@@ -1,689 +1,202 @@
 #!/usr/bin/env python3
-# scripts/multimodal_fuel_emissions_and_costs.py
+# scripts/compare_single.py
 # -*- coding: utf-8 -*-
+
 """
-Multimodal fuel + emissions + costs comparer (road-only vs cabotage)
-====================================================================
+Single Route Comparator (CLI).
+==============================
 
-Given:
-  - origin  (string address / CEP / "lat,lon")
-  - destiny (string address / CEP / "lat,lon")
-  - cargo mass (t)
+Compares Direct Road vs. Multimodal (Cabotage) for a single O->D pair.
 
-This script will:
+Flow:
+  1. Build Geometry (modules.multimodal.builder)
+  2. Evaluate Costs/Emissions (modules.multimodal.evaluator)
+  3. Save to DB (modules.infra.database_manager)
+  4. Output JSON/Text
 
-  1) Call modules.fuel.multimodal_fuel_service.get_multimodal_fuel_profile(...)
-     to build a consistent multimodal fuel profile:
-       - road-only leg
-       - origin → port road leg
-       - port → destiny road leg
-       - cabotage leg (sea + ops + hotel)
-
-     **Important:** Optionally, before computing the profile, this script can:
-       - open the SQLite database (--db-path),
-       - DROP TABLE IF EXISTS <data-table> (if --data-table is provided),
-       - letting a *separate* aggregation pipeline recreate the "all data"
-         table for this scenario.
-
-     The *road-legs cache* table (distance table) is **never** dropped here;
-     it is reused across runs.
-
-  2) Use modules.fuel.emissions.estimate_fuel_emissions(...) to compute CO₂e:
-       - road-only (diesel)
-       - multimodal road part (diesel)
-       - sea leg (VLSFO / MGO / MFO)
-
-  3) Fetch ship fuel prices for Santos (VLSFO, MGO) from Ship & Bunker and
-     convert them to BRL using modules.costs.ship_fuel_prices.apply_fx_brl.
-     From that it estimates the sea fuel cost (R$).
-
-  4) Persist *aggregated metrics* into a multimodal results table in SQLite
-     (via modules.infra.database_manager.upsert_multimodal_result) and emit
-     the full JSON payload to stdout:
-
-       {
-         "origin_raw": ...,
-         "destiny_raw": ...,
-         "origin_label": ...,
-         "destiny_label": ...,
-         "cargo_t": ...,
-         "scenarios": {
-           "road_only": {...},
-           "multimodal": {
-             "road": {...},
-             "sea": {...},
-             "totals": {...}
-           }
-         },
-         "pricing_sources": {...},
-         "raw": {...}  # original MultimodalFuelProfile payload
-       }
-
-Example (PowerShell)
---------------------
-
-python scripts\\multimodal_fuel_emissions_and_costs.py `
-    --origin "Avenida Professor Luciano Gualberto, São Paulo" `
-    --destiny "Campinas, SP" `
-    --cargo-t 30 `
-    --log-level DEBUG `
-    --pretty
-
+Usage:
+  python scripts/compare_single.py --origin "Santos, SP" --destiny "Manaus, AM" --cargo 30
 """
 
 from __future__ import annotations
 
-from dataclasses import asdict
-from pathlib import Path
+import argparse
 import json
-import sqlite3
 import sys
-from typing import Any, Dict, Optional, List
+from pathlib import Path
 
-# ───────────────────── path bootstrap (scripts → repo root) ────────────────────
-ROOT = Path(__file__).resolve().parents[1]  # repo root (one level above /scripts)
+# ───────────────────── Path Bootstrap ─────────────────────
+# Ensure we can import 'modules' from repo root
+ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# ────────────────────────────────────────────────────────────────────────────────
-# Project imports
-# ────────────────────────────────────────────────────────────────────────────────
-from modules.infra.log_manager import get_logger, init_logging
-
-from modules.multimodal.evaluator import (
-      get_multimodal_fuel_profile
-    , MultimodalFuelProfile
-)
-
-from modules.fuel.emissions import estimate_fuel_emissions
-
-from modules.costs.ship_fuel_prices import (
-      fetch_santos_prices
-    , apply_fx_brl
-)
-
+# ───────────────────── Imports ─────────────────────
+from modules.infra.log_manager import init_logging, get_logger
 from modules.infra.database_manager import (
-      DEFAULT_DB_PATH
-    , DEFAULT_TABLE as DEFAULT_DISTANCE_TABLE
+      db_session
     , upsert_multimodal_result
-    , db_session
+    , DEFAULT_DB_PATH
 )
+from modules.multimodal import build_path_geometry, evaluate_path
 
-from modules.fuel.cabotage_fuel_service import (
-      DEFAULT_HOTEL_JSON as CAB_DEFAULT_HOTEL_JSON
-)
-
-from modules.app.multimodal_route_builder import (
-      DEFAULT_PORTS_JSON as MM_DEFAULT_PORTS_JSON
-    , DEFAULT_SEA_MATRIX_JSON as MM_DEFAULT_SEA_MATRIX_JSON
-)
-
-log = get_logger(__name__)
+_log = get_logger("compare_single")
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Internal helpers
+# Helpers
 # ────────────────────────────────────────────────────────────────────────────────
 
-def _safe_float(
-    value: Any
-) -> Optional[float]:
+def _flatten_for_db(
+      origin_name: str
+    , destiny_name: str
+    , res: dict
+) -> dict:
     """
-    Convert to float, preserving None.
+    Convert the nested evaluator result into the flat dictionary 
+    required by `upsert_multimodal_result`.
     """
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
+    road_only = res.get("road_only", {})
+    mm = res.get("multimodal", {})
+    
+    # Sum up the two road legs of the multimodal path
+    first = mm.get("first_mile", {})
+    last = mm.get("last_mile", {})
+    
+    mm_road_liters = (first.get("liters") or 0.0) + (last.get("liters") or 0.0)
+    mm_road_kg = (first.get("fuel_kg") or 0.0) + (last.get("fuel_kg") or 0.0)
+    mm_road_cost = (first.get("cost") or 0.0) + (last.get("cost") or 0.0)
+    mm_road_co2e = (first.get("co2e") or 0.0) + (last.get("co2e") or 0.0)
 
-
-def _compute_road_only_block(
-    profile: MultimodalFuelProfile
-) -> Dict[str, Any]:
-    """
-    Build the 'road_only' scenario block.
-
-    Uses diesel EF via estimate_fuel_emissions(fuel_kg, "diesel").
-    """
-    road_only = profile.road_legs.get("road_only")
-    if road_only is None:
-        return {
-              "distance_km": None
-            , "fuel_liters": None
-            , "fuel_kg": None
-            , "fuel_cost_r": None
-            , "co2e_kg": None
-        }
-
-    distance_km = _safe_float(road_only.distance_km)
-    fuel_liters = _safe_float(road_only.fuel_liters)
-    fuel_kg     = _safe_float(road_only.fuel_kg)
-    fuel_cost_r = _safe_float(road_only.fuel_cost_r)
-
-    co2e_kg: Optional[float] = None
-    if fuel_kg is not None:
-        em = estimate_fuel_emissions(
-              fuel_mass_kg=fuel_kg
-            , fuel_type="diesel"
-        )
-        co2e_kg = float(em["co2e_kg"])
+    mm_sea = mm.get("sea", {})
+    comp = res.get("comparison", {})
 
     return {
-          "distance_km": distance_km
-        , "fuel_liters": fuel_liters
-        , "fuel_kg": fuel_kg
-        , "fuel_cost_r": fuel_cost_r
-        , "co2e_kg": co2e_kg
-    }
+        "origin_name": origin_name,
+        "destiny_name": destiny_name,
+        "cargo_t": res["inputs"]["cargo_t"],
+        
+        # Road Baseline
+        "road_distance_km": road_only.get("distance_km"),
+        "road_fuel_liters": road_only.get("liters"),
+        "road_fuel_kg": None, # Evaluator usually returns liters for road; calculate if needed or add to model
+        "road_fuel_cost_r": road_only.get("cost"),
+        "road_co2e_kg": road_only.get("co2e"),
 
+        # Multimodal Road Parts (First + Last)
+        "mm_road_fuel_liters": mm_road_liters,
+        "mm_road_fuel_kg": mm_road_kg,
+        "mm_road_fuel_cost_r": mm_road_cost,
+        "mm_road_co2e_kg": mm_road_co2e,
 
-def _compute_multimodal_blocks(
-    profile: MultimodalFuelProfile
-) -> Dict[str, Any]:
-    """
-    Build the 'multimodal' block (road + sea + totals), *without* sea cost.
+        # Multimodal Sea Part
+        "sea_km": mm_sea.get("distance_km"),
+        "sea_fuel_kg": mm_sea.get("fuel_kg"),
+        "sea_fuel_cost_r": mm_sea.get("cost"),
+        "sea_co2e_kg": mm_sea.get("co2e"),
 
-    Emissions:
-      - road part: diesel
-      - sea part: profile.cabotage.fuel_type (e.g. "vlsfo")
-    """
-    totals_dict: Dict[str, Any] = dict(profile.totals or {})
-
-    road_fuel_liters = _safe_float(totals_dict.get("multimodal_road_liters"))
-    road_fuel_kg     = _safe_float(totals_dict.get("multimodal_road_kg"))
-    road_fuel_cost_r = _safe_float(totals_dict.get("multimodal_road_cost_r"))
-
-    co2e_road_kg: Optional[float] = None
-    if road_fuel_kg is not None:
-        em_road = estimate_fuel_emissions(
-              fuel_mass_kg=road_fuel_kg
-            , fuel_type="diesel"
-        )
-        co2e_road_kg = float(em_road["co2e_kg"])
-
-    sea_fuel_kg = float(profile.cabotage.fuel_total_kg)
-    em_sea = estimate_fuel_emissions(
-          fuel_mass_kg=sea_fuel_kg
-        , fuel_type=profile.cabotage.fuel_type
-    )
-    co2e_sea_kg = float(em_sea["co2e_kg"])
-
-    # multimodal totals
-    if road_fuel_kg is not None:
-        multimodal_total_fuel_kg = road_fuel_kg + sea_fuel_kg
-        if co2e_road_kg is not None:
-            multimodal_total_co2e_kg = co2e_road_kg + co2e_sea_kg
-        else:
-            multimodal_total_co2e_kg = None
-    else:
-        multimodal_total_fuel_kg = sea_fuel_kg
-        multimodal_total_co2e_kg = co2e_sea_kg
-
-    sea_block: Dict[str, Any] = {
-          "sea_km": float(profile.cabotage.sea_km)
-        , "fuel_kg": sea_fuel_kg
-        , "fuel_cost_r": None      # filled later when ship prices are available
-        , "co2e_kg": co2e_sea_kg
-        , "fuel_type": profile.cabotage.fuel_type
-    }
-
-    road_block: Dict[str, Any] = {
-          "fuel_liters": road_fuel_liters
-        , "fuel_kg": road_fuel_kg
-        , "fuel_cost_r": road_fuel_cost_r
-        , "co2e_kg": co2e_road_kg
-    }
-
-    totals_block: Dict[str, Any] = {
-          "fuel_kg": multimodal_total_fuel_kg
-        , "fuel_cost_r": None      # filled later when sea cost is known
-        , "co2e_kg": multimodal_total_co2e_kg
-        , "delta_co2e_vs_road_only_kg": None   # filled later once road_only known
-        , "delta_cost_vs_road_only_r": None
-    }
-
-    return {
-          "road": road_block
-        , "sea": sea_block
-        , "totals": totals_block
-    }
-
-
-def _attach_ship_fuel_cost(
-      multimodal_block: Dict[str, Any]
-    , profile: MultimodalFuelProfile
-) -> Dict[str, Any]:
-    """
-    Enrich 'multimodal' block with sea fuel cost using Ship & Bunker prices.
-
-    Returns a dict describing the ship fuel pricing source to be placed under
-    payload["pricing_sources"]["ship_fuel"].
-    """
-    sea_block    = multimodal_block["sea"]
-    totals_block = multimodal_block["totals"]
-
-    sea_fuel_kg = _safe_float(sea_block.get("fuel_kg"))
-    if sea_fuel_kg is None or sea_fuel_kg <= 0.0:
-        log.info("Sea fuel kg is zero or NULL; skipping ship fuel pricing.")
-        return {
-              "status": "skipped"
-            , "reason": "sea_fuel_kg_null_or_zero"
-        }
-
-    fuel_type = str(sea_block.get("fuel_type") or "").lower()
-
-    try:
-        # 1) Fetch Santos bunker prices in USD/mt
-        prices_usd = fetch_santos_prices()
-
-        # 2) Apply FX using the helper's built-in converter
-        prices_brl = apply_fx_brl(prices_usd)
-
-        # 3) Select BRL/mt for the fuel type in use.
-        #    Ship & Bunker gives us VLSFO + MGO; when using "mfo", we
-        #    approximate with VLSFO price (planning-level simplification).
-        key_map = {
-              "vlsfo": "vlsfo_brl_per_mt"
-            , "mgo":   "mgo_brl_per_mt"
-            , "mfo":   "vlsfo_brl_per_mt"
-        }
-        price_key = key_map.get(fuel_type)
-
-        if not price_key or prices_brl.get(price_key) is None:
-            log.warning(
-                  "No matching BRL price key for fuel_type=%r (price_key=%r); "
-                  "sea fuel cost will remain NULL.",
-                fuel_type,
-                price_key,
-            )
-            data = dict(prices_brl)
-            data["status"] = "ok"
-            data["note"] = "prices_fetched_but_no_matching_key"
-            return data
-
-        price_brl_per_mt = float(prices_brl[price_key])
-        fuel_mt          = sea_fuel_kg / 1000.0
-        sea_cost_r       = fuel_mt * price_brl_per_mt
-
-        sea_block["fuel_cost_r"] = sea_cost_r
-
-        # If road part has cost, add it for multimodal total cost
-        road_cost_r = _safe_float(multimodal_block["road"].get("fuel_cost_r"))
-        totals_block["fuel_cost_r"] = (
-            None if road_cost_r is None else road_cost_r + sea_cost_r
-        )
-
-        data = dict(prices_brl)
-        data["status"] = "ok"
-        return data
-
-    except Exception as exc:  # pragma: no cover - network/runtime failures
-        log.error(
-              "Failed to fetch/apply ship fuel prices for cost calculation; "
-              "cabotage cost will be NULL. err=%s",
-            exc,
-        )
-        return {
-              "status": "error"
-            , "error": str(exc)
-        }
-
-
-def _build_payload(
-    profile: MultimodalFuelProfile
-) -> Dict[str, Any]:
-    """
-    Build final JSON-serialisable payload from MultimodalFuelProfile.
-    """
-    road_only_block   = _compute_road_only_block(profile)
-    multimodal_block  = _compute_multimodal_blocks(profile)
-
-    # Attach ship fuel cost and pricing sources
-    ship_pricing = _attach_ship_fuel_cost(
-          multimodal_block=multimodal_block
-        , profile=profile
-    )
-
-    # Deltas vs road-only (only if both sides have CO₂ and cost)
-    road_only_co2e_kg = _safe_float(road_only_block.get("co2e_kg"))
-    road_only_cost_r  = _safe_float(road_only_block.get("fuel_cost_r"))
-
-    totals_block      = multimodal_block["totals"]
-    multi_co2e_kg     = _safe_float(totals_block.get("co2e_kg"))
-    multi_cost_r      = _safe_float(totals_block.get("fuel_cost_r"))
-
-    if road_only_co2e_kg is not None and multi_co2e_kg is not None:
-        totals_block["delta_co2e_vs_road_only_kg"] = (
-            multi_co2e_kg - road_only_co2e_kg
-        )
-
-    if road_only_cost_r is not None and multi_cost_r is not None:
-        totals_block["delta_cost_vs_road_only_r"] = (
-            multi_cost_r - road_only_cost_r
-        )
-
-    # Pricing sources (road diesel uses UF-based helper under the hood)
-    road_only_leg = profile.road_legs.get("road_only")
-    road_diesel_price = None
-    road_diesel_detail: Optional[Dict[str, Any]] = None
-
-    if road_only_leg is not None:
-        road_diesel_price = _safe_float(road_only_leg.diesel_price_r_per_liter)
-        meta = getattr(road_only_leg, "meta", {}) or {}
-        road_diesel_detail = {
-              "price_r_per_liter": road_diesel_price
-            , "price_source": meta.get("price_source")
-            , "extra": meta.get("extra", {})
-        }
-
-    pricing_sources: Dict[str, Any] = {
-          "road_diesel_price_r_per_liter": road_diesel_price
-        , "road_diesel": road_diesel_detail
-        , "ship_fuel": ship_pricing
-    }
-
-    raw_block: Dict[str, Any] = {
-          "road_legs": {
-                k: asdict(v)
-            for k, v in profile.road_legs.items()
-        }
-        , "cabotage": asdict(profile.cabotage)
-        , "totals": profile.totals
-        , "meta": profile.meta
-    }
-
-    return {
-          "origin_raw": profile.origin_raw
-        , "destiny_raw": profile.destiny_raw
-        , "origin_label": profile.origin_label
-        , "destiny_label": profile.destiny_label
-        , "cargo_t": profile.cargo_t
-        , "scenarios": {
-              "road_only": road_only_block
-            , "multimodal": multimodal_block
-        }
-        , "pricing_sources": pricing_sources
-        , "raw": raw_block
+        # Totals & Deltas
+        "total_fuel_kg": None, # Can derive if needed
+        "total_fuel_cost_r": mm.get("total_cost"),
+        "total_co2e_kg": mm.get("total_co2e"),
+        "delta_cost_r": comp.get("delta_cost"),
+        "delta_co2e_kg": comp.get("delta_co2e")
     }
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# CLI
+# Main
 # ────────────────────────────────────────────────────────────────────────────────
 
-def main(
-    argv: Optional[List[str]] = None
-) -> int:
-    import argparse
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Single Route Comparison")
+    
+    # Inputs
+    parser.add_argument("--origin", required=True, help="Origin (City/Address/Coords)")
+    parser.add_argument("--destiny", required=True, help="Destiny (City/Address/Coords)")
+    parser.add_argument("--cargo", type=float, default=27.0, help="Cargo mass (tonnes)")
+    
+    # Configs
+    parser.add_argument("--truck", default="semi_27t", help="Truck spec key")
+    parser.add_argument("--profile", default="driving-hgv", help="ORS routing profile")
+    parser.add_argument("--overwrite", action="store_true", help="Force fresh routing (ignore cache)")
+    
+    # Output/DB
+    parser.add_argument("--table", default="analysis_results", help="Target SQLite table name")
+    parser.add_argument("--db-path", default=DEFAULT_DB_PATH, type=Path)
+    parser.add_argument("--json", action="store_true", help="Output raw JSON only")
+    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
+    parser.add_argument("--log-level", default="INFO")
 
-    parser = argparse.ArgumentParser(
-        description=(
-            "Compute multimodal fuel usage, emissions and costs "
-            "(road-only vs cabotage) for a single O→D pair. "
-            "Optionally, this script can drop a user-specified 'all data' "
-            "table before running, but it will never drop the road-legs "
-            "cache (distance) table."
-        )
-    )
-    parser.add_argument(
-          "--origin"
-        , required=True
-        , help="Origin (address/city/CEP/'lat,lon')."
-    )
-    parser.add_argument(
-          "--destiny"
-        , required=True
-        , help="Destiny (address/city/CEP/'lat,lon')."
-    )
-    parser.add_argument(
-          "--cargo-t"
-        , type=float
-        , required=True
-        , help="Cargo mass to move (tonnes)."
-    )
-    parser.add_argument(
-          "--truck-key"
-        , type=str
-        , default="auto_by_weight"
-        , help="Truck preset key (see modules.fuel.truck_specs.list_truck_keys)."
-    )
-    parser.add_argument(
-          "--diesel-price-override"
-        , type=float
-        , default=None
-        , help="Override diesel price [R$/L] for road legs."
-    )
-    parser.add_argument(
-          "--cabotage-fuel-type"
-        , type=str
-        , default="vlsfo"
-        , choices=["vlsfo", "mfo"]
-        , help="Ship fuel type for sea leg."
-    )
-    parser.add_argument(
-          "--ors-profile"
-        , default="driving-hgv"
-        , choices=["driving-hgv", "driving-car"]
-        , help="Primary ORS routing profile. Default: driving-hgv."
+    args = parser.parse_args()
+
+    # 1. Init Logging
+    # If outputting JSON, keep logs quiet (stderr only)
+    init_logging(level=args.log_level, write_to_file=False)
+
+    # 2. Build Geometry
+    if not args.json: 
+        _log.info(f"Routing: {args.origin} -> {args.destiny} ({args.cargo}t)")
+        
+    geo = build_path_geometry(
+        args.origin, 
+        args.destiny, 
+        ors_profile=args.profile, 
+        overwrite_road=args.overwrite,
+        db_path=args.db_path
     )
 
-    # Boolean flags (Python 3.9+ has BooleanOptionalAction; keep fallback)
-    try:
-        from argparse import BooleanOptionalAction
+    if not geo or geo["status"] != "ok":
+        _log.error("Failed to build route geometry.")
+        return 1
 
-        parser.add_argument(
-              "--fallback-to-car"
-            , default=True
-            , action=BooleanOptionalAction
-            , help="Retry with driving-car if primary fails. Default: True."
-        )
-        parser.add_argument(
-              "--include-ops-hotel"
-            , dest="include_ops_and_hotel"
-            , default=True
-            , action=BooleanOptionalAction
-            , help="Include port ops + hotel fuel in cabotage leg. Default: True."
-        )
-    except Exception:  # pragma: no cover - very old Python fallback
-        parser.add_argument(
-              "--fallback-to-car"
-            , dest="fallback_to_car"
-            , action="store_true"
-            , default=True
-        )
-        parser.add_argument(
-              "--no-fallback-to-car"
-            , dest="fallback_to_car"
-            , action="store_false"
-        )
-        parser.add_argument(
-              "--include-ops-hotel"
-            , dest="include_ops_and_hotel"
-            , action="store_true"
-            , default=True
-        )
-        parser.add_argument(
-              "--no-include-ops-hotel"
-            , dest="include_ops_and_hotel"
-            , action="store_false"
-        )
+    # 3. Evaluate Physics/Costs
+    results = evaluate_path(geo, cargo_t=args.cargo, truck_key=args.truck)
+    if not results:
+        _log.error("Failed to evaluate path.")
+        return 1
 
-    parser.add_argument(
-          "--db-path"
-        , type=Path
-        , default=DEFAULT_DB_PATH
-        , help=f"SQLite path. Default: {DEFAULT_DB_PATH}"
+    # 4. Persist to DB
+    flat_record = _flatten_for_db(
+        origin_name=geo["origin"]["label"],
+        destiny_name=geo["destiny"]["label"],
+        res=results
     )
-    parser.add_argument(
-          "--distance-table"
-        , default=DEFAULT_DISTANCE_TABLE
-        , help=(
-            "Road-legs cache table name used by the routing layer "
-            "(e.g. routes / heatmap_runs). This script **never** drops this table."
-        )
-    )
-    parser.add_argument(
-          "--data-table"
-        , default=None
-        , help=(
-            "Optional: name of the 'all data' / multimodal results table. "
-            "If provided, this script will DROP TABLE IF EXISTS <data-table> "
-            "before running the first time, and will also upsert the current "
-            "row into that same table."
-        )
-    )
-    parser.add_argument(
-          "--ports-json"
-        , type=Path
-        , default=MM_DEFAULT_PORTS_JSON
-        , help=f"Ports JSON path. Default: {MM_DEFAULT_PORTS_JSON}"
-    )
-    parser.add_argument(
-          "--sea-matrix-json"
-        , type=Path
-        , default=MM_DEFAULT_SEA_MATRIX_JSON
-        , help=f"Sea matrix JSON path. Default: {MM_DEFAULT_SEA_MATRIX_JSON}"
-    )
-    parser.add_argument(
-          "--hotel-json"
-        , type=Path
-        , default=CAB_DEFAULT_HOTEL_JSON
-        , help=f"Hotel factors JSON path. Default: {CAB_DEFAULT_HOTEL_JSON}"
-    )
-    parser.add_argument(
-          "--log-level"
-        , default="INFO"
-        , choices=["DEBUG", "INFO", "WARNING", "ERROR"]
-    )
-    parser.add_argument(
-          "--pretty"
-        , action="store_true"
-        , help="Pretty-print JSON output."
-    )
+    
+    with db_session(args.db_path) as conn:
+        upsert_multimodal_result(conn, table_name=args.table, **flat_record)
+        if not args.json:
+            _log.info(f"Saved result to table '{args.table}'")
 
-    args = parser.parse_args(argv)
-
-    # ───────────────────────────── logging ──────────────────────────────────────
-    init_logging(
-          level=args.log_level
-        , force=True
-        , write_output=False
-    )
-
-    # ───────────── optional full overwrite of the *data* table (not routes) ─────
-    if args.data_table:
-        try:
-            log.info(
-                  "Full overwrite run: dropping all-data table %r in DB %s."
-                , args.data_table
-                , args.db_path
-            )
-            with sqlite3.connect(str(args.db_path)) as conn:
-                conn.execute(f"DROP TABLE IF EXISTS {args.data_table}")
-                conn.commit()
-        except Exception as exc:  # pragma: no cover
-            log.error(
-                  "Failed to drop all-data table %r in DB %s; continuing anyway. err=%s"
-                , args.data_table
-                , args.db_path
-                , exc
-            )
-
-    log.info(
-          "CLI multimodal fuel+emissions+costs: origin=%r destiny=%r cargo_t=%.3f truck_key=%s"
-        , args.origin
-        , args.destiny
-        , args.cargo_t
-        , args.truck_key
-    )
-
-    # ─────────────────── compute profile via service layer ─────────────────────
-    profile = get_multimodal_fuel_profile(
-          origin=args.origin
-        , destiny=args.destiny
-        , cargo_t=args.cargo_t
-        , truck_key=args.truck_key
-        , diesel_price_override_r_per_l=args.diesel_price_override
-        , cabotage_fuel_type=args.cabotage_fuel_type
-        , include_ops_and_hotel=args.include_ops_and_hotel
-        , ors_profile=args.ors_profile
-        , fallback_to_car=args.fallback_to_car
-        , db_path=args.db_path
-        , table_name=args.distance_table
-        , ports_json=args.ports_json
-        , sea_matrix_json=args.sea_matrix_json
-        , hotel_json=args.hotel_json
-    )
-
-    # ───────────────────────── build payload ───────────────────────────────────
-    payload = _build_payload(profile)
-
-    # ──────────────────────── persist aggregated metrics ───────────────────────
-    # Decide results table name:
-    #   - if user passed --data-table, use it;
-    #   - otherwise, derive from origin_label + cargo_t (Sao_Paulo_SP__30t).
-    if args.data_table:
-        results_table = args.data_table
+    # 5. Output
+    if args.json or args.pretty:
+        print(json.dumps(results, indent=2 if args.pretty else None, ensure_ascii=False))
     else:
-        origin_label = str(profile.origin_label or profile.origin_raw or "origin")
-        origin_tag = origin_label.replace(",", "").replace(" ", "_")
-        amount_tag = f"{int(round(profile.cargo_t))}t"
-        results_table = f"{origin_tag}__{amount_tag}"
-
-    scenarios   = payload.get("scenarios", {}) or {}
-    road_only   = scenarios.get("road_only", {}) or {}
-    multimodal  = scenarios.get("multimodal", {}) or {}
-    mm_road     = multimodal.get("road", {}) or {}
-    mm_sea      = multimodal.get("sea", {}) or {}
-    mm_totals   = multimodal.get("totals", {}) or {}
-
-    origin_name = str(payload.get("origin_label") or payload.get("origin_raw"))
-    destiny_name = str(payload.get("destiny_label") or payload.get("destiny_raw"))
-    cargo_t = payload.get("cargo_t")
-
-    with db_session(db_path=args.db_path) as conn:
-        upsert_multimodal_result(
-              conn
-            , origin_name=origin_name
-            , destiny_name=destiny_name
-            , cargo_t=cargo_t
-            , road_distance_km=_safe_float(road_only.get("distance_km"))
-            , road_fuel_liters=_safe_float(road_only.get("fuel_liters"))
-            , road_fuel_kg=_safe_float(road_only.get("fuel_kg"))
-            , road_fuel_cost_r=_safe_float(road_only.get("fuel_cost_r"))
-            , road_co2e_kg=_safe_float(road_only.get("co2e_kg"))
-            , mm_road_fuel_liters=_safe_float(mm_road.get("fuel_liters"))
-            , mm_road_fuel_kg=_safe_float(mm_road.get("fuel_kg"))
-            , mm_road_fuel_cost_r=_safe_float(mm_road.get("fuel_cost_r"))
-            , mm_road_co2e_kg=_safe_float(mm_road.get("co2e_kg"))
-            , sea_km=_safe_float(mm_sea.get("sea_km"))
-            , sea_fuel_kg=_safe_float(mm_sea.get("fuel_kg"))
-            , sea_fuel_cost_r=_safe_float(mm_sea.get("fuel_cost_r"))
-            , sea_co2e_kg=_safe_float(mm_sea.get("co2e_kg"))
-            , total_fuel_kg=_safe_float(mm_totals.get("fuel_kg"))
-            , total_fuel_cost_r=_safe_float(mm_totals.get("fuel_cost_r"))
-            , total_co2e_kg=_safe_float(mm_totals.get("co2e_kg"))
-            , delta_cost_r=_safe_float(mm_totals.get("delta_cost_vs_road_only_r"))
-            , delta_co2e_kg=_safe_float(mm_totals.get("delta_co2e_vs_road_only_kg"))
-            , table_name=results_table
-        )
-
-    log.info(
-          "Multimodal metrics upserted into table %r (db=%s)."
-        , results_table
-        , args.db_path
-    )
-
-    # ───────────────────────────── JSON output ─────────────────────────────────
-    if args.pretty:
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
-    else:
-        print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+        # Human-readable summary
+        rd = results["road_only"]
+        mm = results["multimodal"]
+        cp = results["comparison"]
+        
+        print("\n" + "─"*50)
+        print(f"ORIGIN:  {geo['origin']['label']}")
+        print(f"DESTINY: {geo['destiny']['label']}")
+        print("─"*50)
+        print(f"ROAD ONLY ({rd['distance_km']:.1f} km)")
+        print(f"  Cost: R$ {rd['cost']:,.2f}")
+        print(f"  CO2e: {rd['co2e']:.1f} kg")
+        print("-" * 20)
+        print(f"MULTIMODAL ({geo['sea_leg']['distance_km']:.1f} km Sea)")
+        print(f"  Cost: R$ {mm['total_cost']:,.2f}")
+        print(f"  CO2e: {mm['total_co2e']:.1f} kg")
+        print("─"*50)
+        
+        # Colorized Delta
+        savings = cp['savings_pct']
+        emoji = "✅" if savings > 0 else "❌"
+        print(f"{emoji} SAVINGS: {savings:.1f}%  (R$ {cp['delta_cost']*-1:,.2f})")
+        print("─"*50 + "\n")
 
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
