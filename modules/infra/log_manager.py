@@ -1,22 +1,32 @@
-# modules/infra/logging.py
+# modules/infra/log_manager.py
 # -*- coding: utf-8 -*-
 
 """
-Central logging configuration for the project.
+Central Log Manager.
+====================
 
-This is the single source of truth for how logging is configured.
+This module acts as the single source of truth for application observability.
+It wraps the standard library `logging` module to provide:
+    1. Consistent formatting (Time | Level | Logger | Message).
+    2. Automatic file rotation and directory management.
+    3. Environment variable overrides (CARBON_LOG_LEVEL).
+    4. Utilities for visual separation in logs (banners).
 
 Usage
 -----
-    from modules.infra.logging import init_logging, get_logger
+    from modules.infra.log_manager import init_logging, get_logger
 
-    init_logging(level="INFO", write_output=True)
-    log = get_logger(__name__)
-    log.info("Hello from my module")
+    # In your main entry point:
+    init_logging(level="DEBUG", write_to_file=True)
 
-Environment
------------
-- CARBON_LOG_LEVEL, if set, overrides the `level` parameter.
+    # In any other module:
+    _log = get_logger(__name__)
+    _log.info("Calculation started.")
+
+Environment Variables
+---------------------
+    CARBON_LOG_LEVEL : str
+        Overrides the default logging level (e.g., set to "DEBUG" in CI/CD).
 """
 
 from __future__ import annotations
@@ -26,187 +36,203 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Globals
+# Constants & State
 # ────────────────────────────────────────────────────────────────────────────────
 
-_DEFAULT_LOGS_DIR = Path("logs")
+# Default directory for log persistence
+_DEFAULT_LOG_DIR = Path("logs")
 
-_current_logs_dir: Path = _DEFAULT_LOGS_DIR
+# Track state for CLI reporting
 _current_log_file: Optional[Path] = None
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Public helpers
+# Public API
 # ────────────────────────────────────────────────────────────────────────────────
 
-def get_logs_dir() -> Path:
+def get_logger(name: Optional[str] = None) -> logging.Logger:
     """
-    Return the directory where log files are written.
+    Acquire a logger instance.
 
-    This reflects whatever was configured in the last `init_logging()` call.
+    This is a thin wrapper around `logging.getLogger`. Using this ensures
+    that if we switch logging backends (e.g., to `loguru` or `structlog`)
+    in the future, the change is isolated to this module.
+
+    Parameters
+    ----------
+    name : str, optional
+        The name of the logger, typically `__name__`.
+
+    Returns
+    -------
+    logging.Logger
+        The configured logger instance.
     """
-    return _current_logs_dir
+    return logging.getLogger(name if name else "root")
 
 
 def get_current_log_path() -> Optional[Path]:
     """
-    Return the path to the *current* log file, if any.
+    Retrieve the filesystem path of the active log file.
 
-    - If no file handler is configured, returns None.
-    - Useful for CLIs that want to print "Log file → ..." after init_logging().
+    Returns
+    -------
+    Path or None
+        The absolute path to the log file if file logging is enabled,
+        otherwise None.
     """
-    global _current_log_file
-
-    if _current_log_file is not None:
-        return _current_log_file
-
-    # Fallback: inspect root handlers (in case logging was configured elsewhere)
-    root = logging.getLogger()
-    for handler in root.handlers:
-        if isinstance(handler, logging.FileHandler):
-            try:
-                fp = Path(handler.baseFilename)
-                _current_log_file = fp
-                return fp
-            except Exception:
-                continue
-    return None
+    return _current_log_file
 
 
 def init_logging(
       level: str = "INFO"
     , *
-    , force: bool = True
-    , write_output: bool = False
-    , log_file: Optional[Path] = None
-    , logs_dir: Optional[Path] = None
+    , write_to_file: bool = False
+    , log_file_path: Optional[Path] = None
+    , silence_libs: Optional[List[str]] = None
+    , force_clean: bool = True
 ) -> None:
     """
-    Configure root logging.
+    Initialize the root logger with standard formatting and handlers.
 
     Parameters
     ----------
-    level : str, default "INFO"
-        Logging level ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL").
-        If environment variable CARBON_LOG_LEVEL is set, it overrides this.
-    force : bool, default True
-        If True, existing handlers on the root logger are removed before
-        applying the new configuration. Useful for CLIs/tests.
-    write_output : bool, default False
-        If True and `log_file` is not provided, a per-run file is created under
-        `logs/` (or the provided `logs_dir`) and logs are written there as well.
-    log_file : Optional[Path]
-        If provided, logs are written to this file *in addition* to stdout.
-        Parent directory is created automatically.
-    logs_dir : Optional[Path]
-        Base directory for log files when `log_file` is not explicitly given.
-        Defaults to `logs/` at repo root.
+    level : str
+        The desired logging verbosity ("DEBUG", "INFO", "WARNING", "ERROR").
+        Can be overridden by the `CARBON_LOG_LEVEL` env var.
+    write_to_file : bool
+        If True, logs are also written to a timestamped file in `logs/`.
+    log_file_path : Path, optional
+        Specific path to write logs to. Overrides auto-generated names.
+    silence_libs : List[str], optional
+        List of library names (e.g., ["urllib3", "requests"]) to set to
+        WARNING level, reducing noise when debugging your own code.
+    force_clean : bool
+        If True, removes all existing handlers from the root logger.
+        Crucial for preventing duplicate logs during tests or re-runs.
     """
-    global _current_logs_dir
     global _current_log_file
 
-    # Env override (used by child processes: CARBON_LOG_LEVEL)
+    # 1. Environment Override
+    #    Allows changing verbosity without changing code (great for Docker/CI).
     env_level = os.getenv("CARBON_LOG_LEVEL")
     if env_level:
-        level = env_level
+        level = env_level.upper()
 
-    # Translate string level to numeric level (fallback to INFO if invalid)
-    numeric_level = getattr(logging, str(level).upper(), logging.INFO)
+    numeric_level = getattr(logging, level.upper(), logging.INFO)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(numeric_level)
 
-    root = logging.getLogger()
-    if force:
-        # Manually clear handlers (works across Python versions)
-        for handler in list(root.handlers):
-            root.removeHandler(handler)
+    # 2. Clean Slate
+    #    Remove pre-existing handlers to ensure our config is authoritative.
+    if force_clean and root_logger.hasHandlers():
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
 
-    root.setLevel(numeric_level)
-
-    # Common formatter:
-    # [YYYY-MM-DD HH:MM:SS][LEVEL][logger.name] message
-    formatter = logging.Formatter(
+    # 3. Formatter Definition
+    #    Format: [YYYY-MM-DD HH:MM:SS][LEVEL][LoggerName] Message
+    log_fmt = logging.Formatter(
           fmt="[{asctime}][{levelname}][{name}] {message}"
         , datefmt="%Y-%m-%d %H:%M:%S"
         , style="{"
     )
 
-    # Stream handler (stdout)
-    stream_handler = logging.StreamHandler(stream=sys.stdout)
-    stream_handler.setFormatter(formatter)
-    root.addHandler(stream_handler)
+    # 4. Console Handler (Standard Output)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(log_fmt)
+    root_logger.addHandler(console_handler)
 
-    _current_log_file = None  # will be set below if we add a file handler
-
-    # Optional file handler (per-run log)
-    if write_output or log_file is not None:
-        if log_file is None:
-            # Determine logs dir
-            base_dir = Path(logs_dir) if logs_dir is not None else _DEFAULT_LOGS_DIR
-            base_dir.mkdir(parents=True, exist_ok=True)
-
-            # Script name (best-effort) + timestamp → e.g. bulk_multimodal_fuel_emissions_and_costs__20251117-174709.log
-            script_name = Path(sys.argv[0] or "app").stem or "app"
-            if script_name in {"-m", ""}:
-                script_name = "app"
-            ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-            log_file = base_dir / f"{script_name}__{ts}.log"
+    # 5. File Handler (Optional)
+    if write_to_file or log_file_path:
+        if log_file_path:
+            target_path = Path(log_file_path)
         else:
-            # Ensure parent exists if user passed a custom path
-            log_file = Path(log_file)
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-            base_dir = log_file.parent
+            # Generate specific filename: app_YYYYMMDD-HHMMSS.log
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            script_name = Path(sys.argv[0]).stem if sys.argv[0] else "app"
+            target_path = _DEFAULT_LOG_DIR / f"{script_name}__{timestamp}.log"
 
-        file_handler = logging.FileHandler(log_file, encoding="utf-8")
-        file_handler.setFormatter(formatter)
-        root.addHandler(file_handler)
+        # Ensure directory exists
+        target_path.parent.mkdir(parents=True, exist_ok=True)
 
-        _current_logs_dir = base_dir
-        _current_log_file = log_file.resolve()
+        file_handler = logging.FileHandler(target_path, encoding="utf-8")
+        file_handler.setFormatter(log_fmt)
+        root_logger.addHandler(file_handler)
 
-    log = get_logger(__name__)
-    log.info("Logging configured")
+        _current_log_file = target_path.resolve()
+
+    # 6. Silence Noisy Libraries
+    #    Sets chatty third-party libs to WARNING so they don't drown out app logs.
+    default_silence = ["urllib3", "requests", "matplotlib", "geopy"]
+    libs_to_silence = (silence_libs or []) + default_silence
+    for lib_name in libs_to_silence:
+        logging.getLogger(lib_name).setLevel(logging.WARNING)
+
+    # 7. Self-Identification
+    #    Log that we are ready.
+    get_logger(__name__).debug(
+        f"LogManager initialized. Level={level}, File={_current_log_file}"
+    )
 
 
-def log_banner(
-      log: logging.Logger
-    , msg: str
-    , *
-    , char: str = "="
-    , width: int = 60
-    , box: bool = False
-) -> None:
+def log_banner(msg: str, level: str = "INFO", char: str = "═") -> None:
     """
-    Helper to print a visual banner in logs.
+    Log a visual separator to distinguish processing steps.
 
-    - Simple mode (box=False): prints a bar, the message, and another bar.
-    - Box mode: prints a Unicode box with the message centered.
+    Example
+    -------
+    ╔══════════════════════╗
+    ║   Processing Route   ║
+    ╚══════════════════════╝
     """
-    if not box:
-        bar = char * width
-        log.info(bar)
-        log.info(msg)
-        log.info(bar)
+    logger = get_logger(__name__)
+    log_method = getattr(logger, level.lower(), logger.info)
+
+    width = 60
+    # Center the message
+    padded_msg = f" {msg} "
+    fill_len = max(0, width - len(padded_msg) - 2)
+    left_pad = fill_len // 2
+    right_pad = fill_len - left_pad
+
+    # Build box
+    top = f"╔{char * (width - 2)}╗"
+    middle = f"║{' ' * left_pad}{padded_msg}{' ' * right_pad}║"
+    bottom = f"╚{char * (width - 2)}╝"
+
+    log_method(top)
+    log_method(middle)
+    log_method(bottom)
+
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Smoke Test
+# ────────────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    # 1. Init Logging (force DEBUG to see everything)
+    print("--- Starting Log Manager Smoke Test ---")
+    init_logging(level="DEBUG", write_to_file=True)
+
+    # 2. Get a logger
+    log = get_logger("smoke_test")
+
+    # 3. Test Levels
+    log.debug("This is a debug message (should appear).")
+    log.info("This is an info message.")
+    log.warning("This is a warning.")
+    log.error("This is an error.")
+
+    # 4. Test Banner
+    log_banner("SECTION START")
+
+    # 5. Verify File Creation
+    log_path = get_current_log_path()
+    if log_path and log_path.exists():
+        log.info(f"SUCCESS: Log file confirmed at {log_path}")
     else:
-        inner = " " + msg + " "
-        pad = max(0, width - len(inner))
-        left = pad // 2
-        right = pad - left
-        top_bot = "═" * width
-        log.info(f"╔{top_bot}╗")
-        log.info(f"║{' ' * left}{inner}{' ' * right}║")
-        log.info(f"╚{top_bot}╝")
+        log.error("FAILURE: Log file was not created.")
 
-
-def get_logger(
-    name: Optional[str] = None
-) -> logging.Logger:
-    """
-    Convenience wrapper around logging.getLogger.
-
-    New modules should use this instead of calling logging.getLogger()
-    directly, so if the logging backend ever changes, only this module
-    needs to be updated.
-    """
-    return logging.getLogger(name if name is not None else __name__)
+    print("--- Smoke Test Complete ---")

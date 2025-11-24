@@ -1,0 +1,9 @@
+[2025-11-24 10:04:02][DEBUG][__main__] LogManager initialized. Level=DEBUG, File=C:\Users\felipeproenca\Documents\workspaces\personal\carbon-footprint\logs\log_manager__20251124-100402.log
+[2025-11-24 10:04:02][DEBUG][smoke_test] This is a debug message (should appear).
+[2025-11-24 10:04:02][INFO][smoke_test] This is an info message.
+[2025-11-24 10:04:02][WARNING][smoke_test] This is a warning.
+[2025-11-24 10:04:02][ERROR][smoke_test] This is an error.
+[2025-11-24 10:04:02][INFO][__main__] ╔══════════════════════════════════════════════════════════╗
+[2025-11-24 10:04:02][INFO][__main__] ║                      SECTION START                       ║
+[2025-11-24 10:04:02][INFO][__main__] ╚══════════════════════════════════════════════════════════╝
+[2025-11-24 10:04:02][INFO][smoke_test] SUCCESS: Log file confirmed at C:\Users\felipeproenca\Documents\workspaces\personal\carbon-footprint\logs\log_manager__20251124-100402.log
