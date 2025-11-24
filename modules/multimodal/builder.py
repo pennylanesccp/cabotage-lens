@@ -1,190 +1,250 @@
-#!/usr/bin/env python3
-# modules/app/multimodal_route_builder.py
+# modules/multimodal/builder.py
 # -*- coding: utf-8 -*-
 
 """
-Multimodal Route Builder.
-=========================
+Multimodal Geometry Builder.
+============================
 
-Orchestrates the comparison between a Direct Road route and a Cabotage route.
-1. Resolves coordinates.
-2. Selects nearest ports.
-3. Delegates leg calculations to `modules.road.router`.
-4. Delegates sea distance to `modules.cabotage.sea_matrix`.
-5. Assembles the final JSON payload.
+This module is the "Geospatial Engine" of the multimodal assessment.
+It is responsible for resolving the physical path for a shipment:
+
+1.  **Resolution:** Geocodes the origin and destination.
+2.  **Network Selection:** Finds the optimal entry/exit ports.
+3.  **Routing:** Calculates the three critical road legs:
+    * Direct Road (O -> D)
+    * First Mile (O -> Port Origin)
+    * Last Mile (Port Destiny -> D)
+4.  **Sea Leg:** Looks up the maritime distance.
+
+It delegates raw road routing to `modules.road.router` (which handles caching)
+and sea distances to `modules.cabotage.sea_matrix`.
+
+Usage
+-----
+    from modules.multimodal.builder import build_path_geometry
+
+    path = build_path_geometry("Sao Paulo", "Manaus")
+    print(path.legs.road_direct.distance_km)
 """
 
 from __future__ import annotations
 
+from typing import Any, Dict, Optional, TypedDict, cast
 from pathlib import Path
-import sys
-import json
-import argparse
-from typing import Any, Dict
 
-# Path Bootstrap
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+# Path Bootstrap (for direct execution smoke tests)
+if __name__ == "__main__":
+    import sys
+    ROOT = Path(__file__).resolve().parents[2]
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
 
-# --- Imports from "Mother Modules" ---
-from modules.infra.log_manager import init_logging, get_logger
-# UPDATED: Import everything related to road/routing from the router module
+from modules.infra.log_manager import get_logger
+from modules.core.config import Config
 from modules.road.router import get_or_create_leg, ORSClient, ORSConfig
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.ports.ports_index import load_ports
 from modules.ports.ports_nearest import find_nearest_port
 from modules.cabotage.sea_matrix import SeaMatrix
-from modules.infra.database_manager import DEFAULT_DB_PATH
 
 _log = get_logger(__name__)
 
+
 # ────────────────────────────────────────────────────────────────────────────────
-# Configuration Defaults
+# Data Models (TypedDicts for clean structure)
 # ────────────────────────────────────────────────────────────────────────────────
-DEFAULT_PORTS_JSON = ROOT / "data" / "processed" / "cabotage_data" / "ports_br.json"
-DEFAULT_SEA_JSON   = ROOT / "data" / "processed" / "cabotage_data" / "sea_matrix.json"
+
+class Point(TypedDict):
+    label: str
+    lat: float
+    lon: float
+
+class LegResult(TypedDict):
+    origin_name: str
+    destiny_name: str
+    distance_km: Optional[float]
+    is_hgv: Optional[bool]
+    profile_used: Optional[str]
+    cached: bool
+
+class SeaResult(TypedDict):
+    distance_km: float
+    source: str
+
+class PathGeometry(TypedDict):
+    """The complete geometric definition of the comparison."""
+    origin: Point
+    destiny: Point
+    port_origin: Dict[str, Any]
+    port_destiny: Dict[str, Any]
+    road_direct: LegResult
+    first_mile: LegResult
+    last_mile: LegResult
+    sea_leg: SeaResult
+    status: str
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Orchestration Logic
+# Core Logic
 # ────────────────────────────────────────────────────────────────────────────────
 
-def build_multimodal_route(
-      origin_raw: str
-    , destiny_raw: str
+def build_path_geometry(
+      origin_input: Any
+    , destiny_input: Any
     , *
     , ors_profile: str = "driving-hgv"
-    , overwrite: bool = False
-    , ports_path: Path = DEFAULT_PORTS_JSON
-    , sea_path: Path = DEFAULT_SEA_JSON
-    , db_path: Path = DEFAULT_DB_PATH
-) -> Dict[str, Any]:
+    , overwrite_road: bool = False
+    , ports_json_path: Optional[Path] = None
+    , sea_matrix_path: Optional[Path] = None
+    , db_path: Optional[Path] = None
+) -> Optional[PathGeometry]:
     """
-    Main business logic.
-    """
-    # 1. Initialize Services
-    ors = ORSClient(ORSConfig())
-    ports = load_ports(path=str(ports_path))
-    sea_matrix = SeaMatrix.from_json_path(sea_path)
+    Resolve coordinates and calculate all road/sea legs for a comparison.
 
-    # 2. Geocode Origin/Destiny
-    #    resolve_point_null_safe returns a GeoPoint (lat, lon, label)
-    p_origin = resolve_point_null_safe(origin_raw, ors, _log)
-    p_destiny = resolve_point_null_safe(destiny_raw, ors, _log)
+    This function orchestrates `addressing`, `ports`, `road`, and `cabotage`
+    modules to create a single geometric "truth" for the shipment.
+
+    Parameters
+    ----------
+    origin_input, destiny_input : str or Dict
+        Addresses, CEPs, or lat/lon dicts.
+    ors_profile : str
+        Routing profile for truck legs (default: 'driving-hgv').
+    overwrite_road : bool
+        If True, ignores road cache and forces fresh API calls.
+
+    Returns
+    -------
+    PathGeometry dict or None if geocoding fails.
+    """
+    # 1. Setup Infrastructure
+    #    We load these fresh or relies on module-level caching if implemented.
+    #    For production, you might want to pass these in, but loading here keeps API simple.
+    cfg = Config() # Assuming a global config helper exists or uses defaults
+    
+    p_json = ports_json_path or Path("data/processed/cabotage_data/ports_br.json")
+    s_json = sea_matrix_path or Path("data/processed/cabotage_data/sea_matrix.json")
+    d_path = db_path or Path("data/processed/database/carbon_footprint.sqlite")
+
+    ors = ORSClient(ORSConfig())
+    ports = load_ports(path=str(p_json))
+    sea_matrix = SeaMatrix.from_json_path(s_json)
+
+    # 2. Geocode Endpoints
+    #    We use the null_safe resolver which handles exceptions internally.
+    _log.debug(f"Resolving endpoints: '{origin_input}' -> '{destiny_input}'")
+    p_origin = resolve_point_null_safe(origin_input, ors, _log)
+    p_destiny = resolve_point_null_safe(destiny_input, ors, _log)
 
     if not p_origin or not p_destiny:
-        _log.error("Geocoding failed for one or both endpoints.")
-        return {"status": "geocode_failed", "inputs": {"origin": origin_raw, "destiny": destiny_raw}}
+        _log.error("Failed to geocode one or both endpoints. Aborting geometry build.")
+        return None
 
-    # Convert GeoPoints to simple dicts for the router
-    # This ensures we pass explicit coords, not just strings
-    origin_dict = {"lat": p_origin.lat, "lon": p_origin.lon, "label": p_origin.label}
-    destiny_dict = {"lat": p_destiny.lat, "lon": p_destiny.lon, "label": p_destiny.label}
+    # Convert to strict Point dicts for consistency
+    origin_pt: Point = {"label": p_origin.label, "lat": p_origin.lat, "lon": p_origin.lon}
+    destiny_pt: Point = {"label": p_destiny.label, "lat": p_destiny.lat, "lon": p_destiny.lon}
 
-    # 3. Identify Ports
-    #    find_nearest_port returns a dict with metadata + best 'gate' coords
-    port_origin = find_nearest_port(p_origin.lat, p_origin.lon, ports)
-    port_destiny = find_nearest_port(p_destiny.lat, p_destiny.lon, ports)
+    # 3. Select Ports
+    #    Find the geographically closest ports to O and D.
+    _log.debug("Selecting optimal ports...")
+    po_data = find_nearest_port(origin_pt["lat"], origin_pt["lon"], ports)
+    pd_data = find_nearest_port(destiny_pt["lat"], destiny_pt["lon"], ports)
 
-    # Helper to get the "Gate" coordinates for routing
-    def _get_gate_coords(p: Dict[str, Any]) -> Dict[str, Any]:
-        # Use gate if available, else centroid
-        if p.get("gate"):
+    _log.info(f"Ports Selected: {po_data['name']} (Origin) -> {pd_data['name']} (Destiny)")
+
+    # 4. Routing - Preparation
+    #    Extract "Gate" coordinates for the ports to ensure accurate truck routing.
+    def _get_node(p_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract routing target from port data (Gate > Centroid)."""
+        if p_data.get("gate"):
             return {
-                "lat": p["gate"]["lat"],
-                "lon": p["gate"]["lon"],
-                "label": f"{p['name']} ({p['gate']['label']})"
+                "lat": p_data["gate"]["lat"],
+                "lon": p_data["gate"]["lon"],
+                "label": f"{p_data['name']} ({p_data['gate']['label']})"
             }
         return {
-            "lat": p["lat"],
-            "lon": p["lon"],
-            "label": p["name"]
+            "lat": p_data["lat"],
+            "lon": p_data["lon"],
+            "label": p_data["name"]
         }
 
-    po_node = _get_gate_coords(port_origin)
-    pd_node = _get_gate_coords(port_destiny)
+    po_node = _get_node(po_data)
+    pd_node = _get_node(pd_data)
 
-    # 4. Calculate Legs (Using the Router Module)
-    
-    # A) Direct Road (Origin -> Destiny)
+    # 5. Routing - Execution (Road)
+    #    We use the road router facade to get/cache these legs.
+    _log.debug(f"Calculating road legs (Profile: {ors_profile})...")
+
+    # A) Direct Road (Reference Baseline)
     leg_direct = get_or_create_leg(
-        ors, origin_dict, destiny_dict, 
-        profile=ors_profile, overwrite=overwrite, db_path=db_path
+        ors, origin_pt, destiny_pt,
+        profile=ors_profile, overwrite=overwrite_road, db_path=d_path
     )
 
     # B) First Mile (Origin -> Origin Port)
-    leg_first_mile = get_or_create_leg(
-        ors, origin_dict, po_node,
-        profile=ors_profile, overwrite=overwrite, db_path=db_path
+    leg_first = get_or_create_leg(
+        ors, origin_pt, po_node,
+        profile=ors_profile, overwrite=overwrite_road, db_path=d_path
     )
 
     # C) Last Mile (Destiny Port -> Destiny)
-    leg_last_mile = get_or_create_leg(
-        ors, pd_node, destiny_dict,
-        profile=ors_profile, overwrite=overwrite, db_path=db_path
+    leg_last = get_or_create_leg(
+        ors, pd_node, destiny_pt,
+        profile=ors_profile, overwrite=overwrite_road, db_path=d_path
     )
 
-    # D) Sea Leg (Port -> Port)
-    #    SeaMatrix needs {lat, lon, name} dicts
-    sea_km, sea_source = sea_matrix.km_with_source(
-        {"lat": port_origin["lat"], "lon": port_origin["lon"], "name": port_origin["name"]},
-        {"lat": port_destiny["lat"], "lon": port_destiny["lon"], "name": port_destiny["name"]}
+    # 6. Routing - Execution (Sea)
+    #    SeaMatrix requires {lat, lon, name} to perform lookups or haversine fallback.
+    #    We use the port centroids for sea distance (standard practice), not gates.
+    sea_dist, sea_src = sea_matrix.km_with_source(
+        {"lat": po_data["lat"], "lon": po_data["lon"], "name": po_data["name"]},
+        {"lat": pd_data["lat"], "lon": pd_data["lon"], "name": pd_data["name"]}
     )
 
-    # 5. Assemble Result
-    return {
-        "status": "ok",
-        "origin": origin_dict,
-        "destiny": destiny_dict,
-        "ports": {
-            "origin_port": port_origin,
-            "destiny_port": port_destiny
-        },
-        "legs": {
-            "road_direct": leg_direct,
-            "road_first_mile": leg_first_mile,
-            "road_last_mile": leg_last_mile,
-            "sea": {
-                "distance_km": float(sea_km),
-                "source": sea_source
-            }
-        }
+    # 7. Assembly
+    result: PathGeometry = {
+        "origin": origin_pt,
+        "destiny": destiny_pt,
+        "port_origin": po_data,
+        "port_destiny": pd_data,
+        "road_direct": cast(LegResult, leg_direct),
+        "first_mile": cast(LegResult, leg_first),
+        "last_mile": cast(LegResult, leg_last),
+        "sea_leg": {"distance_km": float(sea_dist), "source": sea_src},
+        "status": "ok"
     }
-
-
-# ────────────────────────────────────────────────────────────────────────────────
-# CLI
-# ────────────────────────────────────────────────────────────────────────────────
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Multimodal Route Builder")
-    parser.add_argument("--origin", required=True)
-    parser.add_argument("--destiny", required=True)
-    parser.add_argument("--ors-profile", default="driving-hgv")
-    parser.add_argument("--overwrite", action="store_true")
-    parser.add_argument("--pretty", action="store_true")
-    parser.add_argument("--log-level", default="INFO")
-    parser.add_argument("--ports-json", default=DEFAULT_PORTS_JSON, type=Path)
-    parser.add_argument("--sea-matrix-json", default=DEFAULT_SEA_JSON, type=Path)
     
-    args = parser.parse_args()
-    init_logging(level=args.log_level)
+    return result
 
-    result = build_multimodal_route(
-        args.origin, args.destiny,
-        ors_profile=args.ors_profile,
-        overwrite=args.overwrite,
-        ports_path=args.ports_json,
-        sea_path=args.sea_matrix_json
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Smoke Test
+# ────────────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    from modules.infra.log_manager import init_logging
+    import json
+
+    init_logging(level="INFO")
+    print("--- Geometry Builder Smoke Test ---")
+
+    # Test Route: USP (SP) -> UFAM (Manaus)
+    # This forces a complex route: Truck -> Santos -> Ship -> Manaus -> Truck -> UFAM
+    res = build_path_geometry(
+        "Avenida Professor Luciano Gualberto, São Paulo",
+        "Manaus, AM",
+        ors_profile="driving-hgv"
     )
 
-    if args.pretty:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+    if res:
+        print("\n✅ Geometry Built Successfully!")
+        print(f"   • Direct Road: {res['road_direct']['distance_km']} km")
+        print(f"   • First Mile:  {res['first_mile']['distance_km']} km (to {res['port_origin']['name']})")
+        print(f"   • Sea Leg:     {res['sea_leg']['distance_km']} km")
+        print(f"   • Last Mile:   {res['last_mile']['distance_km']} km (from {res['port_destiny']['name']})")
+        
+        # Optional: Dump to verify JSON serialization
+        # print(json.dumps(res, indent=2, ensure_ascii=False))
     else:
-        print(json.dumps(result, ensure_ascii=False))
-
-    return 0
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+        print("\n❌ Geometry Build Failed.")
+    
+    print("--- Done ---")

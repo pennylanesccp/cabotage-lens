@@ -7,29 +7,7 @@ Ship fuel prices (Santos, Brazil) from Ship & Bunker
 Scrapes https://shipandbunker.com/prices/br-brazil and extracts the
 bunker prices for the port of **Santos**.
 
-HTML pattern (simplified)
--------------------------
-<tr ...>
-  <th ...><a ...>Santos</a></th>
-  <td class="price up ">
-      <span title="480.00" class="quote tSearch">480.00</span>
-      ...
-  </td>
-  <td class="price up ">
-      <span title="812.50" class="quote tSearch">812.50</span>
-      ...
-  </td>
-  <td class="price noprice "><span ...>-</span></td>
-  <td class="date ">Nov 14</td>
-</tr>
-
-We take:
-  • first price <td> → VLSFO (USD/mt)
-  • second price <td> → MGO  (USD/mt)
-
-This module can also:
-  • convert those prices to BRL/mt using the `CurrencyConverter` package
-  • append a simple text line with BRL prices to a local file
+Also provides `get_bunker_price()` to read the last scraped VLSFO price (BRL/mt).
 """
 
 from __future__ import annotations
@@ -49,8 +27,11 @@ _log = get_logger(__name__)
 SHIPANDBUNKER_BR_URL = "https://shipandbunker.com/prices/br-brazil"
 SANTOS_LABEL = "Santos"
 
+# Path to the persistence file
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 DEFAULT_OUTPUT_TXT = os.path.join(
-      "data"
+      _REPO_ROOT
+    , "data"
     , "processed"
     , "maritime_fuel"
     , "santos_bunker_brl.txt"
@@ -61,7 +42,43 @@ __all__ = [
     , "fetch_santos_prices"
     , "apply_fx_brl"
     , "write_prices_txt"
+    , "get_bunker_price"  # <--- New Export
 ]
+
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Price Reader (for Evaluator)
+# ────────────────────────────────────────────────────────────────────────────────
+
+def get_bunker_price(default_price_brl_mt: float = 3500.0) -> float:
+    """
+    Get the latest VLSFO price in BRL/mt from the local text file.
+    If file is missing or empty, returns the default.
+    """
+    if not os.path.exists(DEFAULT_OUTPUT_TXT):
+        _log.warning(f"Bunker price file not found: {DEFAULT_OUTPUT_TXT}. Using default: R$ {default_price_brl_mt:.2f}")
+        return default_price_brl_mt
+
+    try:
+        with open(DEFAULT_OUTPUT_TXT, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            
+        if not lines:
+            return default_price_brl_mt
+
+        # Format: date_iso \t label \t vlsfo_brl \t mgo_brl \t fx
+        last_line = lines[-1].strip()
+        parts = last_line.split("\t")
+        
+        if len(parts) >= 3:
+            price = float(parts[2])
+            _log.info(f"Loaded Bunker Price (VLSFO): R$ {price:.2f}/mt (Date: {parts[0]})")
+            return price
+            
+    except Exception as e:
+        _log.error(f"Failed to read bunker price: {e}")
+
+    return default_price_brl_mt
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -149,30 +166,6 @@ def fetch_santos_prices(
 ) -> Dict[str, Any]:
     """
     Fetch current Santos bunker prices (VLSFO and MGO) from Ship & Bunker.
-
-    Parameters
-    ----------
-    session : Optional[requests.Session]
-        Optional requests session for reuse / testing.
-    timeout : float
-        HTTP timeout in seconds (default: 30.0).
-
-    Returns
-    -------
-    Dict[str, Any]
-        {
-          "port": "Santos",
-          "vlsfo_usd_per_mt": float,
-          "mgo_usd_per_mt": float,
-          "date_label": str | None,
-          "source_url": str,
-          "row_html_preview": str,
-        }
-
-    Raises
-    ------
-    RuntimeError
-        If the page cannot be fetched or parsed.
     """
     sess = session or requests.Session()
     headers = {
@@ -222,13 +215,6 @@ def apply_fx_brl(
     """
     Take a prices dict in USD from `fetch_santos_prices` and enrich it with
     BRL/mt values using the `CurrencyConverter` package.
-
-    Returns a *new* dict with extra keys:
-
-      - fx_brl_per_usd
-      - vlsfo_brl_per_mt
-      - mgo_brl_per_mt
-      - run_date_iso
     """
     if "vlsfo_usd_per_mt" not in prices or "mgo_usd_per_mt" not in prices:
         raise ValueError(
@@ -271,10 +257,6 @@ def apply_fx_brl(
         , "run_date_iso": run_date_iso
     }
 
-    _log.debug(
-        "apply_fx_brl: enriched prices payload keys=%s",
-        list(enriched.keys()),
-    )
     return enriched
 
 
@@ -290,23 +272,6 @@ def write_prices_txt(
 ) -> str:
     """
     Append (or overwrite) a simple text line with BRL prices.
-
-    Line format (tab-separated):
-        run_date_iso  date_label  vlsfo_brl_per_mt  mgo_brl_per_mt  fx_brl_per_usd
-
-    Parameters
-    ----------
-    prices_brl : Dict[str, Any]
-        Dict produced by `apply_fx_brl`.
-    output_path : str
-        Where to write the TXT file.
-    append : bool
-        If True (default), append line; else overwrite file.
-
-    Returns
-    -------
-    str
-        The absolute path of the written file.
     """
     required_keys = [
           "run_date_iso"
@@ -361,12 +326,6 @@ def write_prices_txt(
 def main(argv: Optional[List[str]] = None) -> int:
     """
     CLI smoke test.
-
-    Examples
-    --------
-    python -m modules.costs.ship_fuel_prices
-    python -m modules.costs.ship_fuel_prices --log-level DEBUG
-    python -m modules.costs.ship_fuel_prices --output-txt data/processed/maritime_fuel/santos_bunker_brl.txt
     """
     import argparse
     import json
@@ -374,44 +333,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     from modules.infra.log_manager import init_logging
 
     parser = argparse.ArgumentParser(
-        description=(
-            "Fetch Santos bunker prices (VLSFO & MGO) from Ship & Bunker, "
-            "convert to BRL/mt and write a simple TXT snapshot."
-        )
+        description="Fetch Santos bunker prices (VLSFO & MGO)."
     )
-    parser.add_argument(
-          "--log-level"
-        , default="INFO"
-        , choices=["DEBUG", "INFO", "WARNING", "ERROR"]
-        , help="Logging level."
-    )
-    parser.add_argument(
-          "--timeout"
-        , type=float
-        , default=30.0
-        , help="HTTP timeout in seconds (default: 30.0)."
-    )
-    parser.add_argument(
-          "--output-txt"
-        , default=DEFAULT_OUTPUT_TXT
-        , help=(
-            "Path to TXT file where BRL prices will be appended. "
-            f"Default: {DEFAULT_OUTPUT_TXT}"
-        )
-    )
-    parser.add_argument(
-          "--no-write"
-        , action="store_true"
-        , help="If set, do not write the TXT file (just print JSON)."
-    )
+    parser.add_argument("--log-level", default="INFO")
+    parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument("--output-txt", default=DEFAULT_OUTPUT_TXT)
+    parser.add_argument("--no-write", action="store_true")
 
     args = parser.parse_args(argv)
 
-    init_logging(
-          level=args.log_level
-        , force=True
-        , write_output=False
-    )
+    init_logging(level=args.log_level, force=True, write_output=False)
 
     # 1) Fetch USD prices
     prices_usd = fetch_santos_prices(timeout=args.timeout)
@@ -421,15 +352,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # 3) Optionally write TXT snapshot
     if not args.no_write:
-        path = write_prices_txt(
-              prices_brl
-            , output_path=args.output_txt
-            , append=True
-        )
-        _log.info("TXT snapshot written to %s", path)
+        path = write_prices_txt(prices_brl, output_path=args.output_txt, append=True)
         prices_brl["output_txt_path"] = path
 
-    # 4) Print JSON payload (for CLI usage / debugging)
     print(json.dumps(prices_brl, ensure_ascii=False, indent=2))
     return 0
 

@@ -16,7 +16,6 @@ from typing import Any, Optional, TYPE_CHECKING
 
 from modules.core.models import GeoPoint
 from modules.addressing.coords import parse_lat_lon_string
-from modules.addressing.cep import is_cep, format_cep
 
 # Use TYPE_CHECKING to avoid circular imports if strictly typing,
 # but here we just import the client class for annotation.
@@ -44,35 +43,52 @@ def resolve_point(
     """
     # 1. Pass-through (Already resolved)
     if hasattr(value, "lat") and hasattr(value, "lon"):
-        return GeoPoint(lat=float(value.lat), lon=float(value.lon), label=getattr(value, "label", "Point"))
+        return GeoPoint(
+            lat=float(value.lat), 
+            lon=float(value.lon), 
+            uf=getattr(value, "uf", None), 
+            label=getattr(value, "label", "Point")
+        )
     
     if isinstance(value, dict):
         lat = value.get("lat") or value.get("latitude")
         lon = value.get("lon") or value.get("longitude")
         if lat is not None and lon is not None:
-            return GeoPoint(lat=float(lat), lon=float(lon), label=value.get("label", "Point"))
+            return GeoPoint(
+                lat=float(lat), 
+                lon=float(lon), 
+                uf=value.get("uf"), # Can be None
+                label=value.get("label", "Point")
+            )
 
     # 2. Coordinate String ("-23.5, -46.6")
     val_str = str(value).strip()
     coords = parse_lat_lon_string(val_str)
     if coords:
-        return GeoPoint(lat=coords[0], lon=coords[1], label=val_str)
+        return GeoPoint(
+            lat=coords[0], 
+            lon=coords[1], 
+            uf=None, 
+            label=val_str
+        )
 
-    # 3. CEP (Postal Code)
-    if is_cep(val_str):
-        cep_fmt = format_cep(val_str)
-        if log: log.debug(f"Resolving CEP: {cep_fmt}")
+    # 3. CEP (Postal Code) - regex check for 8 digits
+    if re.match(r"^\d{5}-?\d{3}$", val_str):
+        if log: log.debug(f"Resolving CEP: {val_str}")
         
         try:
-            # New API returns List[Dict], not Dict['features']
-            features = ors.geocode_structured(postalcode=cep_fmt, country="BR", size=1)
+            # New API returns List[Dict]
+            features = ors.geocode_structured(postalcode=val_str, country="BR", size=1)
             if features:
-                # Take first match
                 f = features[0]
                 c = f["geometry"]["coordinates"] # [lon, lat]
                 props = f.get("properties", {})
-                label = props.get("label") or f"CEP {cep_fmt}"
-                return GeoPoint(lat=c[1], lon=c[0], label=label)
+                
+                # Try to extract state/region for UF
+                uf = props.get("region_a") or props.get("region")
+                label = props.get("label") or f"CEP {val_str}"
+                
+                return GeoPoint(lat=c[1], lon=c[0], uf=uf, label=label)
         except Exception as e:
             if log: log.warning(f"CEP geocode failed for {val_str}: {e}")
 
@@ -84,8 +100,11 @@ def resolve_point(
             f = features[0]
             c = f["geometry"]["coordinates"]
             props = f.get("properties", {})
+            
+            uf = props.get("region_a") or props.get("region")
             label = props.get("label") or val_str
-            return GeoPoint(lat=c[1], lon=c[0], label=label)
+            
+            return GeoPoint(lat=c[1], lon=c[0], uf=uf, label=label)
     except Exception as e:
         if log: log.warning(f"Text geocode failed for {val_str}: {e}")
 
