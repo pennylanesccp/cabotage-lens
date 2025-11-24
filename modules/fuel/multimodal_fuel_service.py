@@ -61,8 +61,7 @@ from modules.infra.database_manager import (
     , DEFAULT_TABLE
 )
 
-from modules.road.ors_common import ORSConfig
-from modules.road.ors_client import ORSClient
+from modules.road.router import ORSConfig, ORSClient
 
 from modules.addressing.resolver import (
       resolve_point_null_safe as geo_resolve
