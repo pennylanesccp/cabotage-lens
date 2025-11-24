@@ -37,8 +37,9 @@ This script will:
      convert them to BRL using modules.costs.ship_fuel_prices.apply_fx_brl.
      From that it estimates the sea fuel cost (R$).
 
-  4) Persist the full JSON payload in SQLite (upsert by
-     (origin_raw, destiny_raw, cargo_t)) **and** emit it to stdout:
+  4) Persist *aggregated metrics* into a multimodal results table in SQLite
+     (via modules.infra.database_manager.upsert_multimodal_result) and emit
+     the full JSON payload to stdout:
 
        {
          "origin_raw": ...,
@@ -105,6 +106,7 @@ from modules.infra.database_manager import (
       DEFAULT_DB_PATH
     , DEFAULT_TABLE as DEFAULT_DISTANCE_TABLE
     , upsert_multimodal_result
+    , db_session
 )
 
 from modules.fuel.cabotage_fuel_service import (
@@ -526,9 +528,10 @@ def main(
           "--data-table"
         , default=None
         , help=(
-            "Optional: name of the 'all data' / results table to drop "
-            "before running (DROP TABLE IF EXISTS). Use this for the "
-            "big scenario/results table, not for the routes cache."
+            "Optional: name of the 'all data' / multimodal results table. "
+            "If provided, this script will DROP TABLE IF EXISTS <data-table> "
+            "before running the first time, and will also upsert the current "
+            "row into that same table."
         )
     )
     parser.add_argument(
@@ -614,17 +617,63 @@ def main(
         , hotel_json=args.hotel_json
     )
 
-    # ───────────────────────── build + persist payload ─────────────────────────
+    # ───────────────────────── build payload ───────────────────────────────────
     payload = _build_payload(profile)
 
-    # Persist full JSON payload in a dedicated multimodal results table
-    upsert_multimodal_result(
-          db_path=args.db_path
-        , origin_raw=args.origin
-        , destiny_raw=args.destiny
-        , cargo_t=args.cargo_t
-        , payload=payload
-        # , table_name="multimodal_results"  # opcional, se quiser outro nome
+    # ──────────────────────── persist aggregated metrics ───────────────────────
+    # Decide results table name:
+    #   - if user passed --data-table, use it;
+    #   - otherwise, derive from origin_label + cargo_t (Sao_Paulo_SP__30t).
+    if args.data_table:
+        results_table = args.data_table
+    else:
+        origin_label = str(profile.origin_label or profile.origin_raw or "origin")
+        origin_tag = origin_label.replace(",", "").replace(" ", "_")
+        amount_tag = f"{int(round(profile.cargo_t))}t"
+        results_table = f"{origin_tag}__{amount_tag}"
+
+    scenarios   = payload.get("scenarios", {}) or {}
+    road_only   = scenarios.get("road_only", {}) or {}
+    multimodal  = scenarios.get("multimodal", {}) or {}
+    mm_road     = multimodal.get("road", {}) or {}
+    mm_sea      = multimodal.get("sea", {}) or {}
+    mm_totals   = multimodal.get("totals", {}) or {}
+
+    origin_name = str(payload.get("origin_label") or payload.get("origin_raw"))
+    destiny_name = str(payload.get("destiny_label") or payload.get("destiny_raw"))
+    cargo_t = payload.get("cargo_t")
+
+    with db_session(db_path=args.db_path) as conn:
+        upsert_multimodal_result(
+              conn
+            , origin_name=origin_name
+            , destiny_name=destiny_name
+            , cargo_t=cargo_t
+            , road_distance_km=_safe_float(road_only.get("distance_km"))
+            , road_fuel_liters=_safe_float(road_only.get("fuel_liters"))
+            , road_fuel_kg=_safe_float(road_only.get("fuel_kg"))
+            , road_fuel_cost_r=_safe_float(road_only.get("fuel_cost_r"))
+            , road_co2e_kg=_safe_float(road_only.get("co2e_kg"))
+            , mm_road_fuel_liters=_safe_float(mm_road.get("fuel_liters"))
+            , mm_road_fuel_kg=_safe_float(mm_road.get("fuel_kg"))
+            , mm_road_fuel_cost_r=_safe_float(mm_road.get("fuel_cost_r"))
+            , mm_road_co2e_kg=_safe_float(mm_road.get("co2e_kg"))
+            , sea_km=_safe_float(mm_sea.get("sea_km"))
+            , sea_fuel_kg=_safe_float(mm_sea.get("fuel_kg"))
+            , sea_fuel_cost_r=_safe_float(mm_sea.get("fuel_cost_r"))
+            , sea_co2e_kg=_safe_float(mm_sea.get("co2e_kg"))
+            , total_fuel_kg=_safe_float(mm_totals.get("fuel_kg"))
+            , total_fuel_cost_r=_safe_float(mm_totals.get("fuel_cost_r"))
+            , total_co2e_kg=_safe_float(mm_totals.get("co2e_kg"))
+            , delta_cost_r=_safe_float(mm_totals.get("delta_cost_vs_road_only_r"))
+            , delta_co2e_kg=_safe_float(mm_totals.get("delta_co2e_vs_road_only_kg"))
+            , table_name=results_table
+        )
+
+    log.info(
+          "Multimodal metrics upserted into table %r (db=%s)."
+        , results_table
+        , args.db_path
     )
 
     # ───────────────────────────── JSON output ─────────────────────────────────
