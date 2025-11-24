@@ -3,35 +3,44 @@
 # -*- coding: utf-8 -*-
 
 """
-Carbon Footprint GUI.
-=====================
+Carbon Footprint GUI with Map.
+==============================
 
-A simple Tkinter interface for the Single Route Comparator.
-Allows users to input Origin/Destiny/Cargo and see the comparison results.
+A Tkinter interface for the Single Route Comparator.
+Features:
+  - Inputs for Origin/Destiny/Cargo
+  - Interactive Map (OpenStreetMap) visualization
+  - Route drawing (Straight line or approximated)
 """
 
 import sys
 import threading
-import json
 import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
 
-# Path Bootstrap (Ensure we can import modules)
-# If running as a script, we need to add the repo root to sys.path
+# --- Path Bootstrap ---
 if getattr(sys, 'frozen', False):
-    # If running as a compiled .exe
+    # If running as a compiled .exe (PyInstaller)
     ROOT = Path(sys._MEIPASS).resolve() # type: ignore
 else:
+    # If running as a script: carbon-footprint/apps/app_gui.py -> parent -> carbon-footprint/
     ROOT = Path(__file__).resolve().parents[1]
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# Import our logic
+# --- Imports ---
 from modules.infra.log_manager import init_logging, get_logger
 from modules.multimodal import build_path_geometry, evaluate_path
 from modules.fuel.truck_specs import list_truck_keys
+
+# Map Widget
+try:
+    import tkintermapview
+except ImportError:
+    print("Please run: pip install tkintermapview")
+    sys.exit(1)
 
 _log = get_logger("gui")
 
@@ -39,166 +48,214 @@ class ComparisonApp(tk.Tk):
     def __init__(self):
         super().__init__()
         
-        self.title("Carbon Footprint Comparator")
-        self.geometry("600x700")
+        self.title("EcoFreight Calculator (Thesis Project)")
+        self.geometry("1100x700") # Wider for map
         
-        # Initialize Logging (File only, to keep console clean if any)
+        # Initialize logs to file
         init_logging(level="INFO", write_to_file=True)
+        
+        # Config
+        self.map_widget = None
         
         self._setup_ui()
         
     def _setup_ui(self):
-        # Main Frame
-        main_frame = ttk.Frame(self, padding="20")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # --- Layout: Left Panel (Controls) | Right Panel (Map) ---
+        main_pane = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+        main_pane.pack(fill=tk.BOTH, expand=True)
         
-        # Title
-        ttk.Label(main_frame, text="Multimodal Logistics Analysis", font=("Helvetica", 16, "bold")).pack(pady=(0, 20))
+        # Left Panel
+        left_frame = ttk.Frame(main_pane, padding="10")
+        main_pane.add(left_frame, width=400)
         
-        # --- Inputs ---
-        input_frame = ttk.LabelFrame(main_frame, text="Inputs", padding="10")
-        input_frame.pack(fill=tk.X, pady=5)
+        # Right Panel (Map container)
+        right_frame = ttk.Frame(main_pane)
+        main_pane.add(right_frame)
         
-        # Origin
-        ttk.Label(input_frame, text="Origin (City/Address):").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.ent_origin = ttk.Entry(input_frame, width=40)
-        self.ent_origin.grid(row=0, column=1, sticky=tk.W, padx=5)
-        self.ent_origin.insert(0, "Avenida Professor Luciano Gualberto, São Paulo")
+        # --- Left Panel Content ---
+        ttk.Label(left_frame, text="Logistics Analysis", font=("Segoe UI", 16, "bold")).pack(pady=(0, 15))
         
-        # Destiny
-        ttk.Label(input_frame, text="Destiny (City/Address):").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.ent_destiny = ttk.Entry(input_frame, width=40)
-        self.ent_destiny.grid(row=1, column=1, sticky=tk.W, padx=5)
-        self.ent_destiny.insert(0, "Manaus, AM")
+        # Input Group
+        in_group = ttk.LabelFrame(left_frame, text="Shipment Details", padding="10")
+        in_group.pack(fill=tk.X, pady=5)
         
-        # Cargo
-        ttk.Label(input_frame, text="Cargo (tonnes):").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.ent_cargo = ttk.Entry(input_frame, width=10)
-        self.ent_cargo.grid(row=2, column=1, sticky=tk.W, padx=5)
-        self.ent_cargo.insert(0, "30.0")
+        self._add_input(in_group, 0, "Origin:", "ent_origin", "Avenida Professor Luciano Gualberto, São Paulo")
+        self._add_input(in_group, 1, "Destiny:", "ent_destiny", "Manaus, AM")
+        self._add_input(in_group, 2, "Cargo (t):", "ent_cargo", "30.0")
         
-        # Truck Selector
-        ttk.Label(input_frame, text="Truck Type:").grid(row=3, column=0, sticky=tk.W, pady=5)
-        self.cb_truck = ttk.Combobox(input_frame, values=sorted(list_truck_keys()), state="readonly")
+        # Truck Select
+        ttk.Label(in_group, text="Truck Type:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.cb_truck = ttk.Combobox(in_group, values=sorted(list_truck_keys()), state="readonly")
         self.cb_truck.set("semi_27t")
-        self.cb_truck.grid(row=3, column=1, sticky=tk.W, padx=5)
+        self.cb_truck.grid(row=3, column=1, sticky=tk.EW, padx=5)
+        in_group.columnconfigure(1, weight=1)
 
-        # --- Actions ---
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X, pady=20)
+        # Button
+        self.btn_run = ttk.Button(left_frame, text="▶ Calculate Route", command=self._on_run)
+        self.btn_run.pack(fill=tk.X, pady=10)
         
-        self.btn_run = ttk.Button(btn_frame, text="Calculate Comparison", command=self._on_run)
-        self.btn_run.pack(side=tk.RIGHT)
+        # Results Text
+        res_group = ttk.LabelFrame(left_frame, text="Results", padding="5")
+        res_group.pack(fill=tk.BOTH, expand=True)
         
-        # --- Results ---
-        result_frame = ttk.LabelFrame(main_frame, text="Results", padding="10")
-        result_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.txt_output = tk.Text(result_frame, height=15, width=60, state=tk.DISABLED, font=("Consolas", 10))
+        self.txt_output = tk.Text(res_group, height=15, state=tk.DISABLED, font=("Consolas", 9))
         self.txt_output.pack(fill=tk.BOTH, expand=True)
         
-        # Status Bar
-        self.lbl_status = ttk.Label(main_frame, text="Ready", relief=tk.SUNKEN, anchor=tk.W)
-        self.lbl_status.pack(side=tk.BOTTOM, fill=tk.X)
+        # --- Map Setup ---
+        self.map_widget = tkintermapview.TkinterMapView(right_frame, corner_radius=0)
+        self.map_widget.pack(fill="both", expand=True)
+        
+        # Default View: Brazil Centroid approx
+        self.map_widget.set_position(-14.2350, -51.9253) 
+        self.map_widget.set_zoom(4)
+        
+        # Optional: Google Maps Tiles (Comment out if blocked)
+        # self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22) 
 
-    def _log_ui(self, msg: str):
+    def _add_input(self, parent, row, label, var_name, default):
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky=tk.W, pady=5)
+        ent = ttk.Entry(parent)
+        ent.insert(0, default)
+        ent.grid(row=row, column=1, sticky=tk.EW, padx=5)
+        setattr(self, var_name, ent)
+
+    def _log_ui(self, msg: str, clear=False):
         self.txt_output.config(state=tk.NORMAL)
+        if clear:
+            self.txt_output.delete(1.0, tk.END)
         self.txt_output.insert(tk.END, msg + "\n")
         self.txt_output.see(tk.END)
         self.txt_output.config(state=tk.DISABLED)
-        self.lbl_status.config(text=msg)
 
     def _on_run(self):
-        # Disable button
-        self.btn_run.config(state=tk.DISABLED)
-        self.txt_output.config(state=tk.NORMAL)
-        self.txt_output.delete(1.0, tk.END)
-        self.txt_output.config(state=tk.DISABLED)
-        
         origin = self.ent_origin.get().strip()
         destiny = self.ent_destiny.get().strip()
+        truck = self.cb_truck.get()
+        
         try:
             cargo = float(self.ent_cargo.get())
         except ValueError:
-            messagebox.showerror("Input Error", "Cargo must be a number.")
-            self.btn_run.config(state=tk.NORMAL)
+            messagebox.showerror("Error", "Cargo must be a number.")
             return
-            
-        truck = self.cb_truck.get()
-        
-        # Run in thread to keep UI responsive
-        threading.Thread(target=self._run_process, args=(origin, destiny, cargo, truck), daemon=True).start()
 
-    def _run_process(self, origin, destiny, cargo, truck):
+        self.btn_run.config(state=tk.DISABLED)
+        self._log_ui("--- Starting Analysis ---", clear=True)
+        
+        # Clear Map
+        self.map_widget.delete_all_marker()
+        self.map_widget.delete_all_path()
+        
+        # Run Thread
+        t = threading.Thread(target=self._process, args=(origin, destiny, cargo, truck), daemon=True)
+        t.start()
+
+    def _process(self, origin, destiny, cargo, truck):
         try:
-            self._log_ui(f"📍 Routing: {origin} -> {destiny}...")
+            self._log_ui(f"Routing: {origin} -> {destiny}...")
             
             # 1. Build Geometry
-            geo = build_path_geometry(
-                origin, destiny, 
-                ors_profile="driving-hgv", 
-                overwrite_road=False # Use cache by default for GUI speed
-            )
+            geo = build_path_geometry(origin, destiny, ors_profile="driving-hgv", overwrite_road=False)
             
             if not geo or geo["status"] != "ok":
-                self._log_ui("❌ Error: Could not build route geometry.")
+                self._log_ui("❌ Routing Failed. Check addresses/API key.")
                 return
 
-            self._log_ui(f"✅ Geometry Found! (Direct Road: {geo['road_direct']['distance_km']:.1f} km)")
-            self._log_ui("⚙️ Calculating costs & emissions...")
+            # Update Map safely on main thread
+            self.after(0, lambda: self._update_map(geo))
 
             # 2. Evaluate
+            self._log_ui("Calculating costs...")
             res = evaluate_path(geo, cargo_t=cargo, truck_key=truck)
             
-            # 3. Display
-            self._display_results(res, geo)
+            # 3. Show Results
+            self.after(0, lambda: self._show_report(res))
             
         except Exception as e:
-            self._log_ui(f"💥 Critical Error: {e}")
-            _log.exception("GUI process failed")
+            _log.exception("Process failed")
+            self.after(0, lambda: self._log_ui(f"Error: {e}"))
         finally:
-            # Re-enable button in main thread
             self.after(0, lambda: self.btn_run.config(state=tk.NORMAL))
-            self.after(0, lambda: self.lbl_status.config(text="Done."))
 
-    def _display_results(self, res: dict, geo: dict):
+    def _update_map(self, geo):
+        """
+        Draws markers and path on the map widget.
+        """
+        # Helper to extract (lat, lon) tuples
+        def _loc(pt):
+            return float(pt["lat"]), float(pt["lon"])
+
+        origin_coords = _loc(geo["origin"])
+        dest_coords = _loc(geo["destiny"])
+        
+        # Add Markers
+        self.map_widget.set_marker(origin_coords[0], origin_coords[1], text=geo["origin"]["label"])
+        self.map_widget.set_marker(dest_coords[0], dest_coords[1], text=geo["destiny"]["label"])
+        
+        # Multimodal Path: O -> Port -> Port -> D
+        po = geo["port_origin"]
+        pd = geo["port_destiny"]
+        
+        # Use gate coords if available, else centroid
+        po_coords = _loc(po["gate"]) if po.get("gate") else _loc(po)
+        pd_coords = _loc(pd["gate"]) if pd.get("gate") else _loc(pd)
+        
+        # Add Port Markers
+        self.map_widget.set_marker(po_coords[0], po_coords[1], text=f"Port: {po['name']}", marker_color_circle="blue")
+        self.map_widget.set_marker(pd_coords[0], pd_coords[1], text=f"Port: {pd['name']}", marker_color_circle="blue")
+        
+        # Draw Lines
+        # 1. Road: Origin -> Port Origin (Red)
+        self.map_widget.set_path([origin_coords, po_coords], color="red", width=3)
+        
+        # 2. Sea: Port Origin -> Port Destiny (Blue)
+        self.map_widget.set_path([po_coords, pd_coords], color="blue", width=4)
+        
+        # 3. Road: Port Destiny -> Destiny (Red)
+        self.map_widget.set_path([pd_coords, dest_coords], color="red", width=3)
+        
+        # --- Robust Bounding Box Calculation ---
+        # Collect all latitudes and longitudes
+        all_lats = [origin_coords[0], dest_coords[0], po_coords[0], pd_coords[0]]
+        all_lons = [origin_coords[1], dest_coords[1], po_coords[1], pd_coords[1]]
+
+        # Find extremes
+        min_lat, max_lat = min(all_lats), max(all_lats)
+        min_lon, max_lon = min(all_lons), max(all_lons)
+
+        # Pad the view slightly so markers aren't on the edge
+        pad = 1.0
+        
+        # Top Left: (max_lat, min_lon)
+        # Bottom Right: (min_lat, max_lon)
+        self.map_widget.fit_bounding_box(
+            (max_lat + pad, min_lon - pad), 
+            (min_lat - pad, max_lon + pad)
+        )
+
+    def _show_report(self, res):
         rd = res["road_only"]
         mm = res["multimodal"]
         cp = res["comparison"]
         
-        out = []
-        out.append("="*40)
-        out.append(f"COMPARISON REPORT")
-        out.append("="*40)
-        out.append(f"Origin:  {geo['origin']['label']}")
-        out.append(f"Destiny: {geo['destiny']['label']}")
-        out.append(f"Cargo:   {res['inputs']['cargo_t']} t  ({res['inputs']['truck']})")
-        out.append("-" * 40)
-        
-        out.append(f"TRUCK ONLY ({rd['distance_km']:.0f} km)")
-        out.append(f"  Fuel: {rd['liters']:.0f} L")
-        out.append(f"  Cost: R$ {rd['cost']:,.2f}")
-        out.append(f"  CO2e: {rd['co2e']:.1f} kg")
-        
-        out.append("-" * 40)
-        
-        out.append(f"MULTIMODAL (Sea: {mm['sea']['distance_km']:.0f} km)")
-        out.append(f"  Road Legs: {mm['first_mile']['distance_km'] + mm['last_mile']['distance_km']:.0f} km")
-        out.append(f"  Cost: R$ {mm['total_cost']:,.2f}")
-        out.append(f"  CO2e: {mm['total_co2e']:.1f} kg")
-        
-        out.append("=" * 40)
+        l = []
+        l.append("📊 COMPARISON RESULT")
+        l.append("-" * 30)
+        l.append(f"Direct Road: {rd['distance_km']:.0f} km")
+        l.append(f"  Cost: R$ {rd['cost']:,.2f}")
+        l.append(f"  CO2e: {rd['co2e']:.0f} kg")
+        l.append("-" * 30)
+        l.append(f"Multimodal (Sea: {mm['sea']['distance_km']:.0f} km)")
+        l.append(f"  Road Legs: {mm['first_mile']['distance_km'] + mm['last_mile']['distance_km']:.0f} km")
+        l.append(f"  Cost: R$ {mm['total_cost']:,.2f}")
+        l.append(f"  CO2e: {mm['total_co2e']:.0f} kg")
+        l.append("=" * 30)
         
         savings = cp['savings_pct']
-        sign = "+" if savings > 0 else ""
-        out.append(f"SAVINGS: {sign}{savings:.1f}%")
-        out.append(f"DELTA:   R$ {cp['delta_cost']*-1:,.2f}")
-        out.append("=" * 40)
-
-        final_text = "\n".join(out)
+        emoji = "✅" if savings > 0 else "❌"
+        l.append(f"{emoji} SAVINGS: {savings:.1f}%")
+        l.append(f"   R$ {cp['delta_cost']*-1:,.2f}")
         
-        # Update UI on main thread
-        self.after(0, lambda: self._log_ui(final_text))
+        self._log_ui("\n".join(l))
 
 if __name__ == "__main__":
     app = ComparisonApp()

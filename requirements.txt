@@ -4,3 +4,4 @@ pandas
 openpyxl
 CurrencyConverter
 pyinstaller
+tkintermapview
