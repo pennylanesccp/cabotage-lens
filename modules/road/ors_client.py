@@ -31,7 +31,7 @@ import requests as _req
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 from .ors_common import (
       _rate_limiter
     , _retry_after_seconds
@@ -386,7 +386,7 @@ if __name__ == "__main__":
     """
     import json as __json
 
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
 
     init_logging(level="INFO", force=True, write_output=True)
 

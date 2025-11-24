@@ -17,7 +17,7 @@ import json
 import logging
 from typing import Any, Optional
 
-from modules.infra.logging import init_logging
+from modules.infra.log_manager import init_logging
 from modules.app.evaluator import (
       evaluate
     , Dependencies

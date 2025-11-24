@@ -37,7 +37,7 @@ import importlib.util
 from types import ModuleType
 from typing import Any, List
 
-from modules.infra.logging import init_logging
+from modules.infra.log_manager import init_logging
 
 log = logging.getLogger(__name__)
 

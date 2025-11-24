@@ -34,7 +34,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
 
@@ -301,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
     import argparse
     import json
 
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
 
     parser = argparse.ArgumentParser(
         description=(

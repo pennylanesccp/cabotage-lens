@@ -50,7 +50,7 @@ if str(ROOT) not in sys.path:
 # ────────────────────────────────────────────────────────────────────────────────
 # Project imports
 # ────────────────────────────────────────────────────────────────────────────────
-from modules.infra.logging import get_logger, init_logging
+from modules.infra.log_manager import get_logger, init_logging
 from modules.infra.database_manager import (
       db_session
     , ensure_main_table

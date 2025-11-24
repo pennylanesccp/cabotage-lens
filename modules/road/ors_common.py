@@ -25,7 +25,7 @@ import sqlite3
 from typing import Any, Dict, Tuple, Optional
 from datetime import datetime, timezone
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -365,7 +365,7 @@ if __name__ == "__main__":
     from datetime import timedelta as _timedelta
 
     try:
-        from modules.infra.logging import init_logging, get_current_log_path
+        from modules.infra.log_manager import init_logging, get_current_log_path
     except Exception:  # pragma: no cover - defensive
         init_logging = None
         get_current_log_path = lambda: "<unknown>"

@@ -42,7 +42,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Tuple, Optional, Any
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 __all__ = ["SeaMatrix"]
 
@@ -322,7 +322,7 @@ if __name__ == "__main__":
 
         python -m modules.cabotage.sea_matrix
     """
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
 
     init_logging(level="INFO", force=True, write_output=False)
 

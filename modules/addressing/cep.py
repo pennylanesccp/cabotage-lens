@@ -15,7 +15,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 from modules.addressing.coords import filter_hits
 
 _log = get_logger(__name__)

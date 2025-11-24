@@ -43,7 +43,7 @@ import json
 import os
 import re
 
-from modules.infra.logging import get_logger, init_logging
+from modules.infra.log_manager import get_logger, init_logging
 from modules.cabotage.sea_matrix import SeaMatrix
 from modules.ports.ports_index import load_ports
 

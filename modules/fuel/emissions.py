@@ -61,7 +61,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 log = get_logger(__name__)
 
@@ -317,7 +317,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     import argparse
     import json
 
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
 
     parser = argparse.ArgumentParser(
         description="Convert a fuel mass [kg] into CO₂e [kg] given a fuel type."

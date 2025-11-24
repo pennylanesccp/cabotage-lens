@@ -60,7 +60,7 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Optional, List
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 from modules.fuel.truck_specs import (
       get_truck_spec
     , guess_axles_from_payload
@@ -338,7 +338,7 @@ def main(argv: List[str] | None = None) -> int:
     import argparse
     import json
 
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
 
     parser = argparse.ArgumentParser(
         description=(

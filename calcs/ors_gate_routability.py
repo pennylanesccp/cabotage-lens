@@ -16,7 +16,7 @@ import argparse
 import json
 from typing import Dict, Any, List
 
-from modules.infra.logging import init_logging, get_logger
+from modules.infra.log_manager import init_logging, get_logger
 from modules.app.evaluator import DataPaths
 from modules.addressing.resolver import resolve_point
 from modules.road.ors_common import ORSConfig, NoRoute

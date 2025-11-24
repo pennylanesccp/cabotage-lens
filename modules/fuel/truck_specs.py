@@ -22,7 +22,7 @@ from __future__ import annotations
 from typing import Dict, Any, Optional, List
 from copy import deepcopy
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
 
@@ -180,7 +180,7 @@ def main(argv: List[str] | None = None) -> int:
     import argparse
     import json
 
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
 
     parser = argparse.ArgumentParser(
         description=(

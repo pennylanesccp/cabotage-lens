@@ -40,7 +40,7 @@ from __future__ import annotations
 import math
 from typing import Dict, Any, Tuple, List
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 # Prefer the centralized truth from truck_specs; fall back gracefully if helpers are missing.
 try:
@@ -391,7 +391,7 @@ def main(argv: List[str] | None = None) -> int:
     import argparse
     import json
 
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
     from modules.fuel.truck_specs import get_truck_spec, list_truck_keys
 
     parser = argparse.ArgumentParser(

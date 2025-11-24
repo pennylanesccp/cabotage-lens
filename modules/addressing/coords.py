@@ -16,7 +16,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from modules.core.types import CoordinatePair, JSONValue
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
 

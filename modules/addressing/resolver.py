@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional
 from modules.core.models import GeoPoint
 from modules.core.config import get_project_config
 from modules.core.types import CoordinatePair, HasLatLon  # kept for type hints elsewhere
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 from modules.addressing.coords import (
       parse_latlon_str
@@ -344,7 +344,7 @@ if __name__ == "__main__":
 
     # Optional logging bootstrap
     try:
-        from modules.infra.logging import init_logging  # type: ignore[attr-defined]
+        from modules.infra.log_manager import init_logging  # type: ignore[attr-defined]
     except Exception:  # pragma: no cover - defensive
         init_logging = None
 

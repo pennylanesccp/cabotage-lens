@@ -29,7 +29,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Iterable, Tuple, Optional
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
 

@@ -40,7 +40,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
 
@@ -262,7 +262,7 @@ def load_cts(
 if __name__ == "__main__":
     # Simple smoke test:
     #   python -m modules.ports.ports_index
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
 
     init_logging(level="INFO", force=True, write_output=False)
 

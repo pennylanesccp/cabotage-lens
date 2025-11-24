@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass
 from modules.core import Path, Any, Dict, List, Optional, Tuple
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 from modules.road.ors_common import ORSConfig
 from modules.road.ors_client import ORSClient
 

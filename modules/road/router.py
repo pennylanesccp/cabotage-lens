@@ -79,7 +79,7 @@ from typing import Any, Optional, Tuple
 # ────────────────────────────────────────────────────────────────────────────────
 # Project imports
 # ────────────────────────────────────────────────────────────────────────────────
-from modules.infra.logging import init_logging, get_logger
+from modules.infra.log_manager import init_logging, get_logger
 from modules.infra.database_manager import (
       db_session
     , ensure_main_table

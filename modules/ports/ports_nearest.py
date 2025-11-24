@@ -32,7 +32,7 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
-from modules.infra.logging import get_logger
+from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
 
@@ -254,7 +254,7 @@ def find_nearest_port(
 if __name__ == "__main__":
     # Simple smoke test:
     #   python -m modules.ports.ports_nearest
-    from modules.infra.logging import init_logging
+    from modules.infra.log_manager import init_logging
 
     init_logging(level="INFO", force=True, write_output=False)
 

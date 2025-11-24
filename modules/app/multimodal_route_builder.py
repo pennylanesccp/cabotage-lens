@@ -89,7 +89,7 @@ from typing import Any, Dict, Optional, Tuple
 # ────────────────────────────────────────────────────────────────────────────────
 # Project imports
 # ────────────────────────────────────────────────────────────────────────────────
-from modules.infra.logging import init_logging
+from modules.infra.log_manager import init_logging
 from modules.infra.database_manager import (
       db_session
     , ensure_main_table

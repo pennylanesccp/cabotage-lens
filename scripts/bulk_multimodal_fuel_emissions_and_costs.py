@@ -46,7 +46,7 @@ import importlib.util
 from types import ModuleType
 from typing import Any, List, Optional
 
-from modules.infra.logging import init_logging, get_logger
+from modules.infra.log_manager import init_logging, get_logger
 from modules.infra.database_manager import (
       DEFAULT_DB_PATH
     , DEFAULT_TABLE as DEFAULT_DISTANCE_TABLE
