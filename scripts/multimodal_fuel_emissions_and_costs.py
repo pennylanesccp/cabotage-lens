@@ -104,7 +104,7 @@ from modules.costs.ship_fuel_prices import (
 from modules.infra.database_manager import (
       DEFAULT_DB_PATH
     , DEFAULT_TABLE as DEFAULT_DISTANCE_TABLE
-    , upsert_multimodal_payload
+    , upsert_multimodal_result
 )
 
 from modules.fuel.cabotage_fuel_service import (
@@ -618,7 +618,7 @@ def main(
     payload = _build_payload(profile)
 
     # Persist full JSON payload in a dedicated multimodal results table
-    upsert_multimodal_payload(
+    upsert_multimodal_result(
           db_path=args.db_path
         , origin_raw=args.origin
         , destiny_raw=args.destiny

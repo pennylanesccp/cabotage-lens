@@ -4,7 +4,7 @@
 SQLite manager for routing cache + multimodal fuel/emissions results
 ====================================================================
 
-This module now handles two generic families of tables:
+This module handles two generic families of tables:
 
 1) Road legs cache (existing behavior, default table = "routes")
    ----------------------------------------------------------------
@@ -32,7 +32,7 @@ This module now handles two generic families of tables:
      - cabotage legs (O→Po, Pd→D)
      - any other ORS directions calls.
 
-2) Multimodal results tables (NEW, generic name per origin/amount)
+2) Multimodal results tables (one table per origin/amount)
    ----------------------------------------------------------------
    Schema (per table):
 
@@ -68,6 +68,13 @@ This module now handles two generic families of tables:
          "Sao_Paulo__26tons"
      - Each row = one destination with full road×multimodal metrics.
 
+   IMPORTANT:
+   ----------
+   • There is **no** table storing raw JSON payloads anymore.
+   • The multimodal module must extract the metrics and call
+     `upsert_multimodal_result(...)` / `bulk_upsert_multimodal_results(...)`
+     into a table named, for example, f"{origin_tag}__{amount_tag}".
+
 Style
 -----
 • 4-space indentation
@@ -77,10 +84,9 @@ Style
 from __future__ import annotations
 
 import logging
-import json
 import sqlite3
 from contextlib import contextmanager
-from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple, List
+from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple
 
 from modules.core.types import Path
 
@@ -168,9 +174,20 @@ def connect(
 
 
 @contextmanager
-def db_session(db_path: Path | str):
+def db_session(
+    db_path: Path | str = DEFAULT_DB_PATH
+):
+    """
+    Context manager wrapping a SQLite connection with automatic commit/rollback.
+
+    Example
+    -------
+        with db_session() as conn:
+            ensure_main_table(conn)
+            ...
+    """
     db_path = Path(db_path)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_parent_dir(db_path)
     conn = sqlite3.connect(str(db_path))
     try:
         yield conn
@@ -181,56 +198,6 @@ def db_session(db_path: Path | str):
         raise
     finally:
         conn.close()
-
-def upsert_multimodal_payload(
-      db_path: Path | str
-    , origin_raw: str
-    , destiny_raw: str
-    , cargo_t: float
-    , payload: Mapping[str, Any]
-    , table_name: str = "multimodal_results"
-) -> None:
-    """
-    Store the full multimodal JSON payload into a dedicated results table.
-
-    Important:
-      • This does NOT touch the road-legs cache table (usually 'routes').
-      • The table is keyed by (origin_raw, destiny_raw, cargo_t).
-    """
-
-    create_sql = f"""
-    CREATE TABLE IF NOT EXISTS {table_name} (
-          origin_raw    TEXT NOT NULL
-        , destiny_raw   TEXT NOT NULL
-        , cargo_t       REAL NOT NULL
-        , payload_json  TEXT NOT NULL
-        , inserted_at   TEXT NOT NULL DEFAULT (datetime('now'))
-        , UNIQUE(origin_raw, destiny_raw, cargo_t)
-    );
-    """
-
-    upsert_sql = f"""
-    INSERT INTO {table_name} (
-          origin_raw
-        , destiny_raw
-        , cargo_t
-        , payload_json
-    )
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(origin_raw, destiny_raw, cargo_t)
-    DO UPDATE SET
-          payload_json = excluded.payload_json
-        , inserted_at  = datetime('now');
-    """
-
-    payload_json = json.dumps(payload, ensure_ascii=False)
-
-    with db_session(db_path) as conn:
-        conn.execute(create_sql)
-        conn.execute(
-              upsert_sql
-            , (origin_raw, destiny_raw, float(cargo_t), payload_json)
-        )
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -701,7 +668,7 @@ def delete_key(
 
 
 # ────────────────────────────────────────────────────────────────────────────────
-# DDL — multimodal results tables (NEW)
+# DDL — multimodal results tables (per origin/amount)
 # ────────────────────────────────────────────────────────────────────────────────
 
 _CREATE_MM_TABLE_SQL = """
@@ -978,7 +945,7 @@ def list_multimodal_results(
     , *
     , table_name: str
     , limit: Optional[int] = None
-) -> List[Mapping[str, Any]]:
+) -> list[Mapping[str, Any]]:
     """
     List rows from a multimodal results table.
 
@@ -1017,7 +984,7 @@ def list_multimodal_results(
     {lim};
     """.strip()
 
-    out: List[Mapping[str, Any]] = []
+    out: list[Mapping[str, Any]] = []
     for row in conn.execute(sql).fetchall():
         out.append({
               "origin_name": row[0]
@@ -1092,7 +1059,7 @@ if __name__ == "__main__":
         )
         log.info("Routes (limit 3): %s", list_runs(_conn, limit=3))
 
-        # Multimodal test table
+        # Multimodal test table (per origin/amount)
         mm_table = "SmokeTest__26tons"
         ensure_multimodal_results_table(_conn, table_name=mm_table)
         upsert_multimodal_result(

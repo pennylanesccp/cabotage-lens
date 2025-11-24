@@ -56,6 +56,7 @@ from modules.infra.database_manager import (
     , ensure_main_table
     , list_runs
     , upsert_run
+    , upsert_multimodal_result
     , DEFAULT_DB_PATH
     , DEFAULT_TABLE
 )
@@ -152,7 +153,9 @@ class MultimodalFuelProfile:
 # Internal helpers
 # ────────────────────────────────────────────────────────────────────────────────
 
-def _port_anchor(p: Dict[str, Any]) -> tuple[float, float]:
+def _port_anchor(
+    p: Dict[str, Any]
+) -> tuple[float, float]:
     """Return (lat, lon) for routing (gate if available, else main coords)."""
     gate = p.get("gate")
     if gate and isinstance(gate, dict):
@@ -160,7 +163,9 @@ def _port_anchor(p: Dict[str, Any]) -> tuple[float, float]:
     return float(p["lat"]), float(p["lon"])
 
 
-def _safe_sum(values: List[Optional[float]]) -> Optional[float]:
+def _safe_sum(
+    values: List[Optional[float]]
+) -> Optional[float]:
     vals = [float(v) for v in values if v is not None]
     return sum(vals) if vals else None
 
@@ -286,6 +291,58 @@ def _road_leg_fuel_from_dict(
     )
 
 
+def multimodal_profile_to_payload(
+    profile: MultimodalFuelProfile
+) -> Dict[str, Any]:
+    """
+    Convert a MultimodalFuelProfile into a JSON-serializable payload dict.
+
+    This is the canonical representation that can be stored via
+    upsert_multimodal_result in SQLite.
+    """
+    return {
+          "origin_raw": profile.origin_raw
+        , "destiny_raw": profile.destiny_raw
+        , "origin_label": profile.origin_label
+        , "destiny_label": profile.destiny_label
+        , "cargo_t": profile.cargo_t
+        , "road_legs": {
+              k: asdict(v)
+            for k, v in profile.road_legs.items()
+        }
+        , "cabotage": asdict(profile.cabotage)
+        , "totals": profile.totals
+        , "meta": profile.meta
+    }
+
+
+def persist_multimodal_profile(
+      profile: MultimodalFuelProfile
+    , *
+    , db_path: Path | str = DEFAULT_DB_PATH
+    , table_name: str
+) -> None:
+    """
+    Persist a MultimodalFuelProfile payload into a dedicated results table.
+
+    Notes
+    -----
+    • The table_name is fully free-form and should typically follow the pattern
+      f\"{origin_tag}__{amount_tag}\", e.g. \"Sao_Paulo__26tons\".
+    • The actual DDL + upsert are handled by upsert_multimodal_result, which
+      creates the table if it does not exist.
+    """
+    payload = multimodal_profile_to_payload(profile)
+    upsert_multimodal_result(
+          db_path=db_path
+        , origin_raw=profile.origin_raw
+        , destiny_raw=profile.destiny_raw
+        , cargo_t=profile.cargo_t
+        , payload=payload
+        , table_name=table_name
+    )
+
+
 # ────────────────────────────────────────────────────────────────────────────────
 # Public API
 # ────────────────────────────────────────────────────────────────────────────────
@@ -310,6 +367,11 @@ def get_multimodal_fuel_profile(
 ) -> MultimodalFuelProfile:
     """
     High-level entry: origin/destiny + cargo_t → full fuel summary.
+
+    This function is *pure* with respect to multimodal results: it only touches
+    the road-legs cache table (routes) for routing, and returns a
+    MultimodalFuelProfile; the caller is responsible for deciding whether and
+    where to persist that profile (e.g. via persist_multimodal_profile()).
     """
     cargo_t = float(cargo_t)
     db_path = Path(db_path)
@@ -647,7 +709,9 @@ def get_multimodal_fuel_profile(
 # CLI / smoke test
 # ────────────────────────────────────────────────────────────────────────────────
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(
+    argv: Optional[List[str]] = None
+) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -759,12 +823,12 @@ def main(argv: Optional[List[str]] = None) -> int:
           "--db-path"
         , type=Path
         , default=DEFAULT_DB_PATH
-        , help=f"SQLite path. Default: {DEFAULT_DB_PATH}"
+        , help=f"SQLite path for routing cache. Default: {DEFAULT_DB_PATH}"
     )
     parser.add_argument(
           "--table"
         , default=DEFAULT_TABLE
-        , help=f"Routes table name. Default: {DEFAULT_TABLE}"
+        , help=f"Routes table name (road legs cache). Default: {DEFAULT_TABLE}"
     )
     parser.add_argument(
           "--ports-json"
@@ -783,6 +847,27 @@ def main(argv: Optional[List[str]] = None) -> int:
         , type=Path
         , default=CAB_DEFAULT_HOTEL_JSON
         , help=f"Hotel factors JSON path. Default: {CAB_DEFAULT_HOTEL_JSON}"
+    )
+
+    # Optional persistence of payload (per-origin/per-amount tables live elsewhere)
+    parser.add_argument(
+          "--results-db-path"
+        , type=Path
+        , default=None
+        , help=(
+              "Optional SQLite path for storing multimodal JSON payloads. "
+              "Defaults to --db-path if omitted."
+        )
+    )
+    parser.add_argument(
+          "--results-table"
+        , dest="results_table_name"
+        , default=None
+        , help=(
+              "Optional results table name to store the full JSON payload via "
+              "upsert_multimodal_result (e.g. 'Sao_Paulo__26tons'). "
+              "If omitted, no payload persistence is performed."
+        )
     )
 
     parser.add_argument(
@@ -830,20 +915,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         , hotel_json=args.hotel_json
     )
 
-    payload = {
-          "origin_raw": profile.origin_raw
-        , "destiny_raw": profile.destiny_raw
-        , "origin_label": profile.origin_label
-        , "destiny_label": profile.destiny_label
-        , "cargo_t": profile.cargo_t
-        , "road_legs": {
-              k: asdict(v)
-            for k, v in profile.road_legs.items()
-        }
-        , "cabotage": asdict(profile.cabotage)
-        , "totals": profile.totals
-        , "meta": profile.meta
-    }
+    payload = multimodal_profile_to_payload(profile)
+
+    # Optional persistence of this single O→D payload
+    if args.results_table_name:
+        results_db_path = args.results_db_path or args.db_path
+        persist_multimodal_profile(
+              profile
+            , db_path=results_db_path
+            , table_name=args.results_table_name
+        )
 
     if args.pretty:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
