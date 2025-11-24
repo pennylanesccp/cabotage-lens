@@ -27,11 +27,11 @@ __all__ = [
 
 # ─────────────────────────────── assumptions (override via **overrides)
 DEFAULTS: Dict[str, float] = {
-      "SEA_SPEED_KMH":       30.0
-    , "SEA_COST_PER_KM":      0.60
-    , "SEA_CO2_T_PER_KM":     0.00015
-    , "ROAD_COST_PER_KM":     4.50
-    , "ROAD_CO2_T_PER_KM":    0.00100
+      "SEA_SPEED_KMH": 30.0
+    , "SEA_COST_PER_KM": 0.60
+    , "SEA_CO2_T_PER_KM": 0.00015
+    , "ROAD_COST_PER_KM": 4.50
+    , "ROAD_CO2_T_PER_KM": 0.00100
     , "PORT_HANDLING_COST": 800.00
     , "PORT_HANDLING_HOURS": 12.00
 }
