@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS {table} (
     -- Road Baseline
     , road_distance_km    REAL
     , road_fuel_liters    REAL
+    , road_fuel_kg        REAL
     , road_fuel_cost_r    REAL
     , road_co2e_kg        REAL
     
@@ -92,6 +93,7 @@ def upsert_result(
     # Road Baseline
     , road_distance_km: Optional[float] = None
     , road_fuel_liters: Optional[float] = None
+    , road_fuel_kg: Optional[float] = None      # <--- ADDED THIS
     , road_fuel_cost_r: Optional[float] = None
     , road_co2e_kg: Optional[float] = None
     
@@ -124,17 +126,18 @@ def upsert_result(
     sql = f"""
     INSERT INTO {table_name} (
           origin_name, destiny_name, cargo_t
-        , road_distance_km, road_fuel_liters, road_fuel_cost_r, road_co2e_kg
+        , road_distance_km, road_fuel_liters, road_fuel_kg, road_fuel_cost_r, road_co2e_kg
         , mm_road_fuel_liters, mm_road_fuel_kg, mm_road_fuel_cost_r, mm_road_co2e_kg
         , sea_km, sea_fuel_kg, sea_fuel_cost_r, sea_co2e_kg
         , total_fuel_kg, total_fuel_cost_r, total_co2e_kg
         , delta_cost_r, delta_co2e_kg
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(destiny_name) DO UPDATE SET
           origin_name         = excluded.origin_name
         , cargo_t             = excluded.cargo_t
         , road_distance_km    = excluded.road_distance_km
         , road_fuel_liters    = excluded.road_fuel_liters
+        , road_fuel_kg        = excluded.road_fuel_kg
         , road_fuel_cost_r    = excluded.road_fuel_cost_r
         , road_co2e_kg        = excluded.road_co2e_kg
         , mm_road_fuel_liters = excluded.mm_road_fuel_liters
@@ -154,7 +157,7 @@ def upsert_result(
     
     params = (
         origin_name, destiny_name, to_float(cargo_t),
-        to_float(road_distance_km), to_float(road_fuel_liters), to_float(road_fuel_cost_r), to_float(road_co2e_kg),
+        to_float(road_distance_km), to_float(road_fuel_liters), to_float(road_fuel_kg), to_float(road_fuel_cost_r), to_float(road_co2e_kg),
         to_float(mm_road_fuel_liters), to_float(mm_road_fuel_kg), to_float(mm_road_fuel_cost_r), to_float(mm_road_co2e_kg),
         to_float(sea_km), to_float(sea_fuel_kg), to_float(sea_fuel_cost_r), to_float(sea_co2e_kg),
         to_float(total_fuel_kg), to_float(total_fuel_cost_r), to_float(total_co2e_kg),
@@ -174,7 +177,8 @@ if __name__ == "__main__":
         upsert_result(
             conn, "test_results",
             origin_name="SP", destiny_name="RJ", cargo_t=10,
-            road_distance_km=400, road_fuel_cost_r=1000, delta_cost_r=-200
+            road_distance_km=400, road_fuel_cost_r=1000, delta_cost_r=-200,
+            road_fuel_kg=150.0
         )
         print("Upsert successful.")
     print("--- Done ---")
