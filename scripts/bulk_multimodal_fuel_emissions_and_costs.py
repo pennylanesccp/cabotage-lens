@@ -26,7 +26,7 @@ Notes
 • The child script is responsible for:
     - building multimodal routes
     - computing fuel, emissions and costs
-    - persisting anything to SQLite (if implemented there) and/or printing JSON.
+    - persisting anything to SQLite and/or printing JSON.
 • This bulk script just orchestrates repetition and logging.
 """
 
@@ -120,8 +120,7 @@ def _build_parser() -> argparse.ArgumentParser:
         , help="Primary ORS profile for all calls. Default: driving-hgv."
     )
 
-    # Boolean flags: prefer BooleanOptionalAction when available (3.9+),
-    # but keep a fallback for older Python versions.
+    # Boolean flags: BooleanOptionalAction when available (Py 3.9+)
     try:
         from argparse import BooleanOptionalAction
 
@@ -132,19 +131,13 @@ def _build_parser() -> argparse.ArgumentParser:
             , help="Retry with driving-car if primary fails. Default: True."
         )
         parser.add_argument(
-              "--overwrite"
-            , default=False
-            , action=BooleanOptionalAction
-            , help="If True, force recompute in DB even if legs/results exist."
-        )
-        parser.add_argument(
               "--include-ops-hotel"
             , dest="include_ops_and_hotel"
             , default=True
             , action=BooleanOptionalAction
             , help="Include port ops + hotel fuel in cabotage leg. Default: True."
         )
-    except Exception:  # pragma: no cover - very old Python
+    except Exception:  # pragma: no cover - very old Python fallback
         parser.add_argument(
               "--fallback-to-car"
             , dest="fallback_to_car"
@@ -154,17 +147,6 @@ def _build_parser() -> argparse.ArgumentParser:
         parser.add_argument(
               "--no-fallback-to-car"
             , dest="fallback_to_car"
-            , action="store_false"
-        )
-        parser.add_argument(
-              "--overwrite"
-            , dest="overwrite"
-            , action="store_true"
-            , default=False
-        )
-        parser.add_argument(
-              "--no-overwrite"
-            , dest="overwrite"
             , action="store_false"
         )
         parser.add_argument(
@@ -194,6 +176,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+          "--data-table"
+        , default=None
+        , help="Optional data table name for aggregated metrics (child: --data-table)."
+    )
+
+    parser.add_argument(
           "--ports-json"
         , type=Path
         , default=None
@@ -218,7 +206,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
           "--pretty"
         , action="store_true"
-        , help="Ask the child to pretty-print JSON output (mostly for debugging / small batches)."
+        , help="Ask the child to pretty-print JSON output (debug / small batches)."
     )
 
     parser.add_argument(
@@ -332,17 +320,18 @@ def _build_child_argv(
             , str(args.diesel_price_override)
         ])
 
+    # Optional data table
+    if args.data_table is not None:
+        child.extend([
+              "--data-table"
+            , str(args.data_table)
+        ])
+
     # Fallback profile flag
     if getattr(args, "fallback_to_car", True):
         child.append("--fallback-to-car")
     else:
         child.append("--no-fallback-to-car")
-
-    # Overwrite flag
-    if args.overwrite:
-        child.append("--overwrite")
-    else:
-        child.append("--no-overwrite")
 
     # Include / exclude ops + hotel fuel
     if getattr(args, "include_ops_and_hotel", True):
