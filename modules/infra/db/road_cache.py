@@ -130,6 +130,24 @@ def overwrite_keys(
     return count
 
 
+def delete_key(
+      conn: sqlite3.Connection
+    , *
+    , origin: str
+    , destiny: str
+    , is_hgv: Optional[bool] = None
+    , table_name: str = DEFAULT_TABLE
+) -> int:
+    """
+    Delete a single composite key. Convenience wrapper for overwrite_keys.
+    """
+    return overwrite_keys(
+        conn, 
+        keys=[(origin, destiny, is_hgv)], 
+        table_name=table_name
+    )
+
+
 # ────────────────────────────────────────────────────────────────────────────────
 # Read Operations
 # ────────────────────────────────────────────────────────────────────────────────
@@ -188,4 +206,10 @@ if __name__ == "__main__":
         print(f"Stored: {res}")
         assert len(res) == 1
         assert res[0]['distance_km'] == 100.0
+        
+        delete_key(conn, origin="A", destiny="B", is_hgv=True)
+        res2 = list_runs(conn)
+        assert len(res2) == 0
+        print("Delete successful.")
+        
     print("--- Done ---")

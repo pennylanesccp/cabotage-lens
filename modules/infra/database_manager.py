@@ -32,22 +32,20 @@ from modules.infra.db.road_cache import (
     , upsert_run
     , list_runs
     , overwrite_keys
+    , delete_key
 )
 
 # 3. Multimodal Results
 from modules.infra.db.multimodal import (
       ensure_results_table as ensure_multimodal_results_table
     , upsert_result as upsert_multimodal_result
-    # Add aliases if old code used different names:
-    # , list_multimodal_results
-    # , delete_multimodal_result
 )
 
 # Export public API
 __all__ = [
     "DEFAULT_DB_PATH", "DEFAULT_TABLE",
     "connect", "db_session",
-    "ensure_main_table", "upsert_run", "list_runs", "overwrite_keys",
+    "ensure_main_table", "upsert_run", "list_runs", "overwrite_keys", "delete_key",
     "ensure_multimodal_results_table", "upsert_multimodal_result"
 ]
 
@@ -69,6 +67,8 @@ if __name__ == "__main__":
             upsert_run(conn, origin="A", destiny="B", distance_km=50.5, is_hgv=True)
             runs = list_runs(conn)
             log.info(f"Retrieved run: {runs[0]}")
+            
+            delete_key(conn, origin="A", destiny="B", is_hgv=True)
             
             ensure_multimodal_results_table(conn, "test_mm")
             upsert_multimodal_result(
