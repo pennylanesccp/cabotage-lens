@@ -90,7 +90,7 @@ if str(ROOT) not in sys.path:
 # ────────────────────────────────────────────────────────────────────────────────
 from modules.infra.log_manager import get_logger, init_logging
 
-from modules.fuel.multimodal_fuel_service import (
+from modules.multimodal.evaluator import (
       get_multimodal_fuel_profile
     , MultimodalFuelProfile
 )

@@ -83,7 +83,7 @@ from modules.fuel.cabotage_fuel_service import (
 )
 
 # IMPORTANT: this lives under `app/`, not `modules/app/`
-from modules.app.multimodal_route_builder import (
+from modules.multimodal.builder import (
       _ensure_road_leg
     , DEFAULT_PORTS_JSON as MM_DEFAULT_PORTS_JSON
     , DEFAULT_SEA_MATRIX_JSON as MM_DEFAULT_SEA_MATRIX_JSON
