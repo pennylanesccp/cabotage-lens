@@ -1,0 +1,18 @@
+[2025-11-25 08:44:40][INFO][modules.road.ors.http] API CALL: GET /geocode/search
+[2025-11-25 08:44:43][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Santos' (UF=SP) distance=60.236 km via gate 'Ponta da Praia'.
+[2025-11-25 08:44:43][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Manaus' (UF=AM) distance=15.568 km via centroid.
+[2025-11-25 08:44:43][INFO][modules.multimodal.builder] Ports Selected: Porto de Santos (Origin) -> Porto de Manaus (Destiny)
+[2025-11-25 08:44:43][INFO][modules.road.router] Cache MISS. Routing: Avenida Professor Luciano Gualberto, São Paulo, Brazil -> Rua Caruari, Manaus, AM, Brazil
+[2025-11-25 08:44:43][INFO][modules.road.ors.api] Routing (driving-hgv): [-46.730357, -23.558808] -> [-59.997416, -3.017088]
+[2025-11-25 08:44:43][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-hgv
+[2025-11-25 08:45:21][INFO][modules.road.router] Cache HIT: Avenida Professor Luciano Gualberto, São Paulo, Brazil -> Porto de Santos (Ponta da Praia) (90.5919 km)
+[2025-11-25 08:45:21][INFO][modules.road.router] Cache MISS. Routing: Porto de Manaus -> Rua Caruari, Manaus, AM, Brazil
+[2025-11-25 08:45:21][INFO][modules.road.ors.api] Routing (driving-hgv): [-60.0079, -3.1567] -> [-59.997416, -3.017088]
+[2025-11-25 08:45:21][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-hgv
+[2025-11-25 08:45:21][INFO][modules.cabotage.sea_matrix] SeaMatrix.km_with_source: HAVERSINE fallback for 'Porto de Santos' → 'Porto de Manaus' (haversine=2739.586 km, coastline_factor=1.180 → 3232.712 km)
+[2025-11-25 08:45:21][INFO][modules.costs.diesel_prices] load_latest_diesel_price: loaded 27 rows from 'C:\Users\felipeproenca\Documents\workspaces\personal\carbon-footprint\data\processed\road_data\latest_diesel_prices.csv'.
+[2025-11-25 08:45:21][INFO][modules.costs.diesel_prices] avg_price_for_ufs: uf_o=SP, uf_d=SP → price_o=6.12, price_d=6.12, avg=6.1200, fallback_used=False
+[2025-11-25 08:45:21][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=1.4950, kmL_empty=1.7641, liters_loaded=5318.1339, liters_empty=0.0000, liters_total=5318.1339
+[2025-11-25 08:45:21][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=1.4950, kmL_empty=1.7641, liters_loaded=121.1932, liters_empty=0.0000, liters_total=121.1932
+[2025-11-25 08:45:21][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=1.4950, kmL_empty=1.7641, liters_loaded=31.2051, liters_empty=0.0000, liters_total=31.2051
+[2025-11-25 08:45:21][INFO][modules.costs.ship_fuel_prices] Loaded Bunker Price (VLSFO): R$ 2572.34/mt (Date: 2025-11-17)

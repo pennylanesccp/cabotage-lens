@@ -50,7 +50,7 @@ class ComparisonApp(tk.Tk):
         super().__init__()
         
         self.title("EcoFreight Calculator (Thesis Project)")
-        self.geometry("1100x700") # Wider for map
+        self.geometry("1200x800") # Wider/Taller for better map view
         
         # Initialize logs to file
         init_logging(level="INFO", write_to_file=True)
@@ -106,11 +106,11 @@ class ComparisonApp(tk.Tk):
         self.map_widget = tkintermapview.TkinterMapView(right_frame, corner_radius=0)
         self.map_widget.pack(fill="both", expand=True)
         
-        # Default View: Brazil Centroid approx
+        # Default View: Brazil Centroid
         self.map_widget.set_position(-14.2350, -51.9253) 
         self.map_widget.set_zoom(4)
         
-        # Optional: Google Maps Tiles (Comment out if blocked)
+        # Optional: Google Maps Tiles (Comment out if map is blank)
         # self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22) 
 
     def _add_input(self, parent, row, label, var_name, default):
@@ -155,6 +155,7 @@ class ComparisonApp(tk.Tk):
             self._log_ui(f"Routing: {origin} -> {destiny}...")
             
             # 1. Build Geometry
+            #    Use 'driving-hgv' but assume cache is okay unless testing
             geo = build_path_geometry(origin, destiny, ors_profile="driving-hgv", overwrite_road=False)
             
             if not geo or geo["status"] != "ok":
@@ -183,6 +184,7 @@ class ComparisonApp(tk.Tk):
         """
         # Helper to extract (lat, lon) tuples
         def _loc(pt):
+            # Ensure we return valid float tuple
             return float(pt["lat"]), float(pt["lon"])
 
         origin_coords = _loc(geo["origin"])
@@ -204,27 +206,28 @@ class ComparisonApp(tk.Tk):
         self.map_widget.set_marker(po_coords[0], po_coords[1], text=f"Port: {po['name']}", marker_color_circle="blue")
         self.map_widget.set_marker(pd_coords[0], pd_coords[1], text=f"Port: {pd['name']}", marker_color_circle="blue")
         
-        # Draw Lines
-        # 1. Road: Origin -> Port Origin (Red)
-        self.map_widget.set_path([origin_coords, po_coords], color="red", width=3)
+        # --- Draw Lines ---
+        # Use different colors for Road (Purple) vs Sea (Blue)
+        
+        # 1. Road: Origin -> Port Origin (Purple)
+        self.map_widget.set_path([origin_coords, po_coords], color="#800080", width=3)
         
         # 2. Sea: Port Origin -> Port Destiny (Blue - Curved)
-        # USE NEW RENDERER from modules.cabotage.route_renderer
-        # Note: Use get_visual_sea_path (not get_sea_path) if that was the function name we settled on.
-        # Based on our conversation, it is get_visual_sea_path.
         try:
+             # Use the helper to get curved path points
              sea_path = get_visual_sea_path(po_coords, pd_coords)
         except Exception as e:
              _log.error(f"Failed to render curved sea path: {e}")
-             sea_path = [po_coords, pd_coords] # Fallback to straight line
+             # Fallback: straight line
+             sea_path = [po_coords, pd_coords]
 
-        self.map_widget.set_path(sea_path, color="blue", width=4)
+        self.map_widget.set_path(sea_path, color="#0000FF", width=4)
         
-        # 3. Road: Port Destiny -> Destiny (Red)
-        self.map_widget.set_path([pd_coords, dest_coords], color="red", width=3)
+        # 3. Road: Port Destiny -> Destiny (Purple)
+        self.map_widget.set_path([pd_coords, dest_coords], color="#800080", width=3)
         
         # --- Robust Bounding Box Calculation ---
-        # Include all waypoints in bounding box logic so the whole curve is seen
+        # Include all waypoints in bounding box logic
         all_points = [origin_coords, dest_coords] + sea_path
         all_lats = [p[0] for p in all_points]
         all_lons = [p[1] for p in all_points]
@@ -232,11 +235,22 @@ class ComparisonApp(tk.Tk):
         min_lat, max_lat = min(all_lats), max(all_lats)
         min_lon, max_lon = min(all_lons), max(all_lons)
 
-        pad = 1.0
-        self.map_widget.fit_bounding_box(
-            (max_lat + pad, min_lon - pad), 
-            (min_lat - pad, max_lon + pad)
-        )
+        # Pad the view slightly so markers aren't on the absolute edge
+        pad = 1.5
+        
+        # fit_bounding_box expects: (top_left_lat, top_left_lon), (bottom_right_lat, bottom_right_lon)
+        # Top Left = (Max Lat, Min Lon)
+        # Bottom Right = (Min Lat, Max Lon)
+        
+        try:
+            self.map_widget.fit_bounding_box(
+                (max_lat + pad, min_lon - pad), 
+                (min_lat - pad, max_lon + pad)
+            )
+        except ValueError:
+            # Fallback if points are identical
+            self.map_widget.set_position(origin_coords[0], origin_coords[1])
+            self.map_widget.set_zoom(8)
 
     def _show_report(self, res):
         rd = res["road_only"]
@@ -245,16 +259,17 @@ class ComparisonApp(tk.Tk):
         
         l = []
         l.append("📊 COMPARISON RESULT")
-        l.append("-" * 30)
-        l.append(f"Direct Road: {rd['distance_km']:.0f} km")
+        l.append("-" * 35)
+        l.append(f"ROAD ONLY ({rd['distance_km']:.0f} km)")
+        l.append(f"  Fuel: {rd['liters']:.0f} L")
         l.append(f"  Cost: R$ {rd['cost']:,.2f}")
         l.append(f"  CO2e: {rd['co2e']:.0f} kg")
-        l.append("-" * 30)
-        l.append(f"Multimodal (Sea: {mm['sea']['distance_km']:.0f} km)")
+        l.append("-" * 35)
+        l.append(f"MULTIMODAL (Sea: {mm['sea']['distance_km']:.0f} km)")
         l.append(f"  Road Legs: {mm['first_mile']['distance_km'] + mm['last_mile']['distance_km']:.0f} km")
         l.append(f"  Cost: R$ {mm['total_cost']:,.2f}")
         l.append(f"  CO2e: {mm['total_co2e']:.0f} kg")
-        l.append("=" * 30)
+        l.append("=" * 35)
         
         savings = cp['savings_pct']
         emoji = "✅" if savings > 0 else "❌"

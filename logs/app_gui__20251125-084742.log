@@ -1,0 +1,16 @@
+[2025-11-25 08:47:59][INFO][modules.road.ors.http] API CALL: GET /geocode/search
+[2025-11-25 08:48:00][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Santos' (UF=SP) distance=60.236 km via gate 'Ponta da Praia'.
+[2025-11-25 08:48:00][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de São Francisco do Sul' (UF=SC) distance=22.153 km via gate 'Gate'.
+[2025-11-25 08:48:00][INFO][modules.multimodal.builder] Ports Selected: Porto de Santos (Origin) -> Porto de São Francisco do Sul (Destiny)
+[2025-11-25 08:48:00][INFO][modules.road.router] Cache HIT: Avenida Professor Luciano Gualberto, São Paulo, Brazil -> Joinville, SC, Brazil (511.2996 km)
+[2025-11-25 08:48:00][INFO][modules.road.router] Cache HIT: Avenida Professor Luciano Gualberto, São Paulo, Brazil -> Porto de Santos (Ponta da Praia) (90.5919 km)
+[2025-11-25 08:48:00][INFO][modules.road.router] Cache MISS. Routing: Porto de São Francisco do Sul (Gate) -> Joinville, SC, Brazil
+[2025-11-25 08:48:00][INFO][modules.road.ors.api] Routing (driving-hgv): [-48.634956367408485, -26.241112922961452] -> [-48.849462, -26.292994]
+[2025-11-25 08:48:00][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-hgv
+[2025-11-25 08:48:00][INFO][modules.cabotage.sea_matrix] SeaMatrix.km_with_source: HAVERSINE fallback for 'Porto de Santos' → 'Porto de São Francisco do Sul' (haversine=345.159 km, coastline_factor=1.180 → 407.287 km)
+[2025-11-25 08:48:00][INFO][modules.costs.diesel_prices] load_latest_diesel_price: loaded 27 rows from 'C:\Users\felipeproenca\Documents\workspaces\personal\carbon-footprint\data\processed\road_data\latest_diesel_prices.csv'.
+[2025-11-25 08:48:00][INFO][modules.costs.diesel_prices] avg_price_for_ufs: uf_o=SP, uf_d=SP → price_o=6.12, price_d=6.12, avg=6.1200, fallback_used=False
+[2025-11-25 08:48:00][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=1.4950, kmL_empty=1.7641, liters_loaded=684.0128, liters_empty=0.0000, liters_total=684.0128
+[2025-11-25 08:48:00][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=1.4950, kmL_empty=1.7641, liters_loaded=121.1932, liters_empty=0.0000, liters_total=121.1932
+[2025-11-25 08:48:00][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=1.4950, kmL_empty=1.7641, liters_loaded=62.2966, liters_empty=0.0000, liters_total=62.2966
+[2025-11-25 08:48:00][INFO][modules.costs.ship_fuel_prices] Loaded Bunker Price (VLSFO): R$ 2572.34/mt (Date: 2025-11-17)
