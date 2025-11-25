@@ -510,19 +510,817 @@ When plotting is enabled, the corresponding app or script also writes graphical 
   - Regenerate the relevant CSVs and figures under `outputs/`.  
   - Archive or reference them externally together with the commit hash.
 
+---
+  
 ## Configuration & Environment Variables
 
+Runtime configuration is centralized and kept minimal. Defaults are defined in code, and only a small number of values must be supplied via environment variables (primarily the routing API key).
+
+### Configuration Sources (Precedence)
+
+From lowest to highest precedence:
+
+1. **Hard-coded defaults**  
+   - Base directories (`data/`, `outputs/`, `logs/`, etc.).  
+   - Default filenames (e.g. SQLite cache, reference tables).  
+
+2. **Configuration module**  
+   - A single config module (e.g. `modules/config.py`) exposes:
+     - Paths (base project root, data/logs/outputs directories).  
+     - Tuning parameters (timeouts, retry counts, etc.).  
+   - This is the recommended place to inspect or change defaults.
+
+3. **Environment variables**  
+   - Used to inject secrets and override selected defaults **without** editing code.  
+   - Take precedence over any default value in the config module.
+
+4. **CLI arguments**  
+   - For apps in `apps/` and scripts in `scripts/`, command-line flags override both config defaults and environment variables for that run.
+
+### Required Environment Variables
+
+At minimum, you must provide an environment variable containing the **OpenRouteService (ORS) API key**, used by the road routing client:
+
+- **Routing API key**  
+  - A single environment variable holds your ORS key (see `modules/config.py` or the ORS client module for the exact name expected by the current code).  
+  - If this variable is missing, any code path that touches the routing API will fail fast with a clear error message.
+
+Example (shell):
+
+```bash
+export ORS_API_KEY="your-real-openrouteservice-key"
+```
+
+> Replace `ORS_API_KEY` with the exact variable name used in the config/client module if it differs.
+
+### Optional Environment Variables
+
+The project recognizes a small set of optional variables to tweak behavior at runtime:
+
+- **Logging configuration**
+
+  - Optional variable(s) to override:
+
+    - Global log level (e.g. from `INFO` to `DEBUG`).
+    - Log file location (e.g. a custom `logs/` directory).
+  - Intended for development and long batch runs.
+
+- **HTTP / network tuning**
+
+  - Optional overrides for:
+
+    - Request timeout for ORS calls.
+    - Maximum retries or backoff parameters.
+    - HTTP(S) proxy URL, if needed in restricted networks.
+
+- **Paths & storage**
+
+  - Optional overrides for:
+
+    - SQLite cache location (routing cache DB file).
+    - Custom base directories for `outputs/` and `logs/` (e.g. mounted volumes on a server).
+
+Exact variable names and defaults are documented in the config and client modules (e.g. `modules/config.py`, `modules/road/ors_client.py`).
+
+### Managing Secrets
+
+- **Do not commit secrets**
+
+  - API keys and other secrets are supplied via environment variables only.
+  - `.gitignore` should prevent common secret files (e.g. `.env`, local config dumps) from being committed.
+
+- **Local convenience (`.env` or similar)**
+
+  - In local development, you may optionally use tools like `direnv` or a `.env` loader script:
+
+    - Store your secrets in a local-only file.
+    - Load them into the environment before running apps or tests.
+  - The repository itself does not depend on any specific `.env` tooling.
+
+### Quick Setup Checklist
+
+Before running any CLI app or script:
+
+1. Create and activate a Python virtual environment.
+2. Install dependencies: `pip install -r requirements.txt`.
+3. Export the routing API key environment variable.
+4. (Optional) Adjust logging level or paths via environment variables if needed.
+5. Run the desired `apps/` or `scripts/` entrypoint.
+
+---
+  
 ## Installation & Local Development Setup
 
+This section describes how to set up a local, reproducible environment for running the tools and developing the codebase.
+
+### 1. Prerequisites
+
+- A recent **Python 3** interpreter (3.10+ recommended).  
+- **Git** for cloning the repository.  
+- A working shell (Linux, macOS, or Windows PowerShell / cmd).
+
+Verify Python and git:
+
+```bash
+python --version
+git --version
+```
+
+If your system uses `python3` instead of `python`, adjust commands accordingly.
+
+### 2. Clone the Repository
+
+```bash
+git clone https://github.com/pennylanesccp/carbon-footprint.git
+cd carbon-footprint
+```
+
+From now on, all paths in this README are relative to the project root directory (`carbon-footprint/`).
+
+### 3. Create and Activate a Virtual Environment
+
+Create a virtual environment named `venv`:
+
+```bash
+python -m venv venv
+```
+
+Activate it:
+
+- **Linux / macOS (bash/zsh):**
+
+  ```bash
+  source venv/bin/activate
+  ```
+
+- **Windows (PowerShell):**
+
+  ```powershell
+  .\venv\Scripts\Activate.ps1
+  ```
+
+- **Windows (cmd):**
+
+  ```cmd
+  venv\Scripts\activate.bat
+  ```
+
+After activation, your shell prompt should show `(venv)`.
+
+### 4. Install Dependencies
+
+Upgrade `pip` and install the project requirements:
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+This installs all runtime and (when present) development dependencies required by the repository.
+
+### 5. Configure Environment Variables
+
+Before running tools that call the routing API, export the required environment variable(s) (see the previous **Configuration & Environment Variables** section):
+
+```bash
+export YOUR_ORS_ENV_VAR_NAME="your-real-openrouteservice-key"
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:YOUR_ORS_ENV_VAR_NAME = "your-real-openrouteservice-key"
+```
+
+Replace `YOUR_ORS_ENV_VAR_NAME` with the actual variable name used by the code.
+
+### 6. Basic Sanity Check
+
+From the project root, run Python and import one of the modules to verify that the environment is consistent:
+
+```bash
+python -c "import modules; print('OK - modules imported')"
+```
+
+If tests are configured, you can run them (optional but recommended for development):
+
+```bash
+pytest
+```
+
+### 7. Day-to-Day Development Workflow
+
+Typical development loop:
+
+1. Activate the virtual environment (`venv`).
+2. Edit code under `modules/`, `apps/` or `scripts/`.
+3. Run the relevant CLI or script (see later sections for details).
+4. Inspect generated artifacts under `outputs/` and logs under `logs/`.
+5. (Optional) Run tests before committing changes.
+
+This setup ensures a clean separation between project dependencies and your global Python installation, making runs and experiments reproducible across machines.
+
+---
+  
 ## Running the Main Apps
+
+High-level workflows are exposed as **CLI apps** under the `apps/` directory. Each app is a thin wrapper around the core library in `modules/` and is meant to be run directly from the command line.
+
+### General Invocation Pattern
+
+From the project root (`carbon-footprint/`), after activating your virtualenv:
+
+- Run an app by **module name**:
+
+  ```bash
+  python -m apps.<app_name> --help
+
+    ```
+
+- Or run the corresponding **file** directly:
+
+  ```bash
+  python apps/<app_name>.py --help
+  ```
+
+Replace `<app_name>` with the actual filename (without the `.py` extension) found under `apps/`.
+
+> **Tip:** Run `ls apps/` (or `dir apps` on Windows) to list the available apps and then call each with `--help` to see its options.
+
+### Common CLI Features
+
+All apps follow a consistent interface:
+
+- Standard `--help` flag
+
+  - Prints a short description, usage examples and the full list of arguments.
+
+- Typical arguments (may vary by app):
+
+  - `--origin` / `--destiny`
+
+    - Free-text address, CEP or `lat,lon` pairs.
+  - `--cargo-mass-t`
+
+    - Cargo mass in tonnes used for tonne-km and per-TEU calculations.
+  - `--mode` or similar flags
+
+    - Select between Road-only, Cabotage, or combined scenarios.
+  - `--output-dir`
+
+    - Override the default `outputs/` subdirectory for generated files.
+  - `--overwrite`
+
+    - Force regeneration of artifacts even if an output file already exists.
+
+Each app is responsible for:
+
+1. Parsing CLI arguments.
+2. Loading configuration (including environment variables).
+3. Calling orchestration functions in `modules/` to:
+
+   - Build required road and sea legs.
+   - Run the cabotage / port energy model.
+   - Aggregate fuel, emissions and costs.
+4. Writing results to `outputs/` and logs to `logs/`.
+
+### Typical Workflow
+
+1. Ensure the routing cache and input tables in `data/` are correctly populated (see the **Command-Line Scripts** section for precomputation utilities).
+
+2. Choose an app under `apps/` that matches your task (e.g. fixed-origin comparison, O-D sweep, heatmap generation).
+
+3. Run it with the desired arguments, for example:
+
+   ```bash
+   python -m apps.<app_name> \
+       --origin "São Paulo, SP" \
+       --destiny "Salvador, BA" \
+       --cargo-mass-t 20
+   ```
+
+4. Inspect:
+
+   - CSV tables and figures in `outputs/`.
+   - Detailed logs for the run in `logs/`.
+
+This pattern is the same for all current and future apps: discover the app under `apps/`, inspect `--help`, then run with your scenario parameters.```
+
+---
 
 ## Command-Line Scripts
 
+The `scripts/` directory contains lower-level, power-user-oriented command-line tools. They are intended for **precomputation**, **batch runs** and **maintenance tasks** that support the higher-level apps.
+
+### Invocation Pattern
+
+From the project root, after activating your virtualenv:
+
+```bash
+python scripts/<script_name>.py --help
+```
+
+or, equivalently:
+
+```bash
+python -m scripts.<script_name> --help
+```
+
+Each script:
+
+- Bootstraps the project root using `pathlib.Path` / `sys.path`.
+- Uses the same configuration and logging setup as the rest of the codebase.
+- Exposes a `--help` flag describing its arguments and behavior.
+
+### Typical Scripts (Examples)
+
+- **`routes_generator.py`**
+
+  - Precomputes road routing building blocks and persists them in the SQLite cache.
+  - Given an origin and a destiny, it:
+
+    - Geocodes both via ORS.
+    - Checks for existing rows in the cache (including geocoded/normalized labels).
+    - Calls ORS directions only when needed, then upserts the result.
+  - Designed to be **idempotent**: by default it skips runs already present in the cache unless an `--overwrite` flag is specified.
+
+- **`bulk_routes_generator.py`**
+
+  - Batch wrapper around `routes_generator.py`.
+  - Given a single origin and a text file containing one destiny per line, it:
+
+    - Iterates over all destinies (skipping blank lines and `#` comments).
+    - Calls `routes_generator` for each pair.
+    - Stops cleanly on ORS rate-limit errors so the job can be safely resumed.
+  - Enables large-scale precomputation of the road legs cache before running main analyses.
+
+- **`multimodal_fuel_emissions_and_costs.py`**
+
+  - One-shot, end-to-end comparator for **road-only vs cabotage** on a single O-D pair.
+  - Given origin, destiny and cargo mass (t), it:
+
+    - Calls the multimodal fuel service in `modules/` to build a consistent multimodal profile (road-only, O→Port, Port→D, sea leg).
+    - Computes fuel, emissions and monetary cost for each leg and for the aggregated scenario.
+    - Writes detailed and aggregated outputs to `outputs/`, logging the full trace of the run.
+
+> The exact list of scripts may evolve as the project grows. Use `ls scripts/` (or `dir scripts`) to discover available tools and `--help` on each script to inspect its arguments and behavior.
+
+### Design Principles
+
+- **Safe to re-run**
+
+  - Scripts that write to the routing cache or other persistent stores are designed to be idempotent whenever possible (e.g. skip existing rows unless `--overwrite` is explicitly set).
+
+- **Thin orchestration only**
+
+  - Business logic lives in `modules/`.
+  - Scripts focus on reading CLI arguments, invoking library functions and handling batch/control flow.
+
+- **Consistent logging**
+
+  - All scripts emit structured logs to `logs/`, making it straightforward to debug failures in precomputation or batch runs.
+
+---
+
 ## Core Python Modules
+
+All domain logic lives under the `modules/` package. CLI apps and scripts are thin layers that import and orchestrate functions from here.
+
+### High-Level Structure
+
+- `modules/`
+
+  - Python package root for all reusable code.
+  - Organized by responsibility (routing, cabotage, fuel/emissions, costs, persistence, plotting).
+
+### Shared Infrastructure & Utilities
+
+- **Configuration and constants**
+
+  - Central place for paths (data, logs, outputs) and non-secret defaults.
+  - Exposes functions/helpers used by both apps and scripts to locate project resources.
+
+- **Logging helpers**
+
+  - Wrapper around the standard `logging` module.
+  - Provides a consistent logger factory used across `apps/`, `scripts/` and `modules/`.
+  - Ensures uniform log formatting and file naming under `logs/`.
+
+- **General-purpose utilities**
+
+  - Small helpers for:
+
+    - Argument validation and normalization (e.g. parsing `lat,lon` strings).
+    - Common math / unit conversions.
+    - Time handling and basic error wrapping.
+
+### Road Routing (`modules.road`)
+
+- **ORS client**
+
+  - Thin HTTP client for OpenRouteService (ORS) geocoding and directions.
+  - Handles:
+
+    - Auth via environment variable.
+    - Timeouts, retries and basic rate-limit handling.
+    - JSON parsing and error surfacing.
+
+- **Geocoding & directions mixins**
+
+  - Reusable functions that:
+
+    - Geocode free-text origin/destiny labels.
+    - Call directions for specific profiles (e.g. driving-car / HGV).
+    - Extract distances, times and geometries from ORS responses.
+
+- **Routing orchestration**
+
+  - Higher-level functions that:
+
+    - Build O→D road-only legs.
+    - Build O→Port and Port→D legs for multimodal scenarios.
+    - Integrate with the SQLite cache to avoid re-querying ORS for known legs.
+
+### Cabotage & Port Modeling (`modules.cabotage`, `modules.port_ops`, etc.)
+
+- **Port and route models**
+
+  - Data structures for:
+
+    - Ports (IDs, names, coordinates, UF).
+    - Predefined port pairs (e.g. Santos ↔ capitals).
+    - Sea distances (either precomputed or read from `data/`).
+
+- **Vessel and phase modeling**
+
+  - Functions that:
+
+    - Represent vessel classes (TEU capacity, installed power, typical speeds).
+    - Split a port call into phases (arrival, hotel, cargo ops, departure).
+    - Convert time in each phase into energy and fuel use for auxiliary engines/boilers.
+
+- **Terminal operations**
+
+  - Functions to approximate:
+
+    - STS crane energy per move.
+    - Yard equipment consumption per TEU.
+  - Aggregate terminal energy and allocate it per container.
+
+### Fuel & Emissions (`modules.fuel`)
+
+- **Road fuel service**
+
+  - Converts road distances and payload into:
+
+    - Diesel consumption (L or kg).
+    - Emissions using road-specific factors.
+  - Handles different truck configurations and load factors when applicable.
+
+- **Cabotage fuel service**
+
+  - Converts sea distance and port phase durations into:
+
+    - Bunker fuel consumption at sea.
+    - Auxiliary fuel for hotel and cargo ops.
+  - Uses calibrated specific fuel consumption and power factors per vessel class.
+
+- **Multimodal fuel profiles**
+
+  - High-level functions that:
+
+    - Combine road-only, O→Port, Port→D and sea legs into a single “multimodal fuel profile”.
+    - Return structured objects with per-leg and total fuel usage by fuel type.
+
+- **Emissions conversion**
+
+  - Functions that apply emission factors (per unit of fuel) to:
+
+    - Compute WTW GHG emissions per leg and per TEU.
+    - Keep a clear audit trail of which factor set is used.
+
+### Costs & Prices (`modules.costs`)
+
+- **Fuel price ingestion**
+
+  - Logic to fetch or parse fuel price tables (e.g. diesel series, bunker prices).
+  - Normalizes units and currencies into the internal convention used by the model.
+
+- **Monetary cost modeling**
+
+  - Functions that:
+
+    - Map fuel use (by type) into fuel cost.
+    - Incorporate additional cabotage-specific components when applicable (e.g. port fees, hotel costs, terminal handling).
+  - Provide aggregate cost indicators per TEU for each scenario.
+
+### Persistence & Caching (`modules.functions.database_manager` and related)
+
+- **SQLite session management**
+
+  - Context managers to open, commit and rollback SQLite transactions safely.
+  - Ensures all DB interactions are logged and errors are surfaced clearly.
+
+- **Routing cache schema & operations**
+
+  - CRUD helpers for the road legs cache (generic O→D store).
+  - Implements:
+
+    - “Lookup-then-insert” semantics for ORS-derived distances and coordinates.
+    - Idempotent upsert logic keyed by normalized origin/destiny labels and flags (e.g. HGV).
+
+- **Other tables**
+
+  - Additional helper functions for any auxiliary tables used by batch runs or heatmaps, keeping all SQL in a single, auditable place.
+
+### Plotting & Diagnostics (when present)
+
+- **Plot helpers**
+
+  - Utilities to generate:
+
+    - Route maps combining road and sea legs.
+    - Heatmaps and comparative bar/line plots for cost and emissions.
+  - Centralized style defaults so figures are consistent across apps.
+
+- **Debug visualizations**
+
+  - Optional diagnostic plots (e.g. distributions of distances, fuel per TEU) used during calibration and sanity checks.
+
+All higher-level behavior exposed by `apps/` and `scripts/` is built by composing these module functions. For any specific analysis or bug, the recommended starting point is to locate the relevant subpackage under `modules/` (road, cabotage, fuel, costs, persistence, plotting) and follow the call chain from there.
+
+---
 
 ## Road Routing Engine (ORS-Based)
 
+The road routing engine is the only component allowed to talk to the **OpenRouteService (ORS)** API. It turns free-text origins/destinies into consistent, cached road legs that downstream modules use for fuel, emissions and cost calculations.
+
+### Responsibilities
+
+- Normalize and geocode free-text locations (addresses, CEPs, `lat,lon` strings).
+- Call ORS **geocoding** and **directions** endpoints for the `driving-car` profile (including HGV variants when needed).
+- Persist all successfully computed legs in a **SQLite cache**, keyed by canonical origin/destiny labels (and flags like HGV).
+- Expose a simple Python interface used by:
+
+  - CLI apps under `apps/` (end-user tools).
+  - Command-line scripts under `scripts/` (precomputation and batch runs).
+  - Higher-level services in `modules.fuel` and cabotage logic.
+
+### External Dependency (ORS API)
+
+- Uses **OpenRouteService** over HTTPS for:
+
+  - Forward geocoding (text → coordinates).
+  - Routing (coordinates → distance, duration, geometry).
+- ORS API key is read from an **environment variable** (see the configuration section).
+- Network behavior:
+
+  - Configurable timeouts and retry logic for transient errors.
+  - Basic rate-limit awareness (HTTP 429) so batch scripts can stop cleanly and be resumed later.
+
+### Main Components (Conceptual)
+
+- ORS HTTP client
+
+  - Small wrapper around `requests` (or equivalent).
+  - Responsible for:
+
+    - Injecting the API key and headers.
+    - Building URLs and payloads for geocoding and directions.
+    - Raising clear exceptions on HTTP or JSON errors.
+
+- Geocoding helpers
+
+  - Parse and normalize user-provided locations (origin/destiny).
+  - Call ORS geocoding exposed by the client.
+  - Return a typed result containing:
+
+    - Canonical label (e.g. `"São Paulo - SP, Brasil"`).
+    - Latitude/longitude pair.
+    - Optional metadata (confidence, etc.) for logging.
+
+- Directions helpers
+
+  - Take resolved coordinates and call ORS directions.
+  - Extract from the response:
+
+    - Total distance (km).
+    - Travel time (seconds).
+    - Route geometry (when needed for plotting or debugging).
+  - Expose a small, stable Python object to the rest of the code.
+
+- Routing orchestration functions
+
+  - Build high-level legs such as:
+
+    - Road-only leg: `origin → destiny`.
+    - First-mile leg: `origin → origin_port`.
+    - Last-mile leg: `destiny_port → destiny`.
+  - Handle HGV vs non-HGV profiles when required by the scenario.
+  - Central place that decides when to read/write the cache.
+
+### SQLite Road-Leg Cache
+
+All road legs are cached in a **single generic table** (e.g. `heatmap_runs`) managed by the SQLite layer:
+
+- Key fields (conceptually):
+
+  - `origin` / `destiny`: canonical text labels after geocoding.
+  - `origin_lat` / `origin_lon`, `destiny_lat` / `destiny_lon`: coordinates.
+  - `distance_km`: road distance returned by ORS.
+  - `is_hgv`: flag for heavy-goods vehicle profile.
+  - `insertion_ts`: timestamp of when the row was written.
+
+- Purpose:
+
+  - Provide a **generic O→D cache** reusable across:
+
+    - Road-only assessments.
+    - Multimodal legs (O→Port, Port→D).
+    - Heatmap and batch runs.
+
+- Access pattern:
+
+  - All DB reads/writes go through the shared database manager (`modules.functions.database_manager`), which:
+
+    - Wraps connections in context managers.
+    - Logs any error and rolls back failed transactions.
+    - Keeps SQL statements centralized and auditable.
+
+### Caching Algorithm (Single O–D Pair)
+
+For a typical CLI/script call (`origin`, `destiny`, flags):
+
+1. **Raw lookup**
+
+   - Check whether there is already a row for the **raw CLI inputs** (`origin_raw`, `destiny_raw`, `is_hgv`).
+   - If found and `overwrite=False`, **do not call ORS** and reuse the cached values.
+
+2. **Geocoding**
+
+   - If not found:
+
+     - Geocode origin and destiny via ORS.
+     - If either cannot be geocoded, insert a **NULL/placeholder row** (with coordinates/distance set to `NULL`) and log a warning.
+
+3. **Canonical lookup**
+
+   - Using the **resolved canonical labels** (e.g. `"São Paulo - SP, Brasil"`), check again in the cache:
+
+     - If a row exists and `overwrite=False`, reuse it (even if the raw inputs were slightly different).
+
+4. **Directions call and upsert**
+
+   - If still no valid entry:
+
+     - Call ORS directions for the resolved coordinates.
+     - Extract distance/time and upsert the row keyed by canonical labels (`origin`, `destiny`, `is_hgv`).
+     - Store coordinates and `distance_km` plus any metadata required by downstream modules.
+
+This strategy guarantees that:
+
+- The **same physical leg** (e.g. São Paulo ↔ Salvador) is never recomputed unnecessarily, even if the user types slightly different free-text labels.
+- The cache is **idempotent** and safe to re-use across runs and scripts.
+- Failures (geocoding or routing) are recorded explicitly instead of silently ignored.
+
+### Integration With Higher-Level Code
+
+- CLI apps and scripts never talk to ORS directly:
+
+  - They call routing services in `modules.road` which:
+
+    - Hide HTTP and JSON details.
+    - Enforce caching rules.
+    - Return plain Python objects with distances, coordinates and metadata.
+
+- Fuel/emissions modules (`modules.fuel`) receive:
+
+  - Distances (km) for each road leg.
+  - Optionally, travel times and HGV/weight information when relevant for consumption curves.
+
+- Plotting/mapping helpers can:
+
+  - Use stored coordinates (and geometries when available) to draw route maps without calling ORS again.
+
+In practice, if you need any road distance or leg, the correct entry point is always a function in `modules.road` that wraps this engine, not a direct HTTP call or ad-hoc database query from other parts of the code.
+
+---
+
 ## Cabotage & Port Operations Model
+
+The cabotage and port operations model encapsulates all **sea-leg** and **port-side** energy use for container services, and is implemented mainly in `modules/fuel/cabotage_fuel_service.py` plus related helpers in `modules/fuel` and static tables under `data/`.
+
+### Scope and Responsibilities
+
+- Represent container vessels (by class) with:
+
+  - TEU capacity
+  - Installed propulsion and auxiliary power
+  - Typical service speeds and hotel loads
+- Represent port calls as a sequence of **phases** (arrival, hotel, cargo operations, departure).
+- Convert:
+
+  - Sea distance between ports
+  - Time spent in each port phase
+    into total fuel consumption (by fuel type) for:
+  - Sea sailing
+  - Hotelling (at berth/anchorage)
+  - Terminal operations (cranes, yard equipment)
+- Return a **cabotage fuel profile** that can be:
+
+  - Combined with road legs in the multimodal fuel service
+  - Converted to emissions and monetary cost downstream
+
+### Inputs and Data Dependencies
+
+- Vessel and port parameter tables in `data/`, for example:
+
+  - Vessel classes (TEU, power, SFOC, speed)
+  - Port/terminal identifiers and UF (state) codes
+  - Phase durations (hours per call in arrival, hotel, ops, departure)
+  - Terminal handling intensity (moves per TEU, energy per move)
+- Sea route distance between ports:
+
+  - Either precomputed (static tables in `data/`) or inferred from a calibrated distance matrix
+  - Used to determine sailing time given vessel speed profiles
+
+All these inputs are loaded through dedicated loader functions so the cabotage service receives typed, validated structures instead of raw CSV/JSON rows.
+
+### Phase-Based Energy and Fuel Model
+
+The core of the cabotage model is a **phase-based breakdown** of a port call and voyage:
+
+- Sea sailing phase
+
+  - Uses vessel speed, resistance and specific fuel consumption to:
+
+    - Compute propulsion power × time
+    - Convert to bunker fuel consumption (e.g. VLSFO, MGO) per voyage
+- Hotelling phase (at berth/anchorage)
+
+  - Uses auxiliary power profiles for:
+
+    - Ship hotel loads (lights, HVAC, hotel systems)
+    - Auxiliary machinery
+  - Integrates power over the hotelling duration to get fuel used
+- Cargo operations phase
+
+  - Represents:
+
+    - STS crane energy per move
+    - Yard equipment energy per TEU (RTGs, reach stackers, internal trucks)
+  - Converts total energy demand into fuel consumption (or electricity-equivalent, depending on the factor set used)
+- Departure / maneuvering phases
+
+  - Uses lower-speed propulsion/auxiliary profiles to cover maneuvering, tugs, and short movements in/out of berth
+
+Each phase is parameterized via the `data/` tables, so it can be recalibrated without changing Python code.
+
+### Per-TEU Allocation and Outputs
+
+The cabotage fuel service exposes a function (e.g. `get_cabotage_fuel_profile(...)`) that:
+
+- Receives:
+
+  - Origin and destination ports (including UF codes)
+  - Cargo mass or TEU count
+  - Vessel class and scenario flags
+- Computes:
+
+  - Total fuel consumption by fuel type for:
+
+    - Sea sailing
+    - Hotelling
+    - Cargo operations
+  - Per-TEU (or per tonne) allocation of this fuel
+- Returns a structured object containing:
+
+  - Phase-level breakdown (sea, hotel, ops, departure, etc.)
+  - Aggregated totals per fuel type
+  - Metadata (ports, vessel class, distances, timings)
+
+This output is the main input for:
+
+- The **multimodal fuel service**, which combines road and sea legs into a single profile.
+- The **emissions module**, which applies emission factors per fuel type.
+- The **cost module**, which multiplies fuel quantities by bunker prices and adds port-related charges if modeled.
+
+### Integration with the Rest of the System
+
+- CLI apps and scripts never implement cabotage logic directly:
+
+  - They call the cabotage fuel service through the multimodal fuel orchestrator in `modules/fuel/multimodal_fuel_service.py`.
+- The cabotage service:
+
+  - Is independent of the road routing cache (no direct ORS calls).
+  - Relies only on:
+
+    - Static tables in `data/`
+    - Simple numeric inputs (sea distance, TEU, vessel class, etc.)
+- This separation allows:
+
+  - Reusing the cabotage model in alternative experiments (e.g. different origin ports, different vessel classes)
+  - Updating vessel/terminal assumptions via `data/` without changing the code path used by apps and scripts.
 
 ## Fuel, Emissions & Cost Calculation
 
