@@ -83,14 +83,14 @@ class ComparisonApp(tk.Tk):
         in_group = ttk.LabelFrame(left_frame, text="Shipment Details", padding="10")
         in_group.pack(fill=tk.X, pady=5)
         
-        self._add_input(in_group, 0, "Origin:", "ent_origin", "Avenida Professor Luciano Gualberto, São Paulo")
+        self._add_input(in_group, 0, "Origin:", "ent_origin", "Pelotas, RS")
         self._add_input(in_group, 1, "Destiny:", "ent_destiny", "Manaus, AM")
         self._add_input(in_group, 2, "Cargo (t):", "ent_cargo", "30.0")
         
         # Truck Select
         ttk.Label(in_group, text="Truck Type:").grid(row=3, column=0, sticky=tk.W, pady=5)
         self.cb_truck = ttk.Combobox(in_group, values=sorted(list_truck_keys()), state="readonly")
-        self.cb_truck.set("semi_27t")
+        self.cb_truck.set("auto_by_weight")
         self.cb_truck.grid(row=3, column=1, sticky=tk.EW, padx=5)
         in_group.columnconfigure(1, weight=1)
 
