@@ -17,6 +17,7 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
+import tkintermapview
 from pathlib import Path
 
 # --- Path Bootstrap ---
@@ -34,17 +35,7 @@ if str(ROOT) not in sys.path:
 from modules.infra.log_manager import init_logging, get_logger
 from modules.multimodal import build_path_geometry, evaluate_path
 from modules.fuel.truck_specs import list_truck_keys
-
-# Import the visual renderer
-# We use the new dynamic renderer we just built
 from modules.plot.cabotage_plot_helper import get_visual_sea_path
-
-# Map Widget
-try:
-    import tkintermapview
-except ImportError:
-    print("Please run: pip install tkintermapview")
-    sys.exit(1)
 
 _log = get_logger("gui")
 
@@ -158,7 +149,6 @@ class ComparisonApp(tk.Tk):
             self._log_ui(f"Routing: {origin} -> {destiny}...")
             
             # 1. Build Geometry
-            #    Use 'driving-hgv' but assume cache is okay unless testing
             geo = build_path_geometry(origin, destiny, ors_profile="driving-hgv", overwrite_road=False)
             
             if not geo or geo["status"] != "ok":
@@ -185,7 +175,6 @@ class ComparisonApp(tk.Tk):
         """
         Draws markers and path on the map widget.
         """
-        # Helper to extract (lat, lon) tuples
         def _loc(pt):
             return float(pt["lat"]), float(pt["lon"])
 
@@ -193,7 +182,6 @@ class ComparisonApp(tk.Tk):
         origin_coords = _loc(geo["origin"])
         dest_coords = _loc(geo["destiny"])
         
-        # Multimodal Path: O -> Port -> Port -> D
         po = geo["port_origin"]
         pd = geo["port_destiny"]
         
@@ -201,37 +189,40 @@ class ComparisonApp(tk.Tk):
         po_coords = _loc(po["gate"]) if po.get("gate") else _loc(po)
         pd_coords = _loc(pd["gate"]) if pd.get("gate") else _loc(pd)
 
-        # 1. Add Markers
-        self.map_widget.set_marker(origin_coords[0], origin_coords[1], text=geo["origin"]["label"])
-        self.map_widget.set_marker(dest_coords[0], dest_coords[1], text=geo["destiny"]["label"])
+        # 1. Markers
+        # Port Labels at Bottom (using standard marker text)
         self.map_widget.set_marker(po_coords[0], po_coords[1], text=f"Port: {po['name']}", marker_color_circle="blue")
         self.map_widget.set_marker(pd_coords[0], pd_coords[1], text=f"Port: {pd['name']}", marker_color_circle="blue")
         
-        # 2. Draw Paths
+        # Origin/Destiny Labels (Standard marker text is usually above or center)
+        self.map_widget.set_marker(origin_coords[0], origin_coords[1], text=geo["origin"]["label"])
+        self.map_widget.set_marker(dest_coords[0], dest_coords[1], text=geo["destiny"]["label"])
         
-        # ROAD 1 (Origin -> Port Origin)
-        # Use set_path with a list of coordinate tuples
+        # 2. Paths
+        
+        # A. Multimodal Road Leg 1 (Purple)
+        # Only draw if they are different points
         if origin_coords != po_coords:
-             self.map_widget.set_path([origin_coords, po_coords], color="#800080", width=3) # Purple
+             self.map_widget.set_path([origin_coords, po_coords], color="#A020F0", width=5)
 
-        # SEA (Port Origin -> Port Destiny)
-        # Use the new curved renderer
-        sea_path = get_visual_sea_path(po_coords, pd_coords)
-        if sea_path and len(sea_path) > 1:
-             self.map_widget.set_path(sea_path, color="#0000FF", width=4) # Blue
+        # B. Multimodal Sea Leg (Blue Curved)
+        try:
+             sea_path = get_visual_sea_path(po_coords, pd_coords)
+        except Exception as e:
+             _log.error(f"Failed to render curved sea path: {e}")
+             sea_path = [po_coords, pd_coords]
+        
+        if len(sea_path) > 1:
+            self.map_widget.set_path(sea_path, color="#0000FF", width=4)
 
-        # ROAD 2 (Port Destiny -> Destiny)
+        # C. Multimodal Road Leg 2 (Purple)
         if pd_coords != dest_coords:
-             self.map_widget.set_path([pd_coords, dest_coords], color="#800080", width=3) # Purple
+             self.map_widget.set_path([pd_coords, dest_coords], color="#A020F0", width=5)
 
-        # ROAD DIRECT (Origin -> Destiny)
-        # This is the pure road comparison leg. Draw it in RED.
-        # We check if it's distinct from the multimodal path to avoid clutter, 
-        # but usually it's nice to see the "straight line" alternative.
-        self.map_widget.set_path([origin_coords, dest_coords], color="#FF0000", width=2) # Red
+        # D. Direct Road (Red) - Draw LAST to be on top
+        self.map_widget.set_path([origin_coords, dest_coords], color="#FF0000", width=2)
 
-        # 3. Set View
-        # Include all waypoints so the whole curve is seen
+        # 3. View Fit
         all_points = [origin_coords, dest_coords] + sea_path
         all_lats = [p[0] for p in all_points]
         all_lons = [p[1] for p in all_points]
@@ -239,16 +230,15 @@ class ComparisonApp(tk.Tk):
         min_lat, max_lat = min(all_lats), max(all_lats)
         min_lon, max_lon = min(all_lons), max(all_lons)
 
-        # Pad the view slightly so markers aren't on the absolute edge
-        pad = 1.0
+        pad = 2.0 # Add padding
         
         try:
             self.map_widget.fit_bounding_box(
                 (max_lat + pad, min_lon - pad), 
                 (min_lat - pad, max_lon + pad)
             )
-        except Exception as e:
-             _log.warning(f"Could not fit bounding box: {e}")
+        except Exception:
+            pass
 
     def _show_report(self, res):
         rd = res["road_only"]
@@ -258,13 +248,14 @@ class ComparisonApp(tk.Tk):
         l = []
         l.append("📊 COMPARISON RESULT")
         l.append("-" * 35)
-        l.append(f"ROAD ONLY ({rd['distance_km']:.0f} km)")
-        l.append(f"  Fuel: {rd['liters']:.0f} L")
+        l.append(f"ROAD ONLY (Red)")
+        l.append(f"  Dist: {rd['distance_km']:.0f} km")
         l.append(f"  Cost: R$ {rd['cost']:,.2f}")
         l.append(f"  CO2e: {rd['co2e']:.0f} kg")
         l.append("-" * 35)
-        l.append(f"MULTIMODAL (Sea: {mm['sea']['distance_km']:.0f} km)")
-        l.append(f"  Road Legs: {mm['first_mile']['distance_km'] + mm['last_mile']['distance_km']:.0f} km")
+        l.append(f"MULTIMODAL (Purple + Blue)")
+        l.append(f"  Sea:  {mm['sea']['distance_km']:.0f} km")
+        l.append(f"  Road: {mm['first_mile']['distance_km'] + mm['last_mile']['distance_km']:.0f} km")
         l.append(f"  Cost: R$ {mm['total_cost']:,.2f}")
         l.append(f"  CO2e: {mm['total_co2e']:.0f} kg")
         l.append("=" * 35)
