@@ -11,10 +11,9 @@ creating a realistic "arc" effect.
 
 Logic:
   1. Load all ports from JSON.
-  2. Sort them into a single linear sequence ("Coastal Highway"):
-     - South of Natal (~-5.5 lat): Ordered South -> North (increasing Lat).
-     - North of Natal: Ordered East -> West (decreasing Lon).
-  3. Routing A->B finds the slice of ports between A and B in this sequence.
+  2. Load fixed offshore waypoints from TXT.
+  3. Sort them into a single linear sequence ("Coastal Highway").
+  4. Routing A->B finds the slice of points between A and B in this sequence.
 """
 
 import json
@@ -22,22 +21,20 @@ import math
 from pathlib import Path
 from typing import List, Tuple, Any
 
+from modules.infra.log_manager import get_logger
+
+_log = get_logger(__name__)
+
 # ────────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ────────────────────────────────────────────────────────────────────────────────
 
 # "The Corner" of Brazil (approx Natal/Touros).
-# Divides the North coast (Amazon) from the East/South coast.
 CORNER_LAT = -5.2
 
-# Default path assumption (relative to repo root when running as module)
+# Default paths (relative to repo root when running as module)
 _DEFAULT_PORTS_PATH = Path("data/processed/cabotage_data/ports_br.json")
-
-# Critical "turning points" to force the route shape around land masses.
-# These are inserted into the sorted sequence based on their geography.
-# Format: (lat, lon, label)
-_FIXED_WAYPOINTS = [
-]
+_DEFAULT_WAYPOINTS_PATH = Path("data/raw/plot/fixed_waypoints.txt")
 
 # Global cache for the sorted waypoints
 _COASTAL_PATH: List[Tuple[float, float]] = []
@@ -50,54 +47,92 @@ _COASTAL_PATH: List[Tuple[float, float]] = []
 def _get_coastal_score(lat: float, lon: float) -> float:
     """
     Assign a 'score' representing linear distance along the coast from South to North-West.
-    
-    Sequence: South -> North (East Coast) -> West (North Coast/Amazon).
     """
-    # The "Corner" is roughly at Latitude -5.2 (Touros, RN)
     if lat < CORNER_LAT:
         # ZONE 1: East Coast (South -> North)
         # Score increases as Latitude increases (moves North toward 0).
-        # Range: -34 (South) to -5.2 (Natal)
-        # Score: 0 to ~29
         return lat + 40.0
     else:
         # ZONE 2: North Coast (Natal -> Amazon)
         # Score increases as Longitude decreases (moves West toward -60).
-        # We start adding from the max score of Zone 1 (~35).
-        # Lon -34 (Natal) -> Lon -60 (Manaus).
-        # We use abs(lon) to make it positive and additive.
         return 40.0 + abs(lon)
 
 
-def _load_waypoints(json_path: Path = _DEFAULT_PORTS_PATH) -> List[Tuple[float, float]]:
+def _load_waypoints_from_file(path: Path) -> List[Tuple[float, float]]:
+    """Parse 'lat, lon' lines from text file."""
+    points = []
+    if not path.exists():
+        # Try stepping up one level if running from subfolder
+        alt = Path("..") / path
+        if alt.exists():
+            path = alt
+        else:
+            _log.warning(f"Waypoints file not found at {path}")
+            return []
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split(",")
+                if len(parts) >= 2:
+                    try:
+                        lat = float(parts[0].strip())
+                        lon = float(parts[1].strip())
+                        points.append((lat, lon))
+                    except ValueError:
+                        continue
+    except Exception as e:
+        _log.error(f"Failed to load waypoints from {path}: {e}")
+        
+    return points
+
+
+def _load_ports_from_json(path: Path) -> List[Tuple[float, float]]:
+    """Extract lat/lon from ports JSON."""
+    points = []
+    if not path.exists():
+        # Try stepping up
+        alt = Path("..") / path
+        if alt.exists():
+            path = alt
+        else:
+            # Fallback check for repo root structure
+            alt2 = Path("data/processed/cabotage_data/ports_br.json")
+            if alt2.exists():
+                path = alt2
+            else:
+                _log.warning(f"Ports file not found at {path}")
+                return []
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            ports = json.load(f)
+            for p in ports:
+                points.append((float(p["lat"]), float(p["lon"])))
+    except Exception as e:
+        _log.error(f"Failed to load ports from {path}: {e}")
+        
+    return points
+
+
+def _load_combined_path() -> List[Tuple[float, float]]:
     """
     Load ports + fixed waypoints and sort them into a single line.
     """
-    # Robust path resolution
-    if not json_path.exists():
-        alt = Path("data/processed/cabotage_data/ports_br.json")
-        if alt.exists():
-            json_path = alt
-        else:
-            alt2 = Path("../data/processed/cabotage_data/ports_br.json")
-            if alt2.exists():
-                json_path = alt2
-    
     points = []
     
-    # 1. Add Ports from JSON
-    if json_path.exists():
-        with open(json_path, "r", encoding="utf-8") as f:
-            ports = json.load(f)
-            for p in ports:
-                points.append( (float(p["lat"]), float(p["lon"])) )
+    # 1. Load Ports (Real locations)
+    points.extend(_load_ports_from_json(_DEFAULT_PORTS_PATH))
     
-    # 2. Add Fixed Waypoints (Virtual Turnpoints)
-    for lat, lon, _ in _FIXED_WAYPOINTS:
-        points.append((lat, lon))
+    # 2. Load Fixed Waypoints (Virtual offshore points)
+    points.extend(_load_waypoints_from_file(_DEFAULT_WAYPOINTS_PATH))
+    
+    if not points:
+        _log.error("No coastal points loaded! Sea routes will be straight lines.")
+        return []
         
     # 3. Sort everything by "Coastal Score"
-    # This interleaves the ports and virtual waypoints into one valid sequence
+    # This merges the lists into one continuous geographic sequence
     points.sort(key=lambda p: _get_coastal_score(p[0], p[1]))
     
     return points
@@ -107,7 +142,7 @@ def _ensure_path():
     """Singleton loader."""
     global _COASTAL_PATH
     if not _COASTAL_PATH:
-        _COASTAL_PATH = _load_waypoints()
+        _COASTAL_PATH = _load_combined_path()
     return _COASTAL_PATH
 
 
@@ -120,6 +155,9 @@ def _dist_sq(p1, p2):
 
 def _find_nearest_idx(lat, lon, points):
     """Find index of the closest point on the highway."""
+    if not points:
+        return -1
+        
     best_i = -1
     best_d = float("inf")
     for i, p in enumerate(points):
@@ -135,6 +173,8 @@ def get_visual_sea_path(start_coords: Tuple[float, float], end_coords: Tuple[flo
     Snaps start/end to the "Coastal Highway" and fills the gap.
     """
     highway = _ensure_path()
+    if not highway:
+        return [start_coords, end_coords]
     
     # Snap inputs to the nearest points on our sorted line
     idx_start = _find_nearest_idx(start_coords[0], start_coords[1], highway)
@@ -145,11 +185,11 @@ def get_visual_sea_path(start_coords: Tuple[float, float], end_coords: Tuple[flo
     if idx_start != -1 and idx_end != -1 and idx_start != idx_end:
         step = 1 if idx_end > idx_start else -1
         
-        # Traverse the highway from [nearest start] to [nearest end]
+        # Traverse the highway
         current = idx_start
         
-        # Include the start anchor immediately to pull the line to the coast
-        if current != idx_start:
+        # Include start anchor if it's not the start itself (it rarely is)
+        if highway[current] != start_coords:
              path.append(highway[current])
              
         while current != idx_end:
@@ -164,16 +204,16 @@ def get_visual_sea_path(start_coords: Tuple[float, float], end_coords: Tuple[flo
 
 # Smoke test
 if __name__ == "__main__":
+    from modules.infra.log_manager import init_logging
+    init_logging(level="DEBUG")
+    
     print("--- Dynamic Route Renderer Test ---")
-    path = _load_waypoints()
+    path = _load_combined_path()
     print(f"Loaded {len(path)} total waypoints (Ports + Virtual).")
     
-    print("\nSorted Sequence Sample:")
-    for p in path:
-        # Simple visualization of the sort
-        if p[0] < -20: print(f"  South: {p}")
-        elif p[0] < -5: print(f"  East:  {p}")
-        else:           print(f"  North: {p}")
+    if path:
+        print(f"First (South): {path[0]}")
+        print(f"Last (North/West): {path[-1]}")
             
     # Test: Santos -> Manaus
     route = get_visual_sea_path((-23.95, -46.32), (-3.1, -60.0))
