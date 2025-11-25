@@ -34,6 +34,7 @@ if str(ROOT) not in sys.path:
 from modules.infra.log_manager import init_logging, get_logger
 from modules.multimodal import build_path_geometry, evaluate_path
 from modules.fuel.truck_specs import list_truck_keys
+from modules.plot.cabotage_plot_helper import get_visual_sea_path
 
 # Map Widget
 try:
@@ -207,60 +208,35 @@ class ComparisonApp(tk.Tk):
         # 1. Road: Origin -> Port Origin (Red)
         self.map_widget.set_path([origin_coords, po_coords], color="red", width=3)
         
-        # 2. Sea: Port Origin -> Port Destiny (Blue)
-        # USE WAYPOINTS to simulate coastal route
-        sea_path = self._get_sea_path(po_coords, pd_coords)
+        # 2. Sea: Port Origin -> Port Destiny (Blue - Curved)
+        # USE NEW RENDERER from modules.cabotage.route_renderer
+        # Note: Use get_visual_sea_path (not get_sea_path) if that was the function name we settled on.
+        # Based on our conversation, it is get_visual_sea_path.
+        try:
+             sea_path = get_visual_sea_path(po_coords, pd_coords)
+        except Exception as e:
+             _log.error(f"Failed to render curved sea path: {e}")
+             sea_path = [po_coords, pd_coords] # Fallback to straight line
+
         self.map_widget.set_path(sea_path, color="blue", width=4)
         
         # 3. Road: Port Destiny -> Destiny (Red)
         self.map_widget.set_path([pd_coords, dest_coords], color="red", width=3)
         
         # --- Robust Bounding Box Calculation ---
-        # Include all waypoints in bounding box logic
-        all_points = [origin_coords, dest_coords, po_coords, pd_coords] + sea_path
+        # Include all waypoints in bounding box logic so the whole curve is seen
+        all_points = [origin_coords, dest_coords] + sea_path
         all_lats = [p[0] for p in all_points]
         all_lons = [p[1] for p in all_points]
 
         min_lat, max_lat = min(all_lats), max(all_lats)
         min_lon, max_lon = min(all_lons), max(all_lons)
 
-        pad = 2.0
+        pad = 1.0
         self.map_widget.fit_bounding_box(
             (max_lat + pad, min_lon - pad), 
             (min_lat - pad, max_lon + pad)
         )
-
-    def _get_sea_path(self, start, end):
-        """
-        Generates a list of coordinates that roughly hug the Brazilian coast
-        instead of a straight line cutting through the continent.
-        """
-        # Simple heuristic: if going North/South along Brazil, route around the "hump" (Natal/Recife)
-        # Brazil Coast "Corner": Approx -5.0, -35.0 (Rio Grande do Norte)
-        # Amazon Delta entry: Approx 0.0, -48.0
-        
-        lat1, lon1 = start
-        lat2, lon2 = end
-        
-        path = [start]
-        
-        # Heuristic: If crossing the "hump" (Latitude -5 to -25, Longitude < -45 to > -35)
-        # We add a waypoint off the coast of Recife/Natal
-        
-        # Check if we are going between South/Southeast and North/Northeast
-        is_south = lat1 < -20 or lat2 < -20
-        is_north = lat1 > -10 or lat2 > -10
-        
-        if is_south and is_north:
-             # Add "The Corner" waypoint (offshore Natal)
-             path.append((-5.0, -34.0))
-             
-             # If going deep into Amazon (Manaus), add delta waypoint
-             if (lat1 > -2 and lon1 < -50) or (lat2 > -2 and lon2 < -50):
-                 path.append((0.5, -47.0)) # Mouth of Amazon
-        
-        path.append(end)
-        return path
 
     def _show_report(self, res):
         rd = res["road_only"]
