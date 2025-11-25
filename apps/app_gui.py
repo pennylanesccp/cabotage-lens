@@ -17,7 +17,6 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
-import tkintermapview # Map Widget
 from pathlib import Path
 
 # --- Path Bootstrap ---
@@ -35,7 +34,17 @@ if str(ROOT) not in sys.path:
 from modules.infra.log_manager import init_logging, get_logger
 from modules.multimodal import build_path_geometry, evaluate_path
 from modules.fuel.truck_specs import list_truck_keys
+
+# Import the visual renderer
+# We use the new dynamic renderer we just built
 from modules.plot.cabotage_plot_helper import get_visual_sea_path
+
+# Map Widget
+try:
+    import tkintermapview
+except ImportError:
+    print("Please run: pip install tkintermapview")
+    sys.exit(1)
 
 _log = get_logger("gui")
 
@@ -195,28 +204,32 @@ class ComparisonApp(tk.Tk):
         # 1. Add Markers
         self.map_widget.set_marker(origin_coords[0], origin_coords[1], text=geo["origin"]["label"])
         self.map_widget.set_marker(dest_coords[0], dest_coords[1], text=geo["destiny"]["label"])
-        self.map_widget.set_marker(po_coords[0], po_coords[1], text=f"{po['name']}", marker_color_circle="blue")
-        self.map_widget.set_marker(pd_coords[0], pd_coords[1], text=f"{pd['name']}", marker_color_circle="blue")
+        self.map_widget.set_marker(po_coords[0], po_coords[1], text=f"Port: {po['name']}", marker_color_circle="blue")
+        self.map_widget.set_marker(pd_coords[0], pd_coords[1], text=f"Port: {pd['name']}", marker_color_circle="blue")
         
         # 2. Draw Paths
-        # Road Leg 1 (Origin -> Port Origin) - PURPLE/RED
-        # Only draw if distance > 0 (avoid 0-length line bugs)
+        
+        # ROAD 1 (Origin -> Port Origin)
+        # Use set_path with a list of coordinate tuples
         if origin_coords != po_coords:
-            self.map_widget.set_path([origin_coords, po_coords], color="#A020F0", width=3) # Purple for truck
-        
-        # Sea Leg (Port Origin -> Port Destiny) - BLUE (Curved)
-        try:
-             sea_path = get_visual_sea_path(po_coords, pd_coords)
-        except Exception as e:
-             _log.error(f"Failed to render curved sea path: {e}")
-             sea_path = [po_coords, pd_coords]
-        
-        self.map_widget.set_path(sea_path, color="#0000FF", width=4)
-        
-        # Road Leg 2 (Port Destiny -> Destiny) - PURPLE/RED
+             self.map_widget.set_path([origin_coords, po_coords], color="#800080", width=3) # Purple
+
+        # SEA (Port Origin -> Port Destiny)
+        # Use the new curved renderer
+        sea_path = get_visual_sea_path(po_coords, pd_coords)
+        if sea_path and len(sea_path) > 1:
+             self.map_widget.set_path(sea_path, color="#0000FF", width=4) # Blue
+
+        # ROAD 2 (Port Destiny -> Destiny)
         if pd_coords != dest_coords:
-            self.map_widget.set_path([pd_coords, dest_coords], color="#A020F0", width=3)
-        
+             self.map_widget.set_path([pd_coords, dest_coords], color="#800080", width=3) # Purple
+
+        # ROAD DIRECT (Origin -> Destiny)
+        # This is the pure road comparison leg. Draw it in RED.
+        # We check if it's distinct from the multimodal path to avoid clutter, 
+        # but usually it's nice to see the "straight line" alternative.
+        self.map_widget.set_path([origin_coords, dest_coords], color="#FF0000", width=2) # Red
+
         # 3. Set View
         # Include all waypoints so the whole curve is seen
         all_points = [origin_coords, dest_coords] + sea_path
