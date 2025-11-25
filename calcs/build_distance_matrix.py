@@ -3,89 +3,105 @@
 # -*- coding: utf-8 -*-
 
 """
-Port-to-port sea-distance matrix (km, using external maritime routing API)
-=========================================================================
+Port-to-port sea-distance matrix (km, Geografos + searoute fallback, with aliases)
+==================================================================================
 
 Builds a symmetric matrix of sea distances between all Brazilian cabotage ports
 defined in ``data/processed/cabotage_data/ports_br.json``.
 
-Routing backend
----------------
-Distances are obtained from an **external maritime routing API** (HTTP),
-configured via environment variables:
+Distance source priority
+------------------------
+Para cada par NÃO ordenado de portos (A, B):
 
-  • SEA_MATRIX_API_BASE  → base URL (default: "https://api.distance.tools")
-  • SEA_MATRIX_API_KEY   → API key / token (required)
+  1) Tenta Geografos com TODAS as combinações possíveis de slugs:
 
-The code assumes an endpoint similar to:
+       • slugs de A (nome principal + aliases) × slugs de B (nome principal + aliases)
+       • para cada par (slug_a, slug_b), tenta as duas URLs:
 
-    POST {SEA_MATRIX_API_BASE}/api/v2/distance/route/maritime
+           https://www.geografos.com.br/viagem-maritima-entre-portos-brasil/
+               distancia-entre-{slug_a}-e-{slug_b}.php
 
-with a JSON payload like:
+           https://www.geografos.com.br/viagem-maritima-entre-portos-brasil/
+               distancia-entre-{slug_b}-e-{slug_a}.php
 
-    {
-      "route": [
-        {"lat": <origin_lat>, "lon": <origin_lon>},
-        {"lat": <dest_lat>,   "lon": <dest_lon>}
-      ]
-    }
+     Até encontrar uma página que contenha algo como:
 
-and a response containing a "distance" object with a "kilometers" field:
+         "Distância: 198 Km ou 107 Milhas Náuticas"
 
-    {
-      "distance": {
-        "kilometers": 1234.56,
-        ...
-      },
-      ...
-    }
+     Usamos esse valor de km como distância marítima.
 
-⚠ IMPORTANT
------------
-You *must* adjust:
+  2) Se todas as combinações de slugs falharem (erro HTTP, timeout, parse error, etc.),
+     caímos para o `searoute`:
 
-  • ``_MARITIME_PATH``
-  • the JSON payload in ``_api_distance_km``
-  • the parsing logic of the API response
+         route = searoute.searoute([lon_a, lat_a], [lon_b, lat_b], units="km")
+         km = route.properties["length"]
 
-to match the provider you actually choose (SeaRoutes, NavAPI, distance.tools, ...).
-The rest of the script (matrix building, ports loading, fallback, JSON schema)
-is independent of the specific provider.
+  3) Se até o searoute falhar, a função levanta uma exceção.
 
 Coordinates
 -----------
-For each port we choose coordinates in this order of preference:
+Para coordenadas, preferência:
 
-  1) Gate coordinates, if available:
-       - p["gate_lat"] / p["gate_lon"], or
+  1) Coordenadas de gate, se existirem:
+       - p["gate_lat"] / p["gate_lon"], ou
        - p["gate"]["lat"] / p["gate"]["lon"]
-  2) Fallback: p["lat"] / p["lon"]
+  2) Caso contrário: p["lat"] / p["lon"]
 
-If the routing API fails for some pair (network error, bad response, etc.),
-we fall back to a Haversine great-circle distance multiplied by a coastline factor
-to approximate coastal routing.
+Aliases
+-------
+Este script suporta aliases no JSON de portos. Para cada porto, consideramos:
+
+  • p["geografos_slug"]          → string única ou lista de slugs explícitos.
+  • p["aliases"], p["alias"],
+    p["aka"], p["geografos_aliases"]
+      → podem ser string única ou lista de nomes alternativos.
+
+Para cada alias que for um NOME (não slug), geramos o slug com a mesma função que
+usamos para o nome principal (lowercase, sem acento, etc.).
 
 Output
 ------
-Saves a JSON file at:
+Salva um JSON em:
 
     data/processed/cabotage_data/sea_matrix.json
 
-with structure:
+no formato:
 
     {
       "unit": "km",
-      "method": "sea_matrix_api_<provider>_<version>",
-      "coastline_factor": 1.18,
-      "note": "Off-diagonal entries are sea distances (km) between port centroids/gates; symmetric.",
+      "method": "geografos_plus_searoute_v2_aliases",
+      "note": "Off-diagonal entries are sea distances (km) between ports; symmetric.",
+      "ports": [
+        {
+          "name": "...",
+          "slug": "...",
+          "slug_candidates": ["...", "..."],
+          "lat": ...,
+          "lon": ...
+        },
+        ...
+      ],
       "matrix": {
         "Port A": {"Port A": 0.0, "Port B": 123.4, ...},
-        "Port B": {...},
+        "Port B": {"Port A": 123.4, "Port B": 0.0, ...},
         ...
       }
     }
 
-(You can uncomment the CSV export if you also want a tabular file.)
+Env-tunable knobs
+-----------------
+• SEA_MATRIX_DEBUG = "1" → debug verbose no stdout.
+• GEOGRAFOS_TIMEOUT = segundos (default: 12.0).
+• SEA_MATRIX_SLEEP = segundos de sleep entre chamadas HTTP bem-sucedidas (default: 0.0).
+
+Requirements
+------------
+pip install:
+
+    requests
+    beautifulsoup4
+    pandas
+    searoute
 """
 
 from __future__ import annotations
@@ -94,12 +110,17 @@ import itertools as it
 import json
 import math
 import os
+import re
 import sys
+import time
+import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 import requests
+from bs4 import BeautifulSoup
+import searoute as sr
 
 
 # ───────────────────────────── debug flag ────────────────────────────────
@@ -109,30 +130,6 @@ DEBUG = os.getenv("SEA_MATRIX_DEBUG", "0") == "1"
 def _debug(msg: str) -> None:
     if DEBUG:
         print(msg)
-
-
-# ──────────────────────────── HTTP config ────────────────────────────────
-_API_BASE_DEFAULT = "https://api.distance.tools"
-_MARITIME_PATH = "/api/v2/distance/route/maritime"  # ← adjust to your provider
-
-
-def _get_api_base() -> str:
-    base = os.getenv("SEA_MATRIX_API_BASE", _API_BASE_DEFAULT).rstrip("/")
-    return base
-
-
-def _get_api_key() -> str:
-    key = os.getenv("SEA_MATRIX_API_KEY")
-    if not key:
-        raise SystemExit(
-            "❌ SEA_MATRIX_API_KEY not set. Please export your maritime routing "
-            "API key, e.g.:\n"
-            "   export SEA_MATRIX_API_KEY='your-key-here'"
-        )
-    return key
-
-
-_SESSION = requests.Session()
 
 
 # ───────────────────────────── repo root helper ──────────────────────────
@@ -170,7 +167,7 @@ PORTS_PATH = os.path.join(
     , "ports_br.json"
 )
 
-ports: List[Dict[str, Any]] = load_ports(PORTS_PATH)
+ports_raw: List[Dict[str, Any]] = load_ports(PORTS_PATH)
 
 
 def _resolve_port_coords(port: Dict[str, Any]) -> Tuple[float, float]:
@@ -184,13 +181,11 @@ def _resolve_port_coords(port: Dict[str, Any]) -> Tuple[float, float]:
 
     Raises ValueError if nothing usable is found.
     """
-    # 1) Flat gate_lat / gate_lon keys
     gate_lat = port.get("gate_lat")
     gate_lon = port.get("gate_lon")
     if gate_lat is not None and gate_lon is not None:
         return float(gate_lat), float(gate_lon)
 
-    # 2) Nested gate dict
     gate = port.get("gate")
     if isinstance(gate, dict):
         g_lat = gate.get("lat")
@@ -198,7 +193,6 @@ def _resolve_port_coords(port: Dict[str, Any]) -> Tuple[float, float]:
         if g_lat is not None and g_lon is not None:
             return float(g_lat), float(g_lon)
 
-    # 3) Fallback to generic lat / lon
     lat = port.get("lat")
     lon = port.get("lon")
     if lat is not None and lon is not None:
@@ -207,149 +201,209 @@ def _resolve_port_coords(port: Dict[str, Any]) -> Tuple[float, float]:
     raise ValueError(f"No usable coordinates for port: {port!r}")
 
 
-# Stable list of (label, lat, lon), using gate coords when present
-port_list: List[Tuple[str, float, float]] = []
-for p in ports:
-    name = p.get("name") or p.get("label") or "UNKNOWN_PORT"
-    lat, lon = _resolve_port_coords(p)
-    port_list.append((name, lat, lon))
-
-
-# ───────────────────────────── utilities ─────────────────────────────────
-def haversine_km(
-    a_lat: float
-    , a_lon: float
-    , b_lat: float
-    , b_lon: float
-) -> float:
+def _strip_accents(text: str) -> str:
     """
-    Great-circle distance between two points on Earth (WGS84), in km.
+    Remove accents/diacritics from a Unicode string.
     """
-    R = 6371.0088
-    ar1 = math.radians(a_lat)
-    br1 = math.radians(a_lon)
-    ar2 = math.radians(b_lat)
-    br2 = math.radians(b_lon)
-    da = ar2 - ar1
-    db = br2 - br1
-    s = (
-          math.sin(da / 2) ** 2
-        + math.cos(ar1) * math.cos(ar2) * math.sin(db / 2) ** 2
-    )
-    return 2 * R * math.atan2(math.sqrt(s), math.sqrt(1 - s))
+    norm = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in norm if not unicodedata.combining(ch))
 
 
-COASTLINE_FACTOR = 1.18  # used only for fallback approximation
-
-
-def _fallback_distance_km(
-    a_lat: float
-    , a_lon: float
-    , b_lat: float
-    , b_lon: float
-) -> float:
+def _default_geografos_slug(name: str) -> str:
     """
-    Approximate sea distance as Haversine × coastline factor.
+    Derive a Geografos-style slug from a human-readable port name.
 
-    This is only used if the maritime routing API fails for some reason
-    (e.g. network issues, invalid response).
+    Example:
+      "Porto de Santos"                 → "porto-santos"
+      "Porto do Rio de Janeiro"         → "porto-rio-de-janeiro"
+      "Porto de São Francisco do Sul"   → "porto-sao-francisco-do-sul"
+
+    Logic:
+      1) Lowercase + accent stripping.
+      2) Strip Portuguese articles/prepositions that Geografos often omits
+         from between "porto" and the city name ("de", "do", "da", "dos", "das").
+      3) Ensure a canonical "porto <rest>" base string.
+      4) Replace spaces/underscores with hyphens, drop other punctuation.
     """
-    hv = haversine_km(a_lat, a_lon, b_lat, b_lon)
-    return hv * COASTLINE_FACTOR
+    if not name:
+        return ""
+
+    txt = _strip_accents(name).lower().strip()
+
+    prefixes = [
+          "porto de "
+        , "porto do "
+        , "porto da "
+        , "porto dos "
+        , "porto das "
+        , "porto "
+    ]
+
+    rest = None
+    for pref in prefixes:
+        if txt.startswith(pref):
+            rest = txt[len(pref):].strip()
+            break
+
+    if rest is None:
+        base = txt
+    else:
+        base = f"porto {rest}"
+
+    chars: List[str] = []
+    for ch in base:
+        if ch.isalnum():
+            chars.append(ch)
+        elif ch in (" ", "-", "_"):
+            chars.append("-")
+
+    slug = "".join(chars)
+    slug = re.sub(r"-+", "-", slug).strip("-")
+
+    return slug
 
 
-# Cache to avoid recomputing distances for identical coord pairs
-_route_cache: Dict[Tuple[float, float, float, float], float] = {}
-
-
-def _cache_key(
-    a_lat: float
-    , a_lon: float
-    , b_lat: float
-    , b_lon: float
-) -> Tuple[float, float, float, float]:
+def _ensure_list_str(value: Any) -> List[str]:
     """
-    Build a symmetric cache key based on coordinates.
-    We round a bit for stability but keep decent precision.
+    Normalize a value to a list[str].
+
+    • None              → []
+    • "foo"             → ["foo"]
+    • ["foo", "bar"]    → ["foo", "bar"]
+    • other types       → []
     """
-    a = (round(a_lat, 7), round(a_lon, 7))
-    b = (round(b_lat, 7), round(b_lon, 7))
-    return tuple(sorted((a, b)))  # type: ignore[return-value]
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple, set)):
+        out: List[str] = []
+        for item in value:
+            if isinstance(item, str):
+                out.append(item)
+        return out
+    return []
 
 
-# ───────────────────────────── API caller ────────────────────────────────
-def _api_distance_km(
-    a_lat: float
-    , a_lon: float
-    , b_lat: float
-    , b_lon: float
-) -> float:
+def _build_port_list() -> List[Dict[str, Any]]:
     """
-    Call the external maritime routing API and return distance in km.
+    Return a stable list of port dicts:
 
-    This function is deliberately written to be easy to tweak for a specific
-    provider. Adjust:
+        {
+          "name": "...",
+          "slug": "...",             # primary slug
+          "slug_candidates": [...],  # primary + aliases
+          "lat": ...,
+          "lon": ...
+        }
 
-      • URL (base + path)
-      • headers / auth
-      • payload structure
-      • response parsing
+    using gate coordinates when present and allowing manual 'geografos_slug'
+    overrides and aliases from the JSON.
 
-    to match your chosen API.
+    Alias logic:
+      • Alias names that do NOT start with "Porto " (case/accents ignored)
+        are first wrapped as "Porto de {alias}" before slugification.
     """
-    base = _get_api_base()
-    key = _get_api_key()
-    url = f"{base}{_MARITIME_PATH}"
+    port_list: List[Dict[str, Any]] = []
 
-    # Example payload for a distance.tools-like API:
-    payload: Dict[str, Any] = {
-          "route": [
-              {
-                  "lat": a_lat
-                , "lon": a_lon
-              }
-            , {
-                  "lat": b_lat
-                , "lon": b_lon
-              }
-          ]
-    }
+    alias_fields = [
+          "aliases"
+        , "alias"
+        , "aka"
+        , "geografos_aliases"
+    ]
 
-    headers = {
-          "Authorization": f"Bearer {key}"
-        , "Content-Type": "application/json"
-        , "Accept": "application/json"
-    }
+    for p in ports_raw:
+        name = p.get("name") or p.get("label") or "UNKNOWN_PORT"
+        lat, lon = _resolve_port_coords(p)
 
-    _debug(f"[HTTP] POST {url} payload={payload}")
+        # 1) Primary slug override from JSON, if present
+        geog_slug_raw = p.get("geografos_slug")
+        geog_slugs_explicit = _ensure_list_str(geog_slug_raw)
 
-    resp = _SESSION.post(
-          url
-        , headers=headers
-        , json=payload
-        , timeout=60
-    )
+        if geog_slugs_explicit:
+            primary_slug = geog_slugs_explicit[0]
+        else:
+            primary_slug = _default_geografos_slug(name)
 
-    if not resp.ok:
-        raise RuntimeError(
-            f"HTTP {resp.status_code} from maritime API: {resp.text[:200]}"
+        # 2) Alias names (to be slugified, forcing "Porto de " when missing)
+        alias_names: List[str] = []
+        for field in alias_fields:
+            alias_names.extend(_ensure_list_str(p.get(field)))
+
+        alias_slugs: List[str] = []
+        for alias_name in alias_names:
+            alias_name = alias_name.strip()
+            if not alias_name:
+                continue
+
+            # Normalize to check if it already starts with "porto "
+            base_no_acc = _strip_accents(alias_name).lower().strip()
+            if not base_no_acc.startswith("porto "):
+                # If alias is just "Angra dos Reis", treat it as "Porto de Angra dos Reis"
+                alias_full = f"Porto de {alias_name}"
+            else:
+                alias_full = alias_name
+
+            alias_slugs.append(_default_geografos_slug(alias_full))
+
+        # 3) Explicit alias slugs (if geog_slugs_explicit has more than one,
+        #    or if geografos_aliases already contained slug-like strings).
+        slug_candidates_raw: List[str] = [
+              primary_slug
+            , *geog_slugs_explicit
+            , *alias_slugs
+        ]
+
+        # 4) Deduplicate while preserving order and dropping empty strings
+        seen: set[str] = set()
+        slug_candidates: List[str] = []
+        for s in slug_candidates_raw:
+            s_norm = s.strip()
+            if not s_norm:
+                continue
+            if s_norm in seen:
+                continue
+            seen.add(s_norm)
+            slug_candidates.append(s_norm)
+
+        port_dict = {
+              "name": name
+            , "slug": primary_slug
+            , "slug_candidates": slug_candidates
+            , "lat": float(lat)
+            , "lon": float(lon)
+        }
+
+        port_list.append(port_dict)
+
+        _debug(
+            f"[PORT] {name!r} → primary_slug={primary_slug!r}, "
+            f"candidates={slug_candidates!r}, coords=({lat}, {lon})"
         )
 
-    data = resp.json()
-
-    # Example parsing: adjust to your provider
-    try:
-        distance_km = float(data["distance"]["kilometers"])
-    except Exception as exc:
-        raise RuntimeError(
-            f"Unexpected maritime API response structure: {data!r}"
-        ) from exc
-
-    _debug(f"[API] distance = {distance_km:.3f} km")
-    return distance_km
+    return port_list
 
 
-def fetch_distance_km(
+ports: List[Dict[str, Any]] = _build_port_list()
+
+
+# ───────────────────────────── searoute helper ───────────────────────────
+def _route_properties(route: Any) -> Dict[str, Any]:
+    """
+    Normalise access to the `properties` of the object returned by `searoute`.
+
+    Depending on the version, `searoute` may return either:
+      • a geojson.Feature-like object with `.properties` attribute, or
+      • a plain `dict` with a `"properties"` key.
+    """
+    props = getattr(route, "properties", None)
+    if props is not None:
+        return props
+    return route["properties"]  # type: ignore[index]
+
+
+def _searoute_distance_km(
     a_name: str
     , a_lat: float
     , a_lon: float
@@ -358,35 +412,226 @@ def fetch_distance_km(
     , b_lon: float
 ) -> float:
     """
-    Compute sea distance (km) between two ports using an external
-    maritime routing API.
+    Compute sea distance (km) between two ports using `searoute`.
 
-    If the API call fails for any reason, fall back to Haversine×coastline_factor.
-
-    We also cache by coordinates so identical coord pairs across different
-    labels don't hit the API repeatedly.
+    Raises if searoute fails.
     """
-    key = _cache_key(a_lat, a_lon, b_lat, b_lon)
-    if key in _route_cache:
-        return _route_cache[key]
+    origin = [a_lon, a_lat]
+    destination = [b_lon, b_lat]
 
+    route = sr.searoute(origin, destination, units="km")
+    props = _route_properties(route)
+    length = float(props["length"])
+
+    _debug(
+        f"[searoute] {a_name} ↔ {b_name}: {length:.1f} km "
+        "(fallback after Geografos failure)"
+    )
+    return length
+
+
+# ───────────────────────────── Geografos helpers ─────────────────────────
+BASE_URL = (
+    "https://www.geografos.com.br"
+    "/viagem-maritima-entre-portos-brasil"
+)
+
+REQUEST_HEADERS = {
+      "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    )
+    , "Accept": (
+        "text/html,application/xhtml+xml,application/xml;"
+        "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+    )
+    , "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
+    , "Connection": "keep-alive"
+}
+
+REQUEST_TIMEOUT = float(os.getenv("GEOGRAFOS_TIMEOUT", "2.0"))
+SLEEP_SECONDS = float(os.getenv("SEA_MATRIX_SLEEP", "0.0"))
+
+
+def _build_geografos_urls(slug_a: str, slug_b: str) -> List[str]:
+    """
+    Return the two possible URL permutations for a slug pair (A, B).
+
+    Geografos uses URLs like:
+
+      /distancia-entre-{slug_a}-e-{slug_b}.php
+    """
+    path1 = f"distancia-entre-{slug_a}-e-{slug_b}.php"
+    path2 = f"distancia-entre-{slug_b}-e-{slug_a}.php"
+
+    return [
+          f"{BASE_URL}/{path1}"
+        , f"{BASE_URL}/{path2}"
+    ]
+
+
+def _parse_km_from_html(html: str) -> float:
+    """
+    Given a page HTML from Geografos, extract the distance in km.
+
+    We look for a <strong> element whose text contains 'Distância:'
+    and then parse the first number before 'Km'.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+
+    strong_tags = soup.find_all("strong")
+    for tag in strong_tags:
+        txt = tag.get_text(strip=True)
+        if "Distância:" not in txt:
+            continue
+
+        # Example: "Distância: 198 Km ou 107 Milhas Náuticas"
+        m = re.search(r"Distância:\s*([\d.,]+)\s*Km", txt)
+        if not m:
+            continue
+
+        raw = m.group(1)
+        cleaned = raw.replace(".", "").replace(",", ".")
+        return float(cleaned)
+
+    raise RuntimeError("Could not find distance pattern in Geografos HTML")
+
+
+# Cache for Geografos distances (by unordered slug pair)
+_geografos_cache: Dict[Tuple[str, str], float] = {}
+
+
+def _geografos_distance_km(
+    slugs_a: List[str]
+    , slugs_b: List[str]
+) -> float:
+    """
+    Try to fetch distance (km) from Geografos for an unordered pair of
+    slug candidate lists.
+
+    For each (slug_a, slug_b) combination:
+
+      1) Check the cache for the unordered pair.
+      2) Try both URL permutations (A-B, B-A).
+
+    If one succeeds, cache the result and return it.
+    If all fail, raises RuntimeError.
+    """
+    last_error: Exception | None = None
+
+    # Normalize candidates: drop empties
+    cand_a = [s for s in slugs_a if s]
+    cand_b = [s for s in slugs_b if s]
+
+    for slug_a in cand_a:
+        for slug_b in cand_b:
+            key = tuple(sorted((slug_a, slug_b)))
+            if key in _geografos_cache:
+                return _geografos_cache[key]
+
+            for url in _build_geografos_urls(slug_a, slug_b):
+                try:
+                    resp = requests.get(
+                          url
+                        , headers=REQUEST_HEADERS
+                        , timeout=REQUEST_TIMEOUT
+                    )
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"HTTP {resp.status_code} for {url}")
+
+                    km = _parse_km_from_html(resp.text)
+                    _geografos_cache[key] = km
+
+                    _debug(
+                        f"[Geografos] {slug_a} ↔ {slug_b}: "
+                        f"{km:.1f} km @ {url}"
+                    )
+
+                    if SLEEP_SECONDS > 0:
+                        time.sleep(SLEEP_SECONDS)
+
+                    return km
+
+                except Exception as exc:  # noqa: BLE001
+                    last_error = exc
+                    _debug(
+                        f"[Geografos] Failed for {slug_a} ↔ {slug_b} "
+                        f"via {url!r}: {exc!r}"
+                    )
+                    continue
+
+    raise RuntimeError(
+        "Geografos distance not available for slug candidates "
+        f"{cand_a!r} ↔ {cand_b!r} (last error: {last_error!r})"
+    )
+
+
+# ───────────────────────────── distance dispatcher ───────────────────────
+_distance_cache: Dict[Tuple[float, float, float, float], float] = {}
+
+
+def fetch_distance_km(
+    a: Dict[str, Any]
+    , b: Dict[str, Any]
+) -> float:
+    """
+    Compute sea distance (km) between two port dicts (with name, slug, lat, lon).
+
+    Priority:
+      1) Geografos (all slug candidate combinations, both URL permutations).
+      2) searoute (using gate/centroid coordinates).
+
+    No Haversine / coastline factor. Raises if both fail.
+    """
+    a_name = a["name"]
+    b_name = b["name"]
+    a_lat = a["lat"]
+    a_lon = a["lon"]
+    b_lat = b["lat"]
+    b_lon = b["lon"]
+    slugs_a = a.get("slug_candidates", [a.get("slug", "")])
+    slugs_b = b.get("slug_candidates", [b.get("slug", "")])
+
+    # Coordinate-based symmetric cache for searoute fallback
+    coord_key = tuple(
+        sorted(
+            [
+                (round(a_lat, 6), round(a_lon, 6)),
+                (round(b_lat, 6), round(b_lon, 6)),
+            ]
+        )
+    )  # type: ignore[assignment]
+
+    # 1) Try Geografos with aliases
     try:
-        length = _api_distance_km(a_lat, a_lon, b_lat, b_lon)
-        _route_cache[key] = length
+        km = _geografos_distance_km(slugs_a, slugs_b)
         _debug(
-            f"[sea-api] {a_name} → {b_name}: "
-            f"{length:.1f} km (cached under {key})"
+            f"[DIST] {a_name} ↔ {b_name}: {km:.1f} km (Geografos, with aliases)"
         )
-        return length
+        return km
 
-    except Exception as exc:  # pragma: no cover  (safety net)
+    except Exception as exc_geo:  # noqa: BLE001
         _debug(
-            f"⚠️  maritime API failed for '{a_name}' → '{b_name}': {exc!r}; "
-            f"falling back to Haversine×{COASTLINE_FACTOR}"
+            f"⚠️  Geografos distance not available for "
+            f"'{a_name}' ↔ '{b_name}' "
+            f"(last error: {exc_geo!r}); falling back to searoute."
         )
-        length = _fallback_distance_km(a_lat, a_lon, b_lat, b_lon)
-        _route_cache[key] = length
-        return length
+
+    # 2) Fallback: searoute
+    if coord_key in _distance_cache:
+        return _distance_cache[coord_key]
+
+    km = _searoute_distance_km(
+          a_name
+        , a_lat
+        , a_lon
+        , b_name
+        , b_lat
+        , b_lon
+    )
+    _distance_cache[coord_key] = km
+    return km
 
 
 # ───────────────────────────── build matrix ───────────────────────────────
@@ -394,11 +639,10 @@ def build_matrix() -> pd.DataFrame:
     """
     Build a symmetric DataFrame of sea distances (km) between all ports.
     """
-    names = [name for (name, _, _) in port_list]
+    names = [p["name"] for p in ports]
     N = len(names)
     matrix_km = pd.DataFrame(0.0, index=names, columns=names, dtype=float)
 
-    # Fill the diagonal explicitly for clarity
     for name in names:
         matrix_km.at[name, name] = 0.0
 
@@ -407,11 +651,14 @@ def build_matrix() -> pd.DataFrame:
 
     print(f"▶ Building sea-distance matrix for {N} ports ({total_pairs} pairs)...")
 
-    for (na, la, loa), (nb, lb, lob) in it.combinations(port_list, 2):
+    for a_port, b_port in it.combinations(ports, 2):
         done += 1
-        dist_km = fetch_distance_km(na, la, loa, nb, lb, lob)
-        matrix_km.at[na, nb] = dist_km
-        matrix_km.at[nb, na] = dist_km
+        dist_km = fetch_distance_km(a_port, b_port)
+        a_name = a_port["name"]
+        b_name = b_port["name"]
+
+        matrix_km.at[a_name, b_name] = dist_km
+        matrix_km.at[b_name, a_name] = dist_km
 
         if done % 10 == 0 or done == total_pairs:
             print(f"  • processed {done}/{total_pairs} pairs", flush=True)
@@ -427,40 +674,33 @@ def main() -> None:
     outdir = Path(ROOT) / "data" / "processed" / "cabotage_data"
     outdir.mkdir(parents=True, exist_ok=True)
 
-    # csv_path = outdir / "sea_matrix.csv"
     json_path = outdir / "sea_matrix.json"
 
-    # Uncomment if you want the CSV as well
-    # matrix_km.to_csv(csv_path, float_format="%.3f", encoding="utf-8")
-
-    # You can later customise `method` to reflect your provider + version
-    provider = os.getenv("SEA_MATRIX_PROVIDER", "external_maritime_api")
-    api_version = os.getenv("SEA_MATRIX_API_VERSION", "v1")
-    method = f"{provider}_{api_version}"
-
-    names = list(matrix_km.index)
-
-    payload: Dict[str, Any] = {
-          "unit": "km"
-        , "method": method
-        , "coastline_factor": COASTLINE_FACTOR
-        , "note": (
-            "Off-diagonal entries are sea distances (km) between port "
-            "centroids/gates; symmetric. Distances computed with an external "
-            "maritime routing API; Haversine×coastline_factor used only as a "
-            "fallback."
-        )
-        , "matrix": {
-              r: {c: float(matrix_km.at[r, c]) for c in names}
-              for r in names
-          }
+    # Dict matrix: {name: {name: distance}}
+    matrix_dict: Dict[str, Dict[str, float]] = {
+        row_name: {
+            col_name: float(matrix_km.at[row_name, col_name])
+            for col_name in matrix_km.columns
+        }
+        for row_name in matrix_km.index
     }
 
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+    meta = {
+          "unit": "km"
+        , "method": "geografos_plus_searoute_v2_aliases"
+        , "note": (
+            "Off-diagonal entries are sea distances (km) between port "
+            "centroids/gates, using Geografos (with aliases) when available "
+            "and searoute otherwise; symmetric."
+        )
+        , "ports": ports
+        , "matrix": matrix_dict
+    }
 
-    # print(f"✓ Saved {csv_path}")
-    print(f"✅ Saved {json_path}")
+    with json_path.open("w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+    print(f"✔ Saved JSON matrix to {json_path}")
 
 
 if __name__ == "__main__":
