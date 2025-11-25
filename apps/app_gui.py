@@ -17,6 +17,7 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
+import tkintermapview # Map Widget
 from pathlib import Path
 
 # --- Path Bootstrap ---
@@ -36,13 +37,6 @@ from modules.multimodal import build_path_geometry, evaluate_path
 from modules.fuel.truck_specs import list_truck_keys
 from modules.plot.cabotage_plot_helper import get_visual_sea_path
 
-# Map Widget
-try:
-    import tkintermapview
-except ImportError:
-    print("Please run: pip install tkintermapview")
-    sys.exit(1)
-
 _log = get_logger("gui")
 
 class ComparisonApp(tk.Tk):
@@ -50,7 +44,7 @@ class ComparisonApp(tk.Tk):
         super().__init__()
         
         self.title("EcoFreight Calculator (Thesis Project)")
-        self.geometry("1200x800") # Wider/Taller for better map view
+        self.geometry("1200x800") # Wider for map
         
         # Initialize logs to file
         init_logging(level="INFO", write_to_file=True)
@@ -110,7 +104,7 @@ class ComparisonApp(tk.Tk):
         self.map_widget.set_position(-14.2350, -51.9253) 
         self.map_widget.set_zoom(4)
         
-        # Optional: Google Maps Tiles (Comment out if map is blank)
+        # Optional: Google Maps Tiles (Comment out if blocked)
         # self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22) 
 
     def _add_input(self, parent, row, label, var_name, default):
@@ -184,15 +178,11 @@ class ComparisonApp(tk.Tk):
         """
         # Helper to extract (lat, lon) tuples
         def _loc(pt):
-            # Ensure we return valid float tuple
             return float(pt["lat"]), float(pt["lon"])
 
+        # Extract Coordinates
         origin_coords = _loc(geo["origin"])
         dest_coords = _loc(geo["destiny"])
-        
-        # Add Markers
-        self.map_widget.set_marker(origin_coords[0], origin_coords[1], text=geo["origin"]["label"])
-        self.map_widget.set_marker(dest_coords[0], dest_coords[1], text=geo["destiny"]["label"])
         
         # Multimodal Path: O -> Port -> Port -> D
         po = geo["port_origin"]
@@ -201,33 +191,34 @@ class ComparisonApp(tk.Tk):
         # Use gate coords if available, else centroid
         po_coords = _loc(po["gate"]) if po.get("gate") else _loc(po)
         pd_coords = _loc(pd["gate"]) if pd.get("gate") else _loc(pd)
+
+        # 1. Add Markers
+        self.map_widget.set_marker(origin_coords[0], origin_coords[1], text=geo["origin"]["label"])
+        self.map_widget.set_marker(dest_coords[0], dest_coords[1], text=geo["destiny"]["label"])
+        self.map_widget.set_marker(po_coords[0], po_coords[1], text=f"{po['name']}", marker_color_circle="blue")
+        self.map_widget.set_marker(pd_coords[0], pd_coords[1], text=f"{pd['name']}", marker_color_circle="blue")
         
-        # Add Port Markers
-        self.map_widget.set_marker(po_coords[0], po_coords[1], text=f"Port: {po['name']}", marker_color_circle="blue")
-        self.map_widget.set_marker(pd_coords[0], pd_coords[1], text=f"Port: {pd['name']}", marker_color_circle="blue")
+        # 2. Draw Paths
+        # Road Leg 1 (Origin -> Port Origin) - PURPLE/RED
+        # Only draw if distance > 0 (avoid 0-length line bugs)
+        if origin_coords != po_coords:
+            self.map_widget.set_path([origin_coords, po_coords], color="#A020F0", width=3) # Purple for truck
         
-        # --- Draw Lines ---
-        # Use different colors for Road (Purple) vs Sea (Blue)
-        
-        # 1. Road: Origin -> Port Origin (Purple)
-        self.map_widget.set_path([origin_coords, po_coords], color="#800080", width=3)
-        
-        # 2. Sea: Port Origin -> Port Destiny (Blue - Curved)
+        # Sea Leg (Port Origin -> Port Destiny) - BLUE (Curved)
         try:
-             # Use the helper to get curved path points
              sea_path = get_visual_sea_path(po_coords, pd_coords)
         except Exception as e:
              _log.error(f"Failed to render curved sea path: {e}")
-             # Fallback: straight line
              sea_path = [po_coords, pd_coords]
-
+        
         self.map_widget.set_path(sea_path, color="#0000FF", width=4)
         
-        # 3. Road: Port Destiny -> Destiny (Purple)
-        self.map_widget.set_path([pd_coords, dest_coords], color="#800080", width=3)
+        # Road Leg 2 (Port Destiny -> Destiny) - PURPLE/RED
+        if pd_coords != dest_coords:
+            self.map_widget.set_path([pd_coords, dest_coords], color="#A020F0", width=3)
         
-        # --- Robust Bounding Box Calculation ---
-        # Include all waypoints in bounding box logic
+        # 3. Set View
+        # Include all waypoints so the whole curve is seen
         all_points = [origin_coords, dest_coords] + sea_path
         all_lats = [p[0] for p in all_points]
         all_lons = [p[1] for p in all_points]
@@ -236,21 +227,15 @@ class ComparisonApp(tk.Tk):
         min_lon, max_lon = min(all_lons), max(all_lons)
 
         # Pad the view slightly so markers aren't on the absolute edge
-        pad = 1.5
-        
-        # fit_bounding_box expects: (top_left_lat, top_left_lon), (bottom_right_lat, bottom_right_lon)
-        # Top Left = (Max Lat, Min Lon)
-        # Bottom Right = (Min Lat, Max Lon)
+        pad = 1.0
         
         try:
             self.map_widget.fit_bounding_box(
                 (max_lat + pad, min_lon - pad), 
                 (min_lat - pad, max_lon + pad)
             )
-        except ValueError:
-            # Fallback if points are identical
-            self.map_widget.set_position(origin_coords[0], origin_coords[1])
-            self.map_widget.set_zoom(8)
+        except Exception as e:
+             _log.warning(f"Could not fit bounding box: {e}")
 
     def _show_report(self, res):
         rd = res["road_only"]
