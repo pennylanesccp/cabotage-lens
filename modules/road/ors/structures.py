@@ -91,8 +91,9 @@ class ORSConfig:
     cache_ttl_s: int = 2_592_000  # 30 days (30 * 24 * 3600)
 
     # HTTP Behavior
-    timeout: tuple[float, float] = (10.0, 60.0)
-    retry_limit: int = 3
+    # timeout: tuple[float, float] = (10.0, 60.0) long
+    timeout: tuple[float, float] = (10.0, 3.0)
+    retry_limit: int = 1
     
     # Domain Defaults
     default_profile: str = "driving-hgv"
