@@ -1,0 +1,12 @@
+[2025-11-25 11:33:56][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto do Rio Grande' (UF=RS) distance=47.379 km via gate 'Gate'.
+[2025-11-25 11:33:56][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Manaus' (UF=AM) distance=16.406 km via centroid.
+[2025-11-25 11:33:56][INFO][modules.multimodal.builder] Ports Selected: Porto do Rio Grande (Origin) -> Porto de Manaus (Destiny)
+[2025-11-25 11:33:56][INFO][modules.road.router] Cache HIT: Pelotas, RS, Brazil -> Manaus, AM, Brazil (4674.8995 km)
+[2025-11-25 11:33:56][INFO][modules.road.router] Cache HIT: Pelotas, RS, Brazil -> Porto do Rio Grande (Gate) (61.5115 km)
+[2025-11-25 11:33:56][INFO][modules.road.router] Cache HIT: Porto de Manaus -> Manaus, AM, Brazil (23.219099999999997 km)
+[2025-11-25 11:33:56][INFO][modules.costs.diesel_prices] load_latest_diesel_price: loaded 27 rows from 'C:\Users\felipeproenca\Documents\workspaces\personal\carbon-footprint\data\processed\road_data\latest_diesel_prices.csv'.
+[2025-11-25 11:33:56][INFO][modules.costs.diesel_prices] avg_price_for_ufs: uf_o=SP, uf_d=SP → price_o=6.12, price_d=6.12, avg=6.1200, fallback_used=False
+[2025-11-25 11:33:56][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=4065.1300, liters_empty=0.0000, liters_total=4065.1300
+[2025-11-25 11:33:56][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=53.4883, liters_empty=0.0000, liters_total=53.4883
+[2025-11-25 11:33:56][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=20.1905, liters_empty=0.0000, liters_total=20.1905
+[2025-11-25 11:33:56][INFO][modules.costs.ship_fuel_prices] Loaded Bunker Price (VLSFO): R$ 2572.34/mt (Date: 2025-11-17)
