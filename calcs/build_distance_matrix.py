@@ -1,120 +1,258 @@
-# --- Build a port-to-port sea-distance matrix (km)
-# Save as calcs/build_distance_matrix.py (or a notebook cell)
+#!/usr/bin/env python3
+# calcs/build_distance_matrix.py
+# -*- coding: utf-8 -*-
 
-import os, sys, json, time, math, itertools as it
+"""
+Port-to-port sea-distance matrix (km, using searoute)
+=====================================================
+
+Builds a symmetric matrix of sea distances between all Brazilian cabotage ports
+defined in ``data/cabotage_data/ports_br.json``.
+
+Distances are computed with the `searoute` Python package (shortest sea route
+over a maritime network). If `searoute` fails for any pair, we fall back to a
+Haversine great-circle distance multiplied by a coastline factor.
+
+Output
+------
+Saves a JSON file at:
+
+    data/cabotage_data/sea_matrix.json
+
+with structure:
+
+    {
+      "unit": "km",
+      "method": "searoute_py_<version>",
+      "coastline_factor": 1.18,
+      "note": "Off-diagonal entries are sea distances (km) between port centroids; symmetric.",
+      "matrix": {
+        "Port A": {"Port A": 0.0, "Port B": 123.4, ...},
+        "Port B": {...},
+        ...
+      }
+    }
+
+(You can uncomment the CSV export if you also want a tabular file.)
+"""
+
+from __future__ import annotations
+
+import itertools as it
+import json
+import math
+import os
+import sys
 from pathlib import Path
-import pandas as pd
-import requests
+from typing import Any, Dict, List, Tuple
 
-# 1) Repo root & ports loader --------------------------------------------------
-def _repo_root():
+import pandas as pd
+
+# ───────────────────────────── dependencies ──────────────────────────────
+import searoute as sr
+
+# ───────────────────────────── repo root helper ──────────────────────────
+def _repo_root() -> str:
+    """
+    Try to locate the repository root by walking upwards until we find a
+    ``modules`` directory. If that fails, fall back to ``$PROJECT_ROOT``.
+    """
     cand = os.getcwd()
     for _ in range(8):
         if os.path.isdir(os.path.join(cand, "modules")):
             return cand
         cand = os.path.dirname(cand)
+
     env = os.getenv("PROJECT_ROOT")
     if env and os.path.isdir(os.path.join(env, "modules")):
         return env
-    raise SystemExit("❌ Could not locate repo root.")
+
+    raise SystemExit("❌ Could not locate repo root (no 'modules' dir found).")
+
 
 ROOT = _repo_root()
-sys.path.insert(0, ROOT)
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
-from modules.cabotage import load_ports  # you already have this
-PORTS_PATH = os.path.join(ROOT, "data", "cabotage_data", "ports_br.json")
-ports = load_ports(PORTS_PATH)
+from modules.ports.ports_index import load_ports
 
-# Keep a stable list of (label, lat, lon)
-port_list = [
+
+# ───────────────────────────── ports loader ──────────────────────────────
+PORTS_PATH = os.path.join(ROOT, "data", "processed", "cabotage_data", "ports_br.json")
+ports: List[Dict[str, Any]] = load_ports(PORTS_PATH)
+
+# Stable list of (label, lat, lon)
+port_list: List[Tuple[str, float, float]] = [
       (p["name"], float(p["lat"]), float(p["lon"]))
     for p in ports
 ]
 
-# 2) Utilities ----------------------------------------------------------------
-def haversine_km(a_lat, a_lon, b_lat, b_lon) -> float:
+# ───────────────────────────── utilities ──────────────────────────────────
+def haversine_km(
+    a_lat: float
+    , a_lon: float
+    , b_lat: float
+    , b_lon: float
+) -> float:
+    """
+    Great-circle distance between two points on Earth (WGS84), in km.
+    """
     R = 6371.0088
-    ar1, br1 = math.radians(a_lat), math.radians(a_lon)
-    ar2, br2 = math.radians(b_lat), math.radians(b_lon)
-    da, db = ar2 - ar1, br2 - br1
-    s = (math.sin(da/2)**2 + math.cos(ar1) * math.cos(ar2) * math.sin(db/2)**2)
+    ar1 = math.radians(a_lat)
+    br1 = math.radians(a_lon)
+    ar2 = math.radians(b_lat)
+    br2 = math.radians(b_lon)
+    da = ar2 - ar1
+    db = br2 - br1
+    s = (
+          math.sin(da / 2) ** 2
+        + math.cos(ar1) * math.cos(ar2) * math.sin(db / 2) ** 2
+    )
     return 2 * R * math.atan2(math.sqrt(s), math.sqrt(1 - s))
 
-def nm_to_km(nm: float) -> float:
-    return nm * 1.852
 
-# 3) Plug your API here --------------------------------------------------------
-# Choose ONE provider and implement the call inside fetch_distance_nm().
-# Fallback is Haversine×coastline_factor (≈1.15–1.25) to approximate sailing lanes.
+COASTLINE_FACTOR = 1.18  # used only for fallback approximation
 
-COASTLINE_FACTOR = 1.18   # tweak if you later compare against API values
 
-# EXAMPLE (VesselFinder) — requires API key:
-# DOCS: https://api.vesselfinder.com/docs/distance.html
-VF_KEY = os.getenv("VF_API_KEY", "")   # set in your environment if you have it
+def _fallback_distance_km(
+    a_lat: float
+    , a_lon: float
+    , b_lat: float
+    , b_lon: float
+) -> float:
+    """
+    Approximate sea distance as Haversine × coastline factor.
 
-def fetch_distance_nm(a_name, a_lat, a_lon, b_name, b_lat, b_lon) -> float | None:
-    # If you have a key, uncomment to use VesselFinder's shortest sea route:
-    # if VF_KEY:
-    #     url = "https://api.vesselfinder.com/distance"
-    #     params = {
-    #           "userkey": VF_KEY
-    #         , "from": f"{a_lon},{a_lat}"
-    #         , "to":   f"{b_lon},{b_lat}"
-    #     }
-    #     r = requests.get(url, params=params, timeout=30)
-    #     r.raise_for_status()
-    #     data = r.json()
-    #     return float(data["distance_nm"])
+    This is only used if `searoute` fails for some reason (e.g. weird coords).
+    """
+    hv = haversine_km(a_lat, a_lon, b_lat, b_lon)
+    return hv * COASTLINE_FACTOR
 
-    # EXAMPLE (SeaRates) — see: https://www.searates.com/services/distances-time
-    # (their API/endpoint details depend on account plan; adapt similarly)
 
-    # Fallback: Haversine × coastline factor:
-    hv_km = haversine_km(a_lat, a_lon, b_lat, b_lon)
-    return hv_km / 1.852 * COASTLINE_FACTOR  # return NM
+def _route_properties(route: Any) -> Dict[str, Any]:
+    """
+    Normalise access to the `properties` of the object returned by `searoute`.
 
-# 4) Build the matrix ----------------------------------------------------------
-names = [n for (n, _, _) in port_list]
-N = len(names)
-matrix_km = pd.DataFrame(0.0, index=names, columns=names)
+    Depending on the version, `searoute` may return either:
+      • a geojson.Feature-like object with `.properties` attribute, or
+      • a plain `dict` with a `"properties"` key.
 
-# cache so symmetric queries only run once
-cache_nm: dict[tuple[str, str], float] = {}
+    This helper handles both.
+    """
+    props = getattr(route, "properties", None)
+    # print(route)
+    if props is not None:
+        return props
+    return route["properties"]  # type: ignore[index]
 
-for (i, (na, la, loa)) in enumerate(port_list):
-    for (j, (nb, lb, lob)) in enumerate(port_list):
-        if i == j:
-            continue
-        key = tuple(sorted((na, nb)))
-        if key in cache_nm:
-            nm = cache_nm[key]
-        else:
-            nm = fetch_distance_nm(na, la, loa, nb, lb, lob) or 0.0
-            cache_nm[key] = nm
-            # be kind to APIs:
-            time.sleep(0.2)
-        matrix_km.at[na, nb] = nm_to_km(nm)
 
-# 5) Persist outputs -----------------------------------------------------------
-outdir = Path(ROOT) / "data" / "cabotage_data"
-outdir.mkdir(parents=True, exist_ok=True)
+def fetch_distance_km(
+    a_name: str
+    , a_lat: float
+    , a_lon: float
+    , b_name: str
+    , b_lat: float
+    , b_lon: float
+) -> float:
+    """
+    Compute sea distance (km) between two ports using `searoute`.
 
-csv_path  = outdir / "sea_matrix.csv"
-json_path = outdir / "sea_matrix.json"
+    If `searoute` raises, fall back to Haversine×coastline_factor.
+    """
+    # searoute expects [lon, lat]
+    origin = [a_lon, a_lat]
+    destination = [b_lon, b_lat]
 
-# matrix_km.to_csv(csv_path, float_format="%.3f", encoding="utf-8")
-with open(json_path, "w", encoding="utf-8") as f:
-    json.dump({
+    try:
+        # units="km" → distance in kilometres in `properties["length"]`
+        route = sr.searoute(origin, destination, units="km")
+        props = _route_properties(route)
+        length = float(props["length"])
+        return length
+
+    except Exception as exc:  # pragma: no cover  (safety net)
+        print(
+            f"⚠️  searoute failed for '{a_name}' → '{b_name}': {exc!r}\n"
+            f"   Falling back to Haversine×coastline_factor={COASTLINE_FACTOR}."
+        )
+        return _fallback_distance_km(a_lat, a_lon, b_lat, b_lon)
+
+
+# ───────────────────────────── build matrix ───────────────────────────────
+def build_matrix() -> pd.DataFrame:
+    """
+    Build a symmetric DataFrame of sea distances (km) between all ports.
+    """
+    names = [name for (name, _, _) in port_list]
+    N = len(names)
+    matrix_km = pd.DataFrame(0.0, index=names, columns=names, dtype=float)
+
+    # Fill the diagonal explicitly for clarity
+    for name in names:
+        matrix_km.at[name, name] = 0.0
+
+    total_pairs = math.comb(N, 2) if N >= 2 else 0
+    done = 0
+
+    print(f"▶ Building sea-distance matrix for {N} ports ({total_pairs} pairs)...")
+
+    # combinations() → each unordered pair once (no need for manual cache)
+    for (na, la, loa), (nb, lb, lob) in it.combinations(port_list, 2):
+        print(na, la, loa, nb, lb, lob)
+        done += 1
+        dist_km = fetch_distance_km(na, la, loa, nb, lb, lob)
+        matrix_km.at[na, nb] = dist_km
+        matrix_km.at[nb, na] = dist_km
+
+        if done % 10 == 0 or done == total_pairs:
+            print(f"  • processed {done}/{total_pairs} pairs", flush=True)
+
+    print("✔ Matrix build complete.")
+    return matrix_km
+
+
+# ───────────────────────────── persist outputs ────────────────────────────
+def main() -> None:
+    matrix_km = build_matrix()
+
+    outdir = Path(ROOT) / "data" / "processed" / "cabotage_data"
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = outdir / "sea_matrix.csv"
+    json_path = outdir / "sea_matrix.json"
+
+    # Uncomment if you want the CSV as well
+    # matrix_km.to_csv(csv_path, float_format="%.3f", encoding="utf-8")
+
+    searoute_version = getattr(sr, "__version__", None)
+    method = (
+          "searoute_py"
+        + (f"_{searoute_version}" if searoute_version else "")
+    )
+
+    names = list(matrix_km.index)
+
+    payload: Dict[str, Any] = {
           "unit": "km"
-        , "method": "API_or_Haversine"
+        , "method": method
         , "coastline_factor": COASTLINE_FACTOR
-        , "note": "Off-diagonal entries are sea distances (km) between port centroids; symmetric."
+        , "note": (
+            "Off-diagonal entries are sea distances (km) between port "
+            "centroids; symmetric. Distances computed with `searoute`; "
+            "Haversine×coastline_factor used only as a fallback."
+        )
         , "matrix": {
               r: {c: float(matrix_km.at[r, c]) for c in names}
               for r in names
           }
-    }, f, ensure_ascii=False, indent=2)
+    }
 
-# print(f"✓ Saved {csv_path}")
-print(f"✓ Saved {json_path}")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+    # print(f"✓ Saved {csv_path}")
+    print(f"✅ Saved {json_path}")
+
+
+if __name__ == "__main__":
+    main()
