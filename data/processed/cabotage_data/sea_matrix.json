@@ -2,7 +2,7 @@
   "unit": "km",
   "method": "searoute_py",
   "coastline_factor": 1.18,
-  "note": "Off-diagonal entries are sea distances (km) between port centroids; symmetric. Distances computed with `searoute`; Haversine×coastline_factor used only as a fallback.",
+  "note": "Off-diagonal entries are sea distances (km) between port centroids/gates; symmetric. Distances computed with `searoute`; Haversine×coastline_factor used only as a fallback.",
   "matrix": {
     "Porto de Santos": {
       "Porto de Santos": 0.0,

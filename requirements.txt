@@ -5,4 +5,4 @@ openpyxl
 CurrencyConverter
 pyinstaller
 tkintermapview
-searoute
+beautifulsoup4
