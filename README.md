@@ -4,44 +4,51 @@
 
 ## Overview
 
-This project quantifies the emissions and cost of moving containerized freight across Brazil using either road-only or multimodal (road–cabotage–road) transportation. It is designed to support decision-making in sustainable logistics and national decarbonization strategies.
+This project implements an **activity-based, leg-by-leg methodology** to quantify the emissions and cost of moving containerized freight across Brazil using either road-only or multimodal (road–cabotage–road) transportation. It is designed as a **reproducible research tool** to support decision-making in sustainable logistics and national decarbonization strategies.
 
-At its core, the model performs a **per-scenario assessment** of carbon footprint and financial cost for any origin–destination (O–D) pair, given:
+At its core, the model performs a **per-scenario assessment** for any origin–destination (O–D) pair, given:
 
-* The cargo mass (in tonnes),
-* Diesel and bunker fuel prices,
-* A calibrated model of vessel classes, truck presets, and port operations,
-* OpenRouteService-based routing for road segments,
-* Static distance matrices for sea legs.
+* Cargo mass (in tonnes),
+* Diesel and marine fuel prices,
+* A calibrated representation of truck presets, vessel classes, and port operations,
+* Road distances obtained from the **OpenRouteService (ORS)** API,
+* Sea distances from a static, versioned matrix.
 
-For each scenario, the pipeline constructs:
+For each scenario, the engine builds two comparable transport chains:
 
-* A road-only profile: from origin to destination entirely by truck.
-* A multimodal profile:
+* **Road-only profile**  
+  Origin → destiny entirely by truck.
 
-  * Origin → nearest port (road leg),
-  * Port → port (sea leg),
-  * Destination port → destination (road leg).
+* **Multimodal profile (road–sea–road)**  
+  * Origin → nearest suitable port (road leg),  
+  * Port → port (sea leg),  
+  * Destination port → destiny (road leg).
 
-Each leg is modeled for **fuel use**, **GHG emissions (CO₂e)**, and **cost (BRL)** using factor-based engineering approximations. Results are reported per mode, per fuel type, and as deltas between scenarios.
+Each leg is modeled separately for **distance**, **fuel use**, **GHG emissions (CO₂e)**, and **cost (BRL)** using transparent engineering factors and parameters stored in **open, updatable tables** under `data/`. All intermediate and final results are persisted in a **SQLite database**, which acts as the single source of truth for:
+
+* ORS-based road distances,
+* Sea-leg distances and cabotage fuel profiles,
+* Aggregated scenario indicators (fuel, emissions, cost).
+
+Because all coefficients (fuel prices, emission factors, vessel and truck parameters, port factors) are read from versioned CSV/JSON files, the model is explicitly **configurable and updatable**: updating a table or factor set and rerunning the same scenario immediately propagates new assumptions without changing code.
 
 ### Core Questions Addressed
 
 * What is the emissions and cost difference between trucking-only and cabotage-supported logistics in Brazil?
 * Which corridors offer the greatest carbon or cost savings from modal shift?
-* How do factors such as diesel price, vessel class, cargo mass, and port handling time affect total footprint?
+* How sensitive are results to diesel price, bunker price, vessel class, cargo mass, and port/terminal assumptions?
 
 ### Use Cases
 
 * Benchmarking the carbon intensity of freight corridors in Brazil.
-* Supporting decarbonization plans for logistics and shipping policy.
-* Evaluating investment scenarios involving ports, vessels, or inland terminals.
-* Academic analysis of multimodal logistics infrastructure.
+* Supporting decarbonization plans and modal-shift policies in national logistics.
+* Evaluating investment scenarios involving ports, cabotage services, or inland terminals.
+* Academic analysis and sensitivity studies of multimodal logistics infrastructure.
 
-This documentation explains the technical components and assumptions used to compute these outputs, including routing logic, emissions factors, data sources, and system architecture.
+This documentation details the methodology, data pipeline and assumptions behind these indicators, including routing logic, emissions factors, public data sources, and the database-backed architecture used to keep experiments auditable and reproducible.
 
 ---
-  
+
 ## Documentation Map
 
 This section is the navigation index for all human-readable documentation and high-level technical references in the repository.
@@ -74,15 +81,17 @@ This section is the navigation index for all human-readable documentation and hi
   * Automated tests that validate core behavior of modules and CLI apps.  
   * Use these as the main reference for expected inputs/outputs when modifying internals.
 
-### Data, Outputs and Logs
+### Data, Database and Logs
 
 * `data/`  
   * Static input data and reference tables (e.g. ports, vessel classes, factors).  
+  * Contains the **SQLite database** that stores pre-computed road legs and multimodal scenario results.  
   * Some subfolders may be git-ignored if they contain large or proprietary datasets.
 
-* `outputs/`  
-  * Generated artifacts: CSVs, tables, plots and maps created by `apps/` and `scripts/`.  
-  * Downstream tools (e.g. the thesis report or notebooks) read from here.
+* SQLite database (inside `data/`)  
+  * Central persistence layer for the project.  
+  * Stores routing cache (road legs), multimodal run results, and other small tables used by the thesis experiments.  
+  * All quantitative analyses in the thesis are read from this database rather than from exported CSV files.
 
 * `logs/`  
   * Runtime logs generated by CLI apps and scripts.  
@@ -92,12 +101,12 @@ This section is the navigation index for all human-readable documentation and hi
   
 ## Technology Stack
 
-This project is a pure-Python, CLI-first toolkit built for reproducible freight modeling and scenario analysis.
+This project is a pure-Python, CLI-first toolkit built for reproducible freight modeling and scenario analysis. It relies on **open-source libraries** and **open / periodically updatable datasets** from Brazilian regulators and academic sources.
 
 ### Language & Runtime
 
 * **Python 3.x (CPython)**  
-  * Developed and tested on modern CPython 3 (see `pyproject` / `requirements.txt` for exact version constraints).  
+  * Developed and tested on modern CPython 3 (see `requirements.txt` for exact version constraints).  
   * No external runtime (no JVM, no R, no Julia) required.
 
 * **Cross-platform**  
@@ -118,22 +127,23 @@ This project is a pure-Python, CLI-first toolkit built for reproducible freight 
 
 * **Standard library modules**  
   * `pathlib`, `logging`, `dataclasses`, `sqlite3`, `json`, `csv`, `argparse`, among others.  
-  * These power the CLI interface, caching, and configuration IO.
+  * These power the CLI interface, caching, configuration I/O and database access.
 
 * **Third-party Python packages**  
-  * Numerical / tabular helpers (for handling input/output tables and scenario data).  
+  * Numerical / tabular helpers (for handling scenario tables and factor datasets).  
   * HTTP client library for calling the routing API.  
-  * Plotting / mapping libraries for generating heatmaps and diagnostic plots.  
+  * Optional plotting / mapping libraries for exploratory maps and diagnostic plots.  
   * The authoritative list (with versions) is `requirements.txt`.
 
-> **Note:** This README intentionally stays abstract at this layer; if a library is not in `requirements.txt` it is **not** part of the supported stack.
+> **Note:** If a library is not in `requirements.txt`, it is **not** part of the supported stack.
 
 ### External Services & APIs
 
 * **OpenRouteService (ORS)**  
-  * Used for all road routing (driving-car profiles) in both road-only and multimodal (road–sea–road) scenarios.  
+  * Used for all road routing in both road-only and multimodal (road–sea–road) scenarios.  
+  * Heavy-vehicle routing is based on the **`driving-hgv`** profile; geocoding uses the standard ORS endpoints.  
   * Accessed via HTTPS with an API key sourced from environment variables.  
-  * Responses are cached locally in SQLite to avoid re-hitting the API for identical legs.
+  * Responses are cached locally in SQLite so identical legs do not re-hit the API.
 
 * **No Cloud Dependencies by Default**  
   * The toolchain runs entirely on a local machine; there is no hard dependency on cloud platforms or hosted databases.  
@@ -142,71 +152,76 @@ This project is a pure-Python, CLI-first toolkit built for reproducible freight 
 ### Data Storage & File Formats
 
 * **SQLite 3**  
-  * Local relational database used as a **routing cache** and, where needed, as an intermediate store for precomputed legs and scenarios.  
-  * Managed through a thin in-repo data access layer to keep SQL centralized and auditable.
+  * Local relational database used both as a **routing cache** and as the **primary store for computed scenarios**.  
+  * Road legs (O→D, O→Port, Port→D) and multimodal comparison results are persisted in tables that can be queried directly from Python, SQL clients or external tools (e.g. spreadsheets, BI).  
+  * Managed through a thin in-repo data access layer to keep SQL centralized, auditable and consistent with the thesis methodology.
 
-* **Flat files**  
+* **Flat files (open and updatable)**  
   * **Inputs:** CSV, JSON and other reference tables stored under `data/`.  
-  * **Outputs:** CSV tables, figures (e.g. `.png`) and other artifacts written to `outputs/`.  
-  * Designed so that every run can be fully reproduced from a combination of versioned code + `data/` contents.
+    * Port metadata, vessel classes, emission factors, diesel price series (e.g. ANP), and other parameters derived from public or academic sources.  
+  * Updating these files with newer releases of open data (e.g. new ANP or ANTAQ series, revised factors) is the standard way to **refresh the model** without changing the code, keeping the framework aligned with the most recent evidence.
 
 ### Tooling for Development
 
 * **Testing**  
   * Automated tests live under `tests/` and exercise core modules (routing, cabotage, fuel/emissions, costs, caching).  
-  * Tests are organized by feature area to make refactors safer.
+  * Tests are organized by feature area to make refactors safer and to protect key numerical relationships used in the thesis.
 
 * **Formatting & Style**  
   * Code style follows standard PEP 8 with type-hint-heavy modules (`from __future__ import annotations`).  
-  * Linters / formatters (if configured) are run locally; see project-level config files (e.g. `pyproject.toml`, `.editorconfig`, etc.) when present.
+  * Linters / formatters (if configured) are run locally; see project-level config files when present.
 
 * **Logging & Diagnostics**  
   * Unified logging based on Python’s `logging` module, with module-level loggers for `apps/`, `scripts/` and `modules/`.  
-  * Log files are written to `logs/` to support post-mortem analysis of long-running batch runs.
+  * Log files are written to `logs/` and are the main tool for diagnosing routing issues, database behavior and modeling errors.
 
 ---
-  
+
 ## Project Architecture Overview
 
 At a high level, this repository is organized as a **library-first** Python project with thin CLI “apps” and scripts on top. The core modeling logic lives in `modules/`, and everything else (apps, scripts, tests) is built on top of that.
+
+---
 
 ### Layered Design
 
 1. **CLI / User Interface Layer**
    * **`apps/`**  
-     * High-level entry points for end users (e.g. running a full multimodal comparison, generating maps/heatmaps).
+     * High-level entry points for running full comparisons (e.g. road-only vs multimodal for a set of O–D pairs).  
      * Each app is a small CLI wrapper that parses arguments, loads configuration, and calls into `modules/`.
    * **`scripts/`**  
-     * Lower-level utilities (e.g. bulk route precomputation, data refresh jobs, debugging helpers).
+     * Lower-level utilities (e.g. bulk road-leg precomputation, cache maintenance, one-off experiments).  
      * More “power-user” oriented than `apps/`, but still rely on the same core modules.
 
 2. **Domain Logic Layer (`modules/`)**
    * **Core / shared components**  
-     * Configuration, models (dataclasses), logging helpers, and shared utilities.
+     * Configuration, models (dataclasses), logging helpers and shared utilities.  
      * Provide common types and abstractions that keep domain code decoupled from the CLI layer.
    * **Road routing**  
-     * Client and mixins for OpenRouteService (ORS) geocoding + directions.
+     * Client and mixins for OpenRouteService (ORS) geocoding + directions.  
      * Logic to build and cache road legs (O→D, O→port, port→D), including HGV vs non-HGV distinctions.
    * **Cabotage & port operations**  
-     * Represent ports, sea legs, vessel classes, and port operation phases.
+     * Represent ports, sea legs, vessel classes and port operation phases.  
      * Encapsulate how sea distance, hotel/ops time and terminal operations feed into fuel use and emissions.
    * **Fuel, emissions & cost**  
-     * Functions to turn tonne-km, time, and activity data into fuel, emissions and monetary cost per leg and per TEU.
-     * Handles both road (diesel) and cabotage (bunkers + port ops) with a consistent interface.
+     * Functions to turn tonne-km, time and activity data into fuel, emissions and monetary cost per leg and per TEU.  
+     * Handle both road (diesel) and cabotage (bunkers + port ops) with a consistent interface.
    * **Persistence & caching**  
      * Thin data-access layer over SQLite for:
-       * Road routing cache (avoid re-calling ORS for the same leg).
-       * Other precomputed artifacts as needed (e.g. heatmap runs).
+       * Road routing cache (avoid re-calling ORS for the same leg).  
+       * Storage of evaluated scenarios and their indicators (fuel, emissions, cost) for later querying and analysis.
    * **Plotting / reporting helpers**  
-     * Optional helpers for generating maps, heatmaps and diagnostic charts from computed scenarios.
+     * Optional helpers for generating diagnostic tables or visualizations from what is stored in the SQLite database.
 
 3. **Support & Quality Layer**
    * **`tests/`**  
-     * Automated tests that target `modules/` directly (and optionally `apps/` + `scripts/`).
+     * Automated tests that target `modules/` directly (and optionally `apps/` + `scripts/`).  
      * Act as executable documentation for expected behavior of routing, cabotage, fuel/emissions and cost calculations.
    * **`calcs/`**  
-     * One-off or semi-structured calculation notebooks/scripts used for calibration and sanity checks.
-     * Useful for tracing numerics behind key constants or factors.
+     * One-off or semi-structured calculation notebooks/scripts used for calibration and sanity checks.  
+     * Useful for tracing numerics behind key constants or factors, often using open data before it is distilled into CSV/JSON under `data/`.
+
+---
 
 ### Data & Execution Flow (End-to-End)
 
@@ -214,288 +229,147 @@ Typical execution (e.g. “road-only vs cabotage” comparison) follows this pat
 
 1. **Input & configuration**
    * User calls an app or script with:
-     * Origin / destiny (address, CEP or `lat,lon`).
-     * Cargo mass (t) and scenario parameters (e.g. vessel class, port pair).
+     * Origin / destiny (address, CEP or `lat,lon`).  
+     * Cargo mass (t) and scenario parameters (e.g. vessel class, port pair, price assumptions).
    * The CLI layer validates arguments and loads config (API keys, paths, defaults).
 
 2. **Routing & caching**
    * The routing module:
-     * Geocodes origin/destiny via ORS.
-     * Builds required road legs (road-only, plus O→port and port→D for multimodal).
+     * Geocodes origin/destiny via ORS.  
+     * Builds required road legs (road-only, plus O→port and port→D for multimodal).  
      * Reads/writes from the SQLite cache so repeated legs do not re-hit ORS.
 
 3. **Cabotage & port modeling**
    * Given the origin/destiny ports and vessel class, the cabotage module:
-     * Computes sea distance (for information and bunker use).
-     * Evaluates port phases (arrival, hotel, cargo ops, departure) using calibrated power/time profiles.
+     * Computes sea distance (informational and for bunker use).  
+     * Evaluates port phases (arrival, hotel, cargo ops, departure) using calibrated power/time profiles derived from open and published data.
 
 4. **Fuel, emissions & cost aggregation**
    * Road and sea legs are transformed into:
-     * Fuel usage (kg or L) by fuel type.
-     * Emissions (e.g. CO₂e) using method-consistent factors.
-     * Monetary cost (fuel + port ops + road costs).
-   * Results are returned as structured Python objects or tables (per-leg and aggregated per TEU / O-D pair).
+     * Fuel usage (kg or L) by fuel type.  
+     * Emissions (e.g. CO₂e) using consistent TTW factors.  
+     * Monetary cost (fuel + modeled port ops + road costs).
+   * Results are assembled as structured Python objects and then persisted to the SQLite database as scenario records and leg-level tables (instead of being written to flat files).
 
-5. **Outputs & diagnostics**
-   * The app/script writes:
-     * Tabular outputs (CSV) under `outputs/`.
-     * Optional figures/maps/heatmaps.
-   * Logs for the run are written to `logs/` with enough detail to debug routing or modeling issues.
+5. **Diagnostics & downstream use**
+   * Logs for the run are written to `logs/` with enough detail to debug routing or modeling issues.  
+   * Any external analysis (plots, thesis tables, dashboards) reads directly from the SQLite database, which acts as the single source of truth for computed scenarios.
+
+---
 
 ### Design Goals
 
-* **Reproducible:**  
-  * All modeling logic is in versioned Python modules; external dependencies are limited to ORS and static `data/` tables.
-* **Composable:**  
-  * Higher-level apps are thin orchestrators; new CLIs can be created by recombining existing modules.
-* **Traceable:**  
-  * Every leg, factor and cost component is traceable through the modules that produced it, backed by logs and optional tests.
+* **Reproducible**  
+  * All modeling logic is in versioned Python modules; external dependencies are limited to ORS and static, openly-documented tables under `data/`.  
+  * Scenario results are stored in SQLite with explicit schemas, so analyses can be re-run or compared across commits.
+
+* **Composable**  
+  * Higher-level apps are thin orchestrators; new CLIs or notebooks can be created by recombining existing services (routing, cabotage, fuel, cost, persistence) without duplicating logic.
+
+* **Traceable**  
+  * Every leg, factor and cost component is traceable through:
+    * The open or published dataset it came from (`data/` + `calcs/`).  
+    * The module that transformed it (logged and, when possible, covered by tests).  
+  * The SQLite database stores both inputs (e.g. O–D, cargo, prices) and outputs (fuel, emissions, cost), making each scenario auditable end-to-end.
 
 ---
-  
+
 ## Repository Layout
 
-The project is structured as a library-first Python repository with a small number of thin CLI entrypoints and supporting scripts.
+The project is structured as a library-first Python repository with a small number of thin CLI entrypoints and supporting scripts. Persistent numerical results (routes, fuel, emissions, costs) are stored directly in the SQLite database under `data/`, rather than in exported CSVs.
 
 ```text
 .
 ├── apps/             # High-level CLI apps (user-facing tools)
 ├── calcs/            # Calibration, validation and scratch calculations
-├── data/             # Static input data and reference tables
+├── data/             # Static input data, reference tables and SQLite databases
 ├── logs/             # Runtime logs from apps and scripts
 ├── modules/          # Main Python library (routing, cabotage, fuel, costs, etc.)
 ├── scripts/          # Utility / maintenance scripts (bulk routing, refreshers, etc.)
 ├── tests/            # Automated tests for core modules and CLIs
 ├── trash/            # Deprecated / experimental code kept for reference
-├── .gitignore        # Git ignore rules (outputs, local data, secrets, etc.)
+├── .gitignore        # Git ignore rules (local data, logs, secrets, etc.)
 ├── README.md         # Technical overview and getting-started guide (this file)
 └── requirements.txt  # Locked list of Python dependencies
 ```
 
 ### Top-Level Structure
 
-* `apps/`  
+* `apps/`
   High-level CLI apps (user-facing tools). Each app:
+
   * Parses command-line arguments.
   * Loads configuration (API keys, paths, defaults).
   * Calls orchestration functions inside `modules/`.
+  * Reads from and writes to the SQLite database under `data/` as the main persistence layer.
 
-* `calcs/`  
+* `calcs/`
   Calibration, validation and scratch calculations:
+
   * Sanity-check scripts and notebooks used to derive key parameters.
   * Alternative formulations and back-of-the-envelope checks.
+  * Often consume the same open data sources used by the main model (ANTAQ, ANP, ANTT, etc.).
 
-* `data/`  
-  Static input data and reference tables:
+* `data/`
+  Static input data and database files:
+
   * Port metadata and locations.
   * Vessel and equipment parameters.
-  * Emission and cost factors.
-  * Other calibration files used by the modeling code.
+  * Emission and cost factors derived from open data and literature.
+  * SQLite databases that store:
 
-* `logs/`  
+    * Road routing cache (precomputed ORS legs).
+    * Multimodal evaluation results (fuel, emissions, costs per O–D pair).
+    * Any additional tables needed for analysis.
+
+* `logs/`
   Runtime logs produced by apps and scripts:
+
   * One log file per run (or per app, depending on configuration).
   * Primary evidence for debugging ORS calls, cache behavior and modeling errors.
+  * Complements what is stored in the SQLite database by documenting how results were produced.
 
-* `modules/`  
+* `modules/`
   Main Python library, grouped by domain:
+
   * Shared configuration, models and logging helpers.
   * Road routing (OpenRouteService client, geocoding, directions, caching).
   * Cabotage and port energy model (ports, vessel classes, port ops).
   * Fuel, emissions and cost calculation across modes.
-  * Persistence utilities (SQLite access layer) and optional plotting helpers.
+  * Persistence utilities (SQLite access layer) that expose typed access to all tables.
+  * Optional plotting / reporting helpers for exploratory analysis.
 
-* `scripts/`  
+* `scripts/`
   Power-user and maintenance scripts:
-  * Bulk route precomputation for large O-D sets.
-  * One-off data refresh runs.
+
+  * Bulk route precomputation for large O–D sets (populate the routing cache in SQLite).
+  * One-off data refresh runs (e.g. updating fuel price tables from open data sources).
   * Debugging and developer utilities not intended for casual users.
 
-* `tests/`  
+* `tests/`
   Automated tests:
-  * Unit and integration tests for core modules.
-  * Provide executable examples of expected behavior.
 
-* `trash/`  
+  * Unit and integration tests for core modules.
+  * Provide executable examples of expected behavior and database interactions.
+  * Help ensure numerical stability when factors or code are updated.
+
+* `trash/`
   Archived or deprecated code and experiments:
+
   * Kept separate from the main library to avoid confusion.
   * Useful as historical reference when revisiting old design decisions.
 
-* `.gitignore`  
-  Git ignore rules (outputs, local data, secrets, etc.).
+* `.gitignore`
+  Git ignore rules:
 
-* `README.md`  
+  * Excludes local data, logs, virtual environments and any machine-specific files.
+  * Ensures only versioned code, reference data and schema-level assets are committed.
+
+* `README.md`
   Technical overview and getting-started guide (this file).
 
-* `requirements.txt`  
-  Locked list of Python dependencies.
-
----
-
-## Methodology and Assumptions
-
-This model estimates the logistics cost and carbon footprint of road-only and multimodal (road–sea–road) freight in Brazil using an activity-based, per-leg accounting framework. For any given O–D pair and cargo mass, the system builds a transport chain (road-only or multimodal), computes distance and time components, and converts these into diesel/bunker consumption, GHG emissions, and monetary cost using calibrated parameters.
-
-### Overview of Model Architecture
-
-Each transport scenario is decomposed into atomic **legs** (road or sea) and **phases** (e.g. port handling, hoteling), each evaluated with independent logic:
-
-* Road legs are routed using the OpenRouteService API (HGV profile) and modeled with consumption curves tied to truck presets.
-* Sea legs use fixed port-to-port distances and vessel class parameters to compute bunker fuel use and emissions.
-* Port activities (hoteling, cargo ops) are computed with time-based auxiliary power models and handling benchmarks.
-* Cost and GHG are applied per unit of fuel using current prices and TTW emission factors (tank-to-wake).
-
-All distance, time, fuel, and emissions are computed deterministically and logged leg-by-leg.
-
----
-
-### Road Model
-
-Road transport is computed by combining API-routed distances with truck-specific consumption models, which distinguish between loaded and empty trips.
-
-#### Vehicle Presets and Trip Logic
-
-Truck configurations are defined by a set of calibrated presets (`TRUCK_SPECS`) that include:
-
-* `axles`: determines baseline efficiency,
-* `payload_t`: planning payload per trip,
-* `ref_weight_t`: used to contextualize consumption,
-* `empty_efficiency_gain`: km/L delta when returning empty.
-
-Cargo is assigned to trips via:
-`n_trips = ceil(cargo_mass_t / payload_t)`
-
-All consumption and emissions are then scaled by `n_trips`.
-
-#### Fuel Consumption (Loaded and Empty Legs)
-
-Baseline fuel efficiency (km/L) by axle count (per ANTT planning guides):
-
-| Axles | Loaded km/L |
-| ----- | ----------- |
-| 2     | 4.0         |
-| 3     | 3.0         |
-| 4     | 2.7         |
-| 5     | 2.3         |
-| 6     | 2.0         |
-| 7     | 2.0         |
-| ≥9    | 1.7         |
-
-Efficiency for empty backhauls is increased by the preset's `empty_efficiency_gain`, e.g., +1.0 km/L.
-
-If `empty_backhaul_share ∈ [0,1]`, fuel is computed as:
-`liters = dist_km × (loaded_rate × (1 - share) + empty_rate × share) × n_trips`
-
-#### Road Emissions and Cost
-
-* Fuel mass: `fuel_kg = liters × 0.84`
-* CO₂ emissions: `co2_kg = liters × 2.68`
-* Cost: `cost_brl = liters × diesel_price_brl_per_l`
-
-> Only CO₂ is modeled; CH₄ and N₂O are currently excluded. All CO₂ is treated as CO₂e (TTW scope).
-
----
-
-### Maritime Model
-
-Sea legs are modeled as three distinct components:
-
-1. At-sea propulsion (fuel ∝ tonne-km),
-2. Hoteling (auxiliary power use while at berth),
-3. Terminal operations (STS cranes, yard equipment).
-
-All sea legs assume direct port-to-port service with fixed vessel class and average loading.
-
-#### At-Sea Propulsion
-
-* Fuel mass:
-  `fuel_kg = κ_sea × sea_distance_km × cargo_tonne`
-  where `κ_sea = 0.0027 kg/(t·km)` (calibrated bunker consumption).
-
-> This covers main engine propulsion only.
-
-#### Port Hoteling (Ship-Side Energy)
-
-Port-level hoteling coefficients (`kg_fuel_per_tonne`) are derived from:
-
-* Empirical **time at berth** (ANTAQ port-call data),
-* Auxiliary load benchmark (`~600 kW`) and SFOC (`~225 g/kWh`),
-* Average cargo per call (to convert to per-tonne fuel factor).
-
-The final port contribution is:
-`fuel_hotel_kg = cargo_t × (k_port_origin + k_port_dest)`
-
-#### Terminal Operations (Land-Side Energy)
-
-Fixed dwell time and cost are added to all cabotage calls:
-
-* Dwell: `+2 × port_handling_hours` (load + unload),
-* Cost:  `+2 × port_handling_cost`.
-
-> Terminal energy is not currently modeled separately; it is subsumed under hotel or ignored.
-
-#### Maritime Emissions and Cost
-
-* Fuel used: marine gas oil (MGO),
-* Emission factor: `3.206 tCO₂ / t_fuel` (TTW),
-* Cost: `fuel_kg × 3.2 BRL/kg` (`MGO = 3200 BRL/t` default).
-
-> CH₄ and N₂O are assumed zero; CO₂e = CO₂ in this version.
-
----
-
-### Routing and Distance Inputs
-
-#### Road Routing via ORS
-
-* Routed via `driving-hgv` profile using OpenRouteService API.
-* Failed requests fall back to a SNAP-to-road approach.
-* Distances are cached in SQLite for determinism.
-
-#### Sea Distances
-
-* Sourced from a static precomputed matrix (`sea_matrix.json`), populated using Haversine distances × a `coastline_factor = 1.18`.
-* If missing, distances are recomputed as `Haversine × 1.18`.
-
-#### Nearest Ports
-
-* Ports are selected based on proximity of **truck gates** to O/D cities.
-* Normalization resolves aliasing (e.g. *Pecém* ↔ *São Gonçalo do Amarante*, *Vitória* ↔ *Vila Velha*).
-
----
-
-### Output Structure
-
-A single run emits:
-
-* Inputs and scenario metadata (cargo, diesel price, flags),
-
-* Selected ports and actual routed legs,
-
-* Per-leg and per-scenario totals for:
-
-  * Distance,
-  * Fuel (kg or L),
-  * Emissions (kg CO₂e),
-  * Cost (BRL).
-
-* Delta metrics (cabotage minus road-only) for comparison.
-
-* Distance provenance: `matrix` or `haversine`.
-
----
-
-### Model Scope and Simplifications
-
-This is a deterministic TTW (tank-to-wake) model with reproducible behavior and clear boundaries:
-
-* All emissions are TTW; WTW and Scope 3 are out of scope.
-* CO₂e = CO₂; CH₄ and N₂O are excluded in current calculations.
-* Sea routing is abstracted (static matrix, no dynamic ocean routing).
-* Port times are static averages; schedule reliability is not modeled.
-* Only cargo mass is used (volume, weight limits, and mix are not).
-* Backhauls are averaged (no explicit return leg modeling).
-* No stochastic behavior: all outputs are reproducible with fixed inputs.
+* `requirements.txt`
+  Locked list of Python dependencies used by apps, modules and scripts.
 
 ---
   
@@ -609,6 +483,239 @@ All structured inputs for the model live under the `data/` directory and are tre
 
 ---
 
+## Methodology and Assumptions
+
+This model estimates the logistics cost and carbon footprint of road-only and multimodal (road–sea–road) freight in Brazil using an activity-based, per-leg accounting framework. For any given O–D pair and cargo mass, the system builds a transport chain (road-only or multimodal), computes distance components, and converts these into diesel/bunker consumption, GHG emissions and monetary cost using calibrated parameters.
+
+All core inputs are either:
+
+* **Open-source / public data** (e.g. ANTAQ, ANTT, ANP, IBGE), or  
+* **Static reference tables under `data/`**, which can be updated or replaced as new information becomes available.
+
+Results are persisted primarily in a **local SQLite database**, making the experiment statefully reproducible without generating separate CSV exports.
+
+### Overview of Model Architecture
+
+Each transport scenario is decomposed into atomic **legs** (road or sea) and, for the maritime part, **phases** (e.g. hoteling). Each component is evaluated with its own logic:
+
+* Road legs are routed using the OpenRouteService API (HGV profile) and modeled with consumption curves tied to truck presets calibrated from ANTT benchmarks.
+* Sea legs use static port-to-port distances and a calibrated intensity factor for bunker consumption per tonne-km.
+* Port hoteling is modeled via per-port factors (kg fuel per tonne of cargo) derived from ANTAQ dwell time and auxiliary power assumptions.
+* Cost and GHG are applied per unit of fuel using TTW (tank-to-wake) emission factors and configurable fuel prices.
+
+All distances, fuel and emissions are computed deterministically and written to the SQLite database together with the associated scenario metadata.
+
+---
+
+### Road Model
+
+Road transport is computed by combining API-routed distances with truck-specific consumption models that distinguish between loaded and empty operation.
+
+#### Vehicle Presets and Trip Logic
+
+Truck configurations are defined by calibrated presets (`TRUCK_SPECS`) that include:
+
+* `axles`: selects the baseline fuel efficiency,
+* `payload_t`: planning payload per trip (tonnes),
+* `ref_weight_t`: reference loaded weight used during calibration,
+* `empty_efficiency_gain`: improvement in km/L for empty legs.
+
+Cargo is allocated to trips via:
+
+```text
+n_trips = ceil(cargo_mass_t / payload_t)
+```
+
+All fuel, emissions and cost are then scaled by `n_trips`. Volume constraints are out of scope; only mass is considered.
+
+#### Fuel Consumption (Loaded and Empty Legs)
+
+Baseline fuel efficiency (km/L) by axle count (adapted from ANTT planning values):
+
+| Axles | Loaded km/L |
+| ----- | ----------- |
+| 2     | 4.0         |
+| 3     | 3.0         |
+| 4     | 2.7         |
+| 5     | 2.3         |
+| 6     | 2.0         |
+| 7     | 2.0         |
+| ≥9    | 1.7         |
+
+Efficiency for empty backhauls is increased by the preset’s `empty_efficiency_gain` (for example, +1.0 km/L).
+
+The model does not explicitly simulate a separate return route. Instead, it uses an `empty_backhaul_share ∈ [0, 1]` to blend loaded and empty operation over the same distance:
+
+```text
+liters = dist_km × (loaded_rate × (1 - share) + empty_rate × share) × n_trips
+```
+
+where `loaded_rate` and `empty_rate` are expressed as L/km.
+
+#### Road Emissions and Cost
+
+Fuel and emissions for road legs are derived from simple, transparent factors:
+
+* Fuel mass
+  `fuel_kg = liters × 0.84`  (diesel density, kg/L)
+* CO₂ emissions (TTW)
+  `co2_kg = liters × 2.68`
+* Monetary cost
+  `cost_brl = liters × diesel_price_brl_per_l`
+
+Only CO₂ is currently modeled; CH₄ and N₂O are not included. In this version, **CO₂e is treated as equal to CO₂** for all road legs (TTW scope).
+
+---
+
+### Maritime Model
+
+Sea legs are modeled with a compact but transparent structure, split into:
+
+1. **At-sea propulsion** (fuel proportional to tonne-km), and
+2. **Port hoteling** (auxiliary power while at berth).
+
+Terminal yard energy is not modeled explicitly at this stage; it is implicitly covered by the hotel factor or neglected.
+
+All sea legs assume direct port-to-port cabotage service with a representative vessel class and average loading.
+
+#### At-Sea Propulsion
+
+Propulsion fuel is computed using a linear intensity factor:
+
+```text
+fuel_kg = κ_sea × sea_distance_km × cargo_tonne
+```
+
+where:
+
+* `κ_sea = 0.0027 kg/(t·km)` is a calibrated bunker intensity for Brazilian container cabotage, consistent with values in the literature used as reference.
+
+This term covers **main engine propulsion only**.
+
+#### Port Hoteling (Ship-Side Energy)
+
+Port-level hoteling coefficients (`kg_fuel_per_tonne`) are stored in a JSON table under `data/`, one factor per port. They are derived offline by:
+
+* Using ANTAQ port-call logs to estimate **average time at berth** for container cabotage calls;
+* Assuming a representative **auxiliary demand** (≈600 kW) and **specific fuel oil consumption (SFOC)** (≈225 g/kWh);
+* Dividing the resulting fuel per call by average cargo per call to obtain a **kg fuel per tonne of cargo** factor.
+
+At runtime, the cabotage model loads these port factors and applies:
+
+```text
+fuel_hotel_kg = cargo_t × (k_port_origin + k_port_dest)
+```
+
+where `k_port_origin` and `k_port_dest` are the hotel coefficients for the origin and destination ports.
+
+#### Maritime Emissions and Cost
+
+Sea and hotel fuel are treated as **marine gas oil (MGO)** in the current implementation:
+
+* Emission factor (TTW):
+  `EF_MGO_CO2 = 3.206 tCO₂ / t_fuel`
+* Monetary cost (default scenario):
+  `MGO_PRICE_BRL_PER_T = 3200.0` → `fuel_cost_brl = fuel_kg × 3.2`
+
+CH₄ and N₂O are set to zero in this TTW calculation; therefore, **CO₂e = CO₂** for all maritime legs in the current version.
+
+---
+
+### Routing and Distance Inputs
+
+#### Road Routing via OpenRouteService (ORS)
+
+Road distances are obtained from **OpenRouteService (ORS)** and then cached locally:
+
+* Routing uses a heavy-goods (`driving-hgv`) profile for both road-only and the inland legs feeding ports.
+* Origin and destiny can be informed as addresses, CEPs, `"lat,lon"` strings or `"City, UF"` labels.
+* A dedicated road client module:
+
+  * Geocodes origin and destiny via ORS (biased to Brazil),
+  * Requests directions for the chosen profile,
+  * Extracts distances (km) and coordinates,
+  * Writes successful legs to a **SQLite cache** keyed by canonical origin/destiny labels and HGV flags.
+
+If ORS returns an error for directions, the code falls back to a SNAP-to-road approach before failing. Once a leg is in the cache, subsequent runs **reuse the stored distance** instead of calling ORS again.
+
+#### Sea Distances
+
+Sea distances are taken from a static matrix under `data/` (for example, `sea_matrix.json`):
+
+* Distances were precomputed via great-circle (Haversine) formulas between port centroids and multiplied by a **coastline factor** (≈1.18) to account for realistic routing along the Brazilian coast.
+* Each entry stores the effective sea distance in kilometers and metadata about how it was derived.
+* If a port pair is missing in the matrix, the runtime logic falls back to `Haversine × coastline_factor` with country-level assumptions.
+
+This design keeps all sea distances **open, inspectable and easy to update** as better routes or new services become available.
+
+#### Nearest Ports and Label Normalization
+
+For multimodal scenarios, the model must choose which ports serve each origin/destiny:
+
+* **Nearest port selection** is done using truck gate coordinates: the model measures road distance from the origin city to each port gate (via ORS) and selects the closest candidate according to the configured scenario.
+* **Label normalization and aliases** ensure that:
+
+  * Different names for the same terminal (e.g. *Pecém* vs. *São Gonçalo do Amarante*, *Vitória/TVV* vs. *Vila Velha*) are mapped consistently to the same internal port ID.
+* All port metadata (name, UF, coordinates, aliases) are stored in versioned files under `data/`, making it straightforward to add or update ports or to change which gates represent each terminal.
+
+---
+
+### Output Structure
+
+Each evaluation writes a **structured record** to the SQLite database, capturing:
+
+* Input and scenario metadata:
+
+  * Origin/destiny labels and coordinates,
+  * Selected ports and their UFs,
+  * Cargo mass (t),
+  * Key parameters (e.g. diesel and MGO prices, κ factors, empty backhaul share).
+* Per-scenario totals for:
+
+  * Road-only and multimodal total distance (km),
+  * Fuel use (L or kg) by leg and by mode (road vs. cabotage),
+  * Emissions (kg CO₂e, with CO₂e = CO₂ in this version),
+  * Monetary cost (BRL) by mode and in total.
+* Comparison metrics:
+
+  * Absolute and percentage differences (cabotage minus road-only) in fuel, emissions and cost.
+
+The database schema is intentionally simple and local (SQLite) so that:
+
+* Queries can be written directly in SQL or via Python to extract tables for analysis and visualization;
+* Results remain tied to the exact routing and factor assumptions used.
+
+There is **no separate `outputs/` directory** in the current version; the SQLite database is the primary persistent artifact of the model runs.
+
+---
+
+### Model Scope and Simplifications
+
+This repository implements a deterministic TTW (tank-to-wake) model with clear boundaries:
+
+* **Emissions scope**
+
+  * Only TTW is modeled; WTW (well-to-wake) and upstream emissions are out of scope.
+  * CO₂e is currently approximated as CO₂ only; CH₄ and N₂O are not added.
+* **Sea routing**
+
+  * Sea paths are represented by static port-to-port distances; no dynamic ocean routing, weather or queuing effects.
+* **Port modeling**
+
+  * Hoteling is captured via average per-port factors; intra-port variability and berth conflicts are not modeled.
+  * Terminal yard energy is not explicitly modeled; its contribution is either embedded in the hotel factor or neglected.
+* **Truck operations**
+
+  * Only mass-based capacity constraints are considered; volumetric constraints and cargo mix are ignored.
+  * Backhauls are represented via an average share parameter (`empty_backhaul_share`); no explicit second leg is modeled.
+* **Determinism**
+
+  * There are no stochastic components: given the same code, `data/` tables, SQLite cache and scenario parameters, all results are exactly reproducible.
+
+These simplifications are intentional: they allow all assumptions to be encoded in **open, updatable tables** and simple formulas, making the model transparent, explainable and easy to recalibrate as new public data or literature becomes available.
+
+---
+
 ## Generated Results & Persistent Artifacts
 
 The project is built around **database-backed** persistence rather than exporting CSVs or figures to the filesystem. All “products” of the computation are stored in **SQLite tables** under `data/`, which act both as a routing cache and as the main experiment store.
@@ -662,10 +769,10 @@ This keeps the repository focused on **one source of truth** for numerical outpu
   * As long as the database is preserved, any subsequent analysis can be re-run or extended by reading the same tables, without regenerating intermediate artifacts.
 
 ---
-  
+
 ## Configuration & Environment Variables
 
-Runtime configuration is centralized and kept minimal. Defaults are defined in code, and only a small number of values must be supplied via environment variables (primarily the routing API key).
+Runtime configuration is centralized and kept minimal. Defaults are defined in code, and only a small number of values must be supplied via environment variables (primarily the routing API key). All configuration is designed so the model can be re-run on any machine using the same open, versioned data under `data/` and the same SQLite database file.
 
 ### Configuration Sources (Precedence)
 
@@ -677,7 +784,7 @@ From lowest to highest precedence:
 
 2. **Configuration module**  
    * A single config module (e.g. `modules/config.py`) exposes:
-     * Paths (base project root, data/logs/outputs directories).  
+     * Paths (base project root, data/logs directories).  
      * Tuning parameters (timeouts, retry counts, etc.).  
    * This is the recommended place to inspect or change defaults.
 
@@ -728,7 +835,7 @@ The project recognizes a small set of optional variables to tweak behavior at ru
 
   * Optional overrides for:
 
-    * SQLite cache location (routing cache DB file).
+    * SQLite database location (routing cache and scenario results DB file).
     * Custom base directories for `logs/` (e.g. mounted volumes on a server).
 
 Exact variable names and defaults are documented in the config and client modules (e.g. `modules/config.py`, `modules/road/ors_client.py`).
@@ -755,11 +862,11 @@ Before running any CLI app or script:
 1. Create and activate a Python virtual environment.
 2. Install dependencies: `pip install -r requirements.txt`.
 3. Export the routing API key environment variable.
-4. (Optional) Adjust logging level or paths via environment variables if needed.
+4. (Optional) Adjust logging level, paths or SQLite DB location via environment variables if needed.
 5. Run the desired `apps/` or `scripts/` entrypoint.
 
 ---
-  
+
 ## Installation & Local Development Setup
 
 This section describes how to set up a local, reproducible environment for running the tools and developing the codebase.
@@ -831,19 +938,19 @@ This installs all runtime and (when present) development dependencies required b
 
 ### 5. Configure Environment Variables
 
-Before running tools that call the routing API, export the required environment variable(s) (see the previous **Configuration & Environment Variables** section):
+Before running tools that call the routing API and write into the SQLite database, export the required environment variable(s) (see the previous **Configuration & Environment Variables** section):
 
 ```bash
-export YOUR_ORS_ENV_VAR_NAME="your-real-openrouteservice-key"
+export ORS_API_KEY="your-real-openrouteservice-key"
 ```
 
 On Windows PowerShell:
 
 ```powershell
-$env:YOUR_ORS_ENV_VAR_NAME = "your-real-openrouteservice-key"
+$env:ORS_API_KEY = "your-real-openrouteservice-key"
 ```
 
-Replace `YOUR_ORS_ENV_VAR_NAME` with the actual variable name used by the code.
+Replace `ORS_API_KEY` with the actual variable name used by the code if it differs.
 
 ### 6. Basic Sanity Check
 
@@ -866,13 +973,13 @@ Typical development loop:
 1. Activate the virtual environment (`venv`).
 2. Edit code under `modules/`, `apps/` or `scripts/`.
 3. Run the relevant CLI or script (see later sections for details).
-4. Inspect generated artifacts under `logs/`.
+4. Inspect logs under `logs/` and the SQLite database under `data/` (routing cache and scenario results).
 5. (Optional) Run tests before committing changes.
 
 This setup ensures a clean separation between project dependencies and your global Python installation, making runs and experiments reproducible across machines.
 
 ---
-  
+
 ## Running the Main Apps
 
 High-level workflows are exposed as **CLI apps** under the `apps/` directory. Each app is a thin wrapper around the core library in `modules/` and is meant to be run directly from the command line.
@@ -885,8 +992,7 @@ From the project root (`carbon-footprint/`), after activating your virtualenv:
 
   ```bash
   python -m apps.<app_name> --help
-
-    ```
+  ```
 
 * Or run the corresponding **file** directly:
 
@@ -911,12 +1017,14 @@ All apps follow a consistent interface:
   * `--origin` / `--destiny`
 
     * Free-text address, CEP or `lat,lon` pairs.
+
   * `--cargo-mass-t`
 
     * Cargo mass in tonnes used for tonne-km and per-TEU calculations.
-  * `--mode` or similar flags
 
-    * Force regeneration of artifacts even if an output file already exists.
+  * Mode / scenario selectors (e.g. `--mode`, `--scenario`, or similar)
+
+    * Let you choose between road-only, cabotage, or combined analyses, when supported by the app.
 
 Each app is responsible for:
 
@@ -927,13 +1035,13 @@ Each app is responsible for:
    * Build required road and sea legs.
    * Run the cabotage / port energy model.
    * Aggregate fuel, emissions and costs.
-4. Writing logs to `logs/`.
+4. Persisting results in the SQLite database and writing logs to `logs/`.
 
 ### Typical Workflow
 
 1. Ensure the routing cache and input tables in `data/` are correctly populated (see the **Command-Line Scripts** section for precomputation utilities).
 
-2. Choose an app under `apps/` that matches your task (e.g. fixed-origin comparison, O-D sweep, heatmap generation).
+2. Choose an app under `apps/` that matches your task (e.g. fixed-origin comparison, O–D sweep, or a specific experiment used in the thesis).
 
 3. Run it with the desired arguments, for example:
 
@@ -946,16 +1054,16 @@ Each app is responsible for:
 
 4. Inspect:
 
-   * CSV tables and figures in `outputs/`.
-   * Detailed logs for the run in `logs/`.
+   * The updated values stored in the SQLite database under `data/` (e.g. routing cache, scenario tables).
+   * Detailed logs for the run in `logs/`, including cache usage, ORS calls, and high-level fuel/emissions/cost summaries.
 
-This pattern is the same for all current and future apps: discover the app under `apps/`, inspect `--help`, then run with your scenario parameters.```
+This pattern is the same for all current and future apps: discover the app under `apps/`, inspect `--help`, then run with your scenario parameters and read results from the database and logs.
 
 ---
 
 ## Command-Line Scripts
 
-The `scripts/` directory contains lower-level, power-user-oriented command-line tools. They are intended for **precomputation**, **batch runs** and **maintenance tasks** that support the higher-level apps.
+The `scripts/` directory contains lower-level, power-user-oriented command-line tools. They are intended for **precomputation**, **batch runs** and **maintenance tasks** that support the higher-level apps and feed the SQLite database.
 
 ### Invocation Pattern
 
@@ -997,16 +1105,16 @@ Each script:
     * Iterates over all destinies (skipping blank lines and `#` comments).
     * Calls `routes_generator` for each pair.
     * Stops cleanly on ORS rate-limit errors so the job can be safely resumed.
-  * Enables large-scale precomputation of the road legs cache before running main analyses.
+  * Enables large-scale precomputation of the road legs cache in SQLite before running main analyses.
 
 * **`multimodal_fuel_emissions_and_costs.py`**
 
-  * One-shot, end-to-end comparator for **road-only vs cabotage** on a single O-D pair.
+  * One-shot, end-to-end comparator for **road-only vs cabotage** on a single O–D pair.
   * Given origin, destiny and cargo mass (t), it:
 
     * Calls the multimodal fuel service in `modules/` to build a consistent multimodal profile (road-only, O→Port, Port→D, sea leg).
     * Computes fuel, emissions and monetary cost for each leg and for the aggregated scenario.
-    * Writes detailed and aggregated outputs to `outputs/`, logging the full trace of the run.
+    * Persists detailed and aggregated results in the SQLite database, logging the full trace of the run.
 
 > The exact list of scripts may evolve as the project grows. Use `ls scripts/` (or `dir scripts`) to discover available tools and `--help` on each script to inspect its arguments and behavior.
 
@@ -1014,7 +1122,7 @@ Each script:
 
 * **Safe to re-run**
 
-  * Scripts that write to the routing cache or other persistent stores are designed to be idempotent whenever possible (e.g. skip existing rows unless `--overwrite` is explicitly set).
+  * Scripts that write to the routing cache or other database tables are designed to be idempotent whenever possible (e.g. skip existing rows unless `--overwrite` is explicitly set).
 
 * **Thin orchestration only**
 
@@ -1023,7 +1131,7 @@ Each script:
 
 * **Consistent logging**
 
-  * All scripts emit structured logs to `logs/`, making it straightforward to debug failures in precomputation or batch runs.
+  * All scripts emit structured logs to `logs/`, making it straightforward to debug failures in precomputation or batch runs and to trace which database records came from which script execution.
 
 ---
 
@@ -1036,14 +1144,14 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
 * `modules/`
 
   * Python package root for all reusable code.
-  * Organized by responsibility (routing, cabotage, fuel/emissions, costs, persistence, plotting).
+  * Organized by responsibility (routing, cabotage, fuel/emissions, costs, persistence, plotting/diagnostics).
 
 ### Shared Infrastructure & Utilities
 
 * **Configuration and constants**
 
-  * Central place for paths (data, logs, outputs) and non-secret defaults.
-  * Exposes functions/helpers used by both apps and scripts to locate project resources.
+  * Central place for paths (data, logs) and non-secret defaults.
+  * Exposes functions/helpers used by both apps and scripts to locate project resources and tuning parameters.
 
 * **Logging helpers**
 
@@ -1084,9 +1192,9 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
 
     * Build O→D road-only legs.
     * Build O→Port and Port→D legs for multimodal scenarios.
-    * Integrate with the SQLite cache to avoid re-querying ORS for known legs.
+    * Integrate with the SQLite cache so repeated legs do not re-query ORS.
 
-### Cabotage & Port Modeling (`modules.cabotage`, `modules.port_ops`, etc.)
+### Cabotage & Port Modeling
 
 * **Port and route models**
 
@@ -1094,7 +1202,7 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
 
     * Ports (IDs, names, coordinates, UF).
     * Predefined port pairs (e.g. Santos ↔ capitals).
-    * Sea distances (either precomputed or read from `data/`).
+    * Sea distances (precomputed from open-coordinate data or read from `data/`).
 
 * **Vessel and phase modeling**
 
@@ -1110,7 +1218,7 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
 
     * STS crane energy per move.
     * Yard equipment consumption per TEU.
-  * Aggregate terminal energy and allocate it per container.
+  * Aggregate terminal-related energy and allocate it per container when modeled.
 
 ### Fuel & Emissions (`modules.fuel`)
 
@@ -1119,45 +1227,45 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
   * Converts road distances and payload into:
 
     * Diesel consumption (L or kg).
-    * Emissions using road-specific factors.
+    * Emissions using road-specific TTW factors.
   * Handles different truck configurations and load factors when applicable.
 
 * **Cabotage fuel service**
 
   * Converts sea distance and port phase durations into:
 
-    * Bunker fuel consumption at sea.
+    * Main-engine bunker fuel consumption at sea.
     * Auxiliary fuel for hotel and cargo ops.
-  * Uses calibrated specific fuel consumption and power factors per vessel class.
+  * Uses calibrated specific fuel consumption and power factors per vessel class and port.
 
 * **Multimodal fuel profiles**
 
   * High-level functions that:
 
     * Combine road-only, O→Port, Port→D and sea legs into a single “multimodal fuel profile”.
-    * Return structured objects with per-leg and total fuel usage by fuel type.
+    * Return structured objects with per-leg and total fuel usage, separated by fuel type and mode.
 
 * **Emissions conversion**
 
   * Functions that apply emission factors (per unit of fuel) to:
 
-    * Compute WTW GHG emissions per leg and per TEU.
-    * Keep a clear audit trail of which factor set is used.
+    * Compute TTW GHG emissions per leg and per TEU.
+    * Keep a clear audit trail of which factor set and units are used.
 
 ### Costs & Prices (`modules.costs`)
 
 * **Fuel price ingestion**
 
-  * Logic to fetch or parse fuel price tables (e.g. diesel series, bunker prices).
-  * Normalizes units and currencies into the internal convention used by the model.
+  * Logic to fetch or parse fuel price series from **open, updatable sources** (e.g. ANP diesel statistics, Ship & Bunker bunker prices).
+  * Normalizes units and currencies into the internal convention used by the model (e.g. BRL/L for diesel, BRL/t for MGO).
 
 * **Monetary cost modeling**
 
   * Functions that:
 
-    * Map fuel use (by type) into fuel cost.
+    * Map fuel use (by type) into fuel cost using the latest ingested price tables.
     * Incorporate additional cabotage-specific components when applicable (e.g. port fees, hotel costs, terminal handling).
-  * Provide aggregate cost indicators per TEU for each scenario.
+  * Provide aggregate cost indicators per TEU and per scenario (road-only vs multimodal).
 
 ### Persistence & Caching (`modules.functions.database_manager` and related)
 
@@ -1174,25 +1282,29 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
     * “Lookup-then-insert” semantics for ORS-derived distances and coordinates.
     * Idempotent upsert logic keyed by normalized origin/destiny labels and flags (e.g. HGV).
 
-* **Other tables**
+* **Scenario and batch tables**
 
-  * Additional helper functions for any auxiliary tables used by batch runs or heatmaps, keeping all SQL in a single, auditable place.
+  * Helper functions to read/write tables that store:
+
+    * Precomputed scenario runs (road-only vs cabotage comparisons).
+    * Batch and sweep results used by higher-level analyses (e.g. O-D matrices, heatmap inputs).
+  * Keeps all SQL in a single, auditable place so results are reproducible from the database plus `data/`.
 
 ### Plotting & Diagnostics (when present)
 
 * **Plot helpers**
 
-  * Utilities to generate:
+  * Utilities to generate, from SQLite tables and static inputs:
 
     * Route maps combining road and sea legs.
     * Heatmaps and comparative bar/line plots for cost and emissions.
-  * Centralized style defaults so figures are consistent across apps.
+  * Centralized style defaults so figures are consistent across apps and notebooks.
 
 * **Debug visualizations**
 
   * Optional diagnostic plots (e.g. distributions of distances, fuel per TEU) used during calibration and sanity checks.
 
-All higher-level behavior exposed by `apps/` and `scripts/` is built by composing these module functions. For any specific analysis or bug, the recommended starting point is to locate the relevant subpackage under `modules/` (road, cabotage, fuel, costs, persistence, plotting) and follow the call chain from there.
+All higher-level behavior exposed by `apps/` and `scripts/` is built by composing these module functions. For any specific analysis or bug, the recommended starting point is to locate the relevant subpackage under `modules/` (road, cabotage, fuel, costs, persistence, plotting/diagnostics) and follow the call chain from there.
 
 ---
 
@@ -1203,65 +1315,69 @@ The road routing engine is the only component allowed to talk to the **OpenRoute
 ### Responsibilities
 
 * Normalize and geocode free-text locations (addresses, CEPs, `lat,lon` strings).
-* Call ORS **geocoding** and **directions** endpoints for the `driving-car` profile (including HGV variants when needed).
+* Call ORS **geocoding** and **directions** endpoints for the `driving-car` profile (configured for freight/HGV use when relevant).
 * Persist all successfully computed legs in a **SQLite cache**, keyed by canonical origin/destiny labels (and flags like HGV).
 * Expose a simple Python interface used by:
 
-  * CLI apps under `apps/` (end-user tools).
-  * Command-line scripts under `scripts/` (precomputation and batch runs).
+  * CLI apps under `apps/` (end-user tools),
+  * Command-line scripts under `scripts/` (precomputation and batch runs),
   * Higher-level services in `modules.fuel` and cabotage logic.
+
+The whole stack is built on open tooling (Python + SQLite) and a public routing API (ORS), so any user with an ORS key can recompute the same legs or update them in the future.
 
 ### External Dependency (ORS API)
 
 * Uses **OpenRouteService** over HTTPS for:
 
-  * Forward geocoding (text → coordinates).
+  * Forward geocoding (text → coordinates),
   * Routing (coordinates → distance, duration, geometry).
 * ORS API key is read from an **environment variable** (see the configuration section).
 * Network behavior:
 
-  * Configurable timeouts and retry logic for transient errors.
+  * Configurable timeouts and retry logic for transient errors,
   * Basic rate-limit awareness (HTTP 429) so batch scripts can stop cleanly and be resumed later.
+
+Because ORS is an open, versioned service, the routing layer is intentionally thin: all ORS-specific details are isolated in one place so that updates to the API (or a future provider) can be handled centrally.
 
 ### Main Components (Conceptual)
 
-* ORS HTTP client
+* **ORS HTTP client**
 
-  * Small wrapper around `requests` (or equivalent).
+  * Small wrapper around the HTTP library.
   * Responsible for:
 
-    * Injecting the API key and headers.
-    * Building URLs and payloads for geocoding and directions.
+    * Injecting the API key and headers,
+    * Building URLs and payloads for geocoding and directions,
     * Raising clear exceptions on HTTP or JSON errors.
 
-* Geocoding helpers
+* **Geocoding helpers**
 
-  * Parse and normalize user-provided locations (origin/destiny).
-  * Call ORS geocoding exposed by the client.
+  * Parse and normalize user-provided locations (origin/destiny),
+  * Call ORS geocoding via the client,
   * Return a typed result containing:
 
-    * Canonical label (e.g. `"São Paulo - SP, Brasil"`).
-    * Latitude/longitude pair.
-    * Optional metadata (confidence, etc.) for logging.
+    * Canonical label (e.g. `"São Paulo - SP, Brasil"`),
+    * Latitude/longitude pair,
+    * Optional metadata (confidence etc.) for logging.
 
-* Directions helpers
+* **Directions helpers**
 
-  * Take resolved coordinates and call ORS directions.
+  * Take resolved coordinates and call ORS directions,
   * Extract from the response:
 
-    * Total distance (km).
-    * Travel time (seconds).
-    * Route geometry (when needed for plotting or debugging).
+    * Total distance (km),
+    * Travel time (seconds),
+    * Route geometry (when needed by higher layers),
   * Expose a small, stable Python object to the rest of the code.
 
-* Routing orchestration functions
+* **Routing orchestration functions**
 
   * Build high-level legs such as:
 
-    * Road-only leg: `origin → destiny`.
-    * First-mile leg: `origin → origin_port`.
-    * Last-mile leg: `destiny_port → destiny`.
-  * Handle HGV vs non-HGV profiles when required by the scenario.
+    * Road-only leg: `origin → destiny`,
+    * First-mile leg: `origin → origin_port`,
+    * Last-mile leg: `destiny_port → destiny`,
+  * Handle HGV-related flags when required by the scenario,
   * Central place that decides when to read/write the cache.
 
 ### SQLite Road-Leg Cache
@@ -1270,27 +1386,29 @@ All road legs are cached in a **single generic table** (e.g. `heatmap_runs`) man
 
 * Key fields (conceptually):
 
-  * `origin` / `destiny`: canonical text labels after geocoding.
-  * `origin_lat` / `origin_lon`, `destiny_lat` / `destiny_lon`: coordinates.
-  * `distance_km`: road distance returned by ORS.
-  * `is_hgv`: flag for heavy-goods vehicle profile.
-  * `insertion_ts`: timestamp of when the row was written.
+  * `origin` / `destiny`: canonical text labels after geocoding,
+  * `origin_lat` / `origin_lon`, `destiny_lat` / `destiny_lon`: coordinates,
+  * `distance_km`: road distance returned by ORS,
+  * `is_hgv`: flag for heavy-goods vehicle profile,
+  * `insertion_ts`: timestamp for when the row was written.
 
 * Purpose:
 
   * Provide a **generic O→D cache** reusable across:
 
-    * Road-only assessments.
-    * Multimodal legs (O→Port, Port→D).
+    * Road-only assessments,
+    * Multimodal legs (O→Port, Port→D),
     * Heatmap and batch runs.
 
 * Access pattern:
 
   * All DB reads/writes go through the shared database manager (`modules.functions.database_manager`), which:
 
-    * Wraps connections in context managers.
-    * Logs any error and rolls back failed transactions.
+    * Wraps connections in context managers,
+    * Logs any error and rolls back failed transactions,
     * Keeps SQL statements centralized and auditable.
+
+Using SQLite keeps this cache fully local and self-contained: the entire routing history is just a single file under `data/` that can be backed up, versioned, or regenerated if needed.
 
 ### Caching Algorithm (Single O–D Pair)
 
@@ -1305,7 +1423,7 @@ For a typical CLI/script call (`origin`, `destiny`, flags):
 
    * If not found:
 
-     * Geocode origin and destiny via ORS.
+     * Geocode origin and destiny via ORS,
      * If either cannot be geocoded, insert a **NULL/placeholder row** (with coordinates/distance set to `NULL`) and log a warning.
 
 3. **Canonical lookup**
@@ -1318,14 +1436,14 @@ For a typical CLI/script call (`origin`, `destiny`, flags):
 
    * If still no valid entry:
 
-     * Call ORS directions for the resolved coordinates.
-     * Extract distance/time and upsert the row keyed by canonical labels (`origin`, `destiny`, `is_hgv`).
-     * Store coordinates and `distance_km` plus any metadata required by downstream modules.
+     * Call ORS directions for the resolved coordinates,
+     * Extract distance/time and upsert the row keyed by canonical labels (`origin`, `destiny`, `is_hgv`),
+     * Store coordinates, `distance_km` and any metadata required by downstream modules.
 
 This strategy guarantees that:
 
-* The **same physical leg** (e.g. São Paulo ↔ Salvador) is never recomputed unnecessarily, even if the user types slightly different free-text labels.
-* The cache is **idempotent** and safe to re-use across runs and scripts.
+* The **same physical leg** (e.g. São Paulo ↔ Salvador) is not recomputed unnecessarily, even if the user types slightly different free-text labels,
+* The cache is **idempotent** and safe to reuse across runs and scripts,
 * Failures (geocoding or routing) are recorded explicitly instead of silently ignored.
 
 ### Integration With Higher-Level Code
@@ -1334,144 +1452,142 @@ This strategy guarantees that:
 
   * They call routing services in `modules.road` which:
 
-    * Hide HTTP and JSON details.
-    * Enforce caching rules.
+    * Hide HTTP and JSON details,
+    * Enforce caching rules,
     * Return plain Python objects with distances, coordinates and metadata.
 
 * Fuel/emissions modules (`modules.fuel`) receive:
 
-  * Distances (km) for each road leg.
+  * Distances (km) for each road leg,
   * Optionally, travel times and HGV/weight information when relevant for consumption curves.
 
-* Plotting/mapping helpers can:
+* Diagnostic and plotting helpers can:
 
-  * Use stored coordinates (and geometries when available) to draw route maps without calling ORS again.
+  * Use stored coordinates (and geometries when available) to produce route-level visualizations without re-hitting ORS.
 
-In practice, if you need any road distance or leg, the correct entry point is always a function in `modules.road` that wraps this engine, not a direct HTTP call or ad-hoc database query from other parts of the code.
+By centralizing all routing and caching in this engine, the rest of the model can treat road distance as a clean, deterministic input built entirely on open, versioned data sources.
 
 ---
 
 ## Cabotage & Port Operations Model
 
-The cabotage and port operations model encapsulates all **sea-leg** and **port-side** energy use for container services, and is implemented mainly in `modules/fuel/cabotage_fuel_service.py` plus related helpers in `modules/fuel` and static tables under `data/`.
+The cabotage and port operations model encapsulates all **sea-leg** and **port-side** energy use for container services. It lives primarily in `modules/fuel/cabotage_fuel_service.py`, with parameters and lookup tables under `data/` and small helpers in other `modules/fuel` files.
+
+The goal is to convert **sea distance + port time** into a consistent, per-scenario fuel demand that can be combined with the road model and then mapped to emissions and cost.
 
 ### Scope and Responsibilities
 
-* Represent container vessels (by class) with:
+The cabotage model is responsible for:
 
-  * TEU capacity
-  * Installed propulsion and auxiliary power
-  * Typical service speeds and hotel loads
-* Represent port calls as a sequence of **phases** (arrival, hotel, cargo operations, departure).
-* Convert:
+* Representing container vessels (by class), including:
 
-  * Sea distance between ports
+  * TEU capacity and typical loading assumptions.
+  * Installed main/auxiliary power and service speeds.
+* Representing port calls as a sequence of **phases** (arrival, hotel, cargo ops, departure).
+* Converting:
+
+  * Sea distance between ports, and
   * Time spent in each port phase
     into total fuel consumption (by fuel type) for:
-  * Sea sailing
-  * Hotelling (at berth/anchorage)
-  * Terminal operations (cranes, yard equipment)
-* Return a **cabotage fuel profile** that can be:
+  * Sea sailing (main engine),
+  * Hotelling / auxiliary loads at berth,
+  * Port-side operations aggregated into simple factors.
+* Returning a **cabotage fuel profile** that can be:
 
-  * Combined with road legs in the multimodal fuel service
-  * Converted to emissions and monetary cost downstream
+  * Combined with road legs by the multimodal fuel service, and
+  * Converted into emissions and monetary cost downstream.
+
+All calculations are **TTW (tank-to-wake)** only; WTW and upstream emissions are deliberately out of scope.
 
 ### Inputs and Data Dependencies
 
-* Vessel and port parameter tables in `data/`, for example:
+The cabotage model is parameter-driven and uses only versioned, local data:
 
-  * Vessel classes (TEU, power, SFOC, speed)
-  * Port/terminal identifiers and UF (state) codes
-  * Phase durations (hours per call in arrival, hotel, ops, departure)
-  * Terminal handling intensity (moves per TEU, energy per move)
-* Sea route distance between ports:
+* **Static tables under `data/`**, for example:
 
-  * Either precomputed (static tables in `data/`) or inferred from a calibrated distance matrix
-  * Used to determine sailing time given vessel speed profiles
+  * Vessel classes (TEU, main/aux power, speed, specific fuel consumption).
+  * Port identifiers and metadata (including UF/state codes).
+  * Phase durations (hours per call in arrival, hotel, ops, departure) per port or per service.
+  * Pre-calibrated coefficients that map **time at berth** to auxiliary fuel use per tonne of cargo.
 
-All these inputs are loaded through dedicated loader functions so the cabotage service receives typed, validated structures instead of raw CSV/JSON rows.
+* **Sea distances**:
+
+  * Read from a static distance matrix under `data/` (port–port distances).
+  * If needed, can be regenerated externally from open coastline data and re-imported as a new matrix without changing code.
+
+Where possible, parameters are calibrated using **open datasets** (e.g. port-call statistics from ANTAQ) and literature benchmarks on ship power and specific fuel consumption. Updating to a new dataset is done by editing the tables in `data/`, not the Python code.
 
 ### Phase-Based Energy and Fuel Model
 
-The core of the cabotage model is a **phase-based breakdown** of a port call and voyage:
+The cabotage fuel service uses a **phase-based decomposition** of each voyage:
 
-* Sea sailing phase
+* **Sea sailing**
 
-  * Uses vessel speed, resistance and specific fuel consumption to:
+  * Uses a calibrated per-tonne-km bunker coefficient for the chosen vessel class.
+  * Fuel is proportional to:
 
-    * Compute propulsion power × time
-    * Convert to bunker fuel consumption (e.g. VLSFO, MGO) per voyage
-* Hotelling phase (at berth/anchorage)
+    * Sea distance between ports (km), and
+    * Cargo mass (t) or equivalent TEU.
+  * This captures main engine propulsion only.
 
-  * Uses auxiliary power profiles for:
+* **Hotelling (port stay)**
 
-    * Ship hotel loads (lights, HVAC, hotel systems)
-    * Auxiliary machinery
-  * Integrates power over the hotelling duration to get fuel used
-* Cargo operations phase
+  * Uses auxiliary power benchmarks (kW) and typical time at berth (h) per port.
+  * Converted to fuel via specific fuel consumption (g/kWh).
+  * Results are stored as port-level per-tonne factors that are applied for origin and destination ports.
 
-  * Represents:
+* **Cargo operations and maneuvering**
 
-    * STS crane energy per move
-    * Yard equipment energy per TEU (RTGs, reach stackers, internal trucks)
-  * Converts total energy demand into fuel consumption (or electricity-equivalent, depending on the factor set used)
-* Departure / maneuvering phases
+  * Additional time in low-speed / auxiliary-intensive phases (arrival, departure, cargo ops) is aggregated into:
 
-  * Uses lower-speed propulsion/auxiliary profiles to cover maneuvering, tugs, and short movements in/out of berth
+    * Extra auxiliary fuel at low speed and/or at berth.
+  * In the current implementation, detailed breakdown by equipment type (STS cranes, yard tractors, etc.) is **not** modeled explicitly; their contribution is either absorbed into the hotelling factors or neglected, depending on the calibration.
 
-Each phase is parameterized via the `data/` tables, so it can be recalibrated without changing Python code.
+Each phase has its own coefficient(s) in `data/`, making the model **fully driven by external tables**. Recalibration (e.g. new hotel times, different auxiliary loads) can be done by editing those tables.
 
 ### Per-TEU Allocation and Outputs
 
-The cabotage fuel service exposes a function (e.g. `get_cabotage_fuel_profile(...)`) that:
+The main public entry point (e.g. `get_cabotage_fuel_profile(...)`) receives:
 
-* Receives:
+* Origin and destination ports (including UF codes).
+* Cargo mass (tonnes) or container count (TEU-equivalent).
+* Vessel class and any scenario flags (e.g. alternative coefficients).
 
-  * Origin and destination ports (including UF codes)
-  * Cargo mass or TEU count
-  * Vessel class and scenario flags
-* Computes:
+It returns a **structured cabotage fuel profile** with:
 
-  * Total fuel consumption by fuel type for:
+* Phase-level fuel totals (sea sailing, hotelling, ops/maneuvering).
+* Aggregated fuel totals per fuel type (e.g. MGO).
+* Derived indicators per TEU or per tonne (kg fuel / TEU, etc.).
+* Metadata: ports, distance used, vessel class and key coefficients.
 
-    * Sea sailing
-    * Hotelling
-    * Cargo operations
-  * Per-TEU (or per tonne) allocation of this fuel
-* Returns a structured object containing:
+This object is then consumed by:
 
-  * Phase-level breakdown (sea, hotel, ops, departure, etc.)
-  * Aggregated totals per fuel type
-  * Metadata (ports, vessel class, distances, timings)
-
-This output is the main input for:
-
-* The **multimodal fuel service**, which combines road and sea legs into a single profile.
-* The **emissions module**, which applies emission factors per fuel type.
-* The **cost module**, which multiplies fuel quantities by bunker prices and adds port-related charges if modeled.
+* The **multimodal fuel service**, which merges road and sea legs into a unified scenario.
+* The **emissions layer**, which multiplies fuel by TTW emission factors (CO₂ only in the current version).
+* The **cost layer**, which multiplies fuel by bunker prices and optionally adds port charge components.
 
 ### Integration with the Rest of the System
 
+* The cabotage model is **fully decoupled from ORS**:
+
+  * It never calls external APIs.
+  * It only consumes sea distances and port parameters loaded from local tables.
+
 * CLI apps and scripts never implement cabotage logic directly:
 
-  * They call the cabotage fuel service through the multimodal fuel orchestrator in `modules/fuel/multimodal_fuel_service.py`.
-* The cabotage service:
+  * They call the multimodal orchestrator in `modules/fuel/multimodal_fuel_service.py`, which in turn calls the cabotage fuel service.
 
-  * Is independent of the road routing cache (no direct ORS calls).
-  * Relies only on:
+* Because the model is **table-driven**, improving realism (e.g. new vessel types, updated ANTAQ statistics, redesigned port processes) is primarily a matter of:
 
-    * Static tables in `data/`
-    * Simple numeric inputs (sea distance, TEU, vessel class, etc.)
-* This separation allows:
-
-  * Reusing the cabotage model in alternative experiments (e.g. different origin ports, different vessel classes)
-  * Updating vessel/terminal assumptions via `data/` without changing the code path used by apps and scripts.
+  * Updating CSV/JSON files in `data/`, and
+  * Optionally extending the cabotage service to recognize new fields,
+    while preserving the same public API used by existing apps and scripts.
 
 ---
 
 ## Fuel, Emissions & Cost Calculation
 
-This layer turns **distances, times and activity data** from road routing and cabotage into **fuel usage**, **GHG emissions** and **monetary cost**. It lives mainly under `modules/fuel/` and `modules/costs/`, and is orchestrated by `modules/fuel/multimodal_fuel_service.py`.
+This layer turns **distances, times and activity data** from road routing and cabotage into **fuel usage**, **TTW GHG emissions** and **monetary cost**. It lives mainly under `modules/fuel/` and `modules/costs/`, and is orchestrated by `modules/fuel/multimodal_fuel_service.py`.
 
 ### Scope
 
@@ -1479,15 +1595,19 @@ This layer turns **distances, times and activity data** from road routing and ca
 
   * Road distances and payload
   * Sea distances and port phase durations
-    into fuel consumption by fuel type (diesel, bunkers, ops fuel, etc.).
-* Apply emission factors to obtain:
 
-  * Well-to-Wheel (WTW) GHG emissions per leg and per TEU.
+  into fuel consumption by fuel type (diesel, bunkers, hotel/ops fuel, etc.).
+* Apply **tank-to-wake (TTW)** emission factors to obtain:
+
+  * GHG emissions per leg and per TEU / tonne.
 * Apply price tables and additional cost assumptions to obtain:
 
   * Fuel cost per leg
   * Total logistics cost per TEU (road-only vs multimodal).
-* Expose a **multimodal profile** that can be serialized, logged and consumed by higher-level apps and plotting tools.
+* Expose a **multimodal profile** that can be:
+
+  * Logged and inspected in detail
+  * Persisted in SQLite and reused by higher-level apps, notebooks and reporting tools.
 
 ### Main Modules (Conceptual)
 
@@ -1496,9 +1616,9 @@ This layer turns **distances, times and activity data** from road routing and ca
   * Receives road legs (distance, HGV flag, payload) from the routing engine.
   * Calculates:
 
-    * Fuel consumption (L or kg) based on calibrated consumption curves or factors.
+    * Diesel consumption (L or kg) based on calibrated consumption curves or factors.
     * Per-leg results (origin, destiny, distance, fuel).
-  * Is fully decoupled from HTTP logic (routing is handled elsewhere).
+  * Contains **only numeric logic**; all HTTP/routing concerns are handled upstream.
 
 * `modules/fuel/cabotage_fuel_service.py`
 
@@ -1506,12 +1626,12 @@ This layer turns **distances, times and activity data** from road routing and ca
 
     * Sea distance between ports
     * Port phase durations and intensities (hotel, ops, etc.)
-    * Vessel class and TEU load
+    * Vessel class and TEU / tonne load
   * Calculates:
 
     * Fuel for sea sailing
     * Fuel for hotel/auxiliary loads
-    * Fuel for terminal operations (mapped from energy demand)
+    * Fuel for terminal operations (mapped from energy demand, when modeled)
   * Returns a structured cabotage fuel profile with phase-level breakdown.
 
 * `modules/fuel/multimodal_fuel_service.py`
@@ -1524,276 +1644,183 @@ This layer turns **distances, times and activity data** from road routing and ca
 
     * Road fuel service for each road leg
     * Cabotage fuel service for the sea + port components
-  * Returns a **MultimodalFuelProfile** object containing:
+  * Produces a **MultimodalFuelProfile** object containing:
 
     * Per-leg fuel totals
-    * Aggregated totals per fuel type and per scenario (road-only vs cabotage).
+    * Aggregated totals per fuel type
+    * Scenario-level comparison (road-only vs cabotage).
 
 * `modules/costs/*`
 
   * Responsible for:
 
     * Ingesting and normalizing fuel prices (diesel, bunkers).
-    * Mapping fuel quantities into currency.
-    * Adding any modeled port / terminal cost components (if implemented).
+    * Mapping fuel quantities into monetary cost.
+    * Adding any modeled port / terminal cost components when present.
   * Exposes helpers used by the multimodal layer to attach cost indicators to fuel profiles.
 
 ### Data Inputs
 
-The fuel, emissions and cost modules consume static tables from `data/`, including:
+The fuel, emissions and cost modules consume static tables from `data/`, designed to be **open-source, transparent and easily updatable**:
 
-* Fuel price tables
+* **Fuel price tables**
 
   * Diesel series (e.g. ANP) by region/UF or national averages.
   * Bunker fuel prices (e.g. VLSFO, MGO) for key ports.
-  * All prices normalized to a consistent currency/unit convention internally.
+  * All prices normalized to a consistent internal convention (currency, units).
 
-* Emission and energy content factors
+* **Emission and energy content factors**
 
-  * Per-unit emission factors (e.g. kg CO₂e per L or kg of fuel).
-  * Energy content where required for intermediate calculations or consistency checks.
+  * TTW emission factors per unit of fuel (kg CO₂ per L or kg).
+  * Energy content values where required for intermediate calculations or consistency checks.
 
-These are loaded via dedicated loader functions, not ad-hoc `pandas.read_*` scattered across the codebase.
+* **Model parameters**
+
+  * Truck consumption presets (by axle / payload).
+  * Vessel class parameters (power, speed, SFOC).
+  * Port phase durations and intensities.
+
+All of these are stored as CSV/JSON under `data/`. Updating the model to a new year or scenario typically means **replacing or extending these tables**, without touching Python code.
 
 ### Calculation Flow: From Distance to Cost
 
 For a typical scenario (origin, destiny, cargo mass):
 
-* Road-only path
+#### **Road-only path**
 
-  * Routing engine provides:
+* Routing engine provides:
 
-    * Road distance (km)
-    * Optional travel time and HGV flag
-  * Road fuel service:
+  * Road distance (km)
+  * Optional travel time and HGV flag
 
-    * Computes diesel consumption given distance and payload.
-  * Emissions layer:
+* Road fuel service:
 
-    * Multiplies diesel quantity by the road diesel emission factor.
-  * Cost layer:
+  * Computes diesel consumption given distance and payload.
 
-    * Multiplies diesel quantity by diesel price to obtain road fuel cost.
+* Emissions layer:
 
-* Multimodal path (road–sea–road)
+  * Multiplies diesel quantity by the TTW emission factor for road diesel.
 
-  * Routing engine provides:
+* Cost layer:
 
-    * O→Port road leg
-    * Port→D road leg
-  * Cabotage inputs provide:
+  * Multiplies diesel quantity by diesel price to obtain road fuel cost.
 
-    * Port pair and sea distance
-    * Port phase durations and vessel class
-  * Road fuel service:
+#### **Multimodal path (road–sea–road)**
 
-    * Computes diesel use for both road legs as above.
-  * Cabotage fuel service:
+* Routing engine provides:
 
-    * Computes bunkers/hotel/ops fuel quantities for the sea and port phases.
-  * Emissions layer:
+  * O→Port road leg
+  * Port→D road leg
 
-    * Applies the correct emission factor to each fuel type and phase.
-  * Cost layer:
+* Cabotage inputs provide:
 
-    * Applies fuel prices and additional port-related costs (if modeled).
+  * Port pair and sea distance
+  * Port phase durations and vessel class
+
+* Road fuel service:
+
+  * Computes diesel use for both road legs as above.
+
+* Cabotage fuel service:
+
+  * Computes bunkers/hotel/ops fuel quantities for the sea and port phases.
+
+* Emissions layer:
+
+  * Applies the correct TTW emission factor to each fuel type and phase.
+
+* Cost layer:
+
+  * Applies fuel prices and any additional port-related costs (if modeled).
 
 The multimodal service then aggregates all components into:
 
-* Per-leg results (for diagnostics and detailed tables).
+* Per-leg results (for diagnostics and detailed analysis).
 * Scenario-level KPIs:
 
   * Total fuel consumption by mode and fuel type.
-  * WTW GHG emissions per TEU.
-  * Total logistics cost per TEU.
+  * TTW GHG emissions per TEU / tonne.
+  * Total logistics cost per TEU for road-only and cabotage scenarios.
+
+These structured results are what higher layers persist to SQLite and, when needed, read back for notebooks, comparison studies and visualizations.
 
 ### Emissions Conversion
 
 Emissions are derived in a separate, explicit step:
 
-* Inputs:
+* **Inputs**
 
   * Fuel quantities broken down by:
 
     * Mode (road, sea, hotel, ops)
     * Fuel type (diesel, VLSFO, MGO, etc.)
-* Operations:
+
+* **Operations**
 
   * For each fuel type:
 
-    * Look up its emission factor in the loaded tables.
+    * Look up its TTW emission factor in the loaded tables.
     * Multiply fuel quantity by the factor.
+
   * Aggregate:
 
     * Per leg
     * Per scenario
-    * Per TEU (or per tonne) as required.
-* Outputs:
+    * Per TEU / tonne as required.
 
-  * Emission fields attached to the same structures that store fuel quantities, to guarantee a clear trace from distance → fuel → emissions.
+* **Outputs**
+
+  * Emission fields are attached to the same objects that store fuel quantities, ensuring a clear chain:
+    `distance → fuel → emissions`.
+
+WTW and broader Scope 3 effects are intentionally **out of scope** in the current version and would require additional upstream factor tables.
 
 ### Cost Modeling
 
 The cost modules apply price data and any additional cost assumptions:
 
-* Fuel cost
+* **Fuel cost**
 
   * For each leg and fuel type:
 
-    * Fuel quantity × unit price → fuel cost.
-  * Summed by:
+    * `fuel_quantity × unit_price → fuel_cost`.
+  * Aggregated by:
 
-    * Road-only vs multimodal scenario
-    * Mode/fuel type, if a more detailed breakdown is needed.
+    * Scenario (road-only vs multimodal)
+    * Mode/fuel type, when a more detailed breakdown is needed.
 
-* Additional cost elements (when implemented)
+* **Additional cost elements (when implemented)**
 
   * Potential to include:
 
     * Port dues
     * Terminal handling charges
-    * Carbon cost or tax (via an additional factor per tonne of CO₂e)
-  * Encapsulated in dedicated functions so experiments can toggle or vary them without touching core logic.
+    * Carbon cost or tax (via an extra factor per tonne of CO₂)
 
-* Output structure
+  * Encapsulated in dedicated functions so experiments can toggle or vary them without changing core formulas.
 
-  * Cost is attached to the same objects that already hold fuel and emissions:
+* **Output structure**
 
-    * Ensuring a one-to-one mapping between the physical model and the economic view.
-  * This structure is what upper layers serialize to CSV and use for plots/heatmaps.
+  * Cost is attached to the same Python objects that hold fuel and emissions, guaranteeing a one-to-one mapping between the physical model and the economic view.
+  * These objects are what upper layers serialize into **SQLite tables** and reuse in analysis notebooks and plots.
 
 ### Design
 
-* No hidden factors
+* **No hidden factors**
 
   * All fuel, emission and cost coefficients come from explicit data tables or well-documented constants in code.
-* Mode separation with a common interface
 
-  * Road and cabotage each implement their own fuel logic, but present a compatible interface to the multimodal service.
-* Traceability
+* **Mode separation with a common interface**
+
+  * Road and cabotage each implement their own fuel logic, but expose a compatible interface to the multimodal service.
+
+* **Traceability**
 
   * For any O–D pair and scenario, it is possible to:
 
-    * Trace the chain: distance → fuel → emissions → cost.
+    * Trace the full chain: `distance → fuel → emissions → cost`.
     * Inspect phase-level contributions (sea vs hotel vs ops, O→Port vs Port→D, etc.).
-
----
-
-## Data Persistence & Caching (SQLite)
-
-The project uses a **single local SQLite database** as a lightweight persistence layer, with a focus on **routing cache** and other small tabular artifacts that support batch runs and diagnostics.
-
-### Engine and Location
-
-* Backend:
-
-  * Standard library `sqlite3` (no external DB server required).
-* Physical file:
-
-  * A `.sqlite` database stored under `data/` (exact filename/path is defined in the configuration / database manager code).
-* Access pattern:
-
-  * Opened on demand via helper functions in `modules/functions/database_manager.py`.
-  * All callers use shared context managers to ensure consistent connection lifecycle and error handling.
-
-### Database Manager (`modules.functions.database_manager`)
-
-* Central responsibilities:
-
-  * Open and close SQLite connections.
-  * Wrap operations in transactions with proper `COMMIT` / `ROLLBACK`.
-  * Provide high-level helpers for the most common operations (upserts, lookups) so other modules never deal with raw SQL directly.
-* Key features:
-
-  * Context manager (for example `db_session(...)`) that:
-
-    * Opens a connection to the configured `.sqlite` file.
-    * Yields a cursor/connection for the duration of the block.
-    * Commits on success, rolls back and logs on error.
-  * Centralized logging:
-
-    * All DB-related errors are logged with enough context (operation and parameters) to debug issues in batch runs.
-
-### Road-Leg Cache Table
-
-The primary table managed by the database manager is a **generic O→D routing cache** (for example `heatmap_runs`), used to store precomputed road legs:
-
-* Typical schema fields:
-
-  * `origin`: canonical origin label after geocoding.
-  * `origin_lat`, `origin_lon`: origin coordinates.
-  * `destiny`: canonical destiny label after geocoding.
-  * `destiny_lat`, `destiny_lon`: destiny coordinates.
-  * `distance_km`: road distance returned by ORS (may be `NULL` for failed runs).
-  * `is_hgv`: integer flag for the HGV profile (`1` = HGV, `0` = non-HGV, `NULL` = unspecified).
-  * `insertion_ts`: timestamp of when the row was written to the cache.
-* Purpose:
-
-  * Single, generic cache keyed by:
-
-    * `(origin, destiny, is_hgv)` using canonical labels.
-  * Reused across:
-
-    * Road-only scenarios.
-    * Multimodal first- / last-mile legs (origin → port, port → destiny).
-    * Heatmap and bulk O-D analyses.
-
-### Caching Strategy
-
-* Write path:
-
-  * When a road leg is successfully computed via ORS, the routing layer calls a helper (for example `upsert_run(...)`) that:
-
-    * Inserts a new row if none exists for the canonical `(origin, destiny, is_hgv)` tuple.
-    * Updates the existing row if `--overwrite` is explicitly requested.
-    * Sets `insertion_ts` to the current timestamp.
-* Read path:
-
-  * Before calling ORS, the routing layer:
-
-    * First checks by raw CLI input labels if present.
-    * After geocoding, checks again using canonical labels.
-  * If a matching row is found and overwrite is not requested:
-
-    * The cached `distance_km` and coordinates are reused.
-* Error cases:
-
-  * If a location cannot be geocoded or a route cannot be obtained:
-
-    * A placeholder row with `NULL` distance/coordinates can be inserted.
-    * The issue is logged, and consumers are expected to handle missing distances explicitly.
-
-This design ensures that repeated runs across many scripts and apps never recompute the same physical leg unnecessarily, while still allowing controlled overwrites when assumptions or input data change.
-
-### Other Tables and Extensions
-
-* The same database may host additional small tables, for example:
-
-  * Indexes of previously run heatmap scenarios.
-  * Auxiliary lookup tables used by batch scripts.
-* Design rules:
-
-  * All schema definitions and SQL statements are centralized in the database manager (or tightly related helpers), not scattered across apps/scripts.
-  * New tables should follow the same conventions:
-
-    * Explicit `CREATE TABLE IF NOT EXISTS` at startup.
-    * Centralized helpers for CRUD operations.
-    * Logging on all write paths.
-
-### Concurrency and Usage Model
-
-* Expected workload:
-
-  * Primarily single-process, CLI-like usage (one app or script at a time) on a local machine.
-* Concurrency assumptions:
-
-  * SQLite’s default locking is sufficient for the intended workloads.
-  * If multiple processes may write concurrently in future extensions, they should:
-
-    * Respect SQLite’s locking behavior.
-    * Prefer coarse-grained batching and retries instead of fine-grained concurrent writes.
-
-Overall, SQLite provides a simple, transparent persistence layer that keeps routing and experiment metadata **local, inspectable and versioned with the codebase**, while avoiding the overhead of a full database server.
+  * Because distances are cached in SQLite and all numeric parameters live in `data/`, any change in results can be traced to a specific change in code, inputs or scenario configuration.
 
 ---
 
@@ -1935,6 +1962,7 @@ Automated tests live under `tests/` and focus on validating **core behavior** of
   * Cabotage and port operations calculations are numerically stable for known test cases.
   * Fuel, emissions and cost calculations are internally consistent and respond correctly to parameter changes.
   * CLI apps and scripts can be invoked with typical argument combinations without crashing.
+
 * Provide **executable documentation**:
 
   * Each test encodes an example of how modules are intended to be used.
@@ -1945,6 +1973,7 @@ Automated tests live under `tests/` and focus on validating **core behavior** of
 * Directory:
 
   * `tests/` at the project root.
+
 * Organization:
 
   * One test module per feature area whenever possible, for example:
@@ -1953,6 +1982,7 @@ Automated tests live under `tests/` and focus on validating **core behavior** of
     * `test_cabotage_fuel.py` for cabotage fuel profiles.
     * `test_multimodal_profiles.py` for the orchestration layer.
     * `test_costs.py` for fuel price ingestion and cost mapping.
+
 * Naming conventions:
 
   * Test functions start with `test_...` to be auto-discovered by the test runner.
@@ -1963,10 +1993,12 @@ Automated tests live under `tests/` and focus on validating **core behavior** of
 * Test framework:
 
   * `pytest` is the preferred runner (simple, widely used, easy to extend).
+
 * Typical invocation from the project root:
 
   * `pytest`
   * or `pytest tests/test_something.py` to run a subset.
+
 * CI integration:
 
   * The repository is organized so that adding a future CI pipeline is straightforward:
@@ -1976,26 +2008,29 @@ Automated tests live under `tests/` and focus on validating **core behavior** of
 
 ### What Gets Tested
 
-* Pure functions and small services:
+* **Pure functions and small services**
 
   * Unit tests cover:
 
     * Distance → fuel conversions for road and cabotage legs (using fixed inputs).
     * Emission factor application (fuel → emissions).
     * Price application (fuel → cost).
+
   * These tests use **deterministic** parameters and avoid external I/O.
 
-* SQLite persistence and cache behavior:
+* **SQLite persistence and cache behavior**
 
   * Tests create an isolated, temporary SQLite database (not the real one under `data/`).
+
   * They verify:
 
     * Table creation on startup.
     * Upsert semantics (insert vs overwrite).
     * Lookup behavior for repeated O–D pairs.
+
   * Cleanup is automatic so tests do not leave residual files.
 
-* Routing logic (isolated from real ORS):
+* **Routing logic (isolated from real ORS)**
 
   * Where possible, tests:
 
@@ -2004,9 +2039,10 @@ Automated tests live under `tests/` and focus on validating **core behavior** of
 
       * On cache hit, no HTTP call is made.
       * On cache miss, a call would be made and the result stored.
+
   * This keeps tests fast and independent from external services.
 
-* Multimodal orchestration:
+* **Multimodal orchestration**
 
   * Tests build small, synthetic scenarios that:
 
@@ -2019,31 +2055,34 @@ Automated tests live under `tests/` and focus on validating **core behavior** of
 
 ### What Is Intentionally Not Tested
 
-* End-to-end network calls to ORS in the main test suite:
+* **End-to-end network calls to ORS in the main test suite**
 
   * These are avoided to keep tests:
 
     * Deterministic
     * Fast
     * Independent of API key/config
+
   * Any manual or ad-hoc ORS validation is done outside `pytest` (for example via dedicated calibration scripts).
 
-* Large, multi-hour batch runs:
+* **Large, multi-hour batch runs**
 
   * These are considered **performance/experiment workflows**, not routine tests.
   * Their correctness is inferred from a combination of:
 
     * Unit and integration tests on smaller cases.
-    * Sanity-check scripts and manual inspection of outputs/logs for selected runs.
+    * Sanity-check scripts and manual inspection of **database tables and logs** for selected runs.
 
 ### How to Use Tests During Development
 
 * Before editing core modules:
 
   * Run `pytest` to ensure the current branch is green.
+
 * After changes:
 
   * Re-run tests related to the area you touched (for example `pytest tests/test_fuel_*.py`).
+
 * When adding new features:
 
   * Add or extend unit tests to cover:
@@ -2051,7 +2090,7 @@ Automated tests live under `tests/` and focus on validating **core behavior** of
     * The new code path.
     * Edge cases that could break silently (for example missing data, extreme O–D distances).
 
-By keeping tests small, deterministic and focused on core logic, the project ensures that numerical behavior and key invariants remain stable as the codebase evolves.
+By keeping tests small, deterministic and focused on core logic, the project ensures that numerical behavior and key invariants remain stable as the codebase evolves, while remaining consistent with the SQLite-centered persistence model.
 
 ---
 
@@ -2061,43 +2100,47 @@ The codebase follows a **Python-first, type-hinted** style with a focus on clari
 
 ### General Style Guidelines
 
-* Imports
+* **Imports**
 
   * Use explicit imports instead of `from module import *`.
+
   * Group imports in the usual order:
 
     * Standard library
     * Third-party packages
     * Local modules (`modules.*`, `apps.*`, `scripts.*`)
+
   * Prefer absolute imports from the project root wherever possible.
 
-* Type hints
+* **Type hints**
 
   * Use Python type hints throughout, with:
 
     * `from __future__ import annotations` at the top of modern modules.
-    * `typing` types (`Dict`, `List`, `Tuple`, `Optional`, etc.) where useful.
-  * Treat type hints as part of the documentation for expected inputs/outputs.
+    * Types from `typing` (`Dict`, `List`, `Tuple`, `Optional`, etc.) where useful.
 
-* Functions and modules
+  * Treat type hints as part of the documentation for expected inputs/outputs and as an aid for static analysis.
+
+* **Functions and modules**
 
   * Keep modules **small and cohesive**:
 
     * Prefer several short functions over a single thousand-line script.
-    * Domain logic (routing, cabotage, fuel, costs) lives in `modules/`, not in `apps/` or `scripts/`.
-  * CLI entrypoints:
+    * Domain logic (routing, cabotage, fuel, costs, persistence) lives in `modules/`, not in `apps/` or `scripts/`.
+
+  * CLI entrypoints should:
 
     * Parse arguments
-    * Call orchestration functions
-    * Handle high-level logging and exit codes
+    * Call orchestration functions in `modules/`
+    * Handle high-level logging and exit codes only
 
-* Naming
+* **Naming**
 
   * `snake_case` for functions, variables and module names.
   * `PascalCase` for classes and dataclasses.
-  * Clear, descriptive names over abbreviations, especially for domain concepts (origin, destiny, port, vessel_class, etc.).
+  * Prefer clear, descriptive names over abbreviations, especially for domain concepts (`origin`, `destiny`, `port`, `vessel_class`, etc.).
 
-* Error handling
+* **Error handling**
 
   * Raise explicit exceptions in core modules for unexpected conditions.
   * Let CLI apps and scripts convert exceptions into human-readable error messages and appropriate exit codes.
@@ -2105,20 +2148,20 @@ The codebase follows a **Python-first, type-hinted** style with a focus on clari
 
 ### Formatting
 
-* Line length
+* **Line length**
 
   * Aim for conventional Python limits (around 88–100 characters).
   * Break long expressions across multiple lines using implicit line continuation (parentheses) when possible.
 
-* Whitespace
+* **Whitespace**
 
   * 4 spaces for indentation (no tabs).
-  * Blank lines:
+  * Use blank lines to:
 
     * Separate logical blocks within longer functions.
     * Separate top-level definitions (functions, classes).
 
-* Strings
+* **Strings & docstrings**
 
   * Use triple-quoted docstrings for public functions, classes and modules.
   * Prefer f-strings for interpolation in logging and user-visible messages.
@@ -2130,7 +2173,9 @@ The codebase follows a **Python-first, type-hinted** style with a focus on clari
   * `flake8` or `ruff` for linting.
   * `black` for auto-formatting.
   * `mypy` (or similar) for static type checking.
+
 * Tool configuration (if present) lives in project-level config files (for example `pyproject.toml`, `setup.cfg` or dedicated `*.cfg` files).
+
 * The repository itself does not enforce a specific linter/formatter, but code is written to be:
 
   * PEP 8–friendly
@@ -2138,73 +2183,76 @@ The codebase follows a **Python-first, type-hinted** style with a focus on clari
 
 ### Logging and Side Effects
 
-* Logging is preferred over `print` for any non-trivial output:
+* **Logging vs `print`**
 
+  * Logging is preferred over `print` for any non-trivial output.
   * Core modules log via the centralized logger helpers.
   * CLI apps may still print brief summaries to stdout, but detailed trace information goes to `logs/`.
-* Functions should avoid unexpected side effects:
 
-  * Avoid global state where possible.
-  * Prefer explicit parameters and return values for clarity and testability.
+* **Side effects**
+
+  * Functions should avoid unexpected side effects:
+
+    * Avoid global mutable state where possible.
+    * Prefer explicit parameters and return values for clarity and testability.
 
 ### Contribution Workflow
 
 When modifying or adding code:
 
 * Follow existing import and naming patterns in the file you are editing.
-* Keep new functions small, testable and well-documented via docstrings.
+* Keep new functions small, testable and documented via docstrings.
 * Run the test suite (or at least the relevant subset) before committing.
 * If you use formatters/linters locally:
 
   * Apply them consistently to the files you touched.
-  * Avoid large, purely cosmetic rewrites unless explicitly intended.
+  * Avoid large, purely cosmetic rewrites unless explicitly intended, so diffs remain focused on semantic changes.
 
 ---
 
 ## Reproducibility & Caching Guarantees
 
-The project is designed so that a given **code + data + cache** state produces the **same outputs** every time. The only non-local dependency is the ORS routing API, and its effects are explicitly cached.
+The project is designed so that a given **code + data + cache** state produces the **same numerical results** every time. The only non-local dependency is the ORS routing API, and its effect is explicitly captured in the SQLite database.
 
 ### What Makes a Run Reproducible
 
 For any analysis (road-only or multimodal), results are determined by:
 
-* The exact **Git commit** of the codebase
-* The contents of the **`data/`** directory
+* The exact **Git commit** of the codebase.
+* The contents of the **`data/`** directory:
 
-  * Static parameter tables (ports, vessels, factors, prices, etc.)
-* The contents of the **SQLite database** in `data/`
-
-  * Routing cache and any auxiliary tables
-* The **CLI arguments** passed to apps/scripts
+  * Static parameter tables (ports, vessels, factors, prices, etc.).
+  * The SQLite database file that holds cached road legs and any auxiliary tables.
+* The **CLI arguments** passed to apps/scripts:
 
   * Origin, destiny, cargo mass, scenario flags, etc.
-* The **environment variables** used
+* The **environment variables** used:
 
-  * ORS API key (affects ability to call ORS, but not the cached values)
-  * Optional overrides like log level or custom paths
+  * ORS API key (affects the ability to call ORS when the cache is cold).
+  * Optional overrides like log level or custom paths.
 
-If these elements are identical, the outputs written to `outputs/` are expected to be identical (up to timestamps or filenames that explicitly include time).
+If these elements are identical, the numerical results produced by the CLIs and scripts (and persisted in SQLite or reported in logs/stdout) are expected to be identical.
 
 ### Role of the Routing Cache
 
-The ORS API is inherently external and could change behavior over time (updated road network, tuning of routing profiles, etc.). To shield experiments from this:
+The ORS API is external and may evolve over time (road network updates, profile tuning, etc.). To shield experiments from this:
 
 * Every road leg (O→D, O→Port, Port→D) is:
 
-  * Computed once via ORS
+  * Computed once via ORS.
   * Stored in the SQLite cache with:
 
-    * Canonical origin/destiny labels
-    * Coordinates and distance
-    * HGV flag and `insertion_ts`
+    * Canonical origin/destiny labels.
+    * Coordinates and distance.
+    * HGV flag and `insertion_ts`.
 * Subsequent runs:
 
-  * Read from the cache instead of calling ORS again, unless `--overwrite` is explicitly used
-* Consequences:
+  * Read from the cache instead of calling ORS again, unless an explicit overwrite flag is used.
 
-  * For a fixed cache file, **all future runs** will see the **same distances** for already-cached legs, even if ORS changes its routing internals later
-  * This ensures numerical stability for all downstream calculations (fuel, emissions, cost)
+Consequences:
+
+* For a fixed cache file, **all future runs** will see the **same distances** for already-cached legs, even if ORS changes its routing internals later.
+* All downstream calculations (fuel, emissions, cost) remain numerically stable for those legs.
 
 ### Determinism of Calculations
 
@@ -2212,79 +2260,86 @@ All domain calculations are **pure functions** of their inputs:
 
 * No random numbers are used in:
 
-  * Fuel consumption formulas
-  * Emissions conversion
-  * Cost mapping
+  * Fuel consumption formulas.
+  * Emissions conversion.
+  * Cost mapping.
 * For a given set of inputs:
 
-  * Distances, times, TEU loads
-  * Parameter tables from `data/`
-    the outputs (fuel, emissions, cost) are deterministic.
+  * Distances, times, TEU loads.
+  * Parameter tables from `data/`.
+  * Cached road legs from SQLite.
 
-This means any differences in results between runs can be traced to changes in:
+the outputs (fuel, emissions, cost) are deterministic.
 
-* Code
-* Input tables (`data/`)
-* Cache contents
-* CLI arguments or environment overrides
+Any difference between two runs can be traced to changes in:
+
+* Code.
+* Input tables (`data/`).
+* Cache contents (SQLite database).
+* CLI arguments or environment overrides.
 
 ### When Results Can Change
 
 Results may legitimately change when:
 
-* The code is updated
+* The code is updated:
 
-  * Example: corrections to formulas, bug fixes, or new parameters
-* The static tables in `data/` are updated
+  * Corrections to formulas, bug fixes, or new parameters.
+* The static tables in `data/` are updated:
 
-  * Example: new diesel price series, updated emission factors
+  * New diesel price series, updated emission factors, revised vessel or port parameters.
 * The SQLite cache is:
 
-  * Deleted (forcing fresh ORS calls)
-  * Rebuilt with different assumptions or an `--overwrite` flag
-* Different scenario parameters are used
+  * Deleted (forcing fresh ORS calls).
+  * Rebuilt with different assumptions or an overwrite flag.
+* Different scenario parameters are used:
 
-  * Example: different cargo mass, origin/destiny, vessel class
+  * Different cargo mass, origin/destiny, vessel class, or modeling flags.
 
-In such cases, the change in results is **expected** and should be documented via:
+In these cases, numerical differences are **expected** and should be documented via:
 
-* The Git commit hash
-* A description of the data changes
-* Any notes on the cache regeneration step
+* The Git commit hash.
+* A short description of the data changes.
+* A note on any cache regeneration step (for example, road legs recomputed on a given date).
 
 ### Practical Reproducibility Checklist
 
-To reproduce a past experiment:
+To reproduce a past experiment as closely as possible:
 
-* Check out the same Git commit that was used originally
-* Restore (or keep) the exact:
+1. Check out the **same Git commit** that was used originally.
+2. Restore (or keep) the exact:
 
-  * `data/` directory (including the SQLite DB file)
-  * `outputs/` folder if you want to compare artifacts directly
-* Ensure environment variables match the original setup (except secrets like the ORS key value itself, which does not affect cached distances)
-* Re-run the same command(s) with the same CLI arguments
+   * `data/` directory, including:
 
-Under these conditions, you should obtain:
+     * Static tables (ports, vessels, fuel factors, prices).
+     * The SQLite database file with cached legs.
+3. Ensure environment variables match the original setup (names and key flags; the actual secret value of the ORS key does not affect already-cached distances).
+4. Re-run the same command(s) with the same CLI arguments.
+5. Compare:
 
-* Identical CSV content (apart from any columns that explicitly include timestamps or run IDs)
-* Identical numerical results for fuel, emissions and cost
+   * The numeric results logged by the CLI.
+   * Any scenario metrics read back from the SQLite database (if you store aggregates there).
+
+Under these conditions, fuel, emissions and cost results should match the original run (up to timestamps in logs or any explicitly time-stamped metadata you may have added).
 
 ### Guarantees and Limitations
 
-* Guaranteed:
+**Guaranteed:**
 
-  * Deterministic calculations given fixed inputs and cache
-  * No hidden randomness or background state
-  * Explicit persistence of all external routing decisions in SQLite
-* Not guaranteed:
+* Deterministic calculations given fixed inputs and cache.
+* No hidden randomness or background state.
+* Explicit persistence of all external routing decisions in SQLite.
+* Clear, inspectable chain from static tables and cache → leg-level metrics → scenario-level KPIs.
 
-  * Bit-by-bit identity of **new** runs performed after:
+**Not guaranteed:**
 
-    * Cache deletion or modification
-    * ORS API behavior changes
-    * Updates to input data or factor tables
+* Bit-by-bit identity of results if:
 
-By keeping ORS calls cached and all inputs versioned, the project provides a clear, inspectable path from raw assumptions to final KPIs, which is essential for a defensible academic thesis.
+  * The cache is deleted or modified and road legs are recomputed.
+  * ORS behavior changes and you intentionally refresh distances.
+  * Input data or factor tables in `data/` are updated between runs.
+
+By caching ORS results locally and versioning both code and static tables, the project provides a transparent path from open, updatable data sources and engineering assumptions to the final numerical indicators used in the thesis.
 
 ---
 
@@ -2298,24 +2353,24 @@ The codebase is optimized for **clarity and reproducibility first**, and for **s
 
   * The slowest part of a fresh run is network latency and ORS processing time for:
 
-    * Geocoding origin/destiny labels
-    * Directions calculations for road legs
+    * Geocoding origin/destiny labels.
+    * Directions calculations for road legs.
   * Once distances are cached in SQLite, subsequent runs over the same legs are significantly faster.
 
 * Lightweight numeric core
 
   * Cabotage, fuel, emissions and cost calculations are CPU-cheap compared to routing:
 
-    * Simple arithmetic and table lookups
-    * No high-dimensional optimization or heavy numerical solvers
+    * Simple arithmetic and table lookups.
+    * No high-dimensional optimization or heavy numerical solvers.
   * Runs comfortably on a standard laptop CPU with modest RAM.
 
 * SQLite as a local store
 
   * Reads/writes are small and infrequent compared to typical SQLite capacity:
 
-    * Insertion and lookup of individual O–D legs
-    * Occasional auxiliary tables for experiments
+    * Insertion and lookup of individual O–D legs.
+    * Occasional auxiliary tables for experiments.
   * For the intended scale (research-grade experiments, not production web traffic), I/O is not a bottleneck.
 
 ### Scaling Guidelines
@@ -2324,229 +2379,268 @@ The codebase is optimized for **clarity and reproducibility first**, and for **s
 
   * Scripts like the bulk route generator are intended for:
 
-    * Tens to hundreds (or at most a few thousand) O–D pairs per run
+    * Tens to hundreds (or at most a few thousand) O–D pairs per run.
   * At this scale:
 
-    * ORS rate limits and network latency are manageable
-    * SQLite remains responsive and simple
+    * ORS rate limits and network latency are manageable.
+    * SQLite remains responsive and simple.
 
 * Cache-first workflow
 
-  * For large experiments:
+  * For larger experiments:
 
-    * Precompute and cache all required road legs once (using the routing scripts)
-    * Reuse the cache for multiple downstream fuel/emissions/cost scenarios
-  * This pattern avoids re-hitting ORS and makes subsequent runs near-instant, bounded by local I/O and arithmetic.
+    * Precompute and cache all required road legs once (using the routing scripts).
+    * Reuse the cache for multiple downstream fuel/emissions/cost scenarios.
+  * This pattern avoids re-hitting ORS and makes subsequent runs near-instant, bounded mainly by local I/O and arithmetic.
 
 * Single-process execution
 
   * CLI apps and scripts are designed as single-process programs:
 
-    * No parallelization or job distribution is implemented by default
+    * No parallelization or job distribution is implemented by default.
   * If you need concurrency, you are expected to:
 
-    * Coordinate it externally (for example via a job scheduler)
+    * Coordinate it externally (for example via a job scheduler).
     * Be careful with concurrent writes to the SQLite file.
 
 ### Known Technical Limits
 
 * Single-machine, local storage
 
-  * All state (data, cache, logs, outputs) lives on local disk:
+  * All state (static data tables, SQLite caches, logs) lives on local disk:
 
-    * No built-in support for remote databases, clusters or distributed file systems
+    * No built-in support for remote databases, clusters or distributed file systems.
   * Scaling beyond a single machine would require:
 
-    * Custom orchestration
-    * Replacing or sharding the SQLite layer manually
+    * Custom orchestration.
+    * Replacing or sharding the SQLite layer manually.
 
 * ORS dependency
 
   * Any leg not already cached depends on:
 
-    * ORS service availability
-    * Your API quota and network conditions
+    * ORS service availability.
+    * Your API quota and network conditions.
   * Long or repeated bulk runs must respect ORS rate limits; scripts are structured to stop cleanly on rate-limit errors but do not automatically queue or retry across multiple days.
 
 * In-memory processing only
 
   * There is no streaming framework or chunked big-data pipeline:
 
-    * All per-run computations are done in memory on standard Python data structures
+    * All per-run computations are done in memory on standard Python data structures.
   * Very large experiments (millions of legs or time steps) are outside the intended scope.
 
 * Limited configurability at runtime
 
   * Many performance-related parameters (batch sizes, polling intervals, etc.) are:
 
-    * Kept simple and conservative
-    * Not exposed as elaborate tuning knobs in the CLI
+    * Kept simple and conservative.
+    * Not exposed as elaborate tuning knobs in the CLI.
   * Advanced users can change these via code edits, but they are not part of the public CLI surface.
 
 ---
 
 ## Extending the Framework
 
-The project is intentionally **library-first** and structured so that new modes, scenarios and tools can be added without rewriting existing code. Extensions should reuse the core modules in `modules/` and keep all new behavior thin and well-isolated.
+The project is intentionally **library-first** and structured so that new modes, scenarios and tools can be added without rewriting existing code. Extensions should reuse the core modules in `modules/` and keep all new behavior small, explicit and well-isolated.
 
 ### Typical Extension Paths
 
-* New CLI apps
+* **New CLI apps**
 
   * Add a new file under `apps/` (for example `apps/new_scenario_runner.py`).
+
   * Pattern:
 
     * Parse CLI arguments with `argparse`.
-    * Resolve paths and configuration via the existing config helpers.
+    * Resolve paths and configuration via existing config helpers.
     * Call orchestration functions in `modules/` (routing, cabotage, fuel, costs).
-    * Write outputs to a subfolder under `outputs/` and log to `logs/`.
+    * Persist results through the existing SQLite layer and log the full run.
+
   * Use an existing app under `apps/` as a template for:
 
-    * Logging setup
-    * Error handling
+    * Logger setup
     * Argument structure
+    * Error handling and exit codes
 
-* New batch or maintenance scripts
+* **New batch or maintenance scripts**
 
   * Add a script under `scripts/` when:
 
     * The task is power-user oriented (precomputation, cache maintenance, data refresh).
     * It does not represent a new “public” workflow for general users.
+
   * Reuse:
 
     * The same path bootstrap pattern (insert project root into `sys.path`).
-    * Shared logging and database helpers.
-  * Keep all domain logic in `modules/` and use scripts only for control flow.
+    * Shared logging helpers.
+    * Database helpers in `modules/functions/database_manager.py` for all reads/writes.
+
+  * Keep all domain logic in `modules/`; scripts are only control flow and orchestration.
 
 ### Extending Domain Logic
 
-* New analysis modules
+* **New analysis modules**
 
-  * Add new Python modules under `modules/` when:
-
-    * You introduce a new domain concept (for example a new cost component, new emissions layer, or new aggregation logic).
+  * Add new Python modules under `modules/` when introducing a new domain concept (for example a new cost component, a different aggregation layer, or an additional comparison metric).
   * Guidelines:
 
     * Keep modules cohesive (one main responsibility).
-    * Expose a small, typed public API (functions/classes) that apps and scripts can call.
-    * Document behavior via docstrings and, when possible, unit tests.
+    * Expose a small, typed public API (functions/dataclasses) that apps and scripts can call.
+    * Document behavior via docstrings and, when possible, dedicated tests.
 
-* New parameters and factor sets
+* **New parameters and factor sets**
 
   * Add new CSV/JSON tables under `data/` for:
 
     * Alternative emission factors
     * New fuel price scenarios
     * Additional vessel or truck configurations
+    * Revised port/phase assumptions
+
   * Implement:
 
-    * Loader functions in `modules/` that read and validate the new tables.
-    * Clear mapping between column names and dataclass or function arguments.
-  * Decide:
+    * Loader functions in `modules/` that read, validate and convert raw tables into typed structures.
+    * Clear mapping between column names and Python fields (for example via dataclasses).
 
-    * Whether the new factors are a “scenario” (selected via CLI flags) or a full replacement for existing defaults.
+  * Each table should record its **source, version/date and units** so that:
 
-* New modes or scenario types
+    * Assumptions are transparent.
+    * Updates from new public/open datasets can be applied without ambiguity.
 
-  * To introduce new scenario families (for example new origin patterns, different cabotage corridors):
+* **New modes or scenario types**
 
-    * Define the scenario configuration (O–D sets, ports, parameters) in `data/`.
+  * To introduce new scenario families (for example new corridor sets or alternative port choices):
+
+    * Define the scenario configuration (O–D sets, ports, parameter bundles) in `data/`.
+
     * Create orchestration functions in `modules/` that:
 
-      * Build the required road legs (via routing and cache).
+      * Build the required road legs via the routing and cache layer.
       * Call cabotage and fuel/emissions/cost services.
-      * Aggregate and structure the results.
-    * Optionally wrap them in:
+      * Aggregate and structure the results (per leg, per TEU, per scenario).
 
-      * A new CLI app under `apps/`
-      * Or a new script under `scripts/` for bulk runs
+    * Optionally wrap these orchestration functions in:
+
+      * A new CLI app under `apps/` for end users.
+      * Or a new script under `scripts/` for batch-style experiments.
+
+### Working With Data & SQLite
+
+* **New tables**
+
+  * When you need persistent results or indexes (for example, scenario summaries, heatmap indices):
+
+    * Define the table schema in the database manager or a tightly related helper.
+    * Provide small CRUD helpers for inserting and querying rows.
+    * Reuse the existing `db_session(...)` pattern to manage connections and transactions.
+
+* **Updating assumptions via data files**
+
+  * To change a model assumption (for example fuel price, emission factor, vessel profile):
+
+    * Update the corresponding table under `data/`.
+    * Keep the loader and downstream code unchanged when possible.
+    * Document the change (source, date, rationale) in the data file or in a separate calibration note under `calcs/`.
+
+  * This keeps the **Python code stable** while allowing the underlying **open/public datasets** to evolve over time.
 
 ### Testing and Backward Compatibility
 
-* Whenever you extend or modify core modules:
+* When extending or modifying core modules:
 
   * Add or update tests under `tests/` to:
 
     * Cover the new behavior.
-    * Protect existing invariants (for example cache behavior, numerical relationships between modes).
+    * Protect existing invariants (for example cache behavior, numeric relationships between road-only and multimodal results).
+
 * Try to keep the public API of `modules/` stable:
 
-  * If you must change function signatures that are used by apps/scripts:
+  * If you must change function signatures used by apps/scripts:
 
     * Update all call sites in the same commit.
-    * Prefer adding optional parameters over breaking existing ones when feasible.
+    * Prefer adding optional parameters over breaking existing ones where feasible.
+
+* For new factor sets or scenarios:
+
+  * Add small, deterministic test cases that:
+
+    * Use the new tables under `data/`.
+    * Assert basic sanity (monotonicity, sign, order-of-magnitude) for fuel, emissions and cost results.
 
 ### Design Rules for New Code
 
 * Always route external interactions through existing layers:
 
-  * Road distances:
+  * **Road distances**:
 
-    * Use the routing services in `modules.road` so you benefit from caching and consistent logging.
-  * SQLite:
+    * Use routing services in `modules.road` so you benefit from caching, consistent error handling and logging.
 
-    * Use the database manager helpers instead of raw `sqlite3` calls.
-  * Fuel, emissions and cost:
+  * **SQLite**:
+
+    * Use database manager helpers instead of raw `sqlite3` calls, keeping SQL centralized and auditable.
+
+  * **Fuel, emissions, cost**:
 
     * Use or extend the existing services in `modules.fuel` and `modules.costs` instead of duplicating formulas.
 
-* Keep separation of concerns:
+* Keep separation of concerns clear:
 
-  * Apps and scripts:
+  * **Apps and scripts**:
 
-    * Parse arguments, orchestrate high-level flows, handle user-facing concerns.
-  * Modules:
+    * Parse arguments, orchestrate high-level flows, handle user-facing messages and exit codes.
 
-    * Encapsulate domain logic and I/O with `data/` and the SQLite DB.
-  * Data:
+  * **Modules**:
 
-    * Live in `data/` with schemas enforced by loader functions.
+    * Encapsulate domain logic, interaction with `data/`, and all persistence to SQLite.
 
-Following these patterns, you can introduce new scenarios, factor sets and tools without breaking existing workflows, while keeping the project readable and defensible as an academic and engineering artifact.
+  * **Data**:
+
+    * Live in `data/` as versioned, well-documented CSV/JSON files derived from traceable, preferably open/public sources.
+
+By following these patterns, you can introduce new scenarios, factor sets and tools while keeping the project readable, defensible and easy to update as better datasets and benchmarks become available.
 
 ---
 
 ## Known Issues & TODOs
 
-This codebase is under active development as part of the graduation project. The architecture and APIs are stable enough for research runs, but there are some known limitations and a small backlog of technical work.
+This codebase is under active development as part of the graduation project. The architecture and APIs are stable enough for research runs with open, updatable data sources, but there are known limitations and a small backlog of technical work.
 
 ### Model Scope & Coverage
 
-* The current workflows are centered on a **fixed-origin assessment** (São Paulo → Santos → Brazilian capitals).
-* Other corridors, multiple origin ports and more generic O–D matrices are not yet fully encoded as first-class scenarios.
+* The currently curated workflows are centered on a **fixed-origin assessment** (São Paulo → Santos → Brazilian capitals) even though most building blocks are reusable for other corridors.
+* Other corridors, multiple origin ports and fully generic O–D matrices are not yet packaged as first-class, documented scenarios.
 * The cabotage model intentionally abstracts away:
 
-  * Weather, congestion and queuing effects
-  * Detailed schedule reliability and berth conflicts
-    These are considered out of scope for the current version.
+  * Weather, congestion and queuing effects.
+  * Detailed schedule reliability and berth conflicts.
+    These are explicitly out of scope for the current version.
 
 ### Codebase & Architecture
 
 * Some **legacy modules and scripts** still exist in a more monolithic style and are parked under `trash/` or older folders. They are kept only as historical reference and are not guaranteed to work with the latest APIs.
 * Not all modules have been fully migrated to:
 
-  * The centralized configuration helpers
-  * The unified logging setup
+  * Centralized configuration helpers.
+  * Unified logging setup.
     New code should follow the patterns described in this README; older code will be gradually aligned.
 
 ### Testing & Validation
 
-* The test suite is intended to grow over time:
+* The test suite is intended to grow over time, with more regression tests planned for:
 
-  * More regression tests are planned for:
-
-    * Multimodal scenarios (road-only vs cabotage comparisons)
-    * SQLite caching edge cases (overwrite vs reuse, NULL-distance legs)
-    * Emissions and cost aggregation consistency
+  * Multimodal scenarios (road-only vs cabotage comparisons).
+  * SQLite caching edge cases (overwrite vs reuse, NULL-distance legs).
+  * Emissions and cost aggregation consistency.
 * At the moment, **manual validation** (via calibration scripts, plots and spot checks) still plays an important role alongside automated tests. Formalizing these checks into tests is an ongoing TODO.
 
 ### Tooling & Developer Experience
 
 * There is no dedicated **packaging setup** yet (no published wheel or pip-installable package). The recommended usage remains:
 
-  * Clone the repo
-  * Create a virtualenv
-  * Run apps and scripts from the project root
+  * Clone the repo.
+  * Create a virtualenv.
+  * Run apps and scripts from the project root.
 * Continuous Integration (CI) is not configured:
 
   * Installing dependencies and running `pytest` is currently a manual step.
@@ -2556,11 +2650,16 @@ This codebase is under active development as part of the graduation project. The
 
 * Factor tables in `data/` are treated as the **current best calibration**:
 
-  * There is no explicit versioning of factor sets within the repository (for example “v1 diesel factors”, “v2 updated emission factors”).
+  * There is no explicit versioning of factor sets within the repository (for example “v1 factors”, “v2 updated factors”).
   * Introducing simple version tags or subfolders for alternative calibrations is a planned improvement.
 * Scenario definitions (which O–D sets to run, which parameter overrides to apply) are still relatively ad hoc:
 
   * Consolidating them into clearly documented configuration files is on the TODO list.
+* As official/open datasets are updated over time, the intended workflow is to:
+
+  * Add new versions under `data/` and point the loaders to them.
+  * Document, in the methodology, which factor set was used for each experiment.
+    This mechanism is only partially implemented and will be strengthened post-thesis.
 
 ### Performance & Robustness Enhancements
 
@@ -2570,7 +2669,7 @@ This codebase is under active development as part of the graduation project. The
 * SQLite usage:
 
   * For the expected research-scale workloads, SQLite is sufficient, but there is no built-in mechanism for safe concurrent writes from multiple processes.
-  * If multi-process or remote execution becomes important, the persistence layer will need to be revisited.
+  * If multi-process or remote execution becomes important, the persistence layer will need to be revisited (for example using a different backend or explicit job coordination).
 
 This list is not exhaustive, but it captures the main engineering areas that are either actively being worked on or explicitly left as future improvements for post-thesis evolution of the framework.
 
@@ -2578,53 +2677,138 @@ This list is not exhaustive, but it captures the main engineering areas that are
 
 ## References and Source Data
 
-This project is grounded in a diverse set of **academic publications**, **government datasets**, and **engineering references**. The data inputs and methodological choices aim for transparency, traceability, and reproducibility, especially in support of an academic thesis.
+This project is grounded in a mix of **public datasets**, **open tools** and **peer-reviewed literature**. Core inputs live under `data/` as CSV/JSON files so they can be **refreshed or recalibrated** without changing the Python code.
 
-### Primary Sources
+Wherever possible:
 
-* **Government & Public Agencies**
+* Raw datasets come from **Brazilian public agencies** or open APIs.
+* Any heavy processing is done once in `calcs/` and saved as **derived tables** under `data/`.
+* The model consumes only those derived tables and a small set of well-documented constants, making updates and audits straightforward.
 
-  * ANTAQ (Agência Nacional de Transportes Aquaviários): port call statistics, dwell time, and container throughput.
-  * ANTT (Agência Nacional de Transportes Terrestres): truck efficiency benchmarks, vehicle configurations.
-  * ANP (Agência Nacional do Petróleo): diesel pricing data by state and fuel type.
-  * IBGE: population and regional metadata, macro-region aggregation.
+What follows is an explicit inventory of the main inputs and references used by the current model.
 
-* **Academic and Technical Literature**
+---
 
-  * Salcedo-Díaz et al. (2020): methodological foundations for port operation energy use and vessel modeling.
-  * Arroyo et al. (2020): container logistics carbon modeling with focus on Brazilian coast.
-  * TRISTAN 2025 extended abstract: contextual motivation and early modeling for this specific project.
-  * MA Arroyo's doctoral thesis: detailed cost and routing analysis of cabotage vs. road logistics in Brazil.
-  * Various emissions factor compilations (IPCC Tier 1, GREET model references, IMO GHG studies).
+### 1) Primary data sources (raw)
 
-* **Engineering Standards & Maritime References**
+* **ANTAQ — port-call records (e.g. `2025Atracacao.txt`)**
+  Public port-call records for Brazilian ports. Used in `calcs/` (e.g. `calcs/hotel.py`) to compute **average time at berth** for cabotage calls. These statistics are transformed into per-tonne hotel factors and stored as a JSON table under `data/`.
 
-  * Vessel auxiliary and propulsion profiles drawn from:
+* **OpenRouteService (ORS) API**
+  Open-source routing engine accessed via HTTPS. Used for:
 
-    * Manufacturer datasheets.
-    * Literature reviews on specific fuel consumption (SFOC) and power usage during sea and port phases.
-  * Container handling energy benchmarks based on STS crane specs and yard equipment studies.
+  * **Geocoding** free-text origins/destinies (addresses, CEPs, etc.), and
+  * **Routing** road legs with the `driving-hgv` profile (with SNAP-to-road fallback when needed).
+    ORS responses are not stored verbatim; only derived distances and coordinates are cached in SQLite.
 
-* **Preprocessed Data**
+---
 
-  * Sea distances matrix: computed using great-circle distances adjusted by a coastline factor (≈1.18).
-  * Port hotel factors: derived from ANTAQ logs and auxiliary engine assumptions, stored in preloaded JSON.
-  * Fuel prices: scenario-calibrated values (e.g. BRL/L for diesel, BRL/t for MGO) are versioned and traceable.
+### 2) Pre-processed / generated reference tables (under `data/`)
 
-### Bibliography Integration
+These files are **derived from raw sources or engineering assumptions** using scripts and notebooks in `calcs/`:
 
-A complete bibliography is available in the `bibliography.md` file. Key references are also cited inline within:
+* **`ports_br.json`**
+  Canonical list of Brazilian ports with:
 
-* `METHODOLOGY.md`: modeling choices and parameter origins.
-* Code comments and loader functions: to map data tables to source publications.
-* The thesis report: where academic narrative and validation discussions occur.
+  * IDs, names and aliases,
+  * Coordinates, and
+  * **Truck-gate** positions.
+    Used for port normalization and **gate-aware nearest-port selection** in multimodal scenarios.
 
-Each static table in `data/` is traceable to one or more sources above. Engineering approximations (e.g. hotel load per tonne) are computed and version-controlled to ensure auditable provenance.
+* **`sea_matrix.json`**
+  Precomputed **port-to-port sea distances** based on great-circle (Haversine) geometry, with a stored **`coastline_factor ≈ 1.18`**.
 
-### Reproducibility Policy
+  * The cabotage leg reads these distances directly.
+  * When a pair is missing, runtime fallbacks also use `Haversine × coastline_factor`.
 
-Where possible:
+* **`hotel.json`**
+  **Per-port hotel factors** in **kg of fuel per tonne** (`kg/t`).
 
-* Raw datasets are stored locally under `data/`, or linked via documented references.
-* All derived values (e.g. port-specific kg/t factors) are computed from stored scripts or intermediate notebooks in `calcs/`.
-* The combination of `requirements.txt`, data files, and SQLite cache ensures full reconstruction of any experiment.
+  * Derived from ANTAQ time-at-berth data plus auxiliary power and SFOC benchmarks.
+  * Loaded by the cabotage fuel service to estimate hotel fuel as `cargo_t × k_port`.
+
+* **Road truck specification table (TRUCK_SPECS)**
+  A calibrated table in the road fuel model containing, for each truck configuration:
+
+  * `axles`,
+  * `payload_t` (planning payload per trip),
+  * `ref_weight_t`, and
+  * `empty_efficiency_gain` (km/L improvement on empty backhaul).
+    It also embeds baseline **km/L by axle count**, which drives the per-trip estimator used in the road fuel service.
+
+These artifacts are treated as **model inputs** just like raw data; they can be recomputed and replaced if new statistics or better calibrations become available.
+
+---
+
+### 3) Public benchmark references and official guidance
+
+The following public references support and constrain key assumptions:
+
+* **ICCT (Jul/2022). *Brazilian coastal shipping: New prospects for growth with decarbonization.***
+  Provides contextual evidence for cabotage expansion, decarbonization pathways and port-side effects. Used as a policy and modeling frame.
+
+* **IMO / engineering references for auxiliaries and SFOC**
+  Used when deriving per-port hotel factors:
+
+  * Typical auxiliary load around **600 kW**, and
+  * Specific fuel consumption (SFOC) around **225 g/kWh**,
+    implying roughly **135 kg of fuel per hour** at berth. These values feed into `hotel.json`.
+
+* **ANTT (Brazil) axle-based fuel economy benchmarks**
+  Source of **baseline km/L by axle count** in the truck consumption curves, e.g.:
+
+  * 5-axle: ≈ 2.3 km/L
+  * 6–7-axle: ≈ 2.0 km/L
+    These benchmarks underpin the TRUCK_SPECS table used by the road model.
+
+* **OpenRouteService documentation**
+  Referenced for API semantics (geocoding, directions, SNAP-to-road), rate-limit behavior, and profile details (`driving-hgv`). Ensures that the routing client and cache semantics align with the upstream service.
+
+---
+
+### 4) Methodological papers and conceptual references
+
+Some references guide the **allocation logic** and **future extensions** even when not fully implemented yet:
+
+* **Leenders et al. (2017). *Emissions allocation in transportation routes.***
+  Motivates careful treatment of emission allocation in multi-stop or shared routes. The current implementation uses **per-tonne port factors**, but this work is a reference for more sophisticated allocation schemes.
+
+* **Cooperative game theory (Shapley value) — e.g. Arroyo et al. (2024)**
+  Provides the conceptual “gold standard” for fair cost allocation in shared systems. Not yet implemented in the code; cited as a **future extension path** for cost and emissions apportioning across multiple users of the same service.
+
+Other academic and technical works (e.g. ICCT/IMO GHG reports, cabotage-focused theses and articles) informed the overall structure of the cabotage and port-energy models and are cited in the thesis document where the narrative and validation are developed in more detail.
+
+---
+
+### 5) Emission factors & constants used in the code
+
+The model uses a small, explicit set of **fuel properties and emission factors**, kept as constants or table values and traceable to standard references:
+
+* **Road diesel (TTW)**
+
+  * Density: `DIESEL_DENSITY_KG_PER_L = 0.84`
+  * CO₂ emission factor: `EF_DIESEL_CO2_KG_PER_L = 2.68`
+    Together, these represent a conventional **tank-to-wake** factor for road diesel.
+
+* **Marine gas oil (MGO, TTW)**
+
+  * Emission factors per tonne of fuel:
+    `EF_TTW_MGO_KG_PER_T = {"CO2": 3206.0, "CH4": 0.0, "N2O": 0.0}`
+    → **3.206 tCO₂ per tonne of MGO**, with CH₄ and N₂O assumed negligible.
+  * Monetary cost (default scenario): `MGO_PRICE_BRL_PER_T = 3200.0`.
+
+* **Port handling and dwell assumptions**
+
+  * Fixed dwell hours per call (load + unload) are used when building total time in port.
+  * A **fixed cost per call** is applied in the cost layer whenever port charges are modeled explicitly.
+
+All such constants are **hard-coded in a small number of modules** and/or backing tables under `data/`. When a factor is updated (e.g. a new IPCC value or price level), the change is local and easily auditable: re-running the same scenarios with the new tables gives a clear before/after comparison.
+
+---
+
+In summary, every static table or constant used by the model is tied either to:
+
+1. A **raw public dataset** (e.g. ANTAQ, ANTT, ANP, IBGE, ORS), or
+2. A **well-documented engineering or academic reference** (e.g. ICCT, IMO, IPCC-style factors),
+
+and all transformations from raw source → derived table are scripted under `calcs/`. This guarantees that the data backbone of the project remains **transparent, updateable and reproducible** as new information becomes available.
