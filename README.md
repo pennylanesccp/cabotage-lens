@@ -608,75 +608,58 @@ All structured inputs for the model live under the `data/` directory and are tre
   * In external thesis/report material kept outside this repository.
 
 ---
-  
-## Generated Outputs & Artifacts
 
-All persistent results produced by the CLI apps and scripts are written under the `outputs/` directory. This keeps the repository clean while making it easy to track, diff and archive experiment runs.
+## Generated Results & Persistent Artifacts
 
-### Storage Layout
+The project is built around **database-backed** persistence rather than exporting CSVs or figures to the filesystem. All “products” of the computation are stored in **SQLite tables** under `data/`, which act both as a routing cache and as the main experiment store.
 
-* **Root directory:** `outputs/`  
-  * All generated tables, maps and figures are stored here.  
-  * Subfolders are typically organized by app or scenario (e.g. `outputs/heatmaps/`, `outputs/routes/`).
+### Where Results Live
 
-* **File naming conventions:**  
-  * Prefix by tool or app (e.g. `routes_…`, `heatmap_…`, `multimodal_…`).  
-  * Include key scenario dimensions (origin, destination, mode, year) where applicable.  
-  * Use ISO-like timestamps (e.g. `2025-11-25T173000`) when storing time-stamped runs.
+All persistent results are written to a single **SQLite database file** located under `data/` (see `modules/functions/database_manager.py` for the exact filename and schema):
 
-### Tabular Outputs (CSV)
+* **Road legs cache**
+  * Stores every computed road leg (origin → destiny, origin → port, port → destiny).
+  * Includes:
+    * Canonical origin/destiny labels,
+    * Coordinates,
+    * Distance (km),
+    * HGV flag,
+    * Insertion timestamp.
+  * Used as the **authoritative source** of road distances for all analyses.
 
-Most numerical results are serialized as CSV to make them easy to inspect, plot, or use in external tools (Excel, R, etc.):
+* **Multimodal runs and experiment tables** (when present)
+  * Store per-scenario or per-leg results for multimodal evaluations.
+  * Typical fields include:
+    * Origin/destiny (city, UF, ports),
+    * Mode/leg type (road-only, O→Port, Port→D, sea),
+    * Distances and (optionally) times,
+    * Fuel use by component (road diesel, sea, hotel, ops),
+    * Emissions and cost indicators.
 
-* **Per-leg detail tables**  
-  * One row per transport leg (road-only, road–sea–road).  
-  * Typical columns include:
-    * Origin/destiny labels (city, UF, port codes).  
-    * Mode and leg type (road-only, O→Port, Port→D, sea).  
-    * Distance, time and payload.  
-    * Fuel use per fuel type (road diesel, bunkers, ops).  
-    * Emissions and cost fields.
+The exact table names and schemas are defined in the database manager and related modules; they are kept centralized so that all SQL is auditable in one place.
 
-* **Aggregated scenario tables**  
-  * One row per O-D pair / scenario combination.  
-  * Typical columns include:
-    * Total logistics cost per TEU.  
-    * WTW GHG emissions per TEU.  
-    * Transit time metrics.  
-    * Mode configuration (road-only vs multimodal, vessel class, etc.).
+### How Results Are Consumed
 
-### Maps, Plots & Heatmaps
+Instead of writing CSVs, notebooks and analysis scripts read **directly from the SQLite database**, typically by:
 
-When plotting is enabled, the corresponding app or script also writes graphical artifacts:
+* Connecting to the DB file under `data/`,
+* Querying the routing cache and result tables with SQL,
+* Exporting or plotting data on-the-fly inside the notebook or external tool (e.g. Excel, R, Python).
 
-* **Route maps**  
-  * Static images (e.g. `.png`) showing road and sea legs between origin and destination.  
-  * Used primarily for sanity checks and visual communication.
+This keeps the repository focused on **one source of truth** for numerical outputs, avoiding duplication between flat files and the database.
 
-* **Heatmaps & comparative plots**  
-  * Figures representing:
-    * Cost vs emissions trade-offs across destinations.  
-    * Regional patterns (e.g. which capitals favor cabotage vs road-only).  
-  * Stored in subfolders specific to the app or notebook that generated them.
+### Relationship With Logs and Reproducibility
 
-### Relationship With Logs & Cache
+* **Logs**
+  * All runtime logs are still written under `logs/` (one or more log files per app/script).
+  * Logs describe how each DB row was produced (API calls, cache hits/misses, warnings, errors).
 
-* **Logs** are **not** stored under `outputs/`  
-  * They live in `logs/` and describe how a given artifact was produced (API calls, cache hits, warnings, errors).
-
-* **Routing cache & intermediate databases**  
-  * SQLite databases used for caching ORS results or other intermediates live under `data/` (or its subfolders), not `outputs/`.  
-  * The same input data + code + cache state should be sufficient to re-create any artifact in `outputs/`.
-
-### Reproducibility Notes
-
-* Artifacts in `outputs/` are treated as **derived** data:  
-  * Safe to delete and regenerate when rerunning experiments.  
-  * Not all artifacts are tracked in git; large or purely illustrative files may be `.gitignore`d.
-* For formal results (e.g. those used in the thesis), the recommended workflow is:
-  * Pin code and input data to a specific commit.  
-  * Regenerate the relevant CSVs and figures under `outputs/`.  
-  * Archive or reference them externally together with the commit hash.
+* **Reproducibility**
+  * A run is fully determined by:
+    * The code version (Git commit),
+    * The contents of `data/` (including the SQLite file),
+    * The CLI arguments and environment variables used.
+  * As long as the database is preserved, any subsequent analysis can be re-run or extended by reading the same tables, without regenerating intermediate artifacts.
 
 ---
   
@@ -689,7 +672,7 @@ Runtime configuration is centralized and kept minimal. Defaults are defined in c
 From lowest to highest precedence:
 
 1. **Hard-coded defaults**  
-   * Base directories (`data/`, `outputs/`, `logs/`, etc.).  
+   * Base directories (`data/`, `logs/`, etc.).  
    * Default filenames (e.g. SQLite cache, reference tables).  
 
 2. **Configuration module**  
@@ -746,7 +729,7 @@ The project recognizes a small set of optional variables to tweak behavior at ru
   * Optional overrides for:
 
     * SQLite cache location (routing cache DB file).
-    * Custom base directories for `outputs/` and `logs/` (e.g. mounted volumes on a server).
+    * Custom base directories for `logs/` (e.g. mounted volumes on a server).
 
 Exact variable names and defaults are documented in the config and client modules (e.g. `modules/config.py`, `modules/road/ors_client.py`).
 
@@ -883,7 +866,7 @@ Typical development loop:
 1. Activate the virtual environment (`venv`).
 2. Edit code under `modules/`, `apps/` or `scripts/`.
 3. Run the relevant CLI or script (see later sections for details).
-4. Inspect generated artifacts under `outputs/` and logs under `logs/`.
+4. Inspect generated artifacts under `logs/`.
 5. (Optional) Run tests before committing changes.
 
 This setup ensures a clean separation between project dependencies and your global Python installation, making runs and experiments reproducible across machines.
@@ -933,12 +916,6 @@ All apps follow a consistent interface:
     * Cargo mass in tonnes used for tonne-km and per-TEU calculations.
   * `--mode` or similar flags
 
-    * Select between Road-only, Cabotage, or combined scenarios.
-  * `--output-dir`
-
-    * Override the default `outputs/` subdirectory for generated files.
-  * `--overwrite`
-
     * Force regeneration of artifacts even if an output file already exists.
 
 Each app is responsible for:
@@ -950,7 +927,7 @@ Each app is responsible for:
    * Build required road and sea legs.
    * Run the cabotage / port energy model.
    * Aggregate fuel, emissions and costs.
-4. Writing results to `outputs/` and logs to `logs/`.
+4. Writing logs to `logs/`.
 
 ### Typical Workflow
 
