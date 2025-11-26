@@ -2367,64 +2367,64 @@ This codebase is under active development as part of the graduation project. The
 
 ### Model Scope & Coverage
 
-* The current workflows are centered on a **fixed-origin assessment** (São Paulo → Santos → Brazilian capitals).
-* Other corridors, multiple origin ports and more generic O–D matrices are not yet fully encoded as first-class scenarios.
-* The cabotage model intentionally abstracts away:
+- The current workflows are centered on a **fixed-origin assessment** (São Paulo → Santos → Brazilian capitals).
+- Other corridors, multiple origin ports and more generic O–D matrices are not yet fully encoded as first-class scenarios.
+- The cabotage model intentionally abstracts away:
 
-  * Weather, congestion and queuing effects
-  * Detailed schedule reliability and berth conflicts
+  - Weather, congestion and queuing effects
+  - Detailed schedule reliability and berth conflicts
     These are considered out of scope for the current version.
 
 ### Codebase & Architecture
 
-* Some **legacy modules and scripts** still exist in a more monolithic style and are parked under `trash/` or older folders. They are kept only as historical reference and are not guaranteed to work with the latest APIs.
-* Not all modules have been fully migrated to:
+- Some **legacy modules and scripts** still exist in a more monolithic style and are parked under `trash/` or older folders. They are kept only as historical reference and are not guaranteed to work with the latest APIs.
+- Not all modules have been fully migrated to:
 
-  * The centralized configuration helpers
-  * The unified logging setup
+  - The centralized configuration helpers
+  - The unified logging setup
     New code should follow the patterns described in this README; older code will be gradually aligned.
 
 ### Testing & Validation
 
-* The test suite is intended to grow over time:
+- The test suite is intended to grow over time:
 
-  * More regression tests are planned for:
+  - More regression tests are planned for:
 
-    * Multimodal scenarios (road-only vs cabotage comparisons)
-    * SQLite caching edge cases (overwrite vs reuse, NULL-distance legs)
-    * Emissions and cost aggregation consistency
-* At the moment, **manual validation** (via calibration scripts, plots and spot checks) still plays an important role alongside automated tests. Formalizing these checks into tests is an ongoing TODO.
+    - Multimodal scenarios (road-only vs cabotage comparisons)
+    - SQLite caching edge cases (overwrite vs reuse, NULL-distance legs)
+    - Emissions and cost aggregation consistency
+- At the moment, **manual validation** (via calibration scripts, plots and spot checks) still plays an important role alongside automated tests. Formalizing these checks into tests is an ongoing TODO.
 
 ### Tooling & Developer Experience
 
-* There is no dedicated **packaging setup** yet (no published wheel or pip-installable package). The recommended usage remains:
+- There is no dedicated **packaging setup** yet (no published wheel or pip-installable package). The recommended usage remains:
 
-  * Clone the repo
-  * Create a virtualenv
-  * Run apps and scripts from the project root
-* Continuous Integration (CI) is not configured:
+  - Clone the repo
+  - Create a virtualenv
+  - Run apps and scripts from the project root
+- Continuous Integration (CI) is not configured:
 
-  * Installing dependencies and running `pytest` is currently a manual step.
-  * Adding a simple CI pipeline to run tests on each push is a natural next step.
+  - Installing dependencies and running `pytest` is currently a manual step.
+  - Adding a simple CI pipeline to run tests on each push is a natural next step.
 
 ### Data & Scenario Management
 
-* Factor tables in `data/` are treated as the **current best calibration**:
+- Factor tables in `data/` are treated as the **current best calibration**:
 
-  * There is no explicit versioning of factor sets within the repository (for example “v1 diesel factors”, “v2 updated emission factors”).
-  * Introducing simple version tags or subfolders for alternative calibrations is a planned improvement.
-* Scenario definitions (which O–D sets to run, which parameter overrides to apply) are still relatively ad hoc:
+  - There is no explicit versioning of factor sets within the repository (for example “v1 diesel factors”, “v2 updated emission factors”).
+  - Introducing simple version tags or subfolders for alternative calibrations is a planned improvement.
+- Scenario definitions (which O–D sets to run, which parameter overrides to apply) are still relatively ad hoc:
 
-  * Consolidating them into clearly documented configuration files is on the TODO list.
+  - Consolidating them into clearly documented configuration files is on the TODO list.
 
 ### Performance & Robustness Enhancements
 
-* ORS integration:
+- ORS integration:
 
-  * Basic error handling and rate-limit awareness exist, but more sophisticated backoff and retry logic could be added for very large batch runs.
-* SQLite usage:
+  - Basic error handling and rate-limit awareness exist, but more sophisticated backoff and retry logic could be added for very large batch runs.
+- SQLite usage:
 
-  * For the expected research-scale workloads, SQLite is sufficient, but there is no built-in mechanism for safe concurrent writes from multiple processes.
-  * If multi-process or remote execution becomes important, the persistence layer will need to be revisited.
+  - For the expected research-scale workloads, SQLite is sufficient, but there is no built-in mechanism for safe concurrent writes from multiple processes.
+  - If multi-process or remote execution becomes important, the persistence layer will need to be revisited.
 
 This list is not exhaustive, but it captures the main engineering areas that are either actively being worked on or explicitly left as future improvements for post-thesis evolution of the framework.
