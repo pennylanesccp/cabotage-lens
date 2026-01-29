@@ -1,0 +1,33 @@
+[2025-11-26 11:08:37][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto do Rio Grande' (UF=RS) distance=47.379 km via gate 'Gate'.
+[2025-11-26 11:08:37][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Manaus' (UF=AM) distance=16.406 km via centroid.
+[2025-11-26 11:08:37][INFO][modules.multimodal.builder] Ports Selected: Porto do Rio Grande (Origin) -> Porto de Manaus (Destiny)
+[2025-11-26 11:08:37][INFO][modules.road.router] Cache HIT: Pelotas, RS, Brazil -> Manaus, AM, Brazil (4674.8995 km)
+[2025-11-26 11:08:37][INFO][modules.road.router] Cache HIT: Pelotas, RS, Brazil -> Porto do Rio Grande (Gate) (61.5115 km)
+[2025-11-26 11:08:37][INFO][modules.road.router] Cache HIT: Porto de Manaus -> Manaus, AM, Brazil (23.219099999999997 km)
+[2025-11-26 11:08:37][INFO][modules.costs.diesel_prices] load_latest_diesel_price: loaded 27 rows from 'C:\Users\felipeproenca\Documents\workspaces\personal\carbon-footprint\data\processed\road_data\latest_diesel_prices.csv'.
+[2025-11-26 11:08:37][INFO][modules.costs.diesel_prices] avg_price_for_ufs: uf_o=SP, uf_d=SP → price_o=6.12, price_d=6.12, avg=6.1200, fallback_used=False
+[2025-11-26 11:08:37][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=4065.1300, liters_empty=0.0000, liters_total=4065.1300
+[2025-11-26 11:08:37][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=53.4883, liters_empty=0.0000, liters_total=53.4883
+[2025-11-26 11:08:37][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=20.1905, liters_empty=0.0000, liters_total=20.1905
+[2025-11-26 11:08:37][INFO][modules.costs.ship_fuel_prices] Loaded Bunker Price (VLSFO): R$ 2572.34/mt (Date: 2025-11-17)
+[2025-11-26 11:36:12][INFO][modules.road.ors.http] API CALL: GET /geocode/search
+[2025-11-26 11:36:13][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Santos' (UF=SP) distance=65.953 km via gate 'Ponta da Praia'.
+[2025-11-26 11:36:13][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Manaus' (UF=AM) distance=16.406 km via centroid.
+[2025-11-26 11:36:13][INFO][modules.multimodal.builder] Ports Selected: Porto de Santos (Origin) -> Porto de Manaus (Destiny)
+[2025-11-26 11:36:13][INFO][modules.road.router] Cache MISS. Routing: Avenida Bagiru, São Paulo, Brazil -> Manaus, AM, Brazil
+[2025-11-26 11:36:13][INFO][modules.road.ors.api] Routing (driving-hgv): [-46.72131, -23.541565] -> [-59.979328, -3.011942]
+[2025-11-26 11:36:13][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-hgv
+[2025-11-26 11:36:16][WARNING][urllib3.connectionpool] Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Read timed out. (read timeout=3.0)")': /v2/directions/driving-hgv
+[2025-11-26 11:36:21][ERROR][modules.road.ors.http] Network Error on /v2/directions/driving-hgv: HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Max retries exceeded with url: /v2/directions/driving-hgv (Caused by ReadTimeoutError("HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Read timed out. (read timeout=3.0)"))
+[2025-11-26 11:36:21][INFO][modules.road.ors.api] Routing (driving-car): [-46.72131, -23.541565] -> [-59.979328, -3.011942]
+[2025-11-26 11:36:21][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-car
+[2025-11-26 11:36:23][INFO][modules.road.router] Cache MISS. Routing: Avenida Bagiru, São Paulo, Brazil -> Porto de Santos (Ponta da Praia)
+[2025-11-26 11:36:23][INFO][modules.road.ors.api] Routing (driving-hgv): [-46.72131, -23.541565] -> [-46.29338327916457, -23.987012170316707]
+[2025-11-26 11:36:23][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-hgv
+[2025-11-26 11:36:24][INFO][modules.road.router] Cache HIT: Porto de Manaus -> Manaus, AM, Brazil (23.219099999999997 km)
+[2025-11-26 11:36:24][INFO][modules.costs.diesel_prices] load_latest_diesel_price: loaded 27 rows from 'C:\Users\felipeproenca\Documents\workspaces\personal\carbon-footprint\data\processed\road_data\latest_diesel_prices.csv'.
+[2025-11-26 11:36:24][INFO][modules.costs.diesel_prices] avg_price_for_ufs: uf_o=SP, uf_d=SP → price_o=6.12, price_d=6.12, avg=6.1200, fallback_used=False
+[2025-11-26 11:36:24][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=3371.1084, liters_empty=0.0000, liters_total=3371.1084
+[2025-11-26 11:36:24][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=82.4850, liters_empty=0.0000, liters_total=82.4850
+[2025-11-26 11:36:24][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=20.1905, liters_empty=0.0000, liters_total=20.1905
+[2025-11-26 11:36:24][INFO][modules.costs.ship_fuel_prices] Loaded Bunker Price (VLSFO): R$ 2572.34/mt (Date: 2025-11-17)

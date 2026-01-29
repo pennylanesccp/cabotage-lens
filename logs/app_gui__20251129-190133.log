@@ -1,0 +1,26 @@
+[2025-11-29 19:02:53][INFO][modules.road.ors.http] API CALL: GET /geocode/search
+[2025-11-29 19:02:54][INFO][modules.road.ors.http] API CALL: GET /geocode/search
+[2025-11-29 19:02:55][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Santos' (UF=SP) distance=474.018 km via gate 'Ponta da Praia'.
+[2025-11-29 19:02:55][INFO][modules.ports.ports_nearest] find_nearest_port: nearest='Porto de Manaus' (UF=AM) distance=1149.569 km via centroid.
+[2025-11-29 19:02:55][INFO][modules.multimodal.builder] Ports Selected: Porto de Santos (Origin) -> Porto de Manaus (Destiny)
+[2025-11-29 19:02:55][INFO][modules.road.router] Cache MISS. Routing: Avenida José Munia, Sao Jose do Rio Preto, SP, Brazil -> Rio Branco, R., Brazil
+[2025-11-29 19:02:55][INFO][modules.road.ors.api] Routing (driving-hgv): [-49.387098, -20.825426] -> [-67.822462, -9.989637]
+[2025-11-29 19:02:55][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-hgv
+[2025-11-29 19:02:58][WARNING][urllib3.connectionpool] Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Read timed out. (read timeout=3.0)")': /v2/directions/driving-hgv
+[2025-11-29 19:03:02][ERROR][modules.road.ors.http] Network Error on /v2/directions/driving-hgv: HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Max retries exceeded with url: /v2/directions/driving-hgv (Caused by ReadTimeoutError("HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Read timed out. (read timeout=3.0)"))
+[2025-11-29 19:03:02][INFO][modules.road.ors.api] Routing (driving-car): [-49.387098, -20.825426] -> [-67.822462, -9.989637]
+[2025-11-29 19:03:02][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-car
+[2025-11-29 19:03:03][INFO][modules.road.router] Cache MISS. Routing: Avenida José Munia, Sao Jose do Rio Preto, SP, Brazil -> Porto de Santos (Ponta da Praia)
+[2025-11-29 19:03:03][INFO][modules.road.ors.api] Routing (driving-hgv): [-49.387098, -20.825426] -> [-46.29338327916457, -23.987012170316707]
+[2025-11-29 19:03:03][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-hgv
+[2025-11-29 19:03:06][WARNING][urllib3.connectionpool] Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Read timed out. (read timeout=3.0)")': /v2/directions/driving-hgv
+[2025-11-29 19:03:10][ERROR][modules.road.ors.http] Network Error on /v2/directions/driving-hgv: HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Max retries exceeded with url: /v2/directions/driving-hgv (Caused by ReadTimeoutError("HTTPSConnectionPool(host='api.openrouteservice.org', port=443): Read timed out. (read timeout=3.0)"))
+[2025-11-29 19:03:10][INFO][modules.road.ors.api] Routing (driving-car): [-49.387098, -20.825426] -> [-46.29338327916457, -23.987012170316707]
+[2025-11-29 19:03:10][INFO][modules.road.ors.http] API CALL: POST /v2/directions/driving-car
+[2025-11-29 19:03:12][INFO][modules.road.router] Cache HIT: Porto de Manaus -> Rio Branco, R., Brazil (1406.5156000000002 km)
+[2025-11-29 19:03:12][INFO][modules.costs.diesel_prices] load_latest_diesel_price: loaded 27 rows from 'C:\Users\felipeproenca\Documents\workspaces\personal\carbon-footprint\data\processed\road_data\latest_diesel_prices.csv'.
+[2025-11-29 19:03:12][INFO][modules.costs.diesel_prices] avg_price_for_ufs: uf_o=SP, uf_d=SP → price_o=6.12, price_d=6.12, avg=6.1200, fallback_used=False
+[2025-11-29 19:03:12][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=2657.1354, liters_empty=0.0000, liters_total=2657.1354
+[2025-11-29 19:03:12][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=455.3685, liters_empty=0.0000, liters_total=455.3685
+[2025-11-29 19:03:12][INFO][modules.fuel.road_fuel_model] estimate_leg_liters.result: trips=2, kmL_base=2.3000, kmL_loaded=2.3000, kmL_empty=2.7140, liters_loaded=1223.0570, liters_empty=0.0000, liters_total=1223.0570
+[2025-11-29 19:03:12][INFO][modules.costs.ship_fuel_prices] Loaded Bunker Price (VLSFO): R$ 2572.34/mt (Date: 2025-11-17)
