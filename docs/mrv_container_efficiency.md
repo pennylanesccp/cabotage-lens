@@ -2,15 +2,11 @@
 
 ## Purpose
 
-This preprocessing step converts EU MRV "Publication of Information" workbooks into a single processed artifact with container vessel-class fuel intensity distributions.
+This preprocessing step converts EU MRV "Publication of Information" workbooks into processed artifacts used by runtime model components.
 
-Runtime code must read only:
+Runtime code reads only processed files under `data/processed`.
 
-- `data/processed/container_ship_efficiency_classes.json`
-
-Raw MRV workbooks are used only during this one-time preprocessing step.
-
-## MRV Source Files
+## Raw MRV Source Files
 
 - `data/raw/cabotage_data/2021-v216-06022026-EU MRV Publication of information.xlsx`
 - `data/raw/cabotage_data/2022-v241-06022026-EU MRV Publication of information.xlsx`
@@ -27,25 +23,42 @@ Run:
 python calcs/mrv_container_efficiency.py
 ```
 
-## Column Normalization
+Optional hoteling ratio switch:
 
-The script normalizes headers and extracts these canonical fields (allowing name variants across workbook versions):
+```powershell
+python calcs/mrv_container_efficiency.py --aux-main-ratio 0.27
+```
+
+## Produced Artifacts
+
+- `data/processed/container_ship_efficiency_classes.json`
+- `data/processed/container_ship_fuel_rate_sea_by_class.json`
+- `data/processed/container_ship_hoteling_rate_by_class.json`
+
+## Column Normalization and Extraction
+
+Canonical fields are matched across workbook variations:
 
 - `ship_type`
-- `fuel_per_nm` from MRV fuel-per-distance column (`kg / n mile`)
-- `co2_per_nm` from MRV CO2-per-distance column (`kg CO2 / n mile`)
+- `fuel_per_nm` from fuel-per-distance (`kg / n mile`)
+- `co2_per_nm` from CO2-per-distance (`kg CO2 / n mile`)
 - `deadweight`
+- `fuel_rate_sea_t_per_h` from `Fuel consumption per time spent at sea [m tonnes / hour]` when available
 
 ### Deadweight handling
 
-The provided workbooks do not contain an explicit `Deadweight` column in their published sheets.
-To keep the method fully MRV-derived, the script computes a deadweight proxy when deadweight is missing:
+The provided MRV workbooks do not expose an explicit `Deadweight` column in these published sheets.
+To keep the method MRV-derived, a deadweight proxy is computed when needed:
 
 - `deadweight_t ~= (co2_per_nm * 1000) / technical_efficiency_g_per_t_nm`
 
-Where `technical_efficiency_g_per_t_nm` is parsed from the MRV `Technical efficiency` field (for example `EIV (29.43 gCO₂/t·nm)`).
+`technical_efficiency_g_per_t_nm` is parsed from the MRV `Technical efficiency` text.
 
-No literature constants are hardcoded for this derivation.
+### Sea fuel-rate handling
+
+The direct MRV sea-rate column is used when populated. If missing/empty, a deterministic MRV fallback is used:
+
+- `fuel_rate_sea_t_per_h = total_fuel_consumption_t / time_at_sea_h`
 
 ## Filtering
 
@@ -55,22 +68,8 @@ Rows are restricted to:
 
 Rows are removed when:
 
-- `fuel_per_nm <= 0` (or missing)
+- `fuel_per_nm <= 0` (or missing) for class efficiency outputs
 - `deadweight <= 0` (or missing)
-
-## Metric Derivation
-
-Primary metric from MRV:
-
-- `fuel_per_nm` in `kg / n mile`
-
-Converted metric:
-
-- `fuel_per_km = fuel_per_nm / 1.852`
-
-CO2 metric:
-
-- `co2_per_nm` in `kg CO2 / n mile`
 
 ## Vessel Class Rules
 
@@ -80,43 +79,31 @@ Based on deadweight (t):
 - `container_feeder`: 20,000 <= deadweight < 40,000
 - `container_large`: deadweight >= 40,000
 
-## Aggregated Statistics
+## Metric Derivation
 
-For each class and each metric (`fuel_per_nm`, `fuel_per_km`, `co2_per_nm`), the artifact stores:
+- `fuel_per_km = fuel_per_nm / 1.852`
+- Class efficiency JSON stores full distribution stats (`mean`, `median`, `p10`, `p25`, `p75`, `p90`, `min`, `max`, `count`).
+- Sea-rate JSON stores `median`, `p10`, `p90`, and `sample_size` for `fuel_rate_sea_t_per_h`.
 
-- mean
-- median
-- p10
-- p25
-- p75
-- p90
-- min
-- max
-- count
-
-Also stored:
-
-- `sample_size`
-
-## Current Output Snapshot
-
-From the current run:
+## Current Run Snapshot
 
 - Total MRV rows loaded: 53,880
 - Container rows before cleaning: 7,973
 - Removed by fuel filter: 176
 - Removed by deadweight filter: 237
-- Container rows after cleaning: 7,736
-- Deadweight source in kept rows: 7,736 from `derived_from_technical_efficiency`
+- Container rows used for class efficiency: 7,736
+- Container rows used for sea-rate stats: 7,736
 
-Class sizes and median fuel intensity:
+Deadweight source in kept efficiency rows:
 
-- `container_small`: 2,318 rows, median `fuel_per_nm = 85.34`
-- `container_feeder`: 1,991 rows, median `fuel_per_nm = 149.15`
-- `container_large`: 3,427 rows, median `fuel_per_nm = 264.54`
+- `derived_from_technical_efficiency`: 7,736
+
+Sea fuel-rate source in kept rows:
+
+- `derived_total_fuel_div_time`: 7,736
 
 ## Reproducibility Notes
 
-- Header normalization is deterministic and based on token matching.
-- Numeric parsing removes non-numeric markers (for example `Division by zero!`) and coerces invalid values to null.
-- The output JSON is deterministic for a fixed set of input workbooks.
+- Header matching is token-based and deterministic.
+- Numeric parsing strips non-numeric markers (for example `Division by zero!`) before coercion.
+- Output artifacts are deterministic for a fixed set of MRV files and preprocessing arguments.

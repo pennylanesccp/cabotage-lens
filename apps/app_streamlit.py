@@ -264,6 +264,7 @@ def _build_map_deck(geo: Dict[str, Any], map_style: str) -> pdk.Deck:
 def _render_results(results: Dict[str, Any]) -> None:
     road = results["road_only"]
     mm = results["multimodal"]
+    sea = mm.get("sea", {})
     comp = results["comparison"]
 
     col_a, col_b, col_c = st.columns(3)
@@ -290,6 +291,13 @@ def _render_results(results: Dict[str, Any]) -> None:
             f"{float(sea_fuel_nm):.2f} kg/nm | sample: {int(sample_size or 0)}"
         )
 
+    st.caption(
+        "Sea fuel breakdown: "
+        f"sailing={float(sea.get('fuel_kg_sailing') or 0.0):,.1f} kg, "
+        f"hoteling={float(sea.get('hoteling_fuel_kg') or 0.0):,.1f} kg, "
+        f"total={float(sea.get('fuel_kg') or 0.0):,.1f} kg"
+    )
+
 
 def _run_analysis(
     origin: str,
@@ -300,6 +308,9 @@ def _run_analysis(
     overwrite_road: bool,
     db_path: Path,
     vessel_class: str,
+    include_hoteling: bool,
+    hoteling_hours_per_call: float,
+    port_calls: int,
 ) -> tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None]:
     _log.info("Routing: %s -> %s (%.3ft)", origin, destiny, cargo_t)
 
@@ -320,13 +331,16 @@ def _run_analysis(
         cargo_t=cargo_t,
         truck_key=truck_key,
         vessel_class=vessel_class,
+        include_hoteling=include_hoteling,
+        hoteling_hours_per_call=hoteling_hours_per_call,
+        port_calls=port_calls,
     )
     if not results:
         _log.error("Failed to evaluate route.")
         return (
             geo,
             None,
-            "Failed to evaluate route. Ensure 'data/processed/container_ship_efficiency_classes.json' exists.",
+            "Failed to evaluate route. Ensure processed MRV artifacts exist in data/processed.",
         )
 
     _log.info("Analysis finished.")
@@ -386,6 +400,24 @@ def main() -> None:
 
         with st.expander("Advanced", expanded=False):
             vessel_class = st.selectbox("Vessel class", options=class_options, index=default_class_idx)
+            include_hoteling = st.checkbox("Include hoteling", value=True)
+            hoteling_hours_per_call = st.number_input(
+                "Hoteling hours per port call",
+                min_value=0.0,
+                value=14.0,
+                step=1.0,
+            )
+            port_calls = int(
+                st.number_input(
+                    "Port calls per voyage",
+                    min_value=0,
+                    value=2,
+                    step=1,
+                )
+            )
+            hoteling_hours_total = hoteling_hours_per_call * float(port_calls) if include_hoteling else 0.0
+            st.caption(f"Derived hoteling hours total: {hoteling_hours_total:.1f} h")
+
             truck_key = st.selectbox("Truck", options=sorted(list_truck_keys()), index=0)
             profile = st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], index=0)
             overwrite_road = st.checkbox("Overwrite road cache", value=False)
@@ -415,6 +447,9 @@ def main() -> None:
                 overwrite_road=overwrite_road,
                 db_path=Path(db_path_str),
                 vessel_class=vessel_class,
+                include_hoteling=include_hoteling,
+                hoteling_hours_per_call=float(hoteling_hours_per_call),
+                port_calls=int(port_calls),
             )
         if err:
             st.error(err)
@@ -456,5 +491,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

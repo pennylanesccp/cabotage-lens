@@ -1,0 +1,32 @@
+{
+  "container_small": {
+    "fuel_rate_hoteling_t_per_h": {
+      "median": 0.11203096403884541,
+      "p10": 0.07765991798758595,
+      "p90": 0.15699903476760813
+    },
+    "ratio_used": 0.1142857142857143,
+    "aux_main_ratio": 0.25,
+    "sample_size": 2318
+  },
+  "container_feeder": {
+    "fuel_rate_hoteling_t_per_h": {
+      "median": 0.22915071802485065,
+      "p10": 0.141010886110983,
+      "p90": 0.3616182141383557
+    },
+    "ratio_used": 0.1142857142857143,
+    "aux_main_ratio": 0.25,
+    "sample_size": 1991
+  },
+  "container_large": {
+    "fuel_rate_hoteling_t_per_h": {
+      "median": 0.429977943424736,
+      "p10": 0.2872424876512261,
+      "p90": 0.6049522686007233
+    },
+    "ratio_used": 0.1142857142857143,
+    "aux_main_ratio": 0.25,
+    "sample_size": 3427
+  }
+}

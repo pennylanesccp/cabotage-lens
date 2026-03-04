@@ -83,6 +83,7 @@ def _flatten_for_db(origin_name: str, destiny_name: str, res: Dict[str, Any]) ->
 def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
     road = results["road_only"]
     mm = results["multimodal"]
+    sea = mm.get("sea", {})
     cmp_data = results["comparison"]
 
     print("\n" + "-" * 56)
@@ -102,6 +103,12 @@ def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
     fuel_nm = results.get("inputs", {}).get("sea_fuel_per_nm_kg")
     if vessel and fuel_nm:
         print(f"SEA VESSEL CLASS: {vessel} ({float(fuel_nm):.2f} kg/nm)")
+
+    print(
+        "SEA FUEL BREAKDOWN: "
+        f"sailing={float(sea.get('fuel_kg_sailing') or 0.0):,.1f} kg, "
+        f"hoteling={float(sea.get('hoteling_fuel_kg') or 0.0):,.1f} kg"
+    )
 
     savings_pct = float(cmp_data.get("savings_pct") or 0.0)
     status = "BETTER" if savings_pct > 0 else "WORSE"
@@ -123,6 +130,24 @@ def main() -> int:
         default=DEFAULT_VESSEL_CLASS,
         choices=list(CONTAINER_VESSEL_CLASSES),
         help="Container vessel class from processed MRV artifact",
+    )
+    parser.add_argument(
+        "--include-hoteling",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Include at-berth hoteling fuel/emissions",
+    )
+    parser.add_argument(
+        "--hoteling-hours-per-call",
+        type=float,
+        default=14.0,
+        help="Hoteling hours per port call",
+    )
+    parser.add_argument(
+        "--port-calls",
+        type=int,
+        default=2,
+        help="Port calls per voyage",
     )
 
     parser.add_argument("--table", default="analysis_results", help="Target SQLite table")
@@ -153,6 +178,9 @@ def main() -> int:
         cargo_t=args.cargo,
         truck_key=args.truck,
         vessel_class=args.vessel_class,
+        include_hoteling=bool(args.include_hoteling),
+        hoteling_hours_per_call=float(args.hoteling_hours_per_call),
+        port_calls=int(args.port_calls),
     )
     if not results:
         _log.error("Failed to evaluate path.")
@@ -179,4 +207,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

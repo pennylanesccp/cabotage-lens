@@ -31,12 +31,14 @@ from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
     resolve_vessel_class_efficiency,
 )
+from modules.multimodal.hoteling import resolve_hoteling_rate
 
 _log = get_logger(__name__)
 
 _DIESEL_EF_KG_CO2E_PER_L = 2.68
 _BUNKER_EF_KG_CO2E_PER_KG = 3.2
 _NM_TO_KM = 1.852
+_KG_PER_TONNE = 1000.0
 
 
 def _resolve_uf_from_point(point: Dict[str, Any]) -> str:
@@ -61,11 +63,20 @@ def evaluate_path(
     diesel_price: Optional[float] = None,
     vessel_class: str = DEFAULT_VESSEL_CLASS,
     vessel_efficiency_path: Optional[Path] = None,
+    include_hoteling: bool = True,
+    hoteling_hours_per_call: float = 14.0,
+    port_calls: int = 2,
+    hoteling_rate_path: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Assess costs and emissions for a path geometry payload."""
     if not path_data or path_data.get("status") != "ok":
         _log.warning("Cannot evaluate invalid path geometry.")
         return {}
+
+    include_hoteling = bool(include_hoteling)
+    hoteling_hours_per_call = max(float(hoteling_hours_per_call), 0.0)
+    port_calls = max(int(port_calls), 0)
+    hoteling_hours_total = hoteling_hours_per_call * float(port_calls) if include_hoteling else 0.0
 
     try:
         vessel_eff = resolve_vessel_class_efficiency(
@@ -75,6 +86,17 @@ def evaluate_path(
     except Exception as exc:
         _log.error("Failed to resolve vessel class efficiency: %s", exc)
         return {}
+
+    hoteling_sel = None
+    if include_hoteling and hoteling_hours_total > 0:
+        try:
+            hoteling_sel = resolve_hoteling_rate(
+                vessel_class=vessel_class,
+                hoteling_rate_path=hoteling_rate_path,
+            )
+        except Exception as exc:
+            _log.error("Failed to resolve hoteling-rate artifact: %s", exc)
+            return {}
 
     cargo_t = float(cargo_t)
     truck_spec = get_truck_spec(truck_key)
@@ -91,13 +113,14 @@ def evaluate_path(
         diesel_source = str(diesel_meta.get("source", "latest_diesel_prices_csv"))
 
     _log.debug(
-        "Evaluator inputs: cargo_t=%.3f truck=%s diesel=R$ %.4f/L uf_o=%s uf_d=%s vessel_class=%s",
+        "Evaluator inputs: cargo_t=%.3f truck=%s diesel=R$ %.4f/L uf_o=%s uf_d=%s vessel_class=%s include_hoteling=%s",
         cargo_t,
         truck_key,
         price_l,
         origin_uf or "<missing>",
         destiny_uf or "<missing>",
         vessel_eff.vessel_class,
+        include_hoteling,
     )
 
     def _calc_road(leg: Dict[str, Any]) -> Dict[str, Any]:
@@ -140,16 +163,40 @@ def evaluate_path(
     bunker_price_ton = float(get_bunker_price(default_price_brl_mt=3500.0))
 
     # MRV class medians are ship-level kg fuel / n mile.
-    sea_fuel_kg = sea_dist_nm * vessel_eff.fuel_per_nm
-    sea_cost = (sea_fuel_kg / 1000.0) * bunker_price_ton
-    sea_co2e = sea_fuel_kg * _BUNKER_EF_KG_CO2E_PER_KG
+    sea_fuel_sailing_kg = sea_dist_nm * vessel_eff.fuel_per_nm
+
+    hoteling_rate_t_per_h = 0.0
+    hoteling_ratio_used = 0.0
+    hoteling_aux_main_ratio = 0.0
+    hoteling_fuel_kg = 0.0
+    hoteling_source_path: str | None = None
+
+    if include_hoteling and hoteling_hours_total > 0 and hoteling_sel is not None:
+        hoteling_rate_t_per_h = float(hoteling_sel.fuel_rate_hoteling_t_per_h)
+        hoteling_ratio_used = float(hoteling_sel.ratio_used)
+        hoteling_aux_main_ratio = float(hoteling_sel.aux_main_ratio)
+        hoteling_source_path = str(hoteling_sel.source_path)
+        hoteling_fuel_kg = hoteling_hours_total * hoteling_rate_t_per_h * _KG_PER_TONNE
+
+    sea_fuel_total_kg = sea_fuel_sailing_kg + hoteling_fuel_kg
+    sea_cost = (sea_fuel_total_kg / _KG_PER_TONNE) * bunker_price_ton
+    sea_co2e = sea_fuel_total_kg * _BUNKER_EF_KG_CO2E_PER_KG
 
     res_sea = {
         "distance_km": float(sea_dist_km),
         "distance_nm": float(sea_dist_nm),
         "vessel_class": vessel_eff.vessel_class,
         "fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
-        "fuel_kg": float(sea_fuel_kg),
+        "fuel_kg_sailing": float(sea_fuel_sailing_kg),
+        "hoteling_included": bool(include_hoteling),
+        "hoteling_hours_per_call": float(hoteling_hours_per_call),
+        "port_calls": int(port_calls),
+        "hoteling_hours_total": float(hoteling_hours_total),
+        "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
+        "hoteling_fuel_kg": float(hoteling_fuel_kg),
+        "hoteling_ratio_used": float(hoteling_ratio_used),
+        "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
+        "fuel_kg": float(sea_fuel_total_kg),
         "cost": float(sea_cost),
         "co2e": float(sea_co2e),
     }
@@ -175,6 +222,14 @@ def evaluate_path(
             "sea_fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
             "vessel_sample_size": int(vessel_eff.sample_size),
             "vessel_efficiency_source": str(vessel_eff.source_path),
+            "include_hoteling": bool(include_hoteling),
+            "hoteling_hours_per_call": float(hoteling_hours_per_call),
+            "port_calls": int(port_calls),
+            "hoteling_hours_total": float(hoteling_hours_total),
+            "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
+            "hoteling_ratio_used": float(hoteling_ratio_used),
+            "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
+            "hoteling_source": hoteling_source_path,
         },
         "road_only": res_direct,
         "multimodal": {

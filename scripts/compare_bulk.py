@@ -76,6 +76,9 @@ def run_bulk(
     db_path: Path,
     output_csv: Path,
     vessel_class: str,
+    include_hoteling: bool,
+    hoteling_hours_per_call: float,
+    port_calls: int,
 ) -> None:
     """Process all destinations sequentially."""
     success_count = 0
@@ -105,6 +108,9 @@ def run_bulk(
                 cargo_t=cargo_t,
                 truck_key=truck_key,
                 vessel_class=vessel_class,
+                include_hoteling=include_hoteling,
+                hoteling_hours_per_call=hoteling_hours_per_call,
+                port_calls=port_calls,
             )
             if not res:
                 raise RuntimeError("Path evaluation failed")
@@ -117,6 +123,8 @@ def run_bulk(
                 "destiny": dest,
                 "status": "ok",
                 "vessel_class": res.get("inputs", {}).get("vessel_class"),
+                "include_hoteling": res.get("inputs", {}).get("include_hoteling"),
+                "hoteling_hours_total": res.get("inputs", {}).get("hoteling_hours_total"),
                 "road_cost": flat.get("road_fuel_cost_r"),
                 "mm_cost": flat.get("total_fuel_cost_r"),
                 "delta_cost": flat.get("delta_cost_r"),
@@ -157,6 +165,24 @@ def main() -> int:
         choices=list(CONTAINER_VESSEL_CLASSES),
         help="Container vessel class from processed MRV artifact",
     )
+    parser.add_argument(
+        "--include-hoteling",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Include at-berth hoteling fuel/emissions",
+    )
+    parser.add_argument(
+        "--hoteling-hours-per-call",
+        type=float,
+        default=14.0,
+        help="Hoteling hours per port call",
+    )
+    parser.add_argument(
+        "--port-calls",
+        type=int,
+        default=2,
+        help="Port calls per voyage",
+    )
     parser.add_argument("--output-csv", default="bulk_results_summary.csv", type=Path)
     parser.add_argument("--db-path", default=DEFAULT_DB_PATH, type=Path)
     parser.add_argument("--log-level", default="INFO")
@@ -184,10 +210,12 @@ def main() -> int:
         db_path=args.db_path,
         output_csv=args.output_csv,
         vessel_class=args.vessel_class,
+        include_hoteling=bool(args.include_hoteling),
+        hoteling_hours_per_call=float(args.hoteling_hours_per_call),
+        port_calls=int(args.port_calls),
     )
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
