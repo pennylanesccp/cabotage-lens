@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "carbon-footprint"
-version = "1.0.1"
+version = "1.1.0"
 description = "Multimodal freight assessment of logistics cost and carbon footprint."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,6 +16,7 @@ dependencies = [
     "pyinstaller",
     "tkintermapview",
     "beautifulsoup4",
+    "streamlit",
 ]
 
 [tool.setuptools.packages.find]
