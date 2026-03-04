@@ -1,4 +1,4 @@
-# modules/infra/database_manager.py
+﻿# modules/infra/database_manager.py
 # -*- coding: utf-8 -*-
 
 """
@@ -49,9 +49,9 @@ __all__ = [
     "ensure_multimodal_results_table", "upsert_multimodal_result"
 ]
 
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Smoke Test (Integration)
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if __name__ == "__main__":
     from modules.infra.log_manager import init_logging, get_logger
     
@@ -74,12 +74,12 @@ if __name__ == "__main__":
             upsert_multimodal_result(
                 conn, "test_mm", 
                 origin_name="A", destiny_name="B", cargo_t=100,
-                road_cost=5000, delta_cost=-500
+                road_fuel_cost_r=5000, delta_cost_r=-500
             )
             log.info("Multimodal result inserted via facade.")
             
-        print("✅ Facade test passed.")
+        print("âœ… Facade test passed.")
         
     except Exception as e:
-        log.error(f"❌ Facade test failed: {e}")
+        log.error(f"âŒ Facade test failed: {e}")
         raise

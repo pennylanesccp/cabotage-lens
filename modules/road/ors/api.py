@@ -1,4 +1,4 @@
-# modules/road/ors/api.py
+﻿# modules/road/ors/api.py
 # -*- coding: utf-8 -*-
 
 """
@@ -41,9 +41,9 @@ class ORSClient:
         self.cfg = config or ORSConfig()
         self._http = ORSHttpClient(self.cfg)
 
-    # ────────────────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Geocoding Methods
-    # ────────────────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def geocode_text(
         self, 
@@ -131,9 +131,9 @@ class ORSClient:
         # Return lat, lon, label
         return coords[1], coords[0], props.get("label", query)
 
-    # ────────────────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Routing Methods
-    # ────────────────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def route_road(
         self,
@@ -214,8 +214,8 @@ class ORSClient:
             query = point.get("label") or point.get("input")
             if query:
                 _log.debug(f"Input dict missing coords, geocoding label: '{query}'")
-                _, lon_g, _ = self.resolve_lat_lon(str(query))
-                return [lon_g, _] # type: ignore (unpacking tuple above fails mypy check in snippet)
+                lat_g, lon_g, _ = self.resolve_lat_lon(str(query))
+                return [lon_g, lat_g]
         
         # B) String Input -> Geocode it
         if isinstance(point, str):
@@ -237,9 +237,9 @@ class ORSClient:
         raise ValueError(f"Could not resolve point input: {point}")
 
 
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Smoke Test
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if __name__ == "__main__":
     from modules.infra.log_manager import init_logging
     init_logging(level="INFO")
@@ -250,8 +250,8 @@ if __name__ == "__main__":
         ors = ORSClient()
         
         print("\n1. Testing Geocode (SP)...")
-        lat, lon, lbl = ors.resolve_lat_lon("São Paulo, Brasil")
-        print(f"✅ Found: {lbl} ({lat:.4f}, {lon:.4f})")
+        lat, lon, lbl = ors.resolve_lat_lon("SÃ£o Paulo, Brasil")
+        print(f"âœ… Found: {lbl} ({lat:.4f}, {lon:.4f})")
         
         print("\n2. Testing Routing (SP -> Santos)...")
         # Use the explicit method with [lon, lat] logic inside
@@ -261,9 +261,9 @@ if __name__ == "__main__":
         
         res = ors.route_road(sp_dict, santos_dict)
         dist_km = (res['distance_m'] or 0) / 1000.0
-        print(f"✅ Route found: {dist_km:.2f} km")
+        print(f"âœ… Route found: {dist_km:.2f} km")
         
     except Exception as e:
-        print(f"⚠️ Test skipped/failed (check API key): {e}")
+        print(f"âš ï¸ Test skipped/failed (check API key): {e}")
         
     print("\n--- Done ---")

@@ -1,4 +1,4 @@
-# modules/costs/ship_fuel_prices.py
+﻿# modules/costs/ship_fuel_prices.py
 # -*- coding: utf-8 -*-
 """
 Ship fuel prices (Santos, Brazil) from Ship & Bunker
@@ -15,6 +15,8 @@ from __future__ import annotations
 import os
 import re
 from datetime import date
+from functools import lru_cache
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 import requests
@@ -46,44 +48,59 @@ __all__ = [
 ]
 
 
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Price Reader (for Evaluator)
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@lru_cache(maxsize=8)
+def _read_latest_bunker_price(path_str: str, mtime_ns: int) -> tuple[Optional[float], Optional[str]]:
+    # mtime_ns participates in cache key to invalidate on file updates.
+    _ = mtime_ns
+
+    path = Path(path_str)
+    with path.open("r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    if not lines:
+        return None, None
+
+    parts = lines[-1].strip().split("\t")
+    if len(parts) < 3:
+        return None, None
+
+    return float(parts[2]), str(parts[0])
+
 
 def get_bunker_price(default_price_brl_mt: float = 3500.0) -> float:
     """
     Get the latest VLSFO price in BRL/mt from the local text file.
-    If file is missing or empty, returns the default.
+    If file is missing or malformed, returns the provided default.
     """
-    if not os.path.exists(DEFAULT_OUTPUT_TXT):
-        _log.warning(f"Bunker price file not found: {DEFAULT_OUTPUT_TXT}. Using default: R$ {default_price_brl_mt:.2f}")
-        return default_price_brl_mt
+    path = Path(DEFAULT_OUTPUT_TXT).resolve()
+
+    if not path.exists():
+        _log.warning(
+            "Bunker price file not found: %s. Using default: R$ %.2f",
+            path,
+            default_price_brl_mt,
+        )
+        return float(default_price_brl_mt)
 
     try:
-        with open(DEFAULT_OUTPUT_TXT, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            
-        if not lines:
-            return default_price_brl_mt
+        price, dt = _read_latest_bunker_price(str(path), path.stat().st_mtime_ns)
+        if price is None:
+            return float(default_price_brl_mt)
 
-        # Format: date_iso \t label \t vlsfo_brl \t mgo_brl \t fx
-        last_line = lines[-1].strip()
-        parts = last_line.split("\t")
-        
-        if len(parts) >= 3:
-            price = float(parts[2])
-            _log.info(f"Loaded Bunker Price (VLSFO): R$ {price:.2f}/mt (Date: {parts[0]})")
-            return price
-            
+        _log.info("Loaded bunker price (VLSFO): R$ %.2f/mt (date: %s)", price, dt)
+        return float(price)
     except Exception as e:
-        _log.error(f"Failed to read bunker price: {e}")
+        _log.error("Failed to read bunker price: %s", e)
+        return float(default_price_brl_mt)
 
-    return default_price_brl_mt
 
-
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # HTML parsing helpers (regex-based, no external deps)
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _SANTOS_TR_RE = re.compile(
       r"<tr[^>]*>\s*"
@@ -139,7 +156,7 @@ def _parse_prices_from_row(row_html: str) -> Dict[str, Any]:
     date_label = date_match.group(1).strip() if date_match else None
 
     _log.debug(
-        "Parsed Santos row → VLSFO=%.2f USD/mt, MGO=%.2f USD/mt, date=%s",
+        "Parsed Santos row â†’ VLSFO=%.2f USD/mt, MGO=%.2f USD/mt, date=%s",
         vlsfo_price,
         mgo_price,
         date_label,
@@ -155,9 +172,9 @@ def _parse_prices_from_row(row_html: str) -> Dict[str, Any]:
     }
 
 
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Public scraper (USD)
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def fetch_santos_prices(
     *,
@@ -203,9 +220,9 @@ def fetch_santos_prices(
     return prices
 
 
-# ────────────────────────────────────────────────────────────────────────────────
-# FX conversion helpers (USD → BRL)
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# FX conversion helpers (USD â†’ BRL)
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def apply_fx_brl(
     prices: Dict[str, Any],
@@ -224,7 +241,7 @@ def apply_fx_brl(
 
     c = converter or CurrencyConverter()
 
-    # FX for 1 USD → BRL (ECB reference rate)
+    # FX for 1 USD â†’ BRL (ECB reference rate)
     fx_brl_per_usd = float(c.convert(1.0, "USD", "BRL"))
     _log.info(
         "FX rate used for conversion: 1 USD = %.6f BRL",
@@ -239,8 +256,8 @@ def apply_fx_brl(
 
     _log.info(
         "Converted prices to BRL: "
-        "VLSFO=%.2f USD/mt → %.2f BRL/mt; "
-        "MGO=%.2f USD/mt → %.2f BRL/mt",
+        "VLSFO=%.2f USD/mt â†’ %.2f BRL/mt; "
+        "MGO=%.2f USD/mt â†’ %.2f BRL/mt",
         vlsfo_usd,
         vlsfo_brl,
         mgo_usd,
@@ -260,9 +277,9 @@ def apply_fx_brl(
     return enriched
 
 
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Simple TXT writer (BRL prices)
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def write_prices_txt(
     prices_brl: Dict[str, Any],
@@ -319,9 +336,9 @@ def write_prices_txt(
     return abs_path
 
 
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # CLI / smoke test
-# ────────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def main(argv: Optional[List[str]] = None) -> int:
     """
