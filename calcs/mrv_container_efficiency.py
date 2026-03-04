@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -51,6 +52,8 @@ CRUISE_ME_LOAD = 0.80
 CRUISE_AE_LOAD = 0.30
 HOTELING_AE_LOAD = 0.40
 DEFAULT_AUX_MAIN_RATIO = 0.25
+
+_log = logging.getLogger("mrv_container_efficiency")
 
 
 @dataclass(frozen=True)
@@ -187,47 +190,59 @@ def _classify_size_proxy(size_proxy_t: float) -> str:
     return "container_large"
 
 
-def _stats_full(series: pd.Series) -> dict[str, float | int | None]:
+def _stats_robust(series: pd.Series) -> dict[str, float | int | None]:
     clean = series.dropna()
     if clean.empty:
         return {
             "mean": None,
             "median": None,
+            "trimmed_mean_1pct": None,
+            "winsorized_mean_1pct": None,
+            "p0": None,
             "p10": None,
             "p25": None,
+            "p50": None,
             "p75": None,
             "p90": None,
+            "p99": None,
+            "p99_5": None,
+            "p99_9": None,
             "min": None,
             "max": None,
             "count": 0,
         }
 
+    p0 = float(clean.quantile(0.00))
+    p1 = float(clean.quantile(0.01))
+    p10 = float(clean.quantile(0.10))
+    p25 = float(clean.quantile(0.25))
+    p50 = float(clean.quantile(0.50))
+    p75 = float(clean.quantile(0.75))
+    p90 = float(clean.quantile(0.90))
+    p99 = float(clean.quantile(0.99))
+    p99_5 = float(clean.quantile(0.995))
+    p99_9 = float(clean.quantile(0.999))
+
+    trimmed = clean[(clean >= p1) & (clean <= p99)]
+    winsorized = clean.clip(lower=p1, upper=p99)
+
     return {
         "mean": float(clean.mean()),
-        "median": float(clean.median()),
-        "p10": float(clean.quantile(0.10)),
-        "p25": float(clean.quantile(0.25)),
-        "p75": float(clean.quantile(0.75)),
-        "p90": float(clean.quantile(0.90)),
+        "median": float(p50),
+        "trimmed_mean_1pct": float(trimmed.mean()) if not trimmed.empty else None,
+        "winsorized_mean_1pct": float(winsorized.mean()),
+        "p0": p0,
+        "p10": p10,
+        "p25": p25,
+        "p50": p50,
+        "p75": p75,
+        "p90": p90,
+        "p99": p99,
+        "p99_5": p99_5,
+        "p99_9": p99_9,
         "min": float(clean.min()),
         "max": float(clean.max()),
         "count": int(clean.shape[0]),
-    }
-
-
-def _stats_p10_p90(series: pd.Series) -> dict[str, float | None]:
-    clean = series.dropna()
-    if clean.empty:
-        return {
-            "median": None,
-            "p10": None,
-            "p90": None,
-        }
-
-    return {
-        "median": float(clean.median()),
-        "p10": float(clean.quantile(0.10)),
-        "p90": float(clean.quantile(0.90)),
     }
 
 
@@ -355,9 +370,10 @@ def _aggregate_efficiency_by_class(df: pd.DataFrame) -> dict[str, dict[str, Any]
     for class_name, _, _ in CLASS_BINS:
         subset = df[df["vessel_class"] == class_name]
         payload[class_name] = {
-            "fuel_per_nm": _stats_full(subset["fuel_per_nm"]),
-            "fuel_per_km": _stats_full(subset["fuel_per_km"]),
-            "co2_per_nm": _stats_full(subset["co2_per_nm"]),
+            "fuel_per_nm": _stats_robust(subset["fuel_per_nm"]),
+            "fuel_per_km": _stats_robust(subset["fuel_per_km"]),
+            "co2_per_nm": _stats_robust(subset["co2_per_nm"]),
+            "size_proxy_t": _stats_robust(subset["size_proxy_t"]),
             "sample_size": int(subset.shape[0]),
         }
     return payload
@@ -368,7 +384,7 @@ def _aggregate_sea_rate_by_class(df: pd.DataFrame) -> dict[str, dict[str, Any]]:
     for class_name, _, _ in CLASS_BINS:
         subset = df[df["vessel_class"] == class_name]
         payload[class_name] = {
-            "fuel_rate_sea_t_per_h": _stats_p10_p90(subset["fuel_rate_sea_t_per_h"]),
+            "fuel_rate_sea_t_per_h": _stats_robust(subset["fuel_rate_sea_t_per_h"]),
             "sample_size": int(subset.shape[0]),
         }
     return payload
@@ -384,7 +400,7 @@ def _aggregate_hoteling_rate_by_class(df: pd.DataFrame, aux_main_ratio: float) -
         subset = df[df["vessel_class"] == class_name]
         hoteling_rate_tph = subset["fuel_rate_sea_t_per_h"] * ratio_used
         payload[class_name] = {
-            "fuel_rate_hoteling_t_per_h": _stats_p10_p90(hoteling_rate_tph),
+            "fuel_rate_hoteling_t_per_h": _stats_robust(hoteling_rate_tph),
             "ratio_used": float(ratio_used),
             "aux_main_ratio": float(aux_main_ratio),
             "sample_size": int(subset.shape[0]),
@@ -406,6 +422,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s][%(levelname)s][%(name)s] %(message)s",
+    )
+
     args = _build_arg_parser().parse_args()
     aux_main_ratio = float(args.aux_main_ratio)
     if aux_main_ratio <= 0:
@@ -486,6 +507,26 @@ def main() -> int:
             f"  - {class_name}: n={stats['sample_size']} "
             f"median_fuel_per_nm={stats['fuel_per_nm']['median']}"
         )
+
+    print("Fuel-per-nm sanity (mean vs median vs trimmed_mean_1pct):")
+    for class_name, stats in class_efficiency_payload.items():
+        fuel_stats = stats.get("fuel_per_nm", {})
+        mean_v = fuel_stats.get("mean")
+        median_v = fuel_stats.get("median")
+        trimmed_v = fuel_stats.get("trimmed_mean_1pct")
+        print(
+            f"  - {class_name}: median={median_v}, mean={mean_v}, trimmed_mean_1pct={trimmed_v}"
+        )
+        if isinstance(mean_v, (int, float)) and isinstance(median_v, (int, float)) and median_v > 0:
+            rel_gap = abs(mean_v - median_v) / median_v
+            if rel_gap > 0.50:
+                _log.warning(
+                    "Class '%s' has unstable mean for fuel_per_nm: mean=%.6f median=%.6f rel_gap=%.2f%%",
+                    class_name,
+                    mean_v,
+                    median_v,
+                    rel_gap * 100.0,
+                )
 
     ordering = ["container_small", "container_feeder", "container_large"]
     ordered = [class_efficiency_payload[c]["fuel_per_nm"]["median"] for c in ordering]

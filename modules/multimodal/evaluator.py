@@ -24,6 +24,7 @@ if __name__ == "__main__":
 
 from modules.costs.diesel_prices import get_average_price, normalize_uf
 from modules.costs.ship_fuel_prices import get_bunker_price
+from modules.fuel.emissions import get_ef_kg_per_kg
 from modules.fuel.road_fuel_model import estimate_leg_liters
 from modules.fuel.truck_specs import get_truck_spec
 from modules.infra.log_manager import get_logger
@@ -36,7 +37,8 @@ from modules.multimodal.hoteling import resolve_hoteling_rate
 _log = get_logger(__name__)
 
 _DIESEL_EF_KG_CO2E_PER_L = 2.68
-_BUNKER_EF_KG_CO2E_PER_KG = 3.2
+_MARINE_FUEL_TYPE = "vlsfo"
+_BUNKER_EF_KG_CO2E_PER_KG = float(get_ef_kg_per_kg(_MARINE_FUEL_TYPE))
 _NM_TO_KM = 1.852
 _KG_PER_TONNE = 1000.0
 
@@ -225,6 +227,8 @@ def evaluate_path(
             "diesel_price_source": diesel_source,
             "diesel_price_meta": diesel_meta,
             "bunker_price": bunker_price_ton,
+            "marine_fuel_type": _MARINE_FUEL_TYPE,
+            "marine_ef_kg_per_kg": _BUNKER_EF_KG_CO2E_PER_KG,
             "uf_origin": origin_uf or None,
             "uf_destiny": destiny_uf or None,
             "vessel_class_requested": vessel_eff.requested_class,
@@ -279,3 +283,5 @@ if __name__ == "__main__":
     res = evaluate_path(geo_dummy, cargo_t=27.0)
     print(json.dumps(res, indent=2))
     print("--- Done ---")
+
+

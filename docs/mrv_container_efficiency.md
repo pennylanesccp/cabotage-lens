@@ -44,8 +44,8 @@ Canonical fields are matched across workbook variations:
 - `ship_type`
 - `fuel_per_nm` from fuel-per-distance (`kg / n mile`)
 - `co2_per_nm` from CO2-per-distance (`kg CO2 / n mile`)
-- `fuel_per_transport_work_dwt` from fuel-per-transport-work(dwt) (`g / dwt carried Â· n miles`) when populated
-- `fuel_per_transport_work_mass` from fuel-per-transport-work(mass) (`g / m tonnes Â· n miles`) as fallback
+- `fuel_per_transport_work_dwt` from fuel-per-transport-work(dwt) (`g / dwt carried · n miles`) when populated
+- `fuel_per_transport_work_mass` from fuel-per-transport-work(mass) (`g / m tonnes · n miles`) as fallback
 - `transport_work_dwt`, `transport_work_mass`, `distance_travelled` when available (fallback path)
 - `fuel_rate_sea_t_per_h` from `Fuel consumption per time spent at sea [m tonnes / hour]` when available
 
@@ -89,14 +89,6 @@ Classification thresholds remain:
 - Sea-rate (`t/h`) from direct MRV column, with fallback:
   - `fuel_rate_sea_t_per_h = total_fuel_consumption_t / time_at_sea_h`
 
-Outputs:
-
-- Efficiency JSON stores full distribution stats (`mean`, `median`, `p10`, `p25`, `p75`, `p90`, `min`, `max`, `count`) for:
-  - `fuel_per_nm`
-  - `fuel_per_km`
-  - `co2_per_nm`
-- Sea-rate JSON stores `median`, `p10`, `p90`, and `sample_size` for `fuel_rate_sea_t_per_h`.
-
 ## Filtering
 
 Rows are restricted to:
@@ -108,13 +100,45 @@ Rows are removed when:
 - `fuel_per_nm <= 0` (or missing) for class efficiency outputs
 - `size_proxy_t <= 0` (or missing)
 
+## Robust Statistics and Outlier Handling
+
+Outliers can make class-level means unstable (especially for `container_large` where extreme right tails exist). For each class and each metric distribution, statistics are now computed class-locally (not globally).
+
+Metrics covered:
+
+- `fuel_per_nm`
+- `fuel_per_km`
+- `co2_per_nm`
+- `size_proxy_t`
+- `fuel_rate_sea_t_per_h`
+- `fuel_rate_hoteling_t_per_h`
+
+Stored summary fields per distribution:
+
+- `mean`
+- `median`
+- `trimmed_mean_1pct` (drop values below p1 and above p99)
+- `winsorized_mean_1pct` (cap values at p1/p99)
+- `p0`, `p10`, `p25`, `p50`, `p75`, `p90`, `p99`, `p99_5`, `p99_9`
+- `min`, `max`, `count`
+
+Default reporting should prioritize robust central/tail values:
+
+- `median`
+- `p10`
+- `p90`
+
+Means are retained for completeness and diagnostics.
+
 ## Sanity Checks Logged by Script
 
 - Size proxy distribution (`min`, `median`, `p90`, `max`)
 - Counts per class
 - Source counts used to derive size proxy
-- Monotonic check for class medians (`small <= feeder <= large`) on `fuel_per_nm`
+- Fuel-per-nm monotonic check (`small <= feeder <= large`)
 - Hoteling ratio consistency check (max relative error between expected and derived hoteling medians)
+- Per-class mean vs median vs `trimmed_mean_1pct` printout for `fuel_per_nm`
+- Warning when `|mean - median| / median > 50%`
 
 ## Reproducibility Notes
 
@@ -122,7 +146,7 @@ Rows are removed when:
 - Numeric parsing supports scientific notation and strips non-numeric markers (for example `Division by zero!`) before coercion.
 - Output artifacts are deterministic for fixed MRV inputs and preprocessing arguments.
 
-## Current Run Snapshot (2026-03-04)
+## Current Run Snapshot (2026-03-04, aux/main ratio = 0.25)
 
 - Total MRV rows loaded: 53,880
 - Container rows before cleaning: 7,973
@@ -130,11 +154,13 @@ Rows are removed when:
 - Removed by size proxy filter: 295
 - Container rows used for class efficiency: 7,678
 - Container rows used for sea-rate stats: 7,678
-- Size proxy source counts:
-  - `fuel_per_transport_work_mass`: 7,673
-  - `fuel_per_transport_work_dwt`: 5
-- Fuel-per-nm medians by class (kg/nm):
-  - `container_small`: 93.145
-  - `container_feeder`: 168.780
-  - `container_large`: 270.310
-- Monotonic sanity check (`small <= feeder <= large`): `True`
+
+Fuel-per-nm (`kg/nm`) summary:
+
+- `container_small`: n=3,172 | median=93.145 | mean=100.606 | trimmed_mean_1pct=99.054
+- `container_feeder`: n=1,406 | median=168.780 | mean=171.877 | trimmed_mean_1pct=171.241
+- `container_large`: n=3,100 | median=270.310 | mean=4400.382 | trimmed_mean_1pct=273.611
+
+Observed warning:
+
+- `container_large` mean is unstable (relative gap to median > 50%), confirming strong high-end outliers and motivating robust summaries.
