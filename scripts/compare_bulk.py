@@ -37,6 +37,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from modules.core.env_loader import load_repo_env
+load_repo_env(ROOT / '.env')
+
 # ───────────────────── Imports ─────────────────────
 from modules.infra.log_manager import init_logging, get_logger
 from modules.infra.database_manager import (
