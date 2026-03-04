@@ -161,6 +161,7 @@ def build_payload() -> dict[str, Any]:
         ],
         "defaults": {
             "default_port_calls": 2,
+            "t_per_teu_default": 14.0,
             "default_port_moves_per_call": {
                 "p10": default_moves_p10,
                 "median": default_moves_median,

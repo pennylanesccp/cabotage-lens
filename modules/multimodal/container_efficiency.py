@@ -36,6 +36,8 @@ class VesselClassEfficiency:
     requested_class: str
     vessel_class: str
     fuel_per_nm: float
+    fuel_g_per_tnm: float | None
+    size_proxy_t_median: float | None
     sample_size: int
     source_path: Path
 
@@ -61,18 +63,23 @@ def _resolve_payload(efficiency_json_path: Path | None = None) -> tuple[Path, di
     return path, payload
 
 
-def _class_median(entry: Any) -> float | None:
+def _metric_median(entry: Any, metric_key: str) -> float | None:
     if not isinstance(entry, dict):
         return None
-    fuel_stats = entry.get("fuel_per_nm")
-    if not isinstance(fuel_stats, dict):
+    stats = entry.get(metric_key)
+    if not isinstance(stats, dict):
         return None
-    value = fuel_stats.get("median")
+    value = stats.get("median")
     try:
         val = float(value)
     except (TypeError, ValueError):
         return None
-    if val <= 0:
+    return val
+
+
+def _class_median(entry: Any) -> float | None:
+    val = _metric_median(entry, "fuel_per_nm")
+    if val is None or val <= 0:
         return None
     return val
 
@@ -122,11 +129,19 @@ def resolve_vessel_class_efficiency(
             continue
 
         sample_size = 0
+        fuel_g_per_tnm: float | None = None
+        size_proxy_t_median: float | None = None
         if isinstance(entry, dict):
             try:
                 sample_size = int(entry.get("sample_size") or 0)
             except (TypeError, ValueError):
                 sample_size = 0
+            f_twork = _metric_median(entry, "fuel_g_per_tnm")
+            if isinstance(f_twork, (int, float)) and f_twork > 0:
+                fuel_g_per_tnm = float(f_twork)
+            size_proxy = _metric_median(entry, "size_proxy_t")
+            if isinstance(size_proxy, (int, float)) and size_proxy > 0:
+                size_proxy_t_median = float(size_proxy)
 
         if class_name != requested:
             _log.warning(
@@ -140,6 +155,8 @@ def resolve_vessel_class_efficiency(
             requested_class=requested,
             vessel_class=class_name,
             fuel_per_nm=median,
+            fuel_g_per_tnm=fuel_g_per_tnm,
+            size_proxy_t_median=size_proxy_t_median,
             sample_size=sample_size,
             source_path=source_path,
         )

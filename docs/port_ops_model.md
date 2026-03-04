@@ -26,8 +26,16 @@ Runtime uses only processed artifact data from:
 
 ### 1) Moves basis
 
+Runtime defaults now scale moves to the user cargo:
+
+- `cargo_teu_resolved = ceil(cargo_teu)` if `cargo_teu` is provided
+- Else `cargo_teu_resolved = ceil(cargo_t / t_per_teu_default)`
+- Default `port_moves_per_call = cargo_teu_resolved` (cargo-based mode)
 - `quay_moves_total = port_calls * port_moves_per_call`
-- If `port_moves_per_call` is omitted/zero, runtime uses scenario default median from the processed params file.
+
+Alternative terminal-level mode is still available:
+
+- `full_call_mode=true` uses scenario full-call defaults (`p10/median/p90`) when no explicit override is provided.
 
 ### 2) Equipment activity
 
@@ -86,15 +94,21 @@ The RTG diesel reduction proxy (relative to base RTG diesel factor) comes from t
 Advanced panel includes:
 
 - `Include port ops` (default ON)
-- `Port moves per call (0 uses scenario default)`
+- `Cargo (TEU, optional)` in Cargo section
+- `Tonnes per TEU default` (default `14`)
+- `Full-call mode (terminal-level)` (default OFF)
+- `Port moves per call override` (0 uses default logic)
 - `Port ops scenario`
 - Existing `Port calls per voyage`
 
-Result panel shows a dedicated port-ops breakdown (scenario, moves, calls, fuel, CO2e).
+Result panel and JSON include resolved TEU and move source for traceability.
 
 ### CLI
 
 - `--include-port-ops` / `--no-include-port-ops`
+- `--cargo-teu`
+- `--t-per-teu-default`
+- `--full-call-mode` / `--no-full-call-mode`
 - `--port-moves-per-call`
 - `--port-ops-scenario`
 
@@ -106,6 +120,7 @@ Available in:
 ## Limitations
 
 - STS per-move energy was not explicitly parameterized because no direct local per-move value was found in the provided references; STS is currently an explicit zero placeholder.
+- TEU conversion (`t_per_teu_default`) is a pragmatic assumption (default `14`) and should be replaced by route/customer commodity mix when available.
 - Electricity emission/cost factors are placeholders (0.0) pending local grid/tariff values in the provided references.
 - Reefer loads and non-handling terminal energy were not included.
 

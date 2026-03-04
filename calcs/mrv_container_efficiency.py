@@ -294,6 +294,15 @@ def _load_mrv_rows(path: Path) -> pd.DataFrame:
         out["transport_work_mass_tnm"] = transport_work_mass
         out["distance_travelled_nm"] = distance_nm
 
+        # Preferred transport-work intensity for cargo allocation is dwt-based g/(t*nm).
+        out["fuel_g_per_tnm"] = fuel_per_twork_dwt.where(fuel_per_twork_dwt > 0)
+        out["fuel_g_per_tnm_source"] = "dwt"
+
+        # Fallback to mass-based field when dwt-specific value is unavailable.
+        fallback_mass = out["fuel_g_per_tnm"].isna() & (fuel_per_twork_mass > 0)
+        out.loc[fallback_mass, "fuel_g_per_tnm"] = fuel_per_twork_mass[fallback_mass]
+        out.loc[fallback_mass, "fuel_g_per_tnm_source"] = "mass_fallback"
+
         # Size proxy hierarchy (no technical-efficiency usage):
         # 1) dwt carried proxy from fuel-per-distance and fuel-per-transport-work(dwt)
         # 2) dwt carried proxy from transport_work_dwt / distance
@@ -372,6 +381,7 @@ def _aggregate_efficiency_by_class(df: pd.DataFrame) -> dict[str, dict[str, Any]
         payload[class_name] = {
             "fuel_per_nm": _stats_robust(subset["fuel_per_nm"]),
             "fuel_per_km": _stats_robust(subset["fuel_per_km"]),
+            "fuel_g_per_tnm": _stats_robust(subset["fuel_g_per_tnm"]),
             "co2_per_nm": _stats_robust(subset["co2_per_nm"]),
             "size_proxy_t": _stats_robust(subset["size_proxy_t"]),
             "sample_size": int(subset.shape[0]),
@@ -465,8 +475,10 @@ def main() -> int:
     print(f"Container rows used for sea-rate stats: {len(sea_rate_df):,}")
 
     size_proxy_sources = efficiency_df["size_proxy_source"].value_counts(dropna=False).to_dict()
+    fuel_twork_sources = efficiency_df["fuel_g_per_tnm_source"].value_counts(dropna=False).to_dict()
     sea_rate_sources = sea_rate_df["fuel_rate_sea_source"].value_counts(dropna=False).to_dict()
     print(f"Size proxy source counts: {size_proxy_sources}")
+    print(f"Fuel g/(t*nm) source counts: {fuel_twork_sources}")
     print(f"Sea fuel-rate source counts: {sea_rate_sources}")
 
     if not class_df.empty:
@@ -505,7 +517,8 @@ def main() -> int:
     for class_name, stats in class_efficiency_payload.items():
         print(
             f"  - {class_name}: n={stats['sample_size']} "
-            f"median_fuel_per_nm={stats['fuel_per_nm']['median']}"
+            f"median_fuel_per_nm={stats['fuel_per_nm']['median']} "
+            f"median_fuel_g_per_tnm={stats['fuel_g_per_tnm']['median']}"
         )
 
     print("Fuel-per-nm sanity (mean vs median vs trimmed_mean_1pct):")

@@ -104,6 +104,16 @@ def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
     if vessel and fuel_nm:
         print(f"SEA VESSEL CLASS: {vessel} ({float(fuel_nm):.2f} kg/nm)")
 
+    alloc_share = float(sea.get("cargo_allocation_share") or results.get("inputs", {}).get("cargo_allocation_share") or 0.0)
+    fuel_twork = results.get("inputs", {}).get("sea_fuel_g_per_tnm")
+    mode = sea.get("sailing_fuel_calc_mode") or results.get("inputs", {}).get("sailing_fuel_calc_mode")
+    print(
+        "SEA ALLOCATION: "
+        f"share={alloc_share:.4f}, "
+        f"fuel_g_per_tnm={(f'{float(fuel_twork):.3f}' if isinstance(fuel_twork, (int, float)) else 'n/a')}, "
+        f"mode={mode}"
+    )
+
     print(
         "SEA FUEL BREAKDOWN: "
         f"sailing={float(sea.get('fuel_kg_sailing') or 0.0):,.1f} kg, "
@@ -117,7 +127,8 @@ def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
             "PORT OPS: "
             f"scenario={po.get('resolved_scenario')} "
             f"moves/call={float(po.get('port_moves_per_call') or 0.0):.1f} "
-            f"calls={int(po.get('port_calls') or 0)}"
+            f"calls={int(po.get('port_calls') or 0)} "
+            f"cargo_teu={int(po.get('cargo_teu_resolved') or 0)}"
         )
 
     savings_pct = float(cmp_data.get("savings_pct") or 0.0)
@@ -160,6 +171,24 @@ def main() -> int:
         help="Port calls per voyage",
     )
     parser.add_argument(
+        "--cargo-teu",
+        type=float,
+        default=None,
+        help="Optional cargo amount in TEU (if omitted, derived from cargo_t / t_per_teu_default)",
+    )
+    parser.add_argument(
+        "--t-per-teu-default",
+        type=float,
+        default=14.0,
+        help="Default tonnes per TEU used when cargo_teu is omitted",
+    )
+    parser.add_argument(
+        "--full-call-mode",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Use scenario terminal-call moves distribution instead of cargo-based TEU scaling",
+    )
+    parser.add_argument(
         "--include-port-ops",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -169,7 +198,7 @@ def main() -> int:
         "--port-moves-per-call",
         type=float,
         default=None,
-        help="Quay-side container moves per port call (defaults to scenario median when omitted)",
+        help="Quay-side container moves per port call (defaults to cargo TEU unless --full-call-mode)",
     )
     parser.add_argument(
         "--port-ops-scenario",
@@ -213,6 +242,9 @@ def main() -> int:
         port_calls=int(args.port_calls),
         include_port_ops=bool(args.include_port_ops),
         port_moves_per_call=args.port_moves_per_call,
+        cargo_teu=args.cargo_teu,
+        t_per_teu_default=float(args.t_per_teu_default),
+        full_call_mode=bool(args.full_call_mode),
         port_ops_scenario=str(args.port_ops_scenario),
     )
     if not results:

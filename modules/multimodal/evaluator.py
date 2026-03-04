@@ -62,6 +62,15 @@ def _resolve_uf_from_point(point: Dict[str, Any]) -> str:
     return ""
 
 
+def _cargo_allocation_share(cargo_t: float, size_proxy_t_median: float | None) -> float:
+    if size_proxy_t_median is None or size_proxy_t_median <= 0:
+        return 1.0
+    share = float(cargo_t) / float(size_proxy_t_median)
+    if share < 0:
+        return 0.0
+    return min(share, 1.0)
+
+
 def evaluate_path(
     path_data: Dict[str, Any],
     cargo_t: float,
@@ -75,6 +84,9 @@ def evaluate_path(
     hoteling_rate_path: Optional[Path] = None,
     include_port_ops: bool = True,
     port_moves_per_call: Optional[float] = None,
+    cargo_teu: Optional[float] = None,
+    t_per_teu_default: float = 14.0,
+    full_call_mode: bool = False,
     port_ops_scenario: str = DEFAULT_PORT_OPS_SCENARIO,
     port_ops_params_path: Optional[Path] = None,
     port_ops_stat_key: str = "median",
@@ -179,13 +191,24 @@ def evaluate_path(
     sea_dist_nm = sea_dist_km / _NM_TO_KM if sea_dist_km > 0 else 0.0
     bunker_price_ton = float(get_bunker_price(default_price_brl_mt=3500.0))
 
-    # MRV class medians are ship-level kg fuel / n mile.
-    sea_fuel_sailing_kg = sea_dist_nm * vessel_eff.fuel_per_nm
+    cargo_share = _cargo_allocation_share(cargo_t=cargo_t, size_proxy_t_median=vessel_eff.size_proxy_t_median)
+
+    sailing_fuel_mode = "transport_work_intensity"
+    fuel_g_per_tnm = vessel_eff.fuel_g_per_tnm
+    if isinstance(fuel_g_per_tnm, (int, float)) and fuel_g_per_tnm > 0:
+        # Preferred MRV metric: g fuel/(t*nm) allocated directly to cargo and distance.
+        sea_fuel_sailing_kg = (float(fuel_g_per_tnm) * cargo_t * sea_dist_nm) / _KG_PER_TONNE
+    else:
+        # Fallback uses vessel-level kg/nm scaled by cargo share proxy.
+        ship_fuel_kg = sea_dist_nm * vessel_eff.fuel_per_nm
+        sea_fuel_sailing_kg = ship_fuel_kg * cargo_share
+        sailing_fuel_mode = "vessel_fuel_share_fallback"
 
     hoteling_rate_t_per_h = 0.0
     hoteling_ratio_used = 0.0
     hoteling_aux_main_ratio = 0.0
     hoteling_fuel_kg = 0.0
+    hoteling_fuel_ship_kg = 0.0
     hoteling_source_path: str | None = None
     hoteling_vessel_class = vessel_eff.vessel_class
 
@@ -201,7 +224,8 @@ def evaluate_path(
                 vessel_eff.vessel_class,
                 hoteling_vessel_class,
             )
-        hoteling_fuel_kg = hoteling_hours_total * hoteling_rate_t_per_h * _KG_PER_TONNE
+        hoteling_fuel_ship_kg = hoteling_hours_total * hoteling_rate_t_per_h * _KG_PER_TONNE
+        hoteling_fuel_kg = hoteling_fuel_ship_kg * cargo_share
 
     sea_fuel_marine_kg = sea_fuel_sailing_kg + hoteling_fuel_kg
     sea_cost_marine = (sea_fuel_marine_kg / _KG_PER_TONNE) * bunker_price_ton
@@ -218,6 +242,10 @@ def evaluate_path(
                 scenario=port_ops_scenario,
                 port_calls=port_calls,
                 port_moves_per_call=port_moves_per_call,
+                cargo_t=cargo_t,
+                cargo_teu=cargo_teu,
+                t_per_teu_default=t_per_teu_default,
+                full_call_mode=full_call_mode,
                 stat_key=port_ops_stat_key,
                 diesel_price_per_l=price_l,
                 params_path=port_ops_params_path,
@@ -239,12 +267,19 @@ def evaluate_path(
         "distance_nm": float(sea_dist_nm),
         "vessel_class": vessel_eff.vessel_class,
         "fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
+        "fuel_g_per_tnm": (None if vessel_eff.fuel_g_per_tnm is None else float(vessel_eff.fuel_g_per_tnm)),
+        "size_proxy_t_median": (
+            None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
+        ),
+        "cargo_allocation_share": float(cargo_share),
+        "sailing_fuel_calc_mode": sailing_fuel_mode,
         "fuel_kg_sailing": float(sea_fuel_sailing_kg),
         "hoteling_included": bool(include_hoteling),
         "hoteling_hours_per_call": float(hoteling_hours_per_call),
         "port_calls": int(port_calls),
         "hoteling_hours_total": float(hoteling_hours_total),
         "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
+        "hoteling_fuel_ship_kg": float(hoteling_fuel_ship_kg),
         "hoteling_fuel_kg": float(hoteling_fuel_kg),
         "hoteling_vessel_class": hoteling_vessel_class,
         "hoteling_ratio_used": float(hoteling_ratio_used),
@@ -255,6 +290,9 @@ def evaluate_path(
         "port_ops_included": bool(include_port_ops),
         "port_ops_scenario_requested": str(port_ops_scenario),
         "port_ops_stat_key": str(port_ops_stat_key),
+        "cargo_teu_requested": (None if cargo_teu is None else float(max(float(cargo_teu), 0.0))),
+        "t_per_teu_default": float(t_per_teu_default),
+        "full_call_mode": bool(full_call_mode),
         "port_moves_per_call_requested": (
             None if port_moves_per_call is None else float(max(float(port_moves_per_call), 0.0))
         ),
@@ -288,6 +326,12 @@ def evaluate_path(
             "vessel_class_requested": vessel_eff.requested_class,
             "vessel_class": vessel_eff.vessel_class,
             "sea_fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
+            "sea_fuel_g_per_tnm": (None if vessel_eff.fuel_g_per_tnm is None else float(vessel_eff.fuel_g_per_tnm)),
+            "size_proxy_t_median": (
+                None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
+            ),
+            "cargo_allocation_share": float(cargo_share),
+            "sailing_fuel_calc_mode": sailing_fuel_mode,
             "vessel_sample_size": int(vessel_eff.sample_size),
             "vessel_efficiency_source": str(vessel_eff.source_path),
             "include_hoteling": bool(include_hoteling),
@@ -302,6 +346,9 @@ def evaluate_path(
             "include_port_ops": bool(include_port_ops),
             "port_ops_scenario_requested": str(port_ops_scenario),
             "port_ops_stat_key": str(port_ops_stat_key),
+            "cargo_teu_requested": (None if cargo_teu is None else float(max(float(cargo_teu), 0.0))),
+            "t_per_teu_default": float(t_per_teu_default),
+            "full_call_mode": bool(full_call_mode),
             "port_moves_per_call_requested": (
                 None if port_moves_per_call is None else float(max(float(port_moves_per_call), 0.0))
             ),
@@ -319,6 +366,11 @@ def evaluate_path(
                 None
                 if not isinstance(port_ops_payload, dict)
                 else float(port_ops_payload.get("port_moves_per_call") or 0.0)
+            ),
+            "cargo_teu_resolved": (
+                None
+                if not isinstance(port_ops_payload, dict)
+                else int(port_ops_payload.get("cargo_teu_resolved") or 0)
             ),
         },
         "road_only": res_direct,

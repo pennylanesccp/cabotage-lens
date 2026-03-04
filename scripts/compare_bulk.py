@@ -81,6 +81,9 @@ def run_bulk(
     port_calls: int,
     include_port_ops: bool,
     port_moves_per_call: float | None,
+    cargo_teu: float | None,
+    t_per_teu_default: float,
+    full_call_mode: bool,
     port_ops_scenario: str,
 ) -> None:
     """Process all destinations sequentially."""
@@ -117,6 +120,9 @@ def run_bulk(
                 port_calls=port_calls,
                 include_port_ops=include_port_ops,
                 port_moves_per_call=port_moves_per_call,
+                cargo_teu=cargo_teu,
+                t_per_teu_default=t_per_teu_default,
+                full_call_mode=full_call_mode,
                 port_ops_scenario=port_ops_scenario,
             )
             if not res:
@@ -135,6 +141,8 @@ def run_bulk(
                 "include_port_ops": res.get("inputs", {}).get("include_port_ops"),
                 "port_ops_scenario": res.get("inputs", {}).get("port_ops_scenario_resolved"),
                 "port_moves_per_call": res.get("inputs", {}).get("port_moves_per_call_resolved"),
+                "cargo_teu_resolved": res.get("inputs", {}).get("cargo_teu_resolved"),
+                "allocation_share": res.get("inputs", {}).get("cargo_allocation_share"),
                 "road_cost": flat.get("road_fuel_cost_r"),
                 "mm_cost": flat.get("total_fuel_cost_r"),
                 "delta_cost": flat.get("delta_cost_r"),
@@ -194,6 +202,24 @@ def main() -> int:
         help="Port calls per voyage",
     )
     parser.add_argument(
+        "--cargo-teu",
+        type=float,
+        default=None,
+        help="Optional cargo amount in TEU (if omitted, derived from cargo_t / t_per_teu_default)",
+    )
+    parser.add_argument(
+        "--t-per-teu-default",
+        type=float,
+        default=14.0,
+        help="Default tonnes per TEU used when cargo_teu is omitted",
+    )
+    parser.add_argument(
+        "--full-call-mode",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Use scenario terminal-call moves distribution instead of cargo-based TEU scaling",
+    )
+    parser.add_argument(
         "--include-port-ops",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -203,7 +229,7 @@ def main() -> int:
         "--port-moves-per-call",
         type=float,
         default=None,
-        help="Quay-side container moves per port call (defaults to scenario median when omitted)",
+        help="Quay-side container moves per port call (defaults to cargo TEU unless --full-call-mode)",
     )
     parser.add_argument(
         "--port-ops-scenario",
@@ -243,6 +269,9 @@ def main() -> int:
         port_calls=int(args.port_calls),
         include_port_ops=bool(args.include_port_ops),
         port_moves_per_call=args.port_moves_per_call,
+        cargo_teu=args.cargo_teu,
+        t_per_teu_default=float(args.t_per_teu_default),
+        full_call_mode=bool(args.full_call_mode),
         port_ops_scenario=str(args.port_ops_scenario),
     )
     return 0

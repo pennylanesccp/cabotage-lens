@@ -11,6 +11,7 @@ Runtime consumes processed params from:
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -26,6 +27,7 @@ DEFAULT_PORT_OPS_PARAMS_PATH = (
     _REPO_ROOT / "data" / "processed" / "cabotage_data" / "port_ops_params_santos.json"
 )
 DEFAULT_PORT_OPS_SCENARIO = "santos_diesel_heavy"
+DEFAULT_T_PER_TEU = 14.0
 
 _STAT_KEYS: tuple[str, ...] = ("p10", "median", "p90")
 
@@ -37,6 +39,7 @@ class PortOpsScenarioSelection:
     source_path: Path
     default_port_calls: int
     default_port_moves_per_call: dict[str, float]
+    t_per_teu_default: float
     diesel_density_kg_per_l: float
     diesel_fuel_type: str
     electricity_kg_co2e_per_kwh: float
@@ -93,6 +96,26 @@ def _pick_stat(stats: Any, stat_key: str) -> float:
         return 0.0
 
     return max(_float_or(0.0, stats.get(norm, 0.0)), 0.0)
+
+
+def _resolve_cargo_teu(cargo_t: float | None, cargo_teu: float | None, t_per_teu_default: float) -> int | None:
+    if cargo_teu is not None:
+        try:
+            teu = float(cargo_teu)
+        except (TypeError, ValueError):
+            teu = 0.0
+        if teu > 0:
+            return max(int(math.ceil(teu)), 1)
+
+    if cargo_t is not None:
+        try:
+            mass_t = float(cargo_t)
+        except (TypeError, ValueError):
+            mass_t = 0.0
+        if mass_t > 0 and t_per_teu_default > 0:
+            return max(int(math.ceil(mass_t / t_per_teu_default)), 1)
+
+    return None
 
 
 def list_port_ops_scenarios(params_path: Path | None = None) -> tuple[str, ...]:
@@ -159,6 +182,7 @@ def resolve_port_ops_scenario(
         source_path=source_path,
         default_port_calls=max(int(_float_or(2, defaults.get("default_port_calls", 2))), 0),
         default_port_moves_per_call=default_moves_stats,
+        t_per_teu_default=max(_float_or(DEFAULT_T_PER_TEU, defaults.get("t_per_teu_default", DEFAULT_T_PER_TEU)), 0.1),
         diesel_density_kg_per_l=max(_float_or(0.85, defaults.get("diesel_density_kg_per_l", 0.85)), 0.0),
         diesel_fuel_type=str(defaults.get("diesel_fuel_type") or "diesel").strip().lower() or "diesel",
         electricity_kg_co2e_per_kwh=max(
@@ -178,6 +202,10 @@ def estimate_port_ops(
     scenario: str = DEFAULT_PORT_OPS_SCENARIO,
     port_calls: int,
     port_moves_per_call: float | None = None,
+    cargo_t: float | None = None,
+    cargo_teu: float | None = None,
+    t_per_teu_default: float | None = None,
+    full_call_mode: bool = False,
     stat_key: str = "median",
     diesel_price_per_l: float | None = None,
     params_path: Path | None = None,
@@ -193,12 +221,30 @@ def estimate_port_ops(
     calls = max(int(port_calls), 0)
 
     requested_moves = None if port_moves_per_call is None else max(float(port_moves_per_call), 0.0)
-    if requested_moves is None or requested_moves <= 0.0:
-        moves_per_call = float(selection.default_port_moves_per_call.get("median", 0.0))
-        moves_source = "scenario_default"
+
+    t_per_teu = float(t_per_teu_default) if t_per_teu_default is not None else float(selection.t_per_teu_default)
+    if t_per_teu <= 0:
+        t_per_teu = float(selection.t_per_teu_default)
+
+    cargo_teu_resolved = _resolve_cargo_teu(cargo_t=cargo_t, cargo_teu=cargo_teu, t_per_teu_default=t_per_teu)
+
+    if full_call_mode:
+        if requested_moves is None or requested_moves <= 0.0:
+            moves_per_call = float(selection.default_port_moves_per_call.get("median", 0.0))
+            moves_source = "scenario_default_full_call"
+        else:
+            moves_per_call = requested_moves
+            moves_source = "explicit_override"
     else:
-        moves_per_call = requested_moves
-        moves_source = "explicit_override"
+        if requested_moves is not None and requested_moves > 0.0:
+            moves_per_call = requested_moves
+            moves_source = "explicit_override"
+        elif cargo_teu_resolved is not None:
+            moves_per_call = float(cargo_teu_resolved)
+            moves_source = "cargo_teu_derived"
+        else:
+            moves_per_call = float(selection.default_port_moves_per_call.get("median", 0.0))
+            moves_source = "scenario_default_fallback"
 
     quay_moves_total = moves_per_call * float(calls)
 
@@ -269,7 +315,12 @@ def estimate_port_ops(
         "resolved_scenario": selection.resolved_scenario,
         "source_path": str(selection.source_path),
         "stat_key": stat_key if stat_key in _STAT_KEYS else "median",
+        "full_call_mode": bool(full_call_mode),
         "port_calls": int(calls),
+        "cargo_t_input": None if cargo_t is None else float(cargo_t),
+        "cargo_teu_input": None if cargo_teu is None else float(cargo_teu),
+        "cargo_teu_resolved": None if cargo_teu_resolved is None else int(cargo_teu_resolved),
+        "t_per_teu_default": float(t_per_teu),
         "port_moves_per_call": float(moves_per_call),
         "port_moves_source": moves_source,
         "quay_moves_total": float(quay_moves_total),

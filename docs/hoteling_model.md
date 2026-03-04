@@ -62,12 +62,20 @@ Expected ratio values:
 
 ## Runtime Fuel and CO2 Formulas
 
-For each route:
+For each route, sea/hoteling fuel is allocated to the user cargo (not charged as full-vessel fuel):
 
-- `fuel_sea_sailing_kg = distance_nm * fuel_per_nm_selected`
-- `hoteling_hours_total = hoteling_hours_per_call * port_calls`
-- `fuel_hoteling_kg = hoteling_hours_total * fuel_rate_hoteling_t_per_h_selected * 1000`
-- `fuel_sea_total_kg = fuel_sea_sailing_kg + fuel_hoteling_kg`
+- Preferred sailing metric (MRV transport-work):
+  - `fuel_sea_sailing_kg = (fuel_g_per_tnm * cargo_t * distance_nm) / 1000`
+- Fallback sailing metric (if transport-work metric unavailable):
+  - `ship_fuel_kg = distance_nm * fuel_per_nm_selected`
+  - `cargo_share = min(cargo_t / size_proxy_t_median, 1.0)`
+  - `fuel_sea_sailing_kg = ship_fuel_kg * cargo_share`
+- Hoteling allocation:
+  - `hoteling_hours_total = hoteling_hours_per_call * port_calls`
+  - `hoteling_fuel_ship_kg = hoteling_hours_total * fuel_rate_hoteling_t_per_h_selected * 1000`
+  - `fuel_hoteling_kg = hoteling_fuel_ship_kg * cargo_share`
+- Marine subtotal:
+  - `fuel_sea_total_kg = fuel_sea_sailing_kg + fuel_hoteling_kg`
 
 CO2 uses the same marine fuel emission factor path already applied to sea fuel in the evaluator.
 
@@ -75,11 +83,12 @@ CO2 uses the same marine fuel emission factor path already applied to sea fuel i
 
 Current implementation keeps units consistent:
 
-- `fuel_per_nm_selected` is `kg/nm`
-- `distance_nm` is `nm`
-- `fuel_sea_sailing_kg` is `kg`
+- `fuel_g_per_tnm` is `g/(t*nm)`
+- `cargo_t` is `t` and `distance_nm` is `nm`
+- `(fuel_g_per_tnm * cargo_t * distance_nm) / 1000` yields `kg`
+- Fallback `fuel_per_nm_selected` remains `kg/nm` and is scaled by `cargo_share`
 - `fuel_rate_hoteling_t_per_h_selected` is `t/h`
-- `fuel_hoteling_kg` converts `t` to `kg` via `*1000`
+- `fuel_hoteling_kg` converts `t` to `kg` via `*1000`, then applies `cargo_share`
 - `fuel_sea_total_kg` sums same-unit terms (`kg`)
 
 Cost conversion uses `kg -> tonnes` before bunker price per tonne. CO2 uses marine EF per kg fuel.

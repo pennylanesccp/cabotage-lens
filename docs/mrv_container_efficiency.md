@@ -89,6 +89,20 @@ Classification thresholds remain:
 - Sea-rate (`t/h`) from direct MRV column, with fallback:
   - `fuel_rate_sea_t_per_h = total_fuel_consumption_t / time_at_sea_h`
 
+## Runtime Allocation Note
+
+`fuel_per_nm` is a vessel-level intensity (`kg/nm`) and must not be charged entirely to small cargos.
+
+The preferred runtime metric for cargo allocation is:
+
+- `fuel_g_per_tnm` (`g/(t*nm)`) from MRV transport-work intensity
+
+Runtime sailing fuel uses:
+
+- `fuel_kg_sailing = (fuel_g_per_tnm * cargo_t * distance_nm) / 1000`
+
+Fallback (only when `fuel_g_per_tnm` is missing) scales vessel-level fuel by cargo share based on class median `size_proxy_t`.
+
 ## Filtering
 
 Rows are restricted to:
@@ -108,6 +122,7 @@ Metrics covered:
 
 - `fuel_per_nm`
 - `fuel_per_km`
+- `fuel_g_per_tnm`
 - `co2_per_nm`
 - `size_proxy_t`
 - `fuel_rate_sea_t_per_h`

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import sys
 import tomllib
 from pathlib import Path
@@ -51,6 +52,7 @@ DEFAULTS: Dict[str, Any] = {
     "origin": "Pelotas, RS",
     "destiny": "Manaus, AM",
     "cargo_t": 30.0,
+    "cargo_teu_input": 0.0,
     "profile": "driving-hgv",
     "overwrite_road": False,
     "truck_key": sorted(list_truck_keys())[0] if list_truck_keys() else "semi_27t",
@@ -61,6 +63,8 @@ DEFAULTS: Dict[str, Any] = {
     "include_port_ops": True,
     "port_moves_per_call_input": 0.0,
     "port_ops_scenario": DEFAULT_PORT_OPS_SCENARIO,
+    "t_per_teu_default": 14.0,
+    "full_call_mode": False,
     "map_style": "Voyager",
     "map_show_first_last": True,
     "map_show_sea": True,
@@ -372,10 +376,14 @@ def _build_map_deck(geo: Dict[str, Any]) -> pdk.Deck:
 
 
 def _scenario_payload() -> Dict[str, Any]:
+    cargo_teu_value = float(st.session_state.cargo_teu_input)
+    t_per_teu_default = max(float(st.session_state.t_per_teu_default), 0.1)
     return {
         "origin": st.session_state.origin.strip(),
         "destiny": st.session_state.destiny.strip(),
         "cargo_t": float(st.session_state.cargo_t),
+        "cargo_teu": None if cargo_teu_value <= 0.0 else cargo_teu_value,
+        "t_per_teu_default": t_per_teu_default,
         "truck_key": str(st.session_state.truck_key),
         "ors_profile": str(st.session_state.profile),
         "overwrite_road": bool(st.session_state.overwrite_road),
@@ -384,6 +392,7 @@ def _scenario_payload() -> Dict[str, Any]:
         "hoteling_hours_per_call": float(st.session_state.hoteling_hours_per_call),
         "port_calls": int(st.session_state.port_calls),
         "include_port_ops": bool(st.session_state.include_port_ops),
+        "full_call_mode": bool(st.session_state.full_call_mode),
         "port_moves_per_call": (
             None
             if float(st.session_state.port_moves_per_call_input) <= 0.0
@@ -393,8 +402,18 @@ def _scenario_payload() -> Dict[str, Any]:
     }
 
 
+def _resolve_cargo_teu(payload: Dict[str, Any]) -> int:
+    cargo_teu = payload.get("cargo_teu")
+    if isinstance(cargo_teu, (int, float)) and float(cargo_teu) > 0:
+        return max(int(math.ceil(float(cargo_teu))), 1)
+    cargo_t = max(float(payload.get("cargo_t") or 0.0), 0.0)
+    t_per_teu_default = max(float(payload.get("t_per_teu_default") or 14.0), 0.1)
+    return max(int(math.ceil(cargo_t / t_per_teu_default)), 1) if cargo_t > 0 else 0
+
+
 def _render_header(version: str, payload: Dict[str, Any]) -> None:
     route_label = f"{payload['origin']} -> {payload['destiny']}"
+    cargo_teu_resolved = _resolve_cargo_teu(payload)
     st.markdown(
         f"""
         <div class='hero'>
@@ -408,6 +427,7 @@ def _render_header(version: str, payload: Dict[str, Any]) -> None:
             <div class='scenario-row'>
                 <span class='scenario-chip'><b>Route:</b> {route_label}</span>
                 <span class='scenario-chip'><b>Cargo:</b> {payload['cargo_t']:.1f} t</span>
+                <span class='scenario-chip'><b>Cargo:</b> {cargo_teu_resolved} TEU</span>
                 <span class='scenario-chip'><b>Vessel:</b> {payload['vessel_class']}</span>
                 <span class='scenario-chip'><b>Hoteling:</b> {'ON' if payload['include_hoteling'] else 'OFF'}</span>
                 <span class='scenario-chip'><b>Port ops:</b> {'ON' if payload['include_port_ops'] else 'OFF'}</span>
@@ -535,12 +555,21 @@ def _render_results(results: Dict[str, Any]) -> None:
     inputs = results.get("inputs", {})
     vessel_class = inputs.get("vessel_class")
     sea_fuel_nm = inputs.get("sea_fuel_per_nm_kg")
+    sea_fuel_twork = inputs.get("sea_fuel_g_per_tnm")
     sample_size = int(inputs.get("vessel_sample_size") or 0)
+    cargo_share = float(inputs.get("cargo_allocation_share") or 0.0)
+    cargo_teu_resolved = int(inputs.get("cargo_teu_resolved") or 0)
 
     if vessel_class and sea_fuel_nm:
         st.caption(
             f"Vessel class {vessel_class} | MRV median {float(sea_fuel_nm):.2f} kg/nm | sample {sample_size}"
         )
+    st.caption(
+        "Cargo allocation: "
+        f"share={cargo_share:.4f} | "
+        f"fuel_g_per_tnm={(f'{float(sea_fuel_twork):.3f}' if isinstance(sea_fuel_twork, (int, float)) else 'n/a')} | "
+        f"resolved cargo={cargo_teu_resolved} TEU"
+    )
 
     st.caption(
         "Sea fuel components: "
@@ -586,6 +615,9 @@ def _run_analysis(payload: Dict[str, Any]) -> tuple[Dict[str, Any] | None, Dict[
         port_calls=payload["port_calls"],
         include_port_ops=payload["include_port_ops"],
         port_moves_per_call=payload["port_moves_per_call"],
+        cargo_teu=payload["cargo_teu"],
+        t_per_teu_default=payload["t_per_teu_default"],
+        full_call_mode=payload["full_call_mode"],
         port_ops_scenario=payload["port_ops_scenario"],
     )
     if not results:
@@ -684,6 +716,15 @@ def main() -> None:
 
         with st.expander("Cargo", expanded=True):
             st.number_input("Cargo (t)", min_value=0.0, step=0.5, key="cargo_t")
+            st.number_input(
+                "Cargo (TEU, optional)",
+                min_value=0.0,
+                step=1.0,
+                key="cargo_teu_input",
+                help="If zero, TEU is derived from cargo_t / tonnes-per-TEU default.",
+            )
+            derived_teu = _resolve_cargo_teu(_scenario_payload())
+            st.caption(f"Derived cargo TEU: {derived_teu}")
 
         with st.expander("Road", expanded=False):
             st.selectbox("Truck", options=sorted(list_truck_keys()), key="truck_key")
@@ -705,8 +746,20 @@ def main() -> None:
             st.number_input("Hoteling hours per call", min_value=0.0, step=1.0, key="hoteling_hours_per_call")
             st.number_input("Port calls per voyage", min_value=0, step=1, key="port_calls")
             st.checkbox("Include port ops", key="include_port_ops")
+            st.checkbox(
+                "Full-call mode (terminal-level)",
+                key="full_call_mode",
+                help="ON uses scenario default full terminal call moves. OFF scales by cargo TEU.",
+            )
             st.number_input(
-                "Port moves per call (0 uses scenario default)",
+                "Tonnes per TEU default",
+                min_value=0.1,
+                step=0.5,
+                key="t_per_teu_default",
+                help="Used to derive cargo TEU when explicit cargo TEU is omitted.",
+            )
+            st.number_input(
+                "Port moves per call override (0 uses defaults)",
                 min_value=0.0,
                 step=1.0,
                 key="port_moves_per_call_input",
@@ -716,9 +769,16 @@ def main() -> None:
             if st.session_state.include_hoteling:
                 total_h = float(st.session_state.hoteling_hours_per_call) * float(st.session_state.port_calls)
                 st.caption(f"Derived hoteling total: {total_h:.1f} h")
-            if st.session_state.include_port_ops and st.session_state.port_moves_per_call_input > 0:
-                total_moves = float(st.session_state.port_moves_per_call_input) * float(st.session_state.port_calls)
-                st.caption(f"Derived port moves total: {total_moves:.1f}")
+            if st.session_state.include_port_ops:
+                if st.session_state.port_moves_per_call_input > 0:
+                    total_moves = float(st.session_state.port_moves_per_call_input) * float(st.session_state.port_calls)
+                    st.caption(f"Derived port moves total (override): {total_moves:.1f}")
+                elif st.session_state.full_call_mode:
+                    st.caption("Port moves source: scenario full-call median (terminal-level).")
+                else:
+                    derived_teu = _resolve_cargo_teu(_scenario_payload())
+                    total_moves = float(derived_teu) * float(st.session_state.port_calls)
+                    st.caption(f"Derived port moves total (cargo-based): {total_moves:.1f}")
 
         with st.expander("Map", expanded=False):
             st.selectbox("Map style", options=list(MAP_STYLES.keys()), key="map_style")
