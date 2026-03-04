@@ -2,20 +2,18 @@
 # apps/app_streamlit.py
 # -*- coding: utf-8 -*-
 
-"""
-Streamlit UI for road vs multimodal comparison.
-
-Run with:
-    streamlit run apps/app_streamlit.py
-"""
+"""Streamlit UI for road vs multimodal comparison."""
 
 from __future__ import annotations
 
+import json
 import logging
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
@@ -40,7 +38,6 @@ from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
 )
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
-from modules.plot.cabotage_plot_helper import get_visual_sea_path
 
 st.set_page_config(page_title="EcoFreight Streamlit", page_icon=":earth_americas:", layout="wide")
 
@@ -50,13 +47,46 @@ MAP_STYLES: dict[str, str] = {
     "Dark Matter": "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
 }
 
+DEFAULTS: Dict[str, Any] = {
+    "origin": "Pelotas, RS",
+    "destiny": "Manaus, AM",
+    "cargo_t": 30.0,
+    "profile": "driving-hgv",
+    "overwrite_road": False,
+    "truck_key": sorted(list_truck_keys())[0] if list_truck_keys() else "semi_27t",
+    "vessel_class": DEFAULT_VESSEL_CLASS,
+    "include_hoteling": True,
+    "hoteling_hours_per_call": 14.0,
+    "port_calls": 2,
+    "include_port_ops": True,
+    "port_moves_per_call_input": 0.0,
+    "port_ops_scenario": DEFAULT_PORT_OPS_SCENARIO,
+    "map_style": "Voyager",
+    "map_show_first_last": True,
+    "map_show_sea": True,
+    "map_show_direct": True,
+    "map_show_ports": True,
+    "map_show_labels": True,
+    "map_show_legend": True,
+    "map_pitch": 30,
+    "map_bearing": 5,
+    "map_zoom": 4.8,
+    "map_center_lat": None,
+    "map_center_lon": None,
+    "log_level": "INFO",
+    "write_log_file": True,
+    "db_path_str": str(DEFAULT_DB_PATH),
+    "log_last_n": 300,
+    "log_filter": "",
+}
+
 _log = get_logger("streamlit_app")
 
 
 class StreamlitLogHandler(logging.Handler):
     """Push log lines into Streamlit session state."""
 
-    def __init__(self, key: str = "ui_logs", max_lines: int = 800) -> None:
+    def __init__(self, key: str = "ui_logs", max_lines: int = 1000) -> None:
         super().__init__()
         self.key = key
         self.max_lines = max_lines
@@ -68,8 +98,28 @@ class StreamlitLogHandler(logging.Handler):
             if len(logs) > self.max_lines:
                 del logs[:-self.max_lines]
         except Exception:
-            # Keep logging non-blocking for app flow.
             pass
+
+
+def _project_version() -> str:
+    pyproject = ROOT / "pyproject.toml"
+    if not pyproject.exists():
+        return "dev"
+    try:
+        payload = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        return str(payload.get("project", {}).get("version") or "dev")
+    except Exception:
+        return "dev"
+
+
+def _init_state() -> None:
+    for k, v in DEFAULTS.items():
+        st.session_state.setdefault(k, v)
+
+    st.session_state.setdefault("ui_logs", [])
+    st.session_state.setdefault("last_geo", None)
+    st.session_state.setdefault("last_results", None)
+    st.session_state.setdefault("scenario_json_blob", "")
 
 
 def _attach_streamlit_logging(level: str, write_to_file: bool) -> None:
@@ -103,23 +153,23 @@ def _to_lonlat(path_latlon: List[Tuple[float, float]]) -> List[List[float]]:
 def _zoom_from_span(lat_span: float, lon_span: float) -> float:
     span = max(lat_span, lon_span)
     if span < 0.05:
-        return 12.0
+        return 11.5
     if span < 0.2:
-        return 10.5
+        return 10.0
     if span < 0.8:
-        return 9.0
+        return 8.5
     if span < 2.0:
-        return 7.5
+        return 7.2
     if span < 5.0:
-        return 6.2
+        return 6.0
     if span < 10.0:
-        return 5.4
+        return 5.2
     if span < 20.0:
-        return 4.7
+        return 4.5
     return 3.8
 
 
-def _build_map_deck(geo: Dict[str, Any], map_style: str) -> pdk.Deck:
+def _map_points(geo: Dict[str, Any]) -> list[Tuple[float, float]]:
     origin = _safe_latlon(geo["origin"])
     destiny = _safe_latlon(geo["destiny"])
 
@@ -128,215 +178,398 @@ def _build_map_deck(geo: Dict[str, Any], map_style: str) -> pdk.Deck:
     po_coords = _safe_latlon(po["gate"]) if po.get("gate") else _safe_latlon(po)
     pd_coords = _safe_latlon(pd["gate"]) if pd.get("gate") else _safe_latlon(pd)
 
-    try:
-        sea_path = get_visual_sea_path(po_coords, pd_coords)
-    except Exception as e:
-        _log.error("Failed to render curved sea path: %s", e)
-        sea_path = [po_coords, pd_coords]
+    return [origin, destiny, po_coords, pd_coords]
 
-    path_rows: List[Dict[str, Any]] = []
-    if origin != po_coords:
-        path_rows.append(
-            {
-                "name": "First mile",
-                "path": _to_lonlat([origin, po_coords]),
-                "color": [160, 32, 240, 210],
-                "width": 6,
-            }
-        )
 
-    if len(sea_path) > 1:
-        path_rows.append(
-            {
-                "name": "Sea leg",
-                "path": _to_lonlat(sea_path),
-                "color": [30, 136, 229, 220],
-                "width": 5,
-            }
-        )
-
-    if pd_coords != destiny:
-        path_rows.append(
-            {
-                "name": "Last mile",
-                "path": _to_lonlat([pd_coords, destiny]),
-                "color": [160, 32, 240, 210],
-                "width": 6,
-            }
-        )
-
-    path_rows.append(
-        {
-            "name": "Direct road",
-            "path": _to_lonlat([origin, destiny]),
-            "color": [229, 57, 53, 220],
-            "width": 3,
-        }
-    )
-
-    points = [
-        {
-            "label": geo["origin"]["label"],
-            "kind": "Origin",
-            "position": [origin[1], origin[0]],
-            "color": [229, 57, 53, 245],
-            "radius": 22000,
-        },
-        {
-            "label": geo["destiny"]["label"],
-            "kind": "Destiny",
-            "position": [destiny[1], destiny[0]],
-            "color": [229, 57, 53, 245],
-            "radius": 22000,
-        },
-        {
-            "label": f"Port: {po['name']}",
-            "kind": "Port",
-            "position": [po_coords[1], po_coords[0]],
-            "color": [30, 136, 229, 245],
-            "radius": 26000,
-        },
-        {
-            "label": f"Port: {pd['name']}",
-            "kind": "Port",
-            "position": [pd_coords[1], pd_coords[0]],
-            "color": [30, 136, 229, 245],
-            "radius": 26000,
-        },
-    ]
-
-    all_coords = [origin, destiny] + sea_path
-    lats = [c[0] for c in all_coords]
-    lons = [c[1] for c in all_coords]
-
+def _fit_view(points: list[Tuple[float, float]]) -> tuple[float, float, float]:
+    lats = [p[0] for p in points]
+    lons = [p[1] for p in points]
     lat_min, lat_max = min(lats), max(lats)
     lon_min, lon_max = min(lons), max(lons)
 
-    center_lat = (lat_min + lat_max) / 2
-    center_lon = (lon_min + lon_max) / 2
+    center_lat = (lat_min + lat_max) / 2.0
+    center_lon = (lon_min + lon_max) / 2.0
     zoom = _zoom_from_span(lat_max - lat_min, lon_max - lon_min)
+    return center_lat, center_lon, zoom
 
-    deck = pdk.Deck(
-        map_style=MAP_STYLES[map_style],
-        initial_view_state=pdk.ViewState(
-            latitude=center_lat,
-            longitude=center_lon,
-            zoom=zoom,
-            pitch=38,
-            bearing=7,
-        ),
-        layers=[
+
+def _build_map_deck(geo: Dict[str, Any]) -> pdk.Deck:
+    origin = _safe_latlon(geo["origin"])
+    destiny = _safe_latlon(geo["destiny"])
+
+    po = geo["port_origin"]
+    pd = geo["port_destiny"]
+    po_coords = _safe_latlon(po["gate"]) if po.get("gate") else _safe_latlon(po)
+    pd_coords = _safe_latlon(pd["gate"]) if pd.get("gate") else _safe_latlon(pd)
+
+    zoom = float(st.session_state.map_zoom)
+    radius_base = max(1200.0, 9000.0 - (zoom * 550.0))
+
+    layers: list[pdk.Layer] = []
+
+    if st.session_state.map_show_first_last:
+        road_legs: list[dict[str, Any]] = []
+        if origin != po_coords:
+            road_legs.append(
+                {
+                    "name": "First mile",
+                    "path": _to_lonlat([origin, po_coords]),
+                    "color": [155, 89, 182, 220],
+                    "width": 5,
+                }
+            )
+        if pd_coords != destiny:
+            road_legs.append(
+                {
+                    "name": "Last mile",
+                    "path": _to_lonlat([pd_coords, destiny]),
+                    "color": [155, 89, 182, 220],
+                    "width": 5,
+                }
+            )
+        if road_legs:
+            layers.append(
+                pdk.Layer(
+                    "PathLayer",
+                    data=road_legs,
+                    get_path="path",
+                    get_color="color",
+                    get_width="width",
+                    width_min_pixels=2,
+                    pickable=True,
+                )
+            )
+
+    if st.session_state.map_show_sea:
+        layers.append(
+            pdk.Layer(
+                "ArcLayer",
+                data=[
+                    {
+                        "name": "Sea leg",
+                        "source_position": [po_coords[1], po_coords[0]],
+                        "target_position": [pd_coords[1], pd_coords[0]],
+                        "source_color": [41, 128, 185, 240],
+                        "target_color": [52, 152, 219, 240],
+                        "width": 4,
+                    }
+                ],
+                get_source_position="source_position",
+                get_target_position="target_position",
+                get_source_color="source_color",
+                get_target_color="target_color",
+                get_width="width",
+                great_circle=True,
+                pickable=True,
+            )
+        )
+
+    if st.session_state.map_show_direct:
+        layers.append(
             pdk.Layer(
                 "PathLayer",
-                data=path_rows,
+                data=[
+                    {
+                        "name": "Direct road",
+                        "path": _to_lonlat([origin, destiny]),
+                        "color": [231, 76, 60, 180],
+                        "width": 2,
+                    }
+                ],
                 get_path="path",
                 get_color="color",
                 get_width="width",
-                width_min_pixels=2,
+                width_min_pixels=1,
                 pickable=True,
-            ),
-            pdk.Layer(
-                "ScatterplotLayer",
-                data=points,
-                get_position="position",
-                get_color="color",
-                get_radius="radius",
-                radius_min_pixels=4,
-                pickable=True,
-            ),
+            )
+        )
+
+    points = [
+        {
+            "kind": "Origin",
+            "label": geo["origin"]["label"],
+            "lat": origin[0],
+            "lon": origin[1],
+            "position": [origin[1], origin[0]],
+            "color": [192, 57, 43, 245],
+            "radius": radius_base,
+        },
+        {
+            "kind": "Destiny",
+            "label": geo["destiny"]["label"],
+            "lat": destiny[0],
+            "lon": destiny[1],
+            "position": [destiny[1], destiny[0]],
+            "color": [192, 57, 43, 245],
+            "radius": radius_base,
+        },
+    ]
+
+    if st.session_state.map_show_ports:
+        points.extend(
+            [
+                {
+                    "kind": "Port",
+                    "label": po["name"],
+                    "lat": po_coords[0],
+                    "lon": po_coords[1],
+                    "position": [po_coords[1], po_coords[0]],
+                    "color": [39, 174, 96, 245],
+                    "radius": radius_base * 1.1,
+                },
+                {
+                    "kind": "Port",
+                    "label": pd["name"],
+                    "lat": pd_coords[0],
+                    "lon": pd_coords[1],
+                    "position": [pd_coords[1], pd_coords[0]],
+                    "color": [39, 174, 96, 245],
+                    "radius": radius_base * 1.1,
+                },
+            ]
+        )
+
+    layers.append(
+        pdk.Layer(
+            "ScatterplotLayer",
+            data=points,
+            get_position="position",
+            get_color="color",
+            get_radius="radius",
+            radius_min_pixels=4,
+            radius_max_pixels=18,
+            pickable=True,
+        )
+    )
+
+    if st.session_state.map_show_labels:
+        layers.append(
             pdk.Layer(
                 "TextLayer",
                 data=points,
                 get_position="position",
                 get_text="kind",
-                get_size=14,
-                get_color=[245, 245, 245, 255],
-                get_angle=0,
+                get_size=13,
+                get_color=[248, 250, 252, 240],
                 get_text_anchor="middle",
                 get_alignment_baseline="bottom",
                 pickable=False,
-            ),
-        ],
-        tooltip={"text": "{kind}\n{label}"},
+            )
+        )
+
+    return pdk.Deck(
+        map_style=MAP_STYLES[st.session_state.map_style],
+        initial_view_state=pdk.ViewState(
+            latitude=float(st.session_state.map_center_lat),
+            longitude=float(st.session_state.map_center_lon),
+            zoom=float(st.session_state.map_zoom),
+            pitch=float(st.session_state.map_pitch),
+            bearing=float(st.session_state.map_bearing),
+        ),
+        layers=layers,
+        tooltip={"text": "{kind}\n{label}\nlat: {lat}\nlon: {lon}"},
     )
-    return deck
+
+
+def _scenario_payload() -> Dict[str, Any]:
+    return {
+        "origin": st.session_state.origin.strip(),
+        "destiny": st.session_state.destiny.strip(),
+        "cargo_t": float(st.session_state.cargo_t),
+        "truck_key": str(st.session_state.truck_key),
+        "ors_profile": str(st.session_state.profile),
+        "overwrite_road": bool(st.session_state.overwrite_road),
+        "vessel_class": str(st.session_state.vessel_class),
+        "include_hoteling": bool(st.session_state.include_hoteling),
+        "hoteling_hours_per_call": float(st.session_state.hoteling_hours_per_call),
+        "port_calls": int(st.session_state.port_calls),
+        "include_port_ops": bool(st.session_state.include_port_ops),
+        "port_moves_per_call": (
+            None
+            if float(st.session_state.port_moves_per_call_input) <= 0.0
+            else float(st.session_state.port_moves_per_call_input)
+        ),
+        "port_ops_scenario": str(st.session_state.port_ops_scenario),
+    }
+
+
+def _render_header(version: str, payload: Dict[str, Any]) -> None:
+    route_label = f"{payload['origin']} -> {payload['destiny']}"
+    st.markdown(
+        f"""
+        <div class='hero'>
+            <div class='hero-top'>
+                <div>
+                    <h2>EcoFreight Streamlit</h2>
+                    <p>Road vs cabotage comparison with improved route map and leg-level breakdown.</p>
+                </div>
+                <div class='version-pill'>v{version}</div>
+            </div>
+            <div class='scenario-row'>
+                <span class='scenario-chip'><b>Route:</b> {route_label}</span>
+                <span class='scenario-chip'><b>Cargo:</b> {payload['cargo_t']:.1f} t</span>
+                <span class='scenario-chip'><b>Vessel:</b> {payload['vessel_class']}</span>
+                <span class='scenario-chip'><b>Hoteling:</b> {'ON' if payload['include_hoteling'] else 'OFF'}</span>
+                <span class='scenario-chip'><b>Port ops:</b> {'ON' if payload['include_port_ops'] else 'OFF'}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    cols = st.columns([1, 1, 1])
+    with cols[0]:
+        if st.button("Copy scenario JSON", use_container_width=True):
+            st.session_state.scenario_json_blob = json.dumps(payload, ensure_ascii=False, indent=2)
+    with cols[1]:
+        if st.session_state.scenario_json_blob:
+            st.download_button(
+                "Download scenario",
+                data=st.session_state.scenario_json_blob,
+                file_name="scenario.json",
+                mime="application/json",
+                use_container_width=True,
+            )
+    with cols[2]:
+        if st.session_state.scenario_json_blob:
+            st.caption("Scenario JSON is available in the Raw JSON tab.")
+
+
+def _render_map_legend() -> None:
+    if not st.session_state.map_show_legend:
+        return
+
+    st.markdown(
+        """
+        <div class='map-legend'>
+            <div class='legend-title'>Legend</div>
+            <div class='legend-item'><span class='swatch purple'></span>First/Last mile</div>
+            <div class='legend-item'><span class='swatch blue'></span>Sea leg</div>
+            <div class='legend-item'><span class='swatch red'></span>Direct road</div>
+            <div class='legend-item'><span class='swatch green'></span>Ports</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _breakdown_frames(results: Dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    road = results.get("road_only", {})
+    mm = results.get("multimodal", {})
+    first = mm.get("first_mile", {})
+    last = mm.get("last_mile", {})
+    sea = mm.get("sea", {})
+    inputs = results.get("inputs", {})
+
+    bunker_price = float(inputs.get("bunker_price") or 0.0)
+    marine_ef = float(inputs.get("marine_ef_kg_per_kg") or 0.0)
+
+    sailing_fuel = float(sea.get("fuel_kg_sailing") or 0.0)
+    hoteling_fuel = float(sea.get("hoteling_fuel_kg") or 0.0)
+
+    sailing_cost = (sailing_fuel / 1000.0) * bunker_price
+    hoteling_cost = (hoteling_fuel / 1000.0) * bunker_price
+    port_ops_cost = float(sea.get("port_ops_cost") or 0.0)
+
+    sailing_co2 = sailing_fuel * marine_ef
+    hoteling_co2 = hoteling_fuel * marine_ef
+    port_ops_co2 = float(sea.get("port_ops_co2e") or 0.0)
+
+    mm_road_cost = float(first.get("cost") or 0.0) + float(last.get("cost") or 0.0)
+    mm_road_co2 = float(first.get("co2e") or 0.0) + float(last.get("co2e") or 0.0)
+
+    cost_df = pd.DataFrame(
+        {
+            "Road legs": [float(road.get("cost") or 0.0), mm_road_cost],
+            "Sea sailing": [0.0, sailing_cost],
+            "Sea hoteling": [0.0, hoteling_cost],
+            "Port ops": [0.0, port_ops_cost],
+        },
+        index=["Road-only", "Multimodal"],
+    )
+
+    co2_df = pd.DataFrame(
+        {
+            "Road legs": [float(road.get("co2e") or 0.0), mm_road_co2],
+            "Sea sailing": [0.0, sailing_co2],
+            "Sea hoteling": [0.0, hoteling_co2],
+            "Port ops": [0.0, port_ops_co2],
+        },
+        index=["Road-only", "Multimodal"],
+    )
+
+    return cost_df, co2_df
 
 
 def _render_results(results: Dict[str, Any]) -> None:
     road = results["road_only"]
     mm = results["multimodal"]
-    sea = mm.get("sea", {})
     comp = results["comparison"]
 
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        st.metric("Road cost", f"R$ {road['cost']:,.2f}")
-        st.metric("Road CO2e", f"{road['co2e']:,.1f} kg")
-    with col_b:
-        st.metric("Multimodal cost", f"R$ {mm['total_cost']:,.2f}")
-        st.metric("Multimodal CO2e", f"{mm['total_co2e']:,.1f} kg")
-    with col_c:
-        st.metric("Delta cost", f"R$ {comp['delta_cost']:,.2f}")
-        st.metric("Savings", f"{comp['savings_pct']:,.1f}%")
+    cards = [
+        ("Road", f"R$ {float(road['cost']):,.2f}", f"CO2e {float(road['co2e']):,.1f} kg"),
+        (
+            "Multimodal",
+            f"R$ {float(mm['total_cost']):,.2f}",
+            f"CO2e {float(mm['total_co2e']):,.1f} kg",
+        ),
+        ("Delta cost", f"R$ {float(comp['delta_cost']):,.2f}", "Multimodal - Road"),
+        ("Savings", f"{float(comp['savings_pct']):,.1f}%", "Positive is better"),
+    ]
 
-    status = "BETTER" if float(comp["savings_pct"]) > 0 else "WORSE"
-    st.markdown(f"**Decision:** `{status}` compared to road-only")
+    cols = st.columns(4)
+    for col, (title, value, sub) in zip(cols, cards):
+        with col:
+            st.markdown(
+                f"""
+                <div class='kpi-card'>
+                    <div class='kpi-title'>{title}</div>
+                    <div class='kpi-value'>{value}</div>
+                    <div class='kpi-sub'>{sub}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-    sea_inputs = results.get("inputs", {})
-    vessel_class = sea_inputs.get("vessel_class")
-    sea_fuel_nm = sea_inputs.get("sea_fuel_per_nm_kg")
-    sample_size = sea_inputs.get("vessel_sample_size")
+    sea = mm.get("sea", {})
+    inputs = results.get("inputs", {})
+    vessel_class = inputs.get("vessel_class")
+    sea_fuel_nm = inputs.get("sea_fuel_per_nm_kg")
+    sample_size = int(inputs.get("vessel_sample_size") or 0)
+
     if vessel_class and sea_fuel_nm:
         st.caption(
-            f"Sea vessel class: {vessel_class} | MRV median fuel intensity: "
-            f"{float(sea_fuel_nm):.2f} kg/nm | sample: {int(sample_size or 0)}"
+            f"Vessel class {vessel_class} | MRV median {float(sea_fuel_nm):.2f} kg/nm | sample {sample_size}"
         )
 
     st.caption(
-        "Sea fuel breakdown: "
+        "Sea fuel components: "
         f"sailing={float(sea.get('fuel_kg_sailing') or 0.0):,.1f} kg, "
         f"hoteling={float(sea.get('hoteling_fuel_kg') or 0.0):,.1f} kg, "
-        f"port_ops={float(sea.get('port_ops_fuel_kg') or 0.0):,.1f} kg, "
-        f"total={float(sea.get('fuel_kg') or 0.0):,.1f} kg"
+        f"port_ops={float(sea.get('port_ops_fuel_kg') or 0.0):,.1f} kg"
     )
 
-    port_ops = sea.get("port_ops") if isinstance(sea.get("port_ops"), dict) else None
-    if port_ops:
-        totals = port_ops.get("totals") if isinstance(port_ops.get("totals"), dict) else {}
-        st.caption(
-            "Port ops breakdown: "
-            f"scenario={port_ops.get('resolved_scenario')}, "
-            f"moves/call={float(port_ops.get('port_moves_per_call') or 0.0):,.1f}, "
-            f"calls={int(port_ops.get('port_calls') or 0)}, "
-            f"fuel={float(totals.get('fuel_kg') or 0.0):,.1f} kg, "
-            f"co2e={float(totals.get('co2e_kg') or 0.0):,.1f} kg"
-        )
+    cost_df, co2_df = _breakdown_frames(results)
+    tabs = st.tabs(["Cost breakdown", "CO2 breakdown"])
+
+    with tabs[0]:
+        st.bar_chart(cost_df, height=240)
+        st.dataframe(cost_df.style.format("{:,.2f}"), use_container_width=True)
+
+    with tabs[1]:
+        st.bar_chart(co2_df, height=240)
+        st.dataframe(co2_df.style.format("{:,.2f}"), use_container_width=True)
 
 
-def _run_analysis(
-    origin: str,
-    destiny: str,
-    cargo_t: float,
-    truck_key: str,
-    profile: str,
-    overwrite_road: bool,
-    db_path: Path,
-    vessel_class: str,
-    include_hoteling: bool,
-    hoteling_hours_per_call: float,
-    port_calls: int,
-    include_port_ops: bool,
-    port_moves_per_call: float | None,
-    port_ops_scenario: str,
-) -> tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None]:
-    _log.info("Routing: %s -> %s (%.3ft)", origin, destiny, cargo_t)
+def _run_analysis(payload: Dict[str, Any]) -> tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None]:
+    _log.info("Routing: %s -> %s (%.3ft)", payload["origin"], payload["destiny"], payload["cargo_t"])
 
     geo = build_path_geometry(
-        origin,
-        destiny,
-        ors_profile=profile,
-        overwrite_road=overwrite_road,
-        db_path=db_path,
+        payload["origin"],
+        payload["destiny"],
+        ors_profile=payload["ors_profile"],
+        overwrite_road=payload["overwrite_road"],
+        db_path=Path(str(st.session_state.db_path_str)),
     )
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")
@@ -345,22 +578,22 @@ def _run_analysis(
     _log.info("Calculating costs and emissions...")
     results = evaluate_path(
         geo,
-        cargo_t=cargo_t,
-        truck_key=truck_key,
-        vessel_class=vessel_class,
-        include_hoteling=include_hoteling,
-        hoteling_hours_per_call=hoteling_hours_per_call,
-        port_calls=port_calls,
-        include_port_ops=include_port_ops,
-        port_moves_per_call=port_moves_per_call,
-        port_ops_scenario=port_ops_scenario,
+        cargo_t=payload["cargo_t"],
+        truck_key=payload["truck_key"],
+        vessel_class=payload["vessel_class"],
+        include_hoteling=payload["include_hoteling"],
+        hoteling_hours_per_call=payload["hoteling_hours_per_call"],
+        port_calls=payload["port_calls"],
+        include_port_ops=payload["include_port_ops"],
+        port_moves_per_call=payload["port_moves_per_call"],
+        port_ops_scenario=payload["port_ops_scenario"],
     )
     if not results:
         _log.error("Failed to evaluate route.")
         return (
             geo,
             None,
-            "Failed to evaluate route. Ensure processed MRV artifacts exist in data/processed/cabotage_data.",
+            "Failed to evaluate route. Ensure processed artifacts exist in data/processed/cabotage_data.",
         )
 
     _log.info("Analysis finished.")
@@ -372,19 +605,53 @@ def _inject_styles() -> None:
         """
         <style>
             .stApp {
-                background: radial-gradient(1200px 500px at 10% -5%, #1e3a8a33, transparent 50%),
-                            radial-gradient(1200px 500px at 100% 0%, #0f766e22, transparent 40%);
+                background:
+                    radial-gradient(900px 360px at 5% -10%, rgba(52, 152, 219, .22), transparent 55%),
+                    radial-gradient(1000px 450px at 100% 0%, rgba(22, 160, 133, .18), transparent 45%),
+                    #0b1220;
             }
-            .main .block-container {
-                padding-top: 1.5rem;
-                padding-bottom: 2rem;
-            }
+            .main .block-container { padding-top: 1.2rem; padding-bottom: 1.8rem; }
             .hero {
                 border: 1px solid rgba(148, 163, 184, 0.25);
                 border-radius: 14px;
                 padding: 1rem 1.2rem;
-                background: linear-gradient(135deg, rgba(17,24,39,.65), rgba(3,7,18,.85));
+                background: linear-gradient(120deg, rgba(15,23,42,.88), rgba(2,6,23,.92));
                 margin-bottom: 1rem;
+            }
+            .hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+            .hero h2 { margin: 0; color: #e2e8f0; }
+            .hero p { margin: .35rem 0 .5rem 0; color: #cbd5e1; }
+            .version-pill {
+                border: 1px solid rgba(148,163,184,.35); border-radius: 999px; padding: .15rem .65rem;
+                color: #cbd5e1; font-size: .85rem; white-space: nowrap;
+            }
+            .scenario-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
+            .scenario-chip {
+                border: 1px solid rgba(148, 163, 184, .3); border-radius: 999px; padding: .2rem .6rem;
+                color: #cbd5e1; font-size: .84rem; background: rgba(15, 23, 42, .5);
+            }
+            .kpi-card {
+                border: 1px solid rgba(148,163,184,.26); border-radius: 12px;
+                background: linear-gradient(160deg, rgba(15,23,42,.9), rgba(2,6,23,.9));
+                padding: .75rem .8rem; min-height: 98px;
+            }
+            .kpi-title { font-size: .83rem; color: #94a3b8; margin-bottom: .15rem; }
+            .kpi-value { font-size: 1.1rem; font-weight: 650; color: #e2e8f0; margin-bottom: .2rem; }
+            .kpi-sub { font-size: .78rem; color: #cbd5e1; }
+            .map-legend {
+                border: 1px solid rgba(148,163,184,.32); border-radius: 10px; padding: .5rem .65rem;
+                background: rgba(2, 6, 23, .82); color: #e2e8f0; margin-bottom: .5rem; width: fit-content;
+            }
+            .legend-title { font-size: .82rem; font-weight: 700; margin-bottom: .25rem; color: #cbd5e1; }
+            .legend-item { display: flex; align-items: center; gap: .4rem; font-size: .8rem; margin: .1rem 0; }
+            .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+            .swatch.purple { background: rgb(155, 89, 182); }
+            .swatch.blue { background: rgb(52, 152, 219); }
+            .swatch.red { background: rgb(231, 76, 60); }
+            .swatch.green { background: rgb(39, 174, 96); }
+            .sticky-run {
+                position: sticky; bottom: 0; background: rgba(2,6,23,.95);
+                padding-top: .55rem; border-top: 1px solid rgba(148,163,184,.24); z-index: 20;
             }
         </style>
         """,
@@ -393,147 +660,183 @@ def _inject_styles() -> None:
 
 
 def main() -> None:
-    st.session_state.setdefault("ui_logs", [])
-    st.session_state.setdefault("last_geo", None)
-    st.session_state.setdefault("last_results", None)
-
+    _init_state()
     _inject_styles()
 
-    st.markdown(
-        """
-        <div class='hero'>
-            <h2 style='margin:0;'>EcoFreight Streamlit</h2>
-            <p style='margin:.35rem 0 0 0;'>Road vs cabotage comparison with live logs and interactive corridor map.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     class_options = list(CONTAINER_VESSEL_CLASSES)
-    default_class_idx = class_options.index(DEFAULT_VESSEL_CLASS) if DEFAULT_VESSEL_CLASS in class_options else 0
+    if st.session_state.vessel_class not in class_options:
+        st.session_state.vessel_class = DEFAULT_VESSEL_CLASS
+
     port_ops_scenarios = list_port_ops_scenarios()
-    default_port_ops_idx = (
-        port_ops_scenarios.index(DEFAULT_PORT_OPS_SCENARIO)
-        if DEFAULT_PORT_OPS_SCENARIO in port_ops_scenarios
-        else 0
-    )
+    if st.session_state.port_ops_scenario not in port_ops_scenarios:
+        st.session_state.port_ops_scenario = (
+            DEFAULT_PORT_OPS_SCENARIO if DEFAULT_PORT_OPS_SCENARIO in port_ops_scenarios else port_ops_scenarios[0]
+        )
 
     with st.sidebar:
-        st.subheader("Shipment")
-        origin = st.text_input("Origin", value="Pelotas, RS")
-        destiny = st.text_input("Destiny", value="Manaus, AM")
-        cargo_t = st.number_input("Cargo (t)", min_value=0.1, value=30.0, step=0.5)
+        st.subheader("Inputs")
 
-        with st.expander("Advanced", expanded=False):
-            vessel_class = st.selectbox("Vessel class", options=class_options, index=default_class_idx)
-            include_hoteling = st.checkbox("Include hoteling", value=True)
-            hoteling_hours_per_call = st.number_input(
-                "Hoteling hours per port call",
-                min_value=0.0,
-                value=14.0,
-                step=1.0,
+        with st.expander("Route", expanded=True):
+            st.text_input("Origin", key="origin", help="City, state, address, or coordinates")
+            st.text_input("Destiny", key="destiny", help="City, state, address, or coordinates")
+            st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], key="profile")
+            st.checkbox("Overwrite road cache", key="overwrite_road")
+
+        with st.expander("Cargo", expanded=True):
+            st.number_input("Cargo (t)", min_value=0.0, step=0.5, key="cargo_t")
+
+        with st.expander("Road", expanded=False):
+            st.selectbox("Truck", options=sorted(list_truck_keys()), key="truck_key")
+
+        with st.expander("Maritime", expanded=False):
+            st.selectbox(
+                "Vessel class",
+                options=class_options,
+                key="vessel_class",
+                help="MRV class median fuel intensity is used for sea sailing.",
             )
-            port_calls = int(
-                st.number_input(
-                    "Port calls per voyage",
-                    min_value=0,
-                    value=2,
-                    step=1,
-                )
+
+        with st.expander("Port", expanded=False):
+            st.checkbox(
+                "Include hoteling",
+                key="include_hoteling",
+                help="At-berth fuel is derived from class sea rate via EMEP/EEA ratio assumptions.",
             )
-            include_port_ops = st.checkbox("Include port ops", value=True)
-            port_moves_per_call_input = st.number_input(
+            st.number_input("Hoteling hours per call", min_value=0.0, step=1.0, key="hoteling_hours_per_call")
+            st.number_input("Port calls per voyage", min_value=0, step=1, key="port_calls")
+            st.checkbox("Include port ops", key="include_port_ops")
+            st.number_input(
                 "Port moves per call (0 uses scenario default)",
                 min_value=0.0,
-                value=0.0,
                 step=1.0,
+                key="port_moves_per_call_input",
             )
-            port_ops_scenario = st.selectbox(
-                "Port ops scenario",
-                options=list(port_ops_scenarios),
-                index=default_port_ops_idx,
-            )
+            st.selectbox("Port ops scenario", options=port_ops_scenarios, key="port_ops_scenario")
 
-            hoteling_hours_total = hoteling_hours_per_call * float(port_calls) if include_hoteling else 0.0
-            st.caption(f"Derived hoteling hours total: {hoteling_hours_total:.1f} h")
-            if include_port_ops:
-                if port_moves_per_call_input > 0:
-                    derived_moves_total = float(port_moves_per_call_input) * float(port_calls)
-                    st.caption(f"Derived port moves total: {derived_moves_total:.1f} moves")
-                else:
-                    st.caption("Derived port moves total: scenario default will be used")
+            if st.session_state.include_hoteling:
+                total_h = float(st.session_state.hoteling_hours_per_call) * float(st.session_state.port_calls)
+                st.caption(f"Derived hoteling total: {total_h:.1f} h")
+            if st.session_state.include_port_ops and st.session_state.port_moves_per_call_input > 0:
+                total_moves = float(st.session_state.port_moves_per_call_input) * float(st.session_state.port_calls)
+                st.caption(f"Derived port moves total: {total_moves:.1f}")
 
-            truck_key = st.selectbox("Truck", options=sorted(list_truck_keys()), index=0)
-            profile = st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], index=0)
-            overwrite_road = st.checkbox("Overwrite road cache", value=False)
-            db_path_str = st.text_input("DB path", value=str(DEFAULT_DB_PATH))
-            map_style = st.selectbox("Map style", options=list(MAP_STYLES.keys()), index=0)
-            log_level = st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], index=0)
-            write_log_file = st.checkbox("Write log file", value=True)
+        with st.expander("Map", expanded=False):
+            st.selectbox("Map style", options=list(MAP_STYLES.keys()), key="map_style")
+            st.checkbox("Show first/last mile", key="map_show_first_last")
+            st.checkbox("Show sea leg", key="map_show_sea")
+            st.checkbox("Show direct road", key="map_show_direct")
+            st.checkbox("Show ports", key="map_show_ports")
+            st.checkbox("Show labels", key="map_show_labels")
+            st.checkbox("Show legend", key="map_show_legend")
+            st.slider("Pitch", min_value=0, max_value=60, key="map_pitch")
+            st.slider("Bearing", min_value=-180, max_value=180, key="map_bearing")
 
-        col_run, col_clear = st.columns(2)
-        run_clicked = col_run.button("Run analysis", type="primary", use_container_width=True)
-        clear_logs_clicked = col_clear.button("Clear logs", use_container_width=True)
+        with st.expander("App", expanded=False):
+            st.text_input("DB path", key="db_path_str")
+            st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], key="log_level")
+            st.checkbox("Write log file", key="write_log_file")
 
-    _attach_streamlit_logging(level=log_level, write_to_file=write_log_file)
+        route_ok = bool(st.session_state.origin.strip()) and bool(st.session_state.destiny.strip())
+        cargo_ok = float(st.session_state.cargo_t) > 0.0
+        run_disabled = not (route_ok and cargo_ok)
+
+        if run_disabled:
+            st.warning("Fill origin/destiny and cargo > 0 to run analysis.")
+
+        st.markdown("<div class='sticky-run'>", unsafe_allow_html=True)
+        c_run, c_clear = st.columns(2)
+        run_clicked = c_run.button("Run analysis", type="primary", use_container_width=True, disabled=run_disabled)
+        clear_logs_clicked = c_clear.button("Clear logs", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    _attach_streamlit_logging(level=st.session_state.log_level, write_to_file=bool(st.session_state.write_log_file))
 
     if clear_logs_clicked:
-        st.session_state["ui_logs"] = []
+        st.session_state.ui_logs = []
+
+    payload = _scenario_payload()
+    _render_header(_project_version(), payload)
 
     if run_clicked:
-        st.session_state["ui_logs"] = []
+        st.session_state.ui_logs = []
         with st.spinner("Running route analysis..."):
-            geo, results, err = _run_analysis(
-                origin=origin.strip(),
-                destiny=destiny.strip(),
-                cargo_t=float(cargo_t),
-                truck_key=truck_key,
-                profile=profile,
-                overwrite_road=overwrite_road,
-                db_path=Path(db_path_str),
-                vessel_class=vessel_class,
-                include_hoteling=include_hoteling,
-                hoteling_hours_per_call=float(hoteling_hours_per_call),
-                port_calls=int(port_calls),
-                include_port_ops=include_port_ops,
-                port_moves_per_call=(
-                    float(port_moves_per_call_input) if float(port_moves_per_call_input) > 0.0 else None
-                ),
-                port_ops_scenario=str(port_ops_scenario),
-            )
+            geo, results, err = _run_analysis(payload)
+
         if err:
             st.error(err)
-            st.session_state["last_geo"] = geo
-            st.session_state["last_results"] = results
+            st.session_state.last_geo = geo
+            st.session_state.last_results = results
         else:
             st.success("Analysis completed.")
-            st.session_state["last_geo"] = geo
-            st.session_state["last_results"] = results
+            st.session_state.last_geo = geo
+            st.session_state.last_results = results
+            if geo:
+                c_lat, c_lon, zoom = _fit_view(_map_points(geo))
+                st.session_state.map_center_lat = c_lat
+                st.session_state.map_center_lon = c_lon
+                st.session_state.map_zoom = zoom
 
-    geo = st.session_state.get("last_geo")
-    results = st.session_state.get("last_results")
+    geo = st.session_state.last_geo
+    results = st.session_state.last_results
 
-    tab_map, tab_results, tab_logs, tab_json = st.tabs(["Map", "Results", "Logs", "Raw JSON"])
+    left, right = st.columns([1.8, 1.2], gap="large")
 
-    with tab_map:
+    with left:
+        st.markdown("#### Map")
+        fit_clicked = st.button("Fit to route", use_container_width=False, disabled=geo is None)
+
+        if fit_clicked and geo:
+            c_lat, c_lon, zoom = _fit_view(_map_points(geo))
+            st.session_state.map_center_lat = c_lat
+            st.session_state.map_center_lon = c_lon
+            st.session_state.map_zoom = zoom
+
         if geo:
-            deck = _build_map_deck(geo, map_style=map_style)
-            st.pydeck_chart(deck, use_container_width=True)
+            if st.session_state.map_center_lat is None or st.session_state.map_center_lon is None:
+                c_lat, c_lon, zoom = _fit_view(_map_points(geo))
+                st.session_state.map_center_lat = c_lat
+                st.session_state.map_center_lon = c_lon
+                st.session_state.map_zoom = zoom
+
+            _render_map_legend()
+            st.pydeck_chart(_build_map_deck(geo), use_container_width=True)
         else:
             st.info("Run an analysis to render the map.")
 
-    with tab_results:
+    with right:
+        st.markdown("#### Results")
         if results:
             _render_results(results)
         else:
             st.info("No results yet.")
 
-    with tab_logs:
-        log_text = "\n".join(st.session_state.get("ui_logs", []))
-        st.text_area("Pipeline logs", value=log_text, height=360)
+    tabs = st.tabs(["Logs", "Raw JSON"])
 
-    with tab_json:
+    with tabs[0]:
+        with st.expander("Pipeline logs", expanded=True):
+            st.slider("Last N lines", min_value=50, max_value=1000, step=50, key="log_last_n")
+            st.text_input("Filter", key="log_filter", placeholder="Type text to filter lines")
+
+            logs = list(st.session_state.ui_logs)
+            filt = st.session_state.log_filter.strip().lower()
+            if filt:
+                logs = [line for line in logs if filt in line.lower()]
+
+            shown = logs[-int(st.session_state.log_last_n) :]
+            st.text_area("Logs", value="\n".join(shown), height=280)
+            st.download_button(
+                "Download logs",
+                data="\n".join(st.session_state.ui_logs),
+                file_name="ecofreight_logs.txt",
+                mime="text/plain",
+            )
+
+    with tabs[1]:
+        if st.session_state.scenario_json_blob:
+            st.markdown("**Scenario JSON**")
+            st.code(st.session_state.scenario_json_blob, language="json")
         if results:
+            st.markdown("**Results JSON**")
             st.json(results)
         else:
             st.info("No JSON payload yet.")
