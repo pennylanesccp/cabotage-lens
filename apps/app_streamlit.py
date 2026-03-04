@@ -39,6 +39,7 @@ from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
 )
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
+from modules.plot.sea_lane_brazil import BRAZIL_COASTAL_SEA_WAYPOINTS, build_sea_lane_path
 from modules.plot.sea_path_pretty import build_pretty_sea_path
 
 st.set_page_config(page_title="EcoFreight Streamlit", page_icon=":earth_americas:", layout="wide")
@@ -73,7 +74,8 @@ DEFAULTS: Dict[str, Any] = {
     "map_show_ports": True,
     "map_show_labels": True,
     "map_show_legend": True,
-    "map_pretty_sea_route": True,
+    "map_sea_path_style": "Coastal lane (default)",
+    "map_direct_road_style": "Arc (default)",
     "map_sea_n_points": 200,
     "map_sea_curvature": 0.25,
     "map_sea_smooth_window": 7,
@@ -157,6 +159,58 @@ def _safe_latlon(point: Dict[str, Any]) -> Tuple[float, float]:
 
 def _to_lonlat(path_latlon: List[Tuple[float, float]]) -> List[List[float]]:
     return [[float(lon), float(lat)] for lat, lon in path_latlon]
+
+
+def _path_endpoint_error(path_lonlat: List[List[float]], origin: Tuple[float, float], destiny: Tuple[float, float]) -> float:
+    if not path_lonlat:
+        return float("inf")
+
+    o_lon, o_lat = path_lonlat[0]
+    d_lon, d_lat = path_lonlat[-1]
+    return (
+        abs(o_lat - origin[0])
+        + abs(o_lon - origin[1])
+        + abs(d_lat - destiny[0])
+        + abs(d_lon - destiny[1])
+    )
+
+
+def _extract_direct_road_path(geo: Dict[str, Any], origin: Tuple[float, float], destiny: Tuple[float, float]) -> List[List[float]]:
+    road_leg = geo.get("road_direct", {})
+    if not isinstance(road_leg, dict):
+        return _to_lonlat([origin, destiny])
+
+    candidates = [
+        road_leg.get("geometry"),
+        road_leg.get("path"),
+        road_leg.get("polyline"),
+        road_leg.get("coords"),
+        road_leg.get("coordinates"),
+    ]
+
+    for raw in candidates:
+        if not isinstance(raw, list) or len(raw) < 2:
+            continue
+
+        first = raw[0]
+        if isinstance(first, dict) and "lat" in first and "lon" in first:
+            try:
+                return [[float(p["lon"]), float(p["lat"])] for p in raw]
+            except (TypeError, ValueError, KeyError):
+                continue
+
+        if isinstance(first, (list, tuple)) and len(first) >= 2:
+            try:
+                as_lonlat = [[float(p[0]), float(p[1])] for p in raw]
+                as_latlon = [[float(p[1]), float(p[0])] for p in raw]
+            except (TypeError, ValueError):
+                continue
+
+            score_lonlat = _path_endpoint_error(as_lonlat, origin, destiny)
+            score_latlon = _path_endpoint_error(as_latlon, origin, destiny)
+            return as_lonlat if score_lonlat <= score_latlon else as_latlon
+
+    return _to_lonlat([origin, destiny])
 
 
 def _zoom_from_span(lat_span: float, lon_span: float) -> float:
@@ -249,8 +303,37 @@ def _build_map_deck(geo: Dict[str, Any]) -> pdk.Deck:
                 )
             )
 
+    sea_path_style = str(st.session_state.map_sea_path_style)
+    direct_road_style = str(st.session_state.map_direct_road_style)
+
     if st.session_state.map_show_sea:
-        if st.session_state.map_pretty_sea_route:
+        if sea_path_style == "Coastal lane (default)":
+            sea_path = build_sea_lane_path(
+                origin_latlon=po_coords,
+                dest_latlon=pd_coords,
+                waypoints=BRAZIL_COASTAL_SEA_WAYPOINTS,
+                n_points=int(st.session_state.map_sea_n_points),
+                smooth_window=int(st.session_state.map_sea_smooth_window),
+            )
+            layers.append(
+                pdk.Layer(
+                    "PathLayer",
+                    data=[
+                        {
+                            "name": "Sea leg (coastal lane)",
+                            "path": sea_path,
+                            "color": [33, 113, 181, 255],
+                            "width": 6,
+                        }
+                    ],
+                    get_path="path",
+                    get_color="color",
+                    get_width="width",
+                    width_min_pixels=3,
+                    pickable=True,
+                )
+            )
+        else:
             sea_path = build_pretty_sea_path(
                 origin_lat=po_coords[0],
                 origin_lon=po_coords[1],
@@ -265,9 +348,9 @@ def _build_map_deck(geo: Dict[str, Any]) -> pdk.Deck:
                     "PathLayer",
                     data=[
                         {
-                            "name": "Sea leg",
+                            "name": "Sea leg (arc pretty)",
                             "path": sea_path,
-                            "color": [52, 152, 219, 240],
+                            "color": [52, 152, 219, 235],
                             "width": 4,
                         }
                     ],
@@ -278,18 +361,20 @@ def _build_map_deck(geo: Dict[str, Any]) -> pdk.Deck:
                     pickable=True,
                 )
             )
-        else:
+
+    if st.session_state.map_show_direct:
+        if direct_road_style == "Arc (default)":
             layers.append(
                 pdk.Layer(
                     "ArcLayer",
                     data=[
                         {
-                            "name": "Sea leg",
-                            "source_position": [po_coords[1], po_coords[0]],
-                            "target_position": [pd_coords[1], pd_coords[0]],
-                            "source_color": [41, 128, 185, 240],
-                            "target_color": [52, 152, 219, 240],
-                            "width": 4,
+                            "name": "Direct road",
+                            "source_position": [origin[1], origin[0]],
+                            "target_position": [destiny[1], destiny[0]],
+                            "source_color": [231, 76, 60, 180],
+                            "target_color": [192, 57, 43, 190],
+                            "width": 2,
                         }
                     ],
                     get_source_position="source_position",
@@ -301,26 +386,25 @@ def _build_map_deck(geo: Dict[str, Any]) -> pdk.Deck:
                     pickable=True,
                 )
             )
-
-    if st.session_state.map_show_direct:
-        layers.append(
-            pdk.Layer(
-                "PathLayer",
-                data=[
-                    {
-                        "name": "Direct road",
-                        "path": _to_lonlat([origin, destiny]),
-                        "color": [231, 76, 60, 180],
-                        "width": 2,
-                    }
-                ],
-                get_path="path",
-                get_color="color",
-                get_width="width",
-                width_min_pixels=1,
-                pickable=True,
+        else:
+            layers.append(
+                pdk.Layer(
+                    "PathLayer",
+                    data=[
+                        {
+                            "name": "Direct road",
+                            "path": _extract_direct_road_path(geo, origin=origin, destiny=destiny),
+                            "color": [231, 76, 60, 180],
+                            "width": 2,
+                        }
+                    ],
+                    get_path="path",
+                    get_color="color",
+                    get_width="width",
+                    width_min_pixels=1,
+                    pickable=True,
+                )
             )
-        )
 
     points = [
         {
@@ -822,28 +906,40 @@ def main() -> None:
             st.checkbox("Show ports", key="map_show_ports")
             st.checkbox("Show labels", key="map_show_labels")
             st.checkbox("Show legend", key="map_show_legend")
-            st.checkbox("Pretty sea route", key="map_pretty_sea_route")
+            st.selectbox(
+                "Sea path style",
+                options=["Coastal lane (default)", "Arc (pretty)"],
+                key="map_sea_path_style",
+            )
+            st.selectbox(
+                "Direct road style",
+                options=["Arc (default)", "Polyline"],
+                key="map_direct_road_style",
+            )
             st.slider(
-                "Sea route smoothing",
+                "Sea lane points",
                 min_value=50,
                 max_value=400,
                 step=10,
                 key="map_sea_n_points",
-                disabled=not bool(st.session_state.map_pretty_sea_route),
+                disabled=not bool(st.session_state.map_show_sea),
             )
             st.slider(
-                "Sea route curvature",
+                "Sea arc curvature",
                 min_value=0.0,
                 max_value=0.5,
                 step=0.01,
                 key="map_sea_curvature",
-                disabled=not bool(st.session_state.map_pretty_sea_route),
+                disabled=(
+                    not bool(st.session_state.map_show_sea)
+                    or st.session_state.map_sea_path_style != "Arc (pretty)"
+                ),
             )
             st.select_slider(
-                "Sea route smooth window",
+                "Sea lane smooth window",
                 options=[3, 5, 7, 9, 11, 13, 15],
                 key="map_sea_smooth_window",
-                disabled=not bool(st.session_state.map_pretty_sea_route),
+                disabled=not bool(st.session_state.map_show_sea),
             )
             st.slider("Pitch", min_value=0, max_value=60, key="map_pitch")
             st.slider("Bearing", min_value=-180, max_value=180, key="map_bearing")
