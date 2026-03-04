@@ -5,7 +5,7 @@
 Container vessel-class hoteling (at-berth) fuel-rate loader.
 
 Runtime logic must read preprocessed class distributions from:
-    data/processed/container_ship_hoteling_rate_by_class.json
+    data/processed/cabotage_data/container_ship_hoteling_rate_by_class.json
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS
 _log = get_logger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_HOTELING_RATE_PATH = _REPO_ROOT / "data" / "processed" / "container_ship_hoteling_rate_by_class.json"
+DEFAULT_HOTELING_RATE_PATH = _REPO_ROOT / "data" / "processed" / "cabotage_data" / "container_ship_hoteling_rate_by_class.json"
 
 
 @dataclass(frozen=True)

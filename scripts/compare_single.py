@@ -129,7 +129,7 @@ def main() -> int:
         "--vessel-class",
         default=DEFAULT_VESSEL_CLASS,
         choices=list(CONTAINER_VESSEL_CLASSES),
-        help="Container vessel class from processed MRV artifact",
+        help="Container vessel class from data/processed/cabotage_data MRV artifact",
     )
     parser.add_argument(
         "--include-hoteling",

@@ -90,8 +90,9 @@ def evaluate_path(
     hoteling_sel = None
     if include_hoteling and hoteling_hours_total > 0:
         try:
+            # Keep hoteling class aligned with resolved sea-class fallback.
             hoteling_sel = resolve_hoteling_rate(
-                vessel_class=vessel_class,
+                vessel_class=vessel_eff.vessel_class,
                 hoteling_rate_path=hoteling_rate_path,
             )
         except Exception as exc:
@@ -170,12 +171,20 @@ def evaluate_path(
     hoteling_aux_main_ratio = 0.0
     hoteling_fuel_kg = 0.0
     hoteling_source_path: str | None = None
+    hoteling_vessel_class = vessel_eff.vessel_class
 
     if include_hoteling and hoteling_hours_total > 0 and hoteling_sel is not None:
         hoteling_rate_t_per_h = float(hoteling_sel.fuel_rate_hoteling_t_per_h)
         hoteling_ratio_used = float(hoteling_sel.ratio_used)
         hoteling_aux_main_ratio = float(hoteling_sel.aux_main_ratio)
         hoteling_source_path = str(hoteling_sel.source_path)
+        hoteling_vessel_class = hoteling_sel.vessel_class
+        if hoteling_vessel_class != vessel_eff.vessel_class:
+            _log.warning(
+                "Hoteling class fallback differs from sea efficiency class: sea=%s hoteling=%s",
+                vessel_eff.vessel_class,
+                hoteling_vessel_class,
+            )
         hoteling_fuel_kg = hoteling_hours_total * hoteling_rate_t_per_h * _KG_PER_TONNE
 
     sea_fuel_total_kg = sea_fuel_sailing_kg + hoteling_fuel_kg
@@ -194,6 +203,7 @@ def evaluate_path(
         "hoteling_hours_total": float(hoteling_hours_total),
         "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
         "hoteling_fuel_kg": float(hoteling_fuel_kg),
+        "hoteling_vessel_class": hoteling_vessel_class,
         "hoteling_ratio_used": float(hoteling_ratio_used),
         "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
         "fuel_kg": float(sea_fuel_total_kg),
@@ -227,6 +237,7 @@ def evaluate_path(
             "port_calls": int(port_calls),
             "hoteling_hours_total": float(hoteling_hours_total),
             "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
+            "hoteling_vessel_class": hoteling_vessel_class,
             "hoteling_ratio_used": float(hoteling_ratio_used),
             "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
             "hoteling_source": hoteling_source_path,

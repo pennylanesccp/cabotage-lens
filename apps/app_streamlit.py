@@ -41,7 +41,7 @@ from modules.multimodal.container_efficiency import (
 )
 from modules.plot.cabotage_plot_helper import get_visual_sea_path
 
-st.set_page_config(page_title="EcoFreight Streamlit", page_icon="🌍", layout="wide")
+st.set_page_config(page_title="EcoFreight Streamlit", page_icon=":earth_americas:", layout="wide")
 
 MAP_STYLES: dict[str, str] = {
     "Voyager": "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
@@ -340,7 +340,7 @@ def _run_analysis(
         return (
             geo,
             None,
-            "Failed to evaluate route. Ensure processed MRV artifacts exist in data/processed.",
+            "Failed to evaluate route. Ensure processed MRV artifacts exist in data/processed/cabotage_data.",
         )
 
     _log.info("Analysis finished.")

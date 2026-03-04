@@ -5,7 +5,7 @@
 Container vessel-class fuel intensity loader.
 
 Runtime logic must read preprocessed class distributions from:
-    data/processed/container_ship_efficiency_classes.json
+    data/processed/cabotage_data/container_ship_efficiency_classes.json
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ CONTAINER_VESSEL_CLASSES: tuple[str, ...] = (
 DEFAULT_VESSEL_CLASS = "container_feeder"
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CONTAINER_EFFICIENCY_PATH = _REPO_ROOT / "data" / "processed" / "container_ship_efficiency_classes.json"
+DEFAULT_CONTAINER_EFFICIENCY_PATH = _REPO_ROOT / "data" / "processed" / "cabotage_data" / "container_ship_efficiency_classes.json"
 
 
 @dataclass(frozen=True)

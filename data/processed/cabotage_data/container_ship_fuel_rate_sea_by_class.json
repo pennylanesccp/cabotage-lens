@@ -1,0 +1,26 @@
+{
+  "container_small": {
+    "fuel_rate_sea_t_per_h": {
+      "median": 1.06298130641056,
+      "p10": 0.7175279502997414,
+      "p90": 1.8873099663055635
+    },
+    "sample_size": 3172
+  },
+  "container_feeder": {
+    "fuel_rate_sea_t_per_h": {
+      "median": 2.3375412254394616,
+      "p10": 1.688419737434081,
+      "p90": 3.1443356867221013
+    },
+    "sample_size": 1406
+  },
+  "container_large": {
+    "fuel_rate_sea_t_per_h": {
+      "median": 3.881896506157767,
+      "p10": 2.777851440343906,
+      "p90": 5.316181282525077
+    },
+    "sample_size": 3100
+  }
+}

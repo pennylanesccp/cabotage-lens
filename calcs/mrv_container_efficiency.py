@@ -7,9 +7,9 @@ Build container vessel-class artifacts from EU MRV publication workbooks.
 
 This script is a one-time preprocessing step. Runtime services must consume:
 
-- data/processed/container_ship_efficiency_classes.json
-- data/processed/container_ship_fuel_rate_sea_by_class.json
-- data/processed/container_ship_hoteling_rate_by_class.json
+- data/processed/cabotage_data/container_ship_efficiency_classes.json
+- data/processed/cabotage_data/container_ship_fuel_rate_sea_by_class.json
+- data/processed/cabotage_data/container_ship_hoteling_rate_by_class.json
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from typing import Any
 import pandas as pd
 
 NM_TO_KM = 1.852
+KG_PER_TONNE = 1000.0
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RAW_FILES: tuple[Path, ...] = (
@@ -34,9 +35,10 @@ RAW_FILES: tuple[Path, ...] = (
     REPO_ROOT / "data" / "raw" / "cabotage_data" / "2024-v184-03032026-EU MRV Publication of information.xlsx",
 )
 
-OUTPUT_CLASS_EFFICIENCY_JSON = REPO_ROOT / "data" / "processed" / "container_ship_efficiency_classes.json"
-OUTPUT_SEA_RATE_JSON = REPO_ROOT / "data" / "processed" / "container_ship_fuel_rate_sea_by_class.json"
-OUTPUT_HOTELING_RATE_JSON = REPO_ROOT / "data" / "processed" / "container_ship_hoteling_rate_by_class.json"
+OUTPUT_DIR = REPO_ROOT / "data" / "processed" / "cabotage_data"
+OUTPUT_CLASS_EFFICIENCY_JSON = OUTPUT_DIR / "container_ship_efficiency_classes.json"
+OUTPUT_SEA_RATE_JSON = OUTPUT_DIR / "container_ship_fuel_rate_sea_by_class.json"
+OUTPUT_HOTELING_RATE_JSON = OUTPUT_DIR / "container_ship_hoteling_rate_by_class.json"
 
 CLASS_BINS = (
     ("container_small", float("-inf"), 20000.0),
@@ -54,10 +56,13 @@ DEFAULT_AUX_MAIN_RATIO = 0.25
 @dataclass(frozen=True)
 class CanonicalColumns:
     ship_type: str
-    deadweight: str | None
     fuel_per_nm: str
     co2_per_nm: str
-    technical_efficiency: str | None
+    fuel_per_transport_work_dwt: str | None
+    fuel_per_transport_work_mass: str | None
+    transport_work_dwt: str | None
+    transport_work_mass: str | None
+    distance_travelled_nm: str | None
     total_fuel_t: str | None
     time_at_sea_h: str | None
     fuel_rate_sea_t_per_h: str | None
@@ -88,24 +93,9 @@ def _coerce_numeric(series: pd.Series) -> pd.Series:
     text = text.str.replace(r"(?i)^division by zero!?$", "", regex=True)
     text = text.str.replace(" ", "", regex=False)
     text = text.str.replace(",", ".", regex=False)
-    text = text.str.replace(r"[^0-9.+-]", "", regex=True)
+    text = text.str.replace(r"[^0-9eE+\-.]", "", regex=True)
+    text = text.replace({"": None, ".": None, "-": None, "+": None, "e": None, "E": None})
     return pd.to_numeric(text, errors="coerce")
-
-
-def _parse_tech_efficiency_g_per_t_nm(value: Any) -> float | None:
-    """
-    Parse numeric gCO2/t.nm from strings like "EIV (29.43 gCO2/t.nm)".
-
-    This fallback is used only when no deadweight column exists in the workbook.
-    """
-    text = str(value or "")
-    match = re.search(r"([-+]?\d+(?:[.,]\d+)?)\s*g", text, flags=re.IGNORECASE)
-    if not match:
-        return None
-    try:
-        return float(match.group(1).replace(",", "."))
-    except ValueError:
-        return None
 
 
 def _resolve_columns(df: pd.DataFrame) -> CanonicalColumns:
@@ -122,8 +112,28 @@ def _resolve_columns(df: pd.DataFrame) -> CanonicalColumns:
         include=["co2", "emissions", "per", "distance", "kg", "n", "mile"],
         exclude=["laden", "co2eq"],
     )
-    deadweight = _find_column(cols, include=["deadweight"])
-    technical_efficiency = _find_column(cols, include=["technical", "efficiency"])
+
+    fuel_per_transport_work_dwt = _find_column(
+        cols,
+        include=["fuel", "consumption", "per", "transport", "work", "dwt"],
+        exclude=["laden"],
+    )
+    fuel_per_transport_work_mass = _find_column(
+        cols,
+        include=["fuel", "consumption", "per", "transport", "work", "mass"],
+        exclude=["laden"],
+    )
+    transport_work_dwt = _find_column(
+        cols,
+        include=["transport", "work", "dwt"],
+        exclude=["fuel", "consumption", "co2", "co2eq"],
+    )
+    transport_work_mass = _find_column(
+        cols,
+        include=["transport", "work", "mass"],
+        exclude=["fuel", "consumption", "co2", "co2eq"],
+    )
+    distance_travelled_nm = _find_column(cols, include=["distance", "travelled"])
 
     total_fuel_t = _find_column(
         cols,
@@ -157,19 +167,22 @@ def _resolve_columns(df: pd.DataFrame) -> CanonicalColumns:
 
     return CanonicalColumns(
         ship_type=ship_type,
-        deadweight=deadweight,
         fuel_per_nm=fuel_per_nm,
         co2_per_nm=co2_per_nm,
-        technical_efficiency=technical_efficiency,
+        fuel_per_transport_work_dwt=fuel_per_transport_work_dwt,
+        fuel_per_transport_work_mass=fuel_per_transport_work_mass,
+        transport_work_dwt=transport_work_dwt,
+        transport_work_mass=transport_work_mass,
+        distance_travelled_nm=distance_travelled_nm,
         total_fuel_t=total_fuel_t,
         time_at_sea_h=time_at_sea_h,
         fuel_rate_sea_t_per_h=fuel_rate_sea_t_per_h,
     )
 
 
-def _classify_deadweight(deadweight_t: float) -> str:
+def _classify_size_proxy(size_proxy_t: float) -> str:
     for label, lower, upper in CLASS_BINS:
-        if lower <= deadweight_t < upper:
+        if lower <= size_proxy_t < upper:
             return label
     return "container_large"
 
@@ -234,25 +247,65 @@ def _load_mrv_rows(path: Path) -> pd.DataFrame:
         out["fuel_per_nm"] = _coerce_numeric(df[columns.fuel_per_nm])
         out["co2_per_nm"] = _coerce_numeric(df[columns.co2_per_nm])
 
-        if columns.deadweight is not None:
-            out["deadweight"] = _coerce_numeric(df[columns.deadweight])
-            out["deadweight_source"] = "dataset_column"
-        else:
-            out["deadweight"] = pd.Series([float("nan")] * len(out), dtype="float64", index=out.index)
-            out["deadweight_source"] = "missing"
+        fuel_per_twork_dwt = (
+            _coerce_numeric(df[columns.fuel_per_transport_work_dwt])
+            if columns.fuel_per_transport_work_dwt is not None
+            else pd.Series([float("nan")] * len(out), dtype="float64", index=out.index)
+        )
+        fuel_per_twork_mass = (
+            _coerce_numeric(df[columns.fuel_per_transport_work_mass])
+            if columns.fuel_per_transport_work_mass is not None
+            else pd.Series([float("nan")] * len(out), dtype="float64", index=out.index)
+        )
+        transport_work_dwt = (
+            _coerce_numeric(df[columns.transport_work_dwt])
+            if columns.transport_work_dwt is not None
+            else pd.Series([float("nan")] * len(out), dtype="float64", index=out.index)
+        )
+        transport_work_mass = (
+            _coerce_numeric(df[columns.transport_work_mass])
+            if columns.transport_work_mass is not None
+            else pd.Series([float("nan")] * len(out), dtype="float64", index=out.index)
+        )
+        distance_nm = (
+            _coerce_numeric(df[columns.distance_travelled_nm])
+            if columns.distance_travelled_nm is not None
+            else pd.Series([float("nan")] * len(out), dtype="float64", index=out.index)
+        )
 
-        if columns.technical_efficiency is not None:
-            out["tech_eff_g_per_t_nm"] = df[columns.technical_efficiency].apply(_parse_tech_efficiency_g_per_t_nm)
-        else:
-            out["tech_eff_g_per_t_nm"] = pd.Series([float("nan")] * len(out), dtype="float64", index=out.index)
+        out["fuel_per_transport_work_dwt_g_per_tnm"] = fuel_per_twork_dwt
+        out["fuel_per_transport_work_mass_g_per_tnm"] = fuel_per_twork_mass
+        out["transport_work_dwt_tnm"] = transport_work_dwt
+        out["transport_work_mass_tnm"] = transport_work_mass
+        out["distance_travelled_nm"] = distance_nm
 
-        # Deadweight fallback when no explicit deadweight column is available:
-        # deadweight[t] ~= (co2_per_nm[kg/nm] * 1000[g/kg]) / technical_efficiency[g/(t*nm)]
-        missing_deadweight = out["deadweight"].isna() | (out["deadweight"] <= 0)
-        can_derive = out["tech_eff_g_per_t_nm"].notna() & (out["tech_eff_g_per_t_nm"] > 0) & (out["co2_per_nm"] > 0)
-        derived_deadweight = (out["co2_per_nm"] * 1000.0) / out["tech_eff_g_per_t_nm"]
-        out.loc[missing_deadweight & can_derive, "deadweight"] = derived_deadweight[missing_deadweight & can_derive]
-        out.loc[missing_deadweight & can_derive, "deadweight_source"] = "derived_from_technical_efficiency"
+        # Size proxy hierarchy (no technical-efficiency usage):
+        # 1) dwt carried proxy from fuel-per-distance and fuel-per-transport-work(dwt)
+        # 2) dwt carried proxy from transport_work_dwt / distance
+        # 3) carried-mass proxy from fuel-per-distance and fuel-per-transport-work(mass)
+        # 4) carried-mass proxy from transport_work_mass / distance
+        out["size_proxy_t"] = pd.Series([float("nan")] * len(out), dtype="float64", index=out.index)
+        out["size_proxy_source"] = "missing"
+
+        proxy_dwt_intensity = (out["fuel_per_nm"] * KG_PER_TONNE) / fuel_per_twork_dwt
+        valid_dwt_intensity = (proxy_dwt_intensity > 0) & proxy_dwt_intensity.notna()
+        out.loc[valid_dwt_intensity, "size_proxy_t"] = proxy_dwt_intensity[valid_dwt_intensity]
+        out.loc[valid_dwt_intensity, "size_proxy_source"] = "fuel_per_transport_work_dwt"
+
+        proxy_dwt_transport_work = transport_work_dwt / distance_nm
+        valid_dwt_transport_work = out["size_proxy_t"].isna() & (proxy_dwt_transport_work > 0)
+        out.loc[valid_dwt_transport_work, "size_proxy_t"] = proxy_dwt_transport_work[valid_dwt_transport_work]
+        out.loc[valid_dwt_transport_work, "size_proxy_source"] = "transport_work_dwt_over_distance"
+
+        proxy_mass_intensity = (out["fuel_per_nm"] * KG_PER_TONNE) / fuel_per_twork_mass
+        valid_mass_intensity = out["size_proxy_t"].isna() & (proxy_mass_intensity > 0)
+        out.loc[valid_mass_intensity, "size_proxy_t"] = proxy_mass_intensity[valid_mass_intensity]
+        out.loc[valid_mass_intensity, "size_proxy_source"] = "fuel_per_transport_work_mass"
+
+        proxy_mass_transport_work = transport_work_mass / distance_nm
+        valid_mass_transport_work = out["size_proxy_t"].isna() & (proxy_mass_transport_work > 0)
+        out.loc[valid_mass_transport_work, "size_proxy_t"] = proxy_mass_transport_work[valid_mass_transport_work]
+        out.loc[valid_mass_transport_work, "size_proxy_source"] = "transport_work_mass_over_distance"
 
         total_fuel_t = (
             _coerce_numeric(df[columns.total_fuel_t])
@@ -288,8 +341,8 @@ def _load_mrv_rows(path: Path) -> pd.DataFrame:
                 "ship_type",
                 "fuel_per_nm",
                 "co2_per_nm",
-                "deadweight",
-                "deadweight_source",
+                "size_proxy_t",
+                "size_proxy_source",
                 "fuel_rate_sea_t_per_h",
                 "fuel_rate_sea_source",
             ]
@@ -375,10 +428,10 @@ def main() -> int:
     print(f"Container ship rows before cleaning: {len(container_df):,}")
 
     removed_invalid_fuel = int((container_df["fuel_per_nm"] <= 0).sum() + container_df["fuel_per_nm"].isna().sum())
-    removed_invalid_dwt = int((container_df["deadweight"] <= 0).sum() + container_df["deadweight"].isna().sum())
+    removed_invalid_size_proxy = int((container_df["size_proxy_t"] <= 0).sum() + container_df["size_proxy_t"].isna().sum())
 
-    class_df = container_df[container_df["deadweight"] > 0].copy()
-    class_df["vessel_class"] = class_df["deadweight"].apply(_classify_deadweight)
+    class_df = container_df[container_df["size_proxy_t"] > 0].copy()
+    class_df["vessel_class"] = class_df["size_proxy_t"].apply(_classify_size_proxy)
 
     efficiency_df = class_df[class_df["fuel_per_nm"] > 0].copy()
     efficiency_df["fuel_per_km"] = efficiency_df["fuel_per_nm"] / NM_TO_KM
@@ -386,20 +439,30 @@ def main() -> int:
     sea_rate_df = class_df[class_df["fuel_rate_sea_t_per_h"] > 0].copy()
 
     print(f"Rows removed (fuel_per_nm <= 0 or NaN): {removed_invalid_fuel:,}")
-    print(f"Rows removed (deadweight <= 0 or NaN): {removed_invalid_dwt:,}")
+    print(f"Rows removed (size_proxy_t <= 0 or NaN): {removed_invalid_size_proxy:,}")
     print(f"Container rows used for class efficiency: {len(efficiency_df):,}")
     print(f"Container rows used for sea-rate stats: {len(sea_rate_df):,}")
 
-    deadweight_sources = efficiency_df["deadweight_source"].value_counts(dropna=False).to_dict()
+    size_proxy_sources = efficiency_df["size_proxy_source"].value_counts(dropna=False).to_dict()
     sea_rate_sources = sea_rate_df["fuel_rate_sea_source"].value_counts(dropna=False).to_dict()
-    print(f"Deadweight source counts: {deadweight_sources}")
+    print(f"Size proxy source counts: {size_proxy_sources}")
     print(f"Sea fuel-rate source counts: {sea_rate_sources}")
+
+    if not class_df.empty:
+        size_stats = class_df["size_proxy_t"].dropna()
+        print(
+            "Size proxy sanity (tonnes): "
+            f"min={size_stats.min():.3f}, median={size_stats.median():.3f}, "
+            f"p90={size_stats.quantile(0.90):.3f}, max={size_stats.max():.3f}"
+        )
+        class_counts = class_df["vessel_class"].value_counts().to_dict()
+        print(f"Class counts: {class_counts}")
 
     class_efficiency_payload = _aggregate_efficiency_by_class(efficiency_df)
     sea_rate_payload = _aggregate_sea_rate_by_class(sea_rate_df)
     hoteling_payload = _aggregate_hoteling_rate_by_class(sea_rate_df, aux_main_ratio=aux_main_ratio)
 
-    OUTPUT_CLASS_EFFICIENCY_JSON.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_CLASS_EFFICIENCY_JSON.write_text(
         json.dumps(class_efficiency_payload, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -424,9 +487,28 @@ def main() -> int:
             f"median_fuel_per_nm={stats['fuel_per_nm']['median']}"
         )
 
+    ordering = ["container_small", "container_feeder", "container_large"]
+    ordered = [class_efficiency_payload[c]["fuel_per_nm"]["median"] for c in ordering]
+    if all(isinstance(x, (int, float)) for x in ordered):
+        monotonic = ordered[0] <= ordered[1] <= ordered[2]
+        print(f"Fuel-per-nm monotonic sanity (small<=feeder<=large): {monotonic} values={ordered}")
+    else:
+        print(f"Fuel-per-nm monotonic sanity skipped (missing medians): {ordered}")
+
+    max_ratio_error = 0.0
+    for class_name in ordering:
+        sea_med = sea_rate_payload.get(class_name, {}).get("fuel_rate_sea_t_per_h", {}).get("median")
+        hot_med = hoteling_payload.get(class_name, {}).get("fuel_rate_hoteling_t_per_h", {}).get("median")
+        if not isinstance(sea_med, (int, float)) or not isinstance(hot_med, (int, float)):
+            continue
+        expected = float(sea_med) * float(ratio_used)
+        if expected > 0:
+            rel_err = abs(float(hot_med) - expected) / expected
+            max_ratio_error = max(max_ratio_error, rel_err)
+    print(f"Hoteling median ratio sanity max relative error: {max_ratio_error:.12f}")
+
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
