@@ -1,8 +1,0 @@
-requests
-sqlite3
-pandas
-openpyxl
-CurrencyConverter
-pyinstaller
-tkintermapview
-beautifulsoup4
