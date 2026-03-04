@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # scripts/compare_single.py
 # -*- coding: utf-8 -*-
 
@@ -27,6 +27,7 @@ load_repo_env(ROOT / ".env")
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, upsert_multimodal_result
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal import build_path_geometry, evaluate_path
+from modules.multimodal.container_efficiency import CONTAINER_VESSEL_CLASSES, DEFAULT_VESSEL_CLASS
 
 _log = get_logger("compare_single")
 _DIESEL_DENSITY_KG_PER_L = 0.84
@@ -97,6 +98,11 @@ def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
     print(f"  CO2e: {mm['total_co2e']:.1f} kg")
     print("-" * 56)
 
+    vessel = results.get("inputs", {}).get("vessel_class")
+    fuel_nm = results.get("inputs", {}).get("sea_fuel_per_nm_kg")
+    if vessel and fuel_nm:
+        print(f"SEA VESSEL CLASS: {vessel} ({float(fuel_nm):.2f} kg/nm)")
+
     savings_pct = float(cmp_data.get("savings_pct") or 0.0)
     status = "BETTER" if savings_pct > 0 else "WORSE"
     print(f"{status}: {savings_pct:.1f}% (R$ {-1 * float(cmp_data['delta_cost']):,.2f})")
@@ -112,6 +118,12 @@ def main() -> int:
     parser.add_argument("--truck", default="semi_27t", help="Truck spec key")
     parser.add_argument("--profile", default="driving-hgv", help="ORS routing profile")
     parser.add_argument("--overwrite", action="store_true", help="Force fresh routing")
+    parser.add_argument(
+        "--vessel-class",
+        default=DEFAULT_VESSEL_CLASS,
+        choices=list(CONTAINER_VESSEL_CLASSES),
+        help="Container vessel class from processed MRV artifact",
+    )
 
     parser.add_argument("--table", default="analysis_results", help="Target SQLite table")
     parser.add_argument("--db-path", default=DEFAULT_DB_PATH, type=Path)
@@ -136,7 +148,12 @@ def main() -> int:
         _log.error("Failed to build route geometry.")
         return 1
 
-    results = evaluate_path(geo, cargo_t=args.cargo, truck_key=args.truck)
+    results = evaluate_path(
+        geo,
+        cargo_t=args.cargo,
+        truck_key=args.truck,
+        vessel_class=args.vessel_class,
+    )
     if not results:
         _log.error("Failed to evaluate path.")
         return 1
@@ -162,3 +179,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # scripts/compare_bulk.py
 # -*- coding: utf-8 -*-
 
@@ -29,6 +29,7 @@ load_repo_env(ROOT / ".env")
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, upsert_multimodal_result
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal import build_path_geometry, evaluate_path
+from modules.multimodal.container_efficiency import CONTAINER_VESSEL_CLASSES, DEFAULT_VESSEL_CLASS
 from scripts.compare_single import _flatten_for_db
 
 _log = get_logger("compare_bulk")
@@ -74,6 +75,7 @@ def run_bulk(
     overwrite: bool,
     db_path: Path,
     output_csv: Path,
+    vessel_class: str,
 ) -> None:
     """Process all destinations sequentially."""
     success_count = 0
@@ -98,7 +100,12 @@ def run_bulk(
             if not geo or geo.get("status") != "ok":
                 raise RuntimeError("Geometry build failed")
 
-            res = evaluate_path(geo, cargo_t=cargo_t, truck_key=truck_key)
+            res = evaluate_path(
+                geo,
+                cargo_t=cargo_t,
+                truck_key=truck_key,
+                vessel_class=vessel_class,
+            )
             if not res:
                 raise RuntimeError("Path evaluation failed")
 
@@ -109,6 +116,7 @@ def run_bulk(
             row: Dict[str, object] = {
                 "destiny": dest,
                 "status": "ok",
+                "vessel_class": res.get("inputs", {}).get("vessel_class"),
                 "road_cost": flat.get("road_fuel_cost_r"),
                 "mm_cost": flat.get("total_fuel_cost_r"),
                 "delta_cost": flat.get("delta_cost_r"),
@@ -143,6 +151,12 @@ def main() -> int:
     parser.add_argument("--truck", default="semi_27t", help="Truck profile")
     parser.add_argument("--profile", default="driving-hgv", help="Routing profile")
     parser.add_argument("--overwrite", action="store_true", help="Force rerouting")
+    parser.add_argument(
+        "--vessel-class",
+        default=DEFAULT_VESSEL_CLASS,
+        choices=list(CONTAINER_VESSEL_CLASSES),
+        help="Container vessel class from processed MRV artifact",
+    )
     parser.add_argument("--output-csv", default="bulk_results_summary.csv", type=Path)
     parser.add_argument("--db-path", default=DEFAULT_DB_PATH, type=Path)
     parser.add_argument("--log-level", default="INFO")
@@ -169,9 +183,11 @@ def main() -> int:
         overwrite=args.overwrite,
         db_path=args.db_path,
         output_csv=args.output_csv,
+        vessel_class=args.vessel_class,
     )
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

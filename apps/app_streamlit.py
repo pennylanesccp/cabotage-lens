@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # apps/app_streamlit.py
 # -*- coding: utf-8 -*-
 
@@ -35,6 +35,10 @@ from modules.fuel.truck_specs import list_truck_keys
 from modules.infra.database_manager import DEFAULT_DB_PATH
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal import build_path_geometry, evaluate_path
+from modules.multimodal.container_efficiency import (
+    CONTAINER_VESSEL_CLASSES,
+    DEFAULT_VESSEL_CLASS,
+)
 from modules.plot.cabotage_plot_helper import get_visual_sea_path
 
 st.set_page_config(page_title="EcoFreight Streamlit", page_icon="🌍", layout="wide")
@@ -247,8 +251,8 @@ def _build_map_deck(geo: Dict[str, Any], map_style: str) -> pdk.Deck:
                 get_size=14,
                 get_color=[245, 245, 245, 255],
                 get_angle=0,
-                get_text_anchor='middle',
-                get_alignment_baseline='bottom',
+                get_text_anchor="middle",
+                get_alignment_baseline="bottom",
                 pickable=False,
             ),
         ],
@@ -276,6 +280,16 @@ def _render_results(results: Dict[str, Any]) -> None:
     status = "BETTER" if float(comp["savings_pct"]) > 0 else "WORSE"
     st.markdown(f"**Decision:** `{status}` compared to road-only")
 
+    sea_inputs = results.get("inputs", {})
+    vessel_class = sea_inputs.get("vessel_class")
+    sea_fuel_nm = sea_inputs.get("sea_fuel_per_nm_kg")
+    sample_size = sea_inputs.get("vessel_sample_size")
+    if vessel_class and sea_fuel_nm:
+        st.caption(
+            f"Sea vessel class: {vessel_class} | MRV median fuel intensity: "
+            f"{float(sea_fuel_nm):.2f} kg/nm | sample: {int(sample_size or 0)}"
+        )
+
 
 def _run_analysis(
     origin: str,
@@ -285,6 +299,7 @@ def _run_analysis(
     profile: str,
     overwrite_road: bool,
     db_path: Path,
+    vessel_class: str,
 ) -> tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None]:
     _log.info("Routing: %s -> %s (%.3ft)", origin, destiny, cargo_t)
 
@@ -300,10 +315,19 @@ def _run_analysis(
         return None, None, "Failed to build route geometry. Check inputs and API key."
 
     _log.info("Calculating costs and emissions...")
-    results = evaluate_path(geo, cargo_t=cargo_t, truck_key=truck_key)
+    results = evaluate_path(
+        geo,
+        cargo_t=cargo_t,
+        truck_key=truck_key,
+        vessel_class=vessel_class,
+    )
     if not results:
         _log.error("Failed to evaluate route.")
-        return geo, None, "Failed to evaluate route."
+        return (
+            geo,
+            None,
+            "Failed to evaluate route. Ensure 'data/processed/container_ship_efficiency_classes.json' exists.",
+        )
 
     _log.info("Analysis finished.")
     return geo, results, None
@@ -351,6 +375,9 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
+    class_options = list(CONTAINER_VESSEL_CLASSES)
+    default_class_idx = class_options.index(DEFAULT_VESSEL_CLASS) if DEFAULT_VESSEL_CLASS in class_options else 0
+
     with st.sidebar:
         st.subheader("Shipment")
         origin = st.text_input("Origin", value="Pelotas, RS")
@@ -358,6 +385,7 @@ def main() -> None:
         cargo_t = st.number_input("Cargo (t)", min_value=0.1, value=30.0, step=0.5)
 
         with st.expander("Advanced", expanded=False):
+            vessel_class = st.selectbox("Vessel class", options=class_options, index=default_class_idx)
             truck_key = st.selectbox("Truck", options=sorted(list_truck_keys()), index=0)
             profile = st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], index=0)
             overwrite_road = st.checkbox("Overwrite road cache", value=False)
@@ -386,6 +414,7 @@ def main() -> None:
                 profile=profile,
                 overwrite_road=overwrite_road,
                 db_path=Path(db_path_str),
+                vessel_class=vessel_class,
             )
         if err:
             st.error(err)
@@ -427,4 +456,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
