@@ -39,6 +39,7 @@ from modules.multimodal.container_efficiency import (
     CONTAINER_VESSEL_CLASSES,
     DEFAULT_VESSEL_CLASS,
 )
+from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
 from modules.plot.cabotage_plot_helper import get_visual_sea_path
 
 st.set_page_config(page_title="EcoFreight Streamlit", page_icon=":earth_americas:", layout="wide")
@@ -295,8 +296,21 @@ def _render_results(results: Dict[str, Any]) -> None:
         "Sea fuel breakdown: "
         f"sailing={float(sea.get('fuel_kg_sailing') or 0.0):,.1f} kg, "
         f"hoteling={float(sea.get('hoteling_fuel_kg') or 0.0):,.1f} kg, "
+        f"port_ops={float(sea.get('port_ops_fuel_kg') or 0.0):,.1f} kg, "
         f"total={float(sea.get('fuel_kg') or 0.0):,.1f} kg"
     )
+
+    port_ops = sea.get("port_ops") if isinstance(sea.get("port_ops"), dict) else None
+    if port_ops:
+        totals = port_ops.get("totals") if isinstance(port_ops.get("totals"), dict) else {}
+        st.caption(
+            "Port ops breakdown: "
+            f"scenario={port_ops.get('resolved_scenario')}, "
+            f"moves/call={float(port_ops.get('port_moves_per_call') or 0.0):,.1f}, "
+            f"calls={int(port_ops.get('port_calls') or 0)}, "
+            f"fuel={float(totals.get('fuel_kg') or 0.0):,.1f} kg, "
+            f"co2e={float(totals.get('co2e_kg') or 0.0):,.1f} kg"
+        )
 
 
 def _run_analysis(
@@ -311,6 +325,9 @@ def _run_analysis(
     include_hoteling: bool,
     hoteling_hours_per_call: float,
     port_calls: int,
+    include_port_ops: bool,
+    port_moves_per_call: float | None,
+    port_ops_scenario: str,
 ) -> tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None]:
     _log.info("Routing: %s -> %s (%.3ft)", origin, destiny, cargo_t)
 
@@ -334,6 +351,9 @@ def _run_analysis(
         include_hoteling=include_hoteling,
         hoteling_hours_per_call=hoteling_hours_per_call,
         port_calls=port_calls,
+        include_port_ops=include_port_ops,
+        port_moves_per_call=port_moves_per_call,
+        port_ops_scenario=port_ops_scenario,
     )
     if not results:
         _log.error("Failed to evaluate route.")
@@ -391,6 +411,12 @@ def main() -> None:
 
     class_options = list(CONTAINER_VESSEL_CLASSES)
     default_class_idx = class_options.index(DEFAULT_VESSEL_CLASS) if DEFAULT_VESSEL_CLASS in class_options else 0
+    port_ops_scenarios = list_port_ops_scenarios()
+    default_port_ops_idx = (
+        port_ops_scenarios.index(DEFAULT_PORT_OPS_SCENARIO)
+        if DEFAULT_PORT_OPS_SCENARIO in port_ops_scenarios
+        else 0
+    )
 
     with st.sidebar:
         st.subheader("Shipment")
@@ -415,8 +441,27 @@ def main() -> None:
                     step=1,
                 )
             )
+            include_port_ops = st.checkbox("Include port ops", value=True)
+            port_moves_per_call_input = st.number_input(
+                "Port moves per call (0 uses scenario default)",
+                min_value=0.0,
+                value=0.0,
+                step=1.0,
+            )
+            port_ops_scenario = st.selectbox(
+                "Port ops scenario",
+                options=list(port_ops_scenarios),
+                index=default_port_ops_idx,
+            )
+
             hoteling_hours_total = hoteling_hours_per_call * float(port_calls) if include_hoteling else 0.0
             st.caption(f"Derived hoteling hours total: {hoteling_hours_total:.1f} h")
+            if include_port_ops:
+                if port_moves_per_call_input > 0:
+                    derived_moves_total = float(port_moves_per_call_input) * float(port_calls)
+                    st.caption(f"Derived port moves total: {derived_moves_total:.1f} moves")
+                else:
+                    st.caption("Derived port moves total: scenario default will be used")
 
             truck_key = st.selectbox("Truck", options=sorted(list_truck_keys()), index=0)
             profile = st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], index=0)
@@ -450,6 +495,11 @@ def main() -> None:
                 include_hoteling=include_hoteling,
                 hoteling_hours_per_call=float(hoteling_hours_per_call),
                 port_calls=int(port_calls),
+                include_port_ops=include_port_ops,
+                port_moves_per_call=(
+                    float(port_moves_per_call_input) if float(port_moves_per_call_input) > 0.0 else None
+                ),
+                port_ops_scenario=str(port_ops_scenario),
             )
         if err:
             st.error(err)

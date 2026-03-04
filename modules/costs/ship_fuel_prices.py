@@ -20,7 +20,11 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 import requests
-from currency_converter import CurrencyConverter
+
+try:
+    from currency_converter import CurrencyConverter
+except ModuleNotFoundError:  # pragma: no cover - optional runtime dependency
+    CurrencyConverter = None  # type: ignore[assignment]
 
 from modules.infra.log_manager import get_logger
 
@@ -227,7 +231,7 @@ def fetch_santos_prices(
 def apply_fx_brl(
     prices: Dict[str, Any],
     *,
-    converter: Optional[CurrencyConverter] = None,
+    converter: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
     Take a prices dict in USD from `fetch_santos_prices` and enrich it with
@@ -237,6 +241,12 @@ def apply_fx_brl(
         raise ValueError(
             "apply_fx_brl expects keys 'vlsfo_usd_per_mt' and 'mgo_usd_per_mt' "
             f"but received keys={list(prices.keys())}"
+        )
+
+    if converter is None and CurrencyConverter is None:
+        raise RuntimeError(
+            "currency_converter package is required for FX conversion. "
+            "Install dependencies (pip install -e .) or provide a custom converter."
         )
 
     c = converter or CurrencyConverter()

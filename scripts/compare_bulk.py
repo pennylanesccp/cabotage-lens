@@ -28,8 +28,8 @@ load_repo_env(ROOT / ".env")
 
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, upsert_multimodal_result
 from modules.infra.log_manager import get_logger, init_logging
-from modules.multimodal import build_path_geometry, evaluate_path
 from modules.multimodal.container_efficiency import CONTAINER_VESSEL_CLASSES, DEFAULT_VESSEL_CLASS
+from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
 from scripts.compare_single import _flatten_for_db
 
 _log = get_logger("compare_bulk")
@@ -43,7 +43,7 @@ def _load_destinations(path: Path) -> List[str]:
     out: List[str] = []
     with path.open("r", encoding="utf-8") as f:
         for line in f:
-            text = line.strip().lstrip('uFEFF')
+            text = line.strip().lstrip("\ufeff")
             if text and not text.startswith("#"):
                 out.append(text)
     return out
@@ -79,8 +79,12 @@ def run_bulk(
     include_hoteling: bool,
     hoteling_hours_per_call: float,
     port_calls: int,
+    include_port_ops: bool,
+    port_moves_per_call: float | None,
+    port_ops_scenario: str,
 ) -> None:
     """Process all destinations sequentially."""
+    from modules.multimodal import build_path_geometry, evaluate_path
     success_count = 0
     fail_count = 0
     t0_global = time.time()
@@ -111,6 +115,9 @@ def run_bulk(
                 include_hoteling=include_hoteling,
                 hoteling_hours_per_call=hoteling_hours_per_call,
                 port_calls=port_calls,
+                include_port_ops=include_port_ops,
+                port_moves_per_call=port_moves_per_call,
+                port_ops_scenario=port_ops_scenario,
             )
             if not res:
                 raise RuntimeError("Path evaluation failed")
@@ -125,6 +132,9 @@ def run_bulk(
                 "vessel_class": res.get("inputs", {}).get("vessel_class"),
                 "include_hoteling": res.get("inputs", {}).get("include_hoteling"),
                 "hoteling_hours_total": res.get("inputs", {}).get("hoteling_hours_total"),
+                "include_port_ops": res.get("inputs", {}).get("include_port_ops"),
+                "port_ops_scenario": res.get("inputs", {}).get("port_ops_scenario_resolved"),
+                "port_moves_per_call": res.get("inputs", {}).get("port_moves_per_call_resolved"),
                 "road_cost": flat.get("road_fuel_cost_r"),
                 "mm_cost": flat.get("total_fuel_cost_r"),
                 "delta_cost": flat.get("delta_cost_r"),
@@ -183,6 +193,24 @@ def main() -> int:
         default=2,
         help="Port calls per voyage",
     )
+    parser.add_argument(
+        "--include-port-ops",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Include port operations (RTG/terminal truck/STS placeholder)",
+    )
+    parser.add_argument(
+        "--port-moves-per-call",
+        type=float,
+        default=None,
+        help="Quay-side container moves per port call (defaults to scenario median when omitted)",
+    )
+    parser.add_argument(
+        "--port-ops-scenario",
+        default=DEFAULT_PORT_OPS_SCENARIO,
+        choices=list_port_ops_scenarios(),
+        help="Port ops scenario from data/processed/cabotage_data/port_ops_params_santos.json",
+    )
     parser.add_argument("--output-csv", default="bulk_results_summary.csv", type=Path)
     parser.add_argument("--db-path", default=DEFAULT_DB_PATH, type=Path)
     parser.add_argument("--log-level", default="INFO")
@@ -213,6 +241,9 @@ def main() -> int:
         include_hoteling=bool(args.include_hoteling),
         hoteling_hours_per_call=float(args.hoteling_hours_per_call),
         port_calls=int(args.port_calls),
+        include_port_ops=bool(args.include_port_ops),
+        port_moves_per_call=args.port_moves_per_call,
+        port_ops_scenario=str(args.port_ops_scenario),
     )
     return 0
 

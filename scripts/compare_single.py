@@ -26,8 +26,8 @@ load_repo_env(ROOT / ".env")
 
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, upsert_multimodal_result
 from modules.infra.log_manager import get_logger, init_logging
-from modules.multimodal import build_path_geometry, evaluate_path
 from modules.multimodal.container_efficiency import CONTAINER_VESSEL_CLASSES, DEFAULT_VESSEL_CLASS
+from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
 
 _log = get_logger("compare_single")
 _DIESEL_DENSITY_KG_PER_L = 0.84
@@ -107,8 +107,18 @@ def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
     print(
         "SEA FUEL BREAKDOWN: "
         f"sailing={float(sea.get('fuel_kg_sailing') or 0.0):,.1f} kg, "
-        f"hoteling={float(sea.get('hoteling_fuel_kg') or 0.0):,.1f} kg"
+        f"hoteling={float(sea.get('hoteling_fuel_kg') or 0.0):,.1f} kg, "
+        f"port_ops={float(sea.get('port_ops_fuel_kg') or 0.0):,.1f} kg"
     )
+
+    if sea.get("port_ops"):
+        po = sea["port_ops"]
+        print(
+            "PORT OPS: "
+            f"scenario={po.get('resolved_scenario')} "
+            f"moves/call={float(po.get('port_moves_per_call') or 0.0):.1f} "
+            f"calls={int(po.get('port_calls') or 0)}"
+        )
 
     savings_pct = float(cmp_data.get("savings_pct") or 0.0)
     status = "BETTER" if savings_pct > 0 else "WORSE"
@@ -149,6 +159,24 @@ def main() -> int:
         default=2,
         help="Port calls per voyage",
     )
+    parser.add_argument(
+        "--include-port-ops",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Include port operations (RTG/terminal truck/STS placeholder)",
+    )
+    parser.add_argument(
+        "--port-moves-per-call",
+        type=float,
+        default=None,
+        help="Quay-side container moves per port call (defaults to scenario median when omitted)",
+    )
+    parser.add_argument(
+        "--port-ops-scenario",
+        default=DEFAULT_PORT_OPS_SCENARIO,
+        choices=list_port_ops_scenarios(),
+        help="Port ops scenario from data/processed/cabotage_data/port_ops_params_santos.json",
+    )
 
     parser.add_argument("--table", default="analysis_results", help="Target SQLite table")
     parser.add_argument("--db-path", default=DEFAULT_DB_PATH, type=Path)
@@ -158,6 +186,8 @@ def main() -> int:
 
     args = parser.parse_args()
     init_logging(level=args.log_level, write_to_file=False)
+
+    from modules.multimodal import build_path_geometry, evaluate_path
 
     if not args.json:
         _log.info("Routing: %s -> %s (%.3ft)", args.origin, args.destiny, args.cargo)
@@ -181,6 +211,9 @@ def main() -> int:
         include_hoteling=bool(args.include_hoteling),
         hoteling_hours_per_call=float(args.hoteling_hours_per_call),
         port_calls=int(args.port_calls),
+        include_port_ops=bool(args.include_port_ops),
+        port_moves_per_call=args.port_moves_per_call,
+        port_ops_scenario=str(args.port_ops_scenario),
     )
     if not results:
         _log.error("Failed to evaluate path.")
@@ -207,3 +240,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

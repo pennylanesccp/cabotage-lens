@@ -33,6 +33,10 @@ from modules.multimodal.container_efficiency import (
     resolve_vessel_class_efficiency,
 )
 from modules.multimodal.hoteling import resolve_hoteling_rate
+from modules.multimodal.port_ops import (
+    DEFAULT_PORT_OPS_SCENARIO,
+    estimate_port_ops,
+)
 
 _log = get_logger(__name__)
 
@@ -69,6 +73,11 @@ def evaluate_path(
     hoteling_hours_per_call: float = 14.0,
     port_calls: int = 2,
     hoteling_rate_path: Optional[Path] = None,
+    include_port_ops: bool = True,
+    port_moves_per_call: Optional[float] = None,
+    port_ops_scenario: str = DEFAULT_PORT_OPS_SCENARIO,
+    port_ops_params_path: Optional[Path] = None,
+    port_ops_stat_key: str = "median",
 ) -> Dict[str, Any]:
     """Assess costs and emissions for a path geometry payload."""
     if not path_data or path_data.get("status") != "ok":
@@ -76,6 +85,7 @@ def evaluate_path(
         return {}
 
     include_hoteling = bool(include_hoteling)
+    include_port_ops = bool(include_port_ops)
     hoteling_hours_per_call = max(float(hoteling_hours_per_call), 0.0)
     port_calls = max(int(port_calls), 0)
     hoteling_hours_total = hoteling_hours_per_call * float(port_calls) if include_hoteling else 0.0
@@ -116,7 +126,10 @@ def evaluate_path(
         diesel_source = str(diesel_meta.get("source", "latest_diesel_prices_csv"))
 
     _log.debug(
-        "Evaluator inputs: cargo_t=%.3f truck=%s diesel=R$ %.4f/L uf_o=%s uf_d=%s vessel_class=%s include_hoteling=%s",
+        (
+            "Evaluator inputs: cargo_t=%.3f truck=%s diesel=R$ %.4f/L uf_o=%s uf_d=%s "
+            "vessel_class=%s include_hoteling=%s include_port_ops=%s"
+        ),
         cargo_t,
         truck_key,
         price_l,
@@ -124,6 +137,7 @@ def evaluate_path(
         destiny_uf or "<missing>",
         vessel_eff.vessel_class,
         include_hoteling,
+        include_port_ops,
     )
 
     def _calc_road(leg: Dict[str, Any]) -> Dict[str, Any]:
@@ -189,9 +203,36 @@ def evaluate_path(
             )
         hoteling_fuel_kg = hoteling_hours_total * hoteling_rate_t_per_h * _KG_PER_TONNE
 
-    sea_fuel_total_kg = sea_fuel_sailing_kg + hoteling_fuel_kg
-    sea_cost = (sea_fuel_total_kg / _KG_PER_TONNE) * bunker_price_ton
-    sea_co2e = sea_fuel_total_kg * _BUNKER_EF_KG_CO2E_PER_KG
+    sea_fuel_marine_kg = sea_fuel_sailing_kg + hoteling_fuel_kg
+    sea_cost_marine = (sea_fuel_marine_kg / _KG_PER_TONNE) * bunker_price_ton
+    sea_co2e_marine = sea_fuel_marine_kg * _BUNKER_EF_KG_CO2E_PER_KG
+
+    port_ops_payload: Dict[str, Any] | None = None
+    port_ops_fuel_kg = 0.0
+    port_ops_co2e_kg = 0.0
+    port_ops_cost_brl = 0.0
+
+    if include_port_ops and port_calls > 0:
+        try:
+            port_ops_payload = estimate_port_ops(
+                scenario=port_ops_scenario,
+                port_calls=port_calls,
+                port_moves_per_call=port_moves_per_call,
+                stat_key=port_ops_stat_key,
+                diesel_price_per_l=price_l,
+                params_path=port_ops_params_path,
+            )
+            totals = port_ops_payload.get("totals", {}) if isinstance(port_ops_payload, dict) else {}
+            port_ops_fuel_kg = float(totals.get("fuel_kg") or 0.0)
+            port_ops_co2e_kg = float(totals.get("co2e_kg") or 0.0)
+            port_ops_cost_brl = float(totals.get("cost_brl") or 0.0)
+        except Exception as exc:
+            _log.error("Failed to resolve/evaluate port-ops artifact: %s", exc)
+            return {}
+
+    sea_fuel_total_kg = sea_fuel_marine_kg + port_ops_fuel_kg
+    sea_cost_total = sea_cost_marine + port_ops_cost_brl
+    sea_co2e_total = sea_co2e_marine + port_ops_co2e_kg
 
     res_sea = {
         "distance_km": float(sea_dist_km),
@@ -208,9 +249,22 @@ def evaluate_path(
         "hoteling_vessel_class": hoteling_vessel_class,
         "hoteling_ratio_used": float(hoteling_ratio_used),
         "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
+        "fuel_kg_marine": float(sea_fuel_marine_kg),
+        "cost_marine": float(sea_cost_marine),
+        "co2e_marine": float(sea_co2e_marine),
+        "port_ops_included": bool(include_port_ops),
+        "port_ops_scenario_requested": str(port_ops_scenario),
+        "port_ops_stat_key": str(port_ops_stat_key),
+        "port_moves_per_call_requested": (
+            None if port_moves_per_call is None else float(max(float(port_moves_per_call), 0.0))
+        ),
+        "port_ops_fuel_kg": float(port_ops_fuel_kg),
+        "port_ops_cost": float(port_ops_cost_brl),
+        "port_ops_co2e": float(port_ops_co2e_kg),
+        "port_ops": port_ops_payload,
         "fuel_kg": float(sea_fuel_total_kg),
-        "cost": float(sea_cost),
-        "co2e": float(sea_co2e),
+        "cost": float(sea_cost_total),
+        "co2e": float(sea_co2e_total),
     }
 
     mm_cost = res_first["cost"] + res_last["cost"] + res_sea["cost"]
@@ -245,6 +299,27 @@ def evaluate_path(
             "hoteling_ratio_used": float(hoteling_ratio_used),
             "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
             "hoteling_source": hoteling_source_path,
+            "include_port_ops": bool(include_port_ops),
+            "port_ops_scenario_requested": str(port_ops_scenario),
+            "port_ops_stat_key": str(port_ops_stat_key),
+            "port_moves_per_call_requested": (
+                None if port_moves_per_call is None else float(max(float(port_moves_per_call), 0.0))
+            ),
+            "port_ops_source": (
+                None
+                if not isinstance(port_ops_payload, dict)
+                else str(port_ops_payload.get("source_path") or "")
+            ),
+            "port_ops_scenario_resolved": (
+                None
+                if not isinstance(port_ops_payload, dict)
+                else str(port_ops_payload.get("resolved_scenario") or "")
+            ),
+            "port_moves_per_call_resolved": (
+                None
+                if not isinstance(port_ops_payload, dict)
+                else float(port_ops_payload.get("port_moves_per_call") or 0.0)
+            ),
         },
         "road_only": res_direct,
         "multimodal": {
@@ -283,5 +358,3 @@ if __name__ == "__main__":
     res = evaluate_path(geo_dummy, cargo_t=27.0)
     print(json.dumps(res, indent=2))
     print("--- Done ---")
-
-

@@ -20,7 +20,7 @@ Notes:
 - When full text was not machine-readable, classification below relies on filename/title metadata and should be treated as provisional.
 - "Cited/used in docs" means explicit file-level citation in current repo docs.
 
-### `references/at-berth-fuel-consumption-survey.pdf`
+### `references/seagoing_ships_at_berth_fuel_emissions_survey_2009.pdf`
 
 - Covers:
   - At-berth fuel consumption and associated emissions from seagoing ships.
@@ -32,7 +32,7 @@ Notes:
 - Recommendation:
   - Cite in `docs/hoteling_model.md` limitations section (boilers/auxiliary variability by port).
 
-### `references/biodiesel-brazil-history-evolution-review.pdf`
+### `references/biodiesel_brazil_history_environment_review_2017.pdf`
 
 - Covers:
   - Biodiesel evolution and environmental context in Brazil.
@@ -43,7 +43,7 @@ Notes:
 - Recommendation:
   - Keep as background; use only if adding biodiesel blend sensitivity scenarios.
 
-### `references/brazil-coastal-shipping-growth-decarbonization.pdf`
+### `references/brazil_coastal_shipping_decarbonization_icct_2022.pdf`
 
 - Covers:
   - Brazilian coastal shipping growth and decarbonization framing.
@@ -54,7 +54,7 @@ Notes:
 - Recommendation:
   - Add explicit file citation in `README.md` and in scenario framing docs.
 
-### `references/brazilian-cabotage-competitiveness-supernetwork.pdf`
+### `references/brazilian_cabotage_competitiveness_supernetwork_2024.pdf`
 
 - Covers:
   - Multimodal supernetwork competitiveness for Brazilian cabotage.
@@ -65,7 +65,7 @@ Notes:
 - Recommendation:
   - Cite in methodology rationale section as external validation context.
 
-### `references/brazilian-cabotage-user-satisfaction.pdf`
+### `references/brazilian_cabotage_user_satisfaction_assessment_2022.pdf`
 
 - Covers:
   - User satisfaction in Brazilian container cabotage.
@@ -76,7 +76,7 @@ Notes:
 - Recommendation:
   - Keep for background and discussion, not core model calibration.
 
-### `references/cabotage-hvo-overview.pdf`
+### `references/brazilian_cabotage_decarbonization_pathways_fuels_2024_alt.pdf`
 
 - Covers:
   - HVO/decarbonization topic by filename; embedded text is weak.
@@ -87,7 +87,7 @@ Notes:
 - Recommendation:
   - Mark as provisional in references until full bibliographic metadata is recovered.
 
-### `references/comparative-co2-efficiency-shortsea-container.pdf`
+### `references/short_sea_container_co2_efficiency_comparison_2019.pdf`
 
 - Covers:
   - Comparative CO2 efficiency in short-sea container transport.
@@ -103,13 +103,13 @@ Notes:
 - Covers:
   - Scenario workbook with sheets for emissions factors, road/cabotage scenarios, and terminal operations.
 - Pipeline support:
-  - Potential benchmark for cross-checking legacy assumptions.
+  - Primary parameter source for moves-based port-ops factors (`RTG Base C1`, `RTG C2`, `TT Base C1`, `TT C2`).
 - Cited/used in docs:
-  - No direct citation.
+  - Yes, in `docs/port_ops_model.md`.
 - Recommendation:
-  - Use as validation benchmark in a dedicated comparison notebook, not runtime.
+  - Keep as processed-input source through `calcs/port_ops_params_builder.py`; add periodic refresh checks if workbook revisions are added.
 
-### `references/decarbonization-pathways-brazilian-cabotage-fuels-comparative-analysis.pdf`
+### `references/brazilian_cabotage_decarbonization_pathways_fuels_2024.pdf`
 
 - Covers:
   - Decarbonization pathways and marine fuel comparisons by filename.
@@ -120,7 +120,7 @@ Notes:
 - Recommendation:
   - Cite when introducing marine fuel-type scenarios beyond current default.
 
-### `references/eu-mrv-data-based-review-ship-energy-efficiency-framework.pdf`
+### `references/eu_mrv_ship_energy_efficiency_framework_review_2025.pdf`
 
 - Covers:
   - EU MRV data-based review of ship energy efficiency framework.
@@ -131,7 +131,7 @@ Notes:
 - Recommendation:
   - Add explicit citation to `docs/mrv_container_efficiency.md` under method validity.
 
-### `references/external-cost-internalization-shortsea-shipping.pdf`
+### `references/short_sea_shipping_external_cost_internalization_2022.pdf`
 
 - Covers:
   - External-cost internalization effects in short sea shipping.
@@ -142,7 +142,7 @@ Notes:
 - Recommendation:
   - Keep for future policy-scenario module; not required for current TTW model.
 
-### `references/fast-shapley-approximation-routing-ml-models.pdf`
+### `references/fast_shapley_approximation_routing_ml_models_2025.pdf`
 
 - Covers:
   - Shapley approximation for routing allocations.
@@ -153,7 +153,7 @@ Notes:
 - Recommendation:
   - Keep as future-work anchor; no immediate runtime integration.
 
-### `references/lifecycle-cost-alt-marine-fuels-sss.pdf`
+### `references/lifecycle_cost_alt_marine_fuels_short_sea_2020.pdf`
 
 - Covers:
   - Life-cycle cost assessment of alternative marine fuels in short-sea shipping.
@@ -164,7 +164,7 @@ Notes:
 - Recommendation:
   - Cite in future work for WTW expansion beyond TTW-only default.
 
-### `references/maritime-fuels-lca-review.pdf`
+### `references/maritime_fuels_lca_review_insights_gaps_2024.pdf`
 
 - Covers:
   - LCA review of maritime fuels, gaps, and recommendations.
@@ -175,7 +175,7 @@ Notes:
 - Recommendation:
   - Use to define WTW methodological guardrails before adding fuel pathway comparisons.
 
-### `references/monitoring-carbon-footprint-dry-bulk-shipping-eu-mrv.pdf`
+### `references/dry_bulk_shipping_carbon_footprint_mrv_assessment_2019.pdf`
 
 - Covers:
   - Early MRV-based carbon footprint assessment methodology.
@@ -186,16 +186,49 @@ Notes:
 - Recommendation:
   - Cite in `docs/mrv_container_efficiency.md` as methodological precedent.
 
-### `references/ship-emissions-hoteling-southeast-asia-ports.pdf`
+### `references/ship_hoteling_loading_unloading_emissions_se_asia_2022.pdf`
 
 - Covers:
   - Hotelling and loading/unloading emissions in port operations.
 - Pipeline support:
   - Supports known omissions and potential refinements (cargo ops, berth activity granularity).
 - Cited/used in docs:
+  - Yes, in `docs/port_ops_model.md`.
+- Recommendation:
+  - Keep as contextual validation for port-ops granularity gaps.
+
+### `references/rtg_crane_energy_usage_analysis_2017.pdf`
+
+- Covers:
+  - RTG energy usage profile and operational efficiency behavior.
+- Pipeline support:
+  - Supports RTG-focused equipment-level treatment in the port-ops module.
+- Cited/used in docs:
+  - Yes, in `docs/port_ops_model.md`.
+- Recommendation:
+  - Use for future non-diesel RTG calibration once site-specific electrical factors are available.
+
+### `references/hybrid_rtg_diesel_battery_energy_management_2021.pdf`
+
+- Covers:
+  - Hybrid RTG energy management with reported diesel/CO2 reduction outcomes.
+- Pipeline support:
+  - Basis for partially-electrified RTG diesel-reduction proxy in `port_ops_params_santos.json`.
+- Cited/used in docs:
+  - Yes, in `docs/port_ops_model.md`.
+- Recommendation:
+  - Keep reduction range explicit and scenario-bounded (no single deterministic value).
+
+### `references/fal_329_port_awareness_maritime_emissions_2014.pdf`
+
+- Covers:
+  - Port and maritime energy/emissions awareness context in Latin America and the Caribbean.
+- Pipeline support:
+  - Contextual support for regional port decarbonization framing.
+- Cited/used in docs:
   - No direct citation.
 - Recommendation:
-  - Cite in `docs/hoteling_model.md` limitations and future work.
+  - Keep as background reference for policy/context sections.
 
 ### `references/desktop.ini`
 
@@ -267,7 +300,8 @@ What it does:
 - Computes road-only and multimodal totals.
 - Sea sailing fuel: `distance_nm * fuel_per_nm`.
 - Hoteling fuel: `hoteling_hours_total * hoteling_rate_t_per_h * 1000`.
-- Total sea fuel = sailing + hoteling, then cost/emissions.
+- Port-ops fuel/emissions/cost from `modules.multimodal.port_ops.estimate_port_ops(...)`.
+- Total sea-side aggregate = sailing + hoteling + port-ops, then cost/emissions.
 
 Assumptions audit:
 
@@ -278,7 +312,24 @@ Assumptions audit:
 - Marine emission factor sourcing.
   - Status: corrected in this update to use `modules.fuel.emissions` canonical factor path (`vlsfo`), removing hardcoded drift risk.
 
-## Port/Hotelling Placeholders (`calcs/hotel.py`, `modules/fuel/cabotage_fuel_service.py`)
+## `modules/multimodal/port_ops.py`
+
+What it does:
+
+- Loads processed moves-based terminal parameters from `data/processed/cabotage_data/port_ops_params_santos.json`.
+- Resolves scenario (`santos_diesel_heavy` / `santos_partially_electrified`) with fallback.
+- Computes equipment-level moves, diesel liters, fuel mass, electricity, CO2e, and cost.
+
+Assumptions audit:
+
+- Moves-based equipment aggregation (`quay moves` -> RTG/TT multipliers).
+  - Status: supported by `references/Dados Relatorio 2.xlsx` structure and transparent in params artifact.
+- RTG partially-electrified scenario via diesel-reduction proxy.
+  - Status: supported as bounded proxy by `references/hybrid_rtg_diesel_battery_energy_management_2021.pdf`.
+- STS factor currently zero placeholder.
+  - Status: pragmatic placeholder due missing direct per-move value in provided references.
+
+## Port/Hotelling legacy placeholders (`calcs/hotel.py`, `modules/fuel/cabotage_fuel_service.py`)
 
 What they do:
 
@@ -286,8 +337,8 @@ What they do:
 
 Assumptions audit:
 
-- These modules use different abstractions than the current MRV-class + EMEP ratio runtime.
-  - Status: not aligned with current active pipeline; potential confusion risk.
+- These modules use different abstractions than the active MRV-class + hoteling + moves-based port-ops runtime.
+  - Status: legacy/non-active; retain only for backward comparisons.
 - Recommendation:
   - Mark as legacy/deprecated in README and avoid mixing outputs in active scenarios.
 
@@ -326,7 +377,7 @@ Assumptions audit:
 
 - Implemented ratio: `hoteling_rate = sea_rate * ((0.40*r)/(0.80 + 0.30*r))`.
 - This is consistent with first-order EMEP/EEA ratio interpretation used in current docs.
-- Limitations not modeled: boilers, reefers, shore power uptake, berth power management differences, and terminal equipment energy.
+- Limitations not modeled: boilers, reefers, shore power uptake, berth power management differences, and explicit STS/electric-grid calibration.
 
 ### Port-call defaults and Brazil applicability
 
@@ -344,7 +395,8 @@ Assumptions audit:
 - Reefer load explicit modeling.
 - Boiler load in port phase.
 - Shore power scenarios.
-- Terminal equipment electricity/fuel accounting integrated into active runtime.
+- Explicit STS crane per-move energy factor (currently placeholder).
+- Site-specific electricity emission and tariff factors for port equipment.
 - AIS-based speed/power variability for sea legs.
 
 ## 4) Recommendations
