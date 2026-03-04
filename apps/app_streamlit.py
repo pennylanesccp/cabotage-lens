@@ -826,14 +826,28 @@ def main() -> None:
     with st.sidebar:
         st.subheader("Inputs")
 
-        with st.expander("Route", expanded=True):
-            st.text_input("Origin", key="origin", help="City, state, address, or coordinates")
-            st.text_input("Destiny", key="destiny", help="City, state, address, or coordinates")
+        st.text_input("Origin", key="origin", help="City, state, address, or coordinates")
+        st.text_input("Destination", key="destiny", help="City, state, address, or coordinates")
+        st.number_input("Cargo (t)", min_value=0.0, step=0.5, key="cargo_t")
+
+        clear_logs_clicked = False
+        with st.expander("Advanced", expanded=False):
+            st.markdown("##### Routing")
             st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], key="profile")
             st.checkbox("Overwrite road cache", key="overwrite_road")
 
-        with st.expander("Cargo", expanded=True):
-            st.number_input("Cargo (t)", min_value=0.0, step=0.5, key="cargo_t")
+            st.markdown("##### Road")
+            st.selectbox("Truck", options=sorted(list_truck_keys()), key="truck_key")
+
+            st.markdown("##### Maritime")
+            st.selectbox(
+                "Vessel class",
+                options=class_options,
+                key="vessel_class",
+                help="MRV class median fuel intensity is used for sea sailing.",
+            )
+
+            st.markdown("##### Port")
             st.number_input(
                 "Cargo (TEU, optional)",
                 min_value=0.0,
@@ -843,19 +857,6 @@ def main() -> None:
             )
             derived_teu = _resolve_cargo_teu(_scenario_payload())
             st.caption(f"Derived cargo TEU: {derived_teu}")
-
-        with st.expander("Road", expanded=False):
-            st.selectbox("Truck", options=sorted(list_truck_keys()), key="truck_key")
-
-        with st.expander("Maritime", expanded=False):
-            st.selectbox(
-                "Vessel class",
-                options=class_options,
-                key="vessel_class",
-                help="MRV class median fuel intensity is used for sea sailing.",
-            )
-
-        with st.expander("Port", expanded=False):
             st.checkbox(
                 "Include hoteling",
                 key="include_hoteling",
@@ -898,7 +899,7 @@ def main() -> None:
                     total_moves = float(derived_teu) * float(st.session_state.port_calls)
                     st.caption(f"Derived port moves total (cargo-based): {total_moves:.1f}")
 
-        with st.expander("Map", expanded=False):
+            st.markdown("##### Map")
             st.selectbox("Map style", options=list(MAP_STYLES.keys()), key="map_style")
             st.checkbox("Show first/last mile", key="map_show_first_last")
             st.checkbox("Show sea leg", key="map_show_sea")
@@ -944,22 +945,24 @@ def main() -> None:
             st.slider("Pitch", min_value=0, max_value=60, key="map_pitch")
             st.slider("Bearing", min_value=-180, max_value=180, key="map_bearing")
 
-        with st.expander("App", expanded=False):
+            st.markdown("##### Pricing")
+            st.caption("Diesel and bunker prices are loaded automatically from processed datasets.")
+
+            st.markdown("##### App")
             st.text_input("DB path", key="db_path_str")
             st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], key="log_level")
             st.checkbox("Write log file", key="write_log_file")
+            clear_logs_clicked = st.button("Clear logs", width='stretch')
 
         route_ok = bool(st.session_state.origin.strip()) and bool(st.session_state.destiny.strip())
         cargo_ok = float(st.session_state.cargo_t) > 0.0
         run_disabled = not (route_ok and cargo_ok)
 
         if run_disabled:
-            st.warning("Fill origin/destiny and cargo > 0 to run analysis.")
+            st.warning("Fill origin/destination and cargo > 0 to run analysis.")
 
         st.markdown("<div class='sticky-run'>", unsafe_allow_html=True)
-        c_run, c_clear = st.columns(2)
-        run_clicked = c_run.button("Run analysis", type="primary", width='stretch', disabled=run_disabled)
-        clear_logs_clicked = c_clear.button("Clear logs", width='stretch')
+        run_clicked = st.button("Run analysis", type="primary", width='stretch', disabled=run_disabled)
         st.markdown("</div>", unsafe_allow_html=True)
 
     _attach_streamlit_logging(level=st.session_state.log_level, write_to_file=bool(st.session_state.write_log_file))
