@@ -473,7 +473,7 @@ def _render_header(version: str, payload: Dict[str, Any]) -> None:
 
     cols = st.columns([1, 1, 1])
     with cols[0]:
-        if st.button("Copy scenario JSON", use_container_width=True):
+        if st.button("Copy scenario JSON", width='stretch'):
             st.session_state.scenario_json_blob = json.dumps(payload, ensure_ascii=False, indent=2)
     with cols[1]:
         if st.session_state.scenario_json_blob:
@@ -482,7 +482,7 @@ def _render_header(version: str, payload: Dict[str, Any]) -> None:
                 data=st.session_state.scenario_json_blob,
                 file_name="scenario.json",
                 mime="application/json",
-                use_container_width=True,
+                width='stretch',
             )
     with cols[2]:
         if st.session_state.scenario_json_blob:
@@ -617,11 +617,11 @@ def _render_results(results: Dict[str, Any]) -> None:
 
     with tabs[0]:
         st.bar_chart(cost_df, height=240)
-        st.dataframe(cost_df.style.format("{:,.2f}"), use_container_width=True)
+        st.dataframe(cost_df.style.format("{:,.2f}"), width='stretch')
 
     with tabs[1]:
         st.bar_chart(co2_df, height=240)
-        st.dataframe(co2_df.style.format("{:,.2f}"), use_container_width=True)
+        st.dataframe(co2_df.style.format("{:,.2f}"), width='stretch')
 
 
 def _run_analysis(payload: Dict[str, Any]) -> tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None]:
@@ -862,8 +862,8 @@ def main() -> None:
 
         st.markdown("<div class='sticky-run'>", unsafe_allow_html=True)
         c_run, c_clear = st.columns(2)
-        run_clicked = c_run.button("Run analysis", type="primary", use_container_width=True, disabled=run_disabled)
-        clear_logs_clicked = c_clear.button("Clear logs", use_container_width=True)
+        run_clicked = c_run.button("Run analysis", type="primary", width='stretch', disabled=run_disabled)
+        clear_logs_clicked = c_clear.button("Clear logs", width='stretch')
         st.markdown("</div>", unsafe_allow_html=True)
 
     _attach_streamlit_logging(level=st.session_state.log_level, write_to_file=bool(st.session_state.write_log_file))
@@ -900,7 +900,7 @@ def main() -> None:
 
     with left:
         st.markdown("#### Map")
-        fit_clicked = st.button("Fit to route", use_container_width=False, disabled=geo is None)
+        fit_clicked = st.button("Fit to route", width='content', disabled=geo is None)
 
         if fit_clicked and geo:
             c_lat, c_lon, zoom = _fit_view(_map_points(geo))
@@ -916,7 +916,7 @@ def main() -> None:
                 st.session_state.map_zoom = zoom
 
             _render_map_legend()
-            st.pydeck_chart(_build_map_deck(geo), use_container_width=True)
+            st.pydeck_chart(_build_map_deck(geo), width='stretch')
         else:
             st.info("Run an analysis to render the map.")
 
