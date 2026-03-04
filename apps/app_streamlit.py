@@ -39,6 +39,7 @@ from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
 )
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
+from modules.plot.sea_path_pretty import build_pretty_sea_path
 
 st.set_page_config(page_title="EcoFreight Streamlit", page_icon=":earth_americas:", layout="wide")
 
@@ -72,6 +73,10 @@ DEFAULTS: Dict[str, Any] = {
     "map_show_ports": True,
     "map_show_labels": True,
     "map_show_legend": True,
+    "map_pretty_sea_route": True,
+    "map_sea_n_points": 200,
+    "map_sea_curvature": 0.25,
+    "map_sea_smooth_window": 7,
     "map_pitch": 30,
     "map_bearing": 5,
     "map_zoom": 4.8,
@@ -245,28 +250,57 @@ def _build_map_deck(geo: Dict[str, Any]) -> pdk.Deck:
             )
 
     if st.session_state.map_show_sea:
-        layers.append(
-            pdk.Layer(
-                "ArcLayer",
-                data=[
-                    {
-                        "name": "Sea leg",
-                        "source_position": [po_coords[1], po_coords[0]],
-                        "target_position": [pd_coords[1], pd_coords[0]],
-                        "source_color": [41, 128, 185, 240],
-                        "target_color": [52, 152, 219, 240],
-                        "width": 4,
-                    }
-                ],
-                get_source_position="source_position",
-                get_target_position="target_position",
-                get_source_color="source_color",
-                get_target_color="target_color",
-                get_width="width",
-                great_circle=True,
-                pickable=True,
+        if st.session_state.map_pretty_sea_route:
+            sea_path = build_pretty_sea_path(
+                origin_lat=po_coords[0],
+                origin_lon=po_coords[1],
+                dest_lat=pd_coords[0],
+                dest_lon=pd_coords[1],
+                n_points=int(st.session_state.map_sea_n_points),
+                curvature=float(st.session_state.map_sea_curvature),
+                smooth_window=int(st.session_state.map_sea_smooth_window),
             )
-        )
+            layers.append(
+                pdk.Layer(
+                    "PathLayer",
+                    data=[
+                        {
+                            "name": "Sea leg",
+                            "path": sea_path,
+                            "color": [52, 152, 219, 240],
+                            "width": 4,
+                        }
+                    ],
+                    get_path="path",
+                    get_color="color",
+                    get_width="width",
+                    width_min_pixels=2,
+                    pickable=True,
+                )
+            )
+        else:
+            layers.append(
+                pdk.Layer(
+                    "ArcLayer",
+                    data=[
+                        {
+                            "name": "Sea leg",
+                            "source_position": [po_coords[1], po_coords[0]],
+                            "target_position": [pd_coords[1], pd_coords[0]],
+                            "source_color": [41, 128, 185, 240],
+                            "target_color": [52, 152, 219, 240],
+                            "width": 4,
+                        }
+                    ],
+                    get_source_position="source_position",
+                    get_target_position="target_position",
+                    get_source_color="source_color",
+                    get_target_color="target_color",
+                    get_width="width",
+                    great_circle=True,
+                    pickable=True,
+                )
+            )
 
     if st.session_state.map_show_direct:
         layers.append(
@@ -788,6 +822,29 @@ def main() -> None:
             st.checkbox("Show ports", key="map_show_ports")
             st.checkbox("Show labels", key="map_show_labels")
             st.checkbox("Show legend", key="map_show_legend")
+            st.checkbox("Pretty sea route", key="map_pretty_sea_route")
+            st.slider(
+                "Sea route smoothing",
+                min_value=50,
+                max_value=400,
+                step=10,
+                key="map_sea_n_points",
+                disabled=not bool(st.session_state.map_pretty_sea_route),
+            )
+            st.slider(
+                "Sea route curvature",
+                min_value=0.0,
+                max_value=0.5,
+                step=0.01,
+                key="map_sea_curvature",
+                disabled=not bool(st.session_state.map_pretty_sea_route),
+            )
+            st.select_slider(
+                "Sea route smooth window",
+                options=[3, 5, 7, 9, 11, 13, 15],
+                key="map_sea_smooth_window",
+                disabled=not bool(st.session_state.map_pretty_sea_route),
+            )
             st.slider("Pitch", min_value=0, max_value=60, key="map_pitch")
             st.slider("Bearing", min_value=-180, max_value=180, key="map_bearing")
 

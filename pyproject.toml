@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "carbon-footprint"
-version = "1.4.1"
+version = "1.5.0"
 description = "Multimodal freight assessment of logistics cost and carbon footprint."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,4 +22,6 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["modules*"]
+
+
 
