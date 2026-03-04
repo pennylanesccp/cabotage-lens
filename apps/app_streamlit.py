@@ -356,17 +356,15 @@ def main() -> None:
         origin = st.text_input("Origin", value="Pelotas, RS")
         destiny = st.text_input("Destiny", value="Manaus, AM")
         cargo_t = st.number_input("Cargo (t)", min_value=0.1, value=30.0, step=0.5)
-        truck_key = st.selectbox("Truck", options=sorted(list_truck_keys()), index=0)
 
-        st.subheader("Routing")
-        profile = st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], index=0)
-        overwrite_road = st.checkbox("Overwrite road cache", value=False)
-        db_path_str = st.text_input("DB path", value=str(DEFAULT_DB_PATH))
-
-        st.subheader("View")
-        map_style = st.selectbox("Map style", options=list(MAP_STYLES.keys()), index=0)
-        log_level = st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], index=0)
-        write_log_file = st.checkbox("Write log file", value=True)
+        with st.expander("Advanced", expanded=False):
+            truck_key = st.selectbox("Truck", options=sorted(list_truck_keys()), index=0)
+            profile = st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], index=0)
+            overwrite_road = st.checkbox("Overwrite road cache", value=False)
+            db_path_str = st.text_input("DB path", value=str(DEFAULT_DB_PATH))
+            map_style = st.selectbox("Map style", options=list(MAP_STYLES.keys()), index=0)
+            log_level = st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], index=0)
+            write_log_file = st.checkbox("Write log file", value=True)
 
         col_run, col_clear = st.columns(2)
         run_clicked = col_run.button("Run analysis", type="primary", use_container_width=True)
@@ -429,3 +427,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
