@@ -194,6 +194,32 @@ def list_runs(
 
 
 # ────────────────────────────────────────────────────────────────────────────────
+
+
+def list_place_names(
+      conn: sqlite3.Connection
+    , *
+    , table_name: str = DEFAULT_TABLE
+    , limit: int = 10_000
+) -> List[str]:
+    """
+    Return a distinct union of origin/destiny names from routes, sorted ascending.
+    """
+    ensure_main_table(conn, table_name)
+
+    sql = f"""
+    SELECT name
+    FROM (
+        SELECT TRIM(origin_name) AS name FROM {table_name}
+        UNION
+        SELECT TRIM(destiny_name) AS name FROM {table_name}
+    )
+    WHERE name IS NOT NULL AND name <> ''
+    ORDER BY name COLLATE NOCASE ASC
+    LIMIT ?
+    """
+    rows = conn.execute(sql, (int(limit),)).fetchall()
+    return [str(r[0]) for r in rows if r and r[0] is not None]
 # Smoke Test
 # ────────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":

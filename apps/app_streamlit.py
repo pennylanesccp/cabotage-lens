@@ -31,7 +31,7 @@ from modules.core.env_loader import load_repo_env
 load_repo_env(ROOT / ".env")
 
 from modules.fuel.truck_specs import list_truck_keys
-from modules.infra.database_manager import DEFAULT_DB_PATH
+from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, list_place_names
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal import build_path_geometry, evaluate_path
 from modules.multimodal.container_efficiency import (
@@ -121,6 +121,27 @@ def _project_version() -> str:
         return str(payload.get("project", {}).get("version") or "dev")
     except Exception:
         return "dev"
+
+
+
+def _route_endpoint_options(db_path_str: str, current_values: list[str]) -> list[str]:
+    options: set[str] = set()
+
+    for value in current_values:
+        value_clean = str(value).strip()
+        if value_clean:
+            options.add(value_clean)
+
+    try:
+        with db_session(Path(db_path_str)) as conn:
+            for value in list_place_names(conn):
+                value_clean = str(value).strip()
+                if value_clean:
+                    options.add(value_clean)
+    except Exception as exc:
+        _log.debug("Could not load route endpoint options from %s: %s", db_path_str, exc)
+
+    return sorted(options, key=str.casefold)
 
 
 def _init_state() -> None:
@@ -825,9 +846,24 @@ def main() -> None:
 
     with st.sidebar:
         st.subheader("Inputs")
-
-        st.text_input("Origin", key="origin", help="City, state, address, or coordinates")
-        st.text_input("Destination", key="destiny", help="City, state, address, or coordinates")
+        route_name_options = _route_endpoint_options(
+            db_path_str=str(st.session_state.db_path_str),
+            current_values=[str(st.session_state.origin), str(st.session_state.destiny)],
+        )
+        st.selectbox(
+            "Origin",
+            options=route_name_options,
+            key="origin",
+            accept_new_options=True,
+            help="Choose a cached endpoint or type a city, state, address, or coordinates.",
+        )
+        st.selectbox(
+            "Destination",
+            options=route_name_options,
+            key="destiny",
+            accept_new_options=True,
+            help="Choose a cached endpoint or type a city, state, address, or coordinates.",
+        )
         st.number_input("Cargo (t)", min_value=0.0, step=0.5, key="cargo_t")
 
         clear_logs_clicked = False

@@ -31,6 +31,7 @@ from modules.infra.db.road_cache import (
     , ensure_main_table
     , upsert_run
     , list_runs
+    , list_place_names
     , overwrite_keys
     , delete_key
 )
@@ -45,7 +46,7 @@ from modules.infra.db.multimodal import (
 __all__ = [
     "DEFAULT_DB_PATH", "DEFAULT_TABLE",
     "connect", "db_session",
-    "ensure_main_table", "upsert_run", "list_runs", "overwrite_keys", "delete_key",
+    "ensure_main_table", "upsert_run", "list_runs", "list_place_names", "overwrite_keys", "delete_key",
     "ensure_multimodal_results_table", "upsert_multimodal_result"
 ]
 
