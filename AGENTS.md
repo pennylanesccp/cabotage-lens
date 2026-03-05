@@ -10,7 +10,7 @@ Mission: Maintain and evolve the carbon-footprint toolkit for road vs cabotage c
 
 This repository is a Python project focused on multimodal freight evaluation:
 
-- `apps/` - user-facing app entrypoints (currently `app_gui.py`)
+- `apps/` - user-facing app entrypoints (currently `app_streamlit.py`)
 - `scripts/` - CLI workflows (`compare_single.py`, `compare_bulk.py`)
 - `modules/` - domain and infrastructure code (routing, cabotage, fuel, costs, persistence)
 - `data/` - versioned inputs plus processed artifacts (including SQLite database)
@@ -92,7 +92,7 @@ Local development conventions:
 - `scripts/` commands should be safe to rerun.
 - Fail with clear diagnostics when required config is missing.
 - Keep user-facing output readable for both quick checks and debugging.
-- Preserve compatibility with `python apps/app_gui.py` and direct script execution.
+- Preserve compatibility with `python apps/app_streamlit.py` and direct script execution.
 
 ---
 
