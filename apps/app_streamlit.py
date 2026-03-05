@@ -9,14 +9,20 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
 import sys
-import tomllib
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - fallback for Python 3.10
+    import tomli as tomllib  # type: ignore[import-not-found]
 
 if getattr(sys, "frozen", False):
     ROOT = Path(sys._MEIPASS).resolve()  # type: ignore[attr-defined]
@@ -43,6 +49,62 @@ from modules.plot.sea_lane_brazil import BRAZIL_COASTAL_SEA_WAYPOINTS, build_sea
 from modules.plot.sea_path_pretty import build_pretty_sea_path
 
 st.set_page_config(page_title="EcoFreight Streamlit", page_icon=":earth_americas:", layout="wide")
+
+
+def _secret_or_env(key: str, default: Any = None) -> Any:
+    value = st.secrets.get(key, os.getenv(key))
+    if value is None:
+        return default
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return default
+    return value
+
+
+def _bool_from_any(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
+def _validated_log_level(value: Any, default: str = "INFO") -> str:
+    allowed = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+    candidate = str(value or default).strip().upper()
+    return candidate if candidate in allowed else default
+
+
+def _resolve_runtime_db_path(configured_path: Any = None) -> Path:
+    configured = configured_path if configured_path is not None else _secret_or_env("CARBON_DB_PATH", str(DEFAULT_DB_PATH))
+    candidate = Path(str(configured)).expanduser()
+    if not candidate.is_absolute():
+        candidate = ROOT / candidate
+
+    try:
+        candidate.parent.mkdir(parents=True, exist_ok=True)
+        with candidate.open("a", encoding="utf-8"):
+            pass
+        return candidate.resolve()
+    except OSError:
+        fallback = Path(tempfile.gettempdir()) / "carbon-footprint" / "carbon_footprint.sqlite"
+        fallback.parent.mkdir(parents=True, exist_ok=True)
+        return fallback.resolve()
+
+
+def _bootstrap_runtime_env() -> None:
+    for key in ("ORS_API_KEY", "CARBON_LOG_LEVEL"):
+        value = _secret_or_env(key)
+        if value is not None:
+            normalized = str(value).strip()
+            if normalized:
+                os.environ[key] = normalized
 
 MAP_STYLES: dict[str, str] = {
     "Voyager": "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
@@ -87,7 +149,7 @@ DEFAULTS: Dict[str, Any] = {
     "map_center_lat": None,
     "map_center_lon": None,
     "log_level": "INFO",
-    "write_log_file": True,
+    "write_log_file": False,
     "db_path_str": str(DEFAULT_DB_PATH),
     "log_last_n": 300,
     "log_filter": "",
@@ -147,7 +209,20 @@ def _route_endpoint_options(db_path_str: str, current_values: list[str]) -> list
 
 
 def _init_state() -> None:
-    for k, v in DEFAULTS.items():
+    _bootstrap_runtime_env()
+
+    runtime_defaults: Dict[str, Any] = dict(DEFAULTS)
+    runtime_defaults["db_path_str"] = str(_resolve_runtime_db_path())
+    runtime_defaults["log_level"] = _validated_log_level(
+        _secret_or_env("CARBON_LOG_LEVEL", DEFAULTS["log_level"]),
+        default=str(DEFAULTS["log_level"]),
+    )
+    runtime_defaults["write_log_file"] = _bool_from_any(
+        _secret_or_env("CARBON_WRITE_LOG_FILE", DEFAULTS["write_log_file"]),
+        default=bool(DEFAULTS["write_log_file"]),
+    )
+
+    for k, v in runtime_defaults.items():
         st.session_state.setdefault(k, v)
 
     st.session_state.setdefault("ui_logs", [])
@@ -157,7 +232,13 @@ def _init_state() -> None:
 
 
 def _attach_streamlit_logging(level: str, write_to_file: bool) -> None:
-    init_logging(level=level, write_to_file=write_to_file, force_clean=True)
+    safe_level = _validated_log_level(level, default=str(DEFAULTS["log_level"]))
+    try:
+        init_logging(level=safe_level, write_to_file=write_to_file, force_clean=True)
+    except Exception as exc:
+        init_logging(level=safe_level, write_to_file=False, force_clean=True)
+        st.session_state.write_log_file = False
+        _log.warning("File logging disabled due to runtime filesystem limits: %s", exc)
 
     root = logging.getLogger()
     for handler in list(root.handlers):
@@ -746,13 +827,17 @@ def _render_results(results: Dict[str, Any]) -> None:
 
 def _run_analysis(payload: Dict[str, Any]) -> tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None]:
     _log.info("Routing: %s -> %s (%.3ft)", payload["origin"], payload["destiny"], payload["cargo_t"])
+    db_path = _resolve_runtime_db_path(st.session_state.db_path_str)
+    if str(db_path) != str(st.session_state.db_path_str):
+        _log.warning("DB path '%s' unavailable; using '%s'.", st.session_state.db_path_str, db_path)
+        st.session_state.db_path_str = str(db_path)
 
     geo = build_path_geometry(
         payload["origin"],
         payload["destiny"],
         ors_profile=payload["ors_profile"],
         overwrite_road=payload["overwrite_road"],
-        db_path=Path(str(st.session_state.db_path_str)),
+        db_path=db_path,
     )
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")

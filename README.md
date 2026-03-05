@@ -936,6 +936,23 @@ pip install -r requirements.txt
 
 This installs all runtime and (when present) development dependencies required by the repository.
 
+
+### Streamlit Local Run (Community Cloud Parity)
+
+From the repository root:
+
+```bash
+python -m venv venv
+pip install -r requirements.txt
+streamlit run apps/app_streamlit.py
+```
+
+Minimal smoke check (non-interactive):
+
+```bash
+python -m py_compile apps/app_streamlit.py
+```
+
 ### 5. Configure Environment Variables
 
 Before running tools that call the routing API and write into the SQLite database, export the required environment variable(s) (see the previous **Configuration & Environment Variables** section):
