@@ -944,13 +944,13 @@ From the repository root:
 ```bash
 python -m venv venv
 pip install -r requirements.txt
-streamlit run apps/app_streamlit.py
+streamlit run app/main/page.py
 ```
 
 Minimal smoke check (non-interactive):
 
 ```bash
-python -m py_compile apps/app_streamlit.py
+python -m py_compile app/main/page.py
 ```
 
 ### 5. Configure Environment Variables

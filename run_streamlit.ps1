@@ -1,4 +1,4 @@
-﻿param(
+param(
     [int]$Port = 8501,
     [switch]$Headless,
     [switch]$NoBrowser
@@ -7,14 +7,17 @@
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$AppPath = Join-Path $RepoRoot 'apps\app_streamlit.py'
-$LegacyAppPath = Join-Path $RepoRoot 'streamlit_app.py'
+$AppPath = Join-Path $RepoRoot 'app\main\page.py'
+$LegacyAppPath = Join-Path $RepoRoot 'apps\app_streamlit.py'
+$LegacyRootAppPath = Join-Path $RepoRoot 'streamlit_app.py'
 
 if (-not (Test-Path $AppPath)) {
     if (Test-Path $LegacyAppPath) {
         $AppPath = $LegacyAppPath
+    } elseif (Test-Path $LegacyRootAppPath) {
+        $AppPath = $LegacyRootAppPath
     } else {
-        throw "Streamlit app not found. Expected '$AppPath' (or '$LegacyAppPath')."
+        throw "Streamlit app not found. Expected '$AppPath' (or '$LegacyAppPath' / '$LegacyRootAppPath')."
     }
 }
 
