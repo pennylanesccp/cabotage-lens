@@ -90,7 +90,8 @@
       "max": 19988.700564971754,
       "count": 3172
     },
-    "sample_size": 3172
+    "sample_size": 3172,
+    "teu_capacity": 2800.0
   },
   "container_feeder": {
     "fuel_per_nm": {
@@ -183,7 +184,8 @@
       "max": 39982.06278026906,
       "count": 1406
     },
-    "sample_size": 1406
+    "sample_size": 1406,
+    "teu_capacity": 3800.0
   },
   "container_large": {
     "fuel_per_nm": {
@@ -276,6 +278,7 @@
       "max": 336064939.04361534,
       "count": 3100
     },
-    "sample_size": 3100
+    "sample_size": 3100,
+    "teu_capacity": 5000.0
   }
 }

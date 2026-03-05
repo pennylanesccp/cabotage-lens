@@ -107,9 +107,17 @@ def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
     alloc_share = float(sea.get("cargo_allocation_share") or results.get("inputs", {}).get("cargo_allocation_share") or 0.0)
     fuel_twork = results.get("inputs", {}).get("sea_fuel_g_per_tnm")
     mode = sea.get("sailing_fuel_calc_mode") or results.get("inputs", {}).get("sailing_fuel_calc_mode")
+    alloc_mode = results.get("inputs", {}).get("allocation_mode_used")
+    old_dwt = results.get("inputs", {}).get("share_old_dwt")
+    new_teu = results.get("inputs", {}).get("share_new_teu")
+    ratio = results.get("inputs", {}).get("ratio_new_vs_old")
     print(
         "SEA ALLOCATION: "
+        f"mode={alloc_mode}, "
         f"share={alloc_share:.4f}, "
+        f"old_dwt={(f'{float(old_dwt):.4f}' if isinstance(old_dwt, (int, float)) else 'n/a')}, "
+        f"new_teu={(f'{float(new_teu):.4f}' if isinstance(new_teu, (int, float)) else 'n/a')}, "
+        f"ratio={(f'{float(ratio):.3f}' if isinstance(ratio, (int, float)) else 'n/a')}, "
         f"fuel_g_per_tnm={(f'{float(fuel_twork):.3f}' if isinstance(fuel_twork, (int, float)) else 'n/a')}, "
         f"mode={mode}"
     )
@@ -183,6 +191,18 @@ def main() -> int:
         help="Default tonnes per TEU used when cargo_teu is omitted",
     )
     parser.add_argument(
+        "--allocation-mode",
+        choices=["auto", "teu_share", "dwt_share"],
+        default="auto",
+        help="Cargo allocation mode for maritime fuel attribution",
+    )
+    parser.add_argument(
+        "--allocation-load-factor",
+        type=float,
+        default=0.8,
+        help="Operational TEU load factor for teu_share mode (default from Costa papers: 0.8)",
+    )
+    parser.add_argument(
         "--full-call-mode",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -244,6 +264,8 @@ def main() -> int:
         port_moves_per_call=args.port_moves_per_call,
         cargo_teu=args.cargo_teu,
         t_per_teu_default=float(args.t_per_teu_default),
+        allocation_mode=(None if str(args.allocation_mode).lower() == "auto" else str(args.allocation_mode).lower()),
+        allocation_load_factor=float(args.allocation_load_factor),
         full_call_mode=bool(args.full_call_mode),
         port_ops_scenario=str(args.port_ops_scenario),
     )

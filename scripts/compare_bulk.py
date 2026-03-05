@@ -83,6 +83,8 @@ def run_bulk(
     port_moves_per_call: float | None,
     cargo_teu: float | None,
     t_per_teu_default: float,
+    allocation_mode: str | None,
+    allocation_load_factor: float,
     full_call_mode: bool,
     port_ops_scenario: str,
 ) -> None:
@@ -122,6 +124,8 @@ def run_bulk(
                 port_moves_per_call=port_moves_per_call,
                 cargo_teu=cargo_teu,
                 t_per_teu_default=t_per_teu_default,
+                allocation_mode=allocation_mode,
+                allocation_load_factor=allocation_load_factor,
                 full_call_mode=full_call_mode,
                 port_ops_scenario=port_ops_scenario,
             )
@@ -142,7 +146,11 @@ def run_bulk(
                 "port_ops_scenario": res.get("inputs", {}).get("port_ops_scenario_resolved"),
                 "port_moves_per_call": res.get("inputs", {}).get("port_moves_per_call_resolved"),
                 "cargo_teu_resolved": res.get("inputs", {}).get("cargo_teu_resolved"),
+                "allocation_mode_used": res.get("inputs", {}).get("allocation_mode_used"),
                 "allocation_share": res.get("inputs", {}).get("cargo_allocation_share"),
+                "allocation_share_old_dwt": res.get("inputs", {}).get("share_old_dwt"),
+                "allocation_share_new_teu": res.get("inputs", {}).get("share_new_teu"),
+                "allocation_ratio_new_vs_old": res.get("inputs", {}).get("ratio_new_vs_old"),
                 "road_cost": flat.get("road_fuel_cost_r"),
                 "mm_cost": flat.get("total_fuel_cost_r"),
                 "delta_cost": flat.get("delta_cost_r"),
@@ -214,6 +222,18 @@ def main() -> int:
         help="Default tonnes per TEU used when cargo_teu is omitted",
     )
     parser.add_argument(
+        "--allocation-mode",
+        choices=["auto", "teu_share", "dwt_share"],
+        default="auto",
+        help="Cargo allocation mode for maritime fuel attribution",
+    )
+    parser.add_argument(
+        "--allocation-load-factor",
+        type=float,
+        default=0.8,
+        help="Operational TEU load factor for teu_share mode (default from Costa papers: 0.8)",
+    )
+    parser.add_argument(
         "--full-call-mode",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -271,6 +291,8 @@ def main() -> int:
         port_moves_per_call=args.port_moves_per_call,
         cargo_teu=args.cargo_teu,
         t_per_teu_default=float(args.t_per_teu_default),
+        allocation_mode=(None if str(args.allocation_mode).lower() == "auto" else str(args.allocation_mode).lower()),
+        allocation_load_factor=float(args.allocation_load_factor),
         full_call_mode=bool(args.full_call_mode),
         port_ops_scenario=str(args.port_ops_scenario),
     )

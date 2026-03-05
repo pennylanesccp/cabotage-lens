@@ -38,6 +38,8 @@ class VesselClassEfficiency:
     fuel_per_nm: float
     fuel_g_per_tnm: float | None
     size_proxy_t_median: float | None
+    teu_capacity: float | None
+    lightship_t: float | None
     sample_size: int
     source_path: Path
 
@@ -131,6 +133,8 @@ def resolve_vessel_class_efficiency(
         sample_size = 0
         fuel_g_per_tnm: float | None = None
         size_proxy_t_median: float | None = None
+        teu_capacity: float | None = None
+        lightship_t: float | None = None
         if isinstance(entry, dict):
             try:
                 sample_size = int(entry.get("sample_size") or 0)
@@ -142,6 +146,18 @@ def resolve_vessel_class_efficiency(
             size_proxy = _metric_median(entry, "size_proxy_t")
             if isinstance(size_proxy, (int, float)) and size_proxy > 0:
                 size_proxy_t_median = float(size_proxy)
+            try:
+                cap = float(entry.get("teu_capacity"))
+                if cap > 0:
+                    teu_capacity = cap
+            except (TypeError, ValueError):
+                teu_capacity = None
+            try:
+                light = float(entry.get("lightship_t"))
+                if light > 0:
+                    lightship_t = light
+            except (TypeError, ValueError):
+                lightship_t = None
 
         if class_name != requested:
             _log.warning(
@@ -157,6 +173,8 @@ def resolve_vessel_class_efficiency(
             fuel_per_nm=median,
             fuel_g_per_tnm=fuel_g_per_tnm,
             size_proxy_t_median=size_proxy_t_median,
+            teu_capacity=teu_capacity,
+            lightship_t=lightship_t,
             sample_size=sample_size,
             source_path=source_path,
         )

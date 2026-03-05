@@ -11,6 +11,7 @@ Consumes path geometry and produces cost/emissions comparison between:
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -45,6 +46,7 @@ _MARINE_FUEL_TYPE = "vlsfo"
 _BUNKER_EF_KG_CO2E_PER_KG = float(get_ef_kg_per_kg(_MARINE_FUEL_TYPE))
 _NM_TO_KM = 1.852
 _KG_PER_TONNE = 1000.0
+_DEFAULT_TEU_LOAD_FACTOR = 0.80
 
 
 def _resolve_uf_from_point(point: Dict[str, Any]) -> str:
@@ -62,13 +64,137 @@ def _resolve_uf_from_point(point: Dict[str, Any]) -> str:
     return ""
 
 
-def _cargo_allocation_share(cargo_t: float, size_proxy_t_median: float | None) -> float:
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return min(max(value, lo), hi)
+
+
+def _resolve_cargo_teu(cargo_t: float, cargo_teu: float | None, t_per_teu_default: float) -> int:
+    if cargo_teu is not None:
+        try:
+            teu = float(cargo_teu)
+        except (TypeError, ValueError):
+            teu = 0.0
+        if teu > 0:
+            return max(int(math.ceil(teu)), 1)
+
+    cargo_t = max(float(cargo_t), 0.0)
+    t_per_teu_default = max(float(t_per_teu_default), 0.1)
+    if cargo_t <= 0.0:
+        return 0
+    return max(int(math.ceil(cargo_t / t_per_teu_default)), 1)
+
+
+def _cargo_allocation_share_dwt(cargo_t: float, size_proxy_t_median: float | None) -> float:
     if size_proxy_t_median is None or size_proxy_t_median <= 0:
         return 1.0
     share = float(cargo_t) / float(size_proxy_t_median)
     if share < 0:
         return 0.0
     return min(share, 1.0)
+
+
+def compute_cargo_allocation_share(
+    inputs: Dict[str, Any],
+    vessel_meta: Dict[str, Any],
+) -> tuple[float, Dict[str, Any]]:
+    """
+    Compute cargo allocation share for maritime fuel attribution.
+
+    Supported modes:
+    - dwt_share: legacy mass proxy share (cargo_t / size_proxy_t_median)
+    - teu_share: cargo TEU share over operational loaded TEU capacity
+    """
+    cargo_t = max(float(inputs.get("cargo_t") or 0.0), 0.0)
+    cargo_teu = inputs.get("cargo_teu")
+    t_per_teu_default = max(float(inputs.get("t_per_teu_default") or 14.0), 0.1)
+
+    requested_mode_raw = str(inputs.get("allocation_mode") or "").strip().lower()
+    requested_mode = requested_mode_raw if requested_mode_raw in {"dwt_share", "teu_share"} else None
+
+    load_factor_requested = inputs.get("load_factor")
+    try:
+        load_factor = float(load_factor_requested) if load_factor_requested is not None else _DEFAULT_TEU_LOAD_FACTOR
+    except (TypeError, ValueError):
+        load_factor = _DEFAULT_TEU_LOAD_FACTOR
+    if load_factor <= 0:
+        load_factor = _DEFAULT_TEU_LOAD_FACTOR
+    load_factor = _clamp(float(load_factor), 0.01, 1.0)
+
+    vessel_class = str(vessel_meta.get("vessel_class") or "").strip().lower()
+
+    size_proxy_t_median_raw = vessel_meta.get("size_proxy_t_median")
+    try:
+        size_proxy_t_median = float(size_proxy_t_median_raw) if size_proxy_t_median_raw is not None else None
+    except (TypeError, ValueError):
+        size_proxy_t_median = None
+    if isinstance(size_proxy_t_median, float) and size_proxy_t_median <= 0:
+        size_proxy_t_median = None
+
+    teu_capacity_raw = vessel_meta.get("teu_capacity")
+    try:
+        teu_capacity = float(teu_capacity_raw) if teu_capacity_raw is not None else None
+    except (TypeError, ValueError):
+        teu_capacity = None
+    if isinstance(teu_capacity, float) and teu_capacity <= 0:
+        teu_capacity = None
+
+    lightship_raw = vessel_meta.get("lightship_t")
+    try:
+        lightship_t = float(lightship_raw) if lightship_raw is not None else None
+    except (TypeError, ValueError):
+        lightship_t = None
+    if isinstance(lightship_t, float) and lightship_t <= 0:
+        lightship_t = None
+
+    cargo_teu_resolved = _resolve_cargo_teu(
+        cargo_t=cargo_t,
+        cargo_teu=cargo_teu,
+        t_per_teu_default=t_per_teu_default,
+    )
+
+    share_old_dwt = _cargo_allocation_share_dwt(
+        cargo_t=cargo_t,
+        size_proxy_t_median=size_proxy_t_median,
+    )
+
+    teu_loaded = None
+    share_new_teu = share_old_dwt
+    if teu_capacity is not None and teu_capacity > 0:
+        teu_loaded = teu_capacity * load_factor
+        if teu_loaded > 0:
+            share_new_teu = _clamp(float(cargo_teu_resolved) / float(teu_loaded), 0.0, 1.0)
+
+    default_mode = "teu_share" if vessel_class.startswith("container") else "dwt_share"
+    mode_used = requested_mode or default_mode
+
+    if mode_used == "teu_share" and not (isinstance(teu_loaded, (int, float)) and teu_loaded > 0):
+        mode_used = "dwt_share"
+
+    share_used = share_new_teu if mode_used == "teu_share" else share_old_dwt
+    ratio_new_vs_old = (share_new_teu / share_old_dwt) if share_old_dwt > 0 else None
+
+    debug: Dict[str, Any] = {
+        "allocation_mode_requested": requested_mode,
+        "allocation_mode_default": default_mode,
+        "allocation_mode_used": mode_used,
+        "teu_capacity": teu_capacity,
+        "load_factor": load_factor,
+        "teu_loaded": teu_loaded,
+        "cargo_teu_resolved": int(cargo_teu_resolved),
+        "share_old_dwt": float(share_old_dwt),
+        "share_new_teu": float(share_new_teu),
+        "ratio_new_vs_old": (None if ratio_new_vs_old is None else float(ratio_new_vs_old)),
+    }
+
+    if (
+        lightship_t is not None
+        and cargo_teu_resolved > 0
+        and isinstance(teu_loaded, (int, float))
+        and teu_loaded > 0
+    ):
+        debug["eff_t_per_teu"] = (cargo_t / float(cargo_teu_resolved)) + (lightship_t / float(teu_loaded))
+
+    return float(share_used), debug
 
 
 def evaluate_path(
@@ -86,6 +212,8 @@ def evaluate_path(
     port_moves_per_call: Optional[float] = None,
     cargo_teu: Optional[float] = None,
     t_per_teu_default: float = 14.0,
+    allocation_mode: Optional[str] = None,
+    allocation_load_factor: Optional[float] = None,
     full_call_mode: bool = False,
     port_ops_scenario: str = DEFAULT_PORT_OPS_SCENARIO,
     port_ops_params_path: Optional[Path] = None,
@@ -191,7 +319,21 @@ def evaluate_path(
     sea_dist_nm = sea_dist_km / _NM_TO_KM if sea_dist_km > 0 else 0.0
     bunker_price_ton = float(get_bunker_price(default_price_brl_mt=3500.0))
 
-    cargo_share = _cargo_allocation_share(cargo_t=cargo_t, size_proxy_t_median=vessel_eff.size_proxy_t_median)
+    cargo_share, allocation_debug = compute_cargo_allocation_share(
+        inputs={
+            "cargo_t": cargo_t,
+            "cargo_teu": cargo_teu,
+            "t_per_teu_default": t_per_teu_default,
+            "allocation_mode": allocation_mode,
+            "load_factor": allocation_load_factor,
+        },
+        vessel_meta={
+            "vessel_class": vessel_eff.vessel_class,
+            "size_proxy_t_median": vessel_eff.size_proxy_t_median,
+            "teu_capacity": vessel_eff.teu_capacity,
+            "lightship_t": vessel_eff.lightship_t,
+        },
+    )
 
     sailing_fuel_mode = "transport_work_intensity"
     fuel_g_per_tnm = vessel_eff.fuel_g_per_tnm
@@ -271,6 +413,15 @@ def evaluate_path(
         "size_proxy_t_median": (
             None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
         ),
+        "teu_capacity": allocation_debug.get("teu_capacity"),
+        "allocation_mode_used": allocation_debug.get("allocation_mode_used"),
+        "load_factor": allocation_debug.get("load_factor"),
+        "teu_loaded": allocation_debug.get("teu_loaded"),
+        "cargo_teu_resolved": allocation_debug.get("cargo_teu_resolved"),
+        "share_old_dwt": allocation_debug.get("share_old_dwt"),
+        "share_new_teu": allocation_debug.get("share_new_teu"),
+        "ratio_new_vs_old": allocation_debug.get("ratio_new_vs_old"),
+        "eff_t_per_teu": allocation_debug.get("eff_t_per_teu"),
         "cargo_allocation_share": float(cargo_share),
         "sailing_fuel_calc_mode": sailing_fuel_mode,
         "fuel_kg_sailing": float(sea_fuel_sailing_kg),
@@ -330,6 +481,15 @@ def evaluate_path(
             "size_proxy_t_median": (
                 None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
             ),
+            "teu_capacity": allocation_debug.get("teu_capacity"),
+            "allocation_mode_requested": allocation_debug.get("allocation_mode_requested"),
+            "allocation_mode_used": allocation_debug.get("allocation_mode_used"),
+            "allocation_load_factor": allocation_debug.get("load_factor"),
+            "teu_loaded": allocation_debug.get("teu_loaded"),
+            "share_old_dwt": allocation_debug.get("share_old_dwt"),
+            "share_new_teu": allocation_debug.get("share_new_teu"),
+            "ratio_new_vs_old": allocation_debug.get("ratio_new_vs_old"),
+            "eff_t_per_teu": allocation_debug.get("eff_t_per_teu"),
             "cargo_allocation_share": float(cargo_share),
             "sailing_fuel_calc_mode": sailing_fuel_mode,
             "vessel_sample_size": int(vessel_eff.sample_size),
@@ -367,7 +527,8 @@ def evaluate_path(
                 if not isinstance(port_ops_payload, dict)
                 else float(port_ops_payload.get("port_moves_per_call") or 0.0)
             ),
-            "cargo_teu_resolved": (
+            "cargo_teu_resolved": int(allocation_debug.get("cargo_teu_resolved") or 0),
+            "cargo_teu_resolved_port_ops": (
                 None
                 if not isinstance(port_ops_payload, dict)
                 else int(port_ops_payload.get("cargo_teu_resolved") or 0)

@@ -47,6 +47,15 @@ CLASS_BINS = (
     ("container_large", 40000.0, float("inf")),
 )
 
+# Nominal TEU capacities used by runtime TEU-share allocation.
+# Calibrated from Costa et al. (2024) cabotage service operational TEU values
+# and the 80% operational-capacity assumption.
+CLASS_NOMINAL_TEU_CAPACITY = {
+    "container_small": 2800.0,
+    "container_feeder": 3800.0,
+    "container_large": 5000.0,
+}
+
 # EMEP/EEA 2023 ratios and load factors used for first-order hoteling derivation.
 CRUISE_ME_LOAD = 0.80
 CRUISE_AE_LOAD = 0.30
@@ -384,6 +393,7 @@ def _aggregate_efficiency_by_class(df: pd.DataFrame) -> dict[str, dict[str, Any]
             "fuel_g_per_tnm": _stats_robust(subset["fuel_g_per_tnm"]),
             "co2_per_nm": _stats_robust(subset["co2_per_nm"]),
             "size_proxy_t": _stats_robust(subset["size_proxy_t"]),
+            "teu_capacity": float(CLASS_NOMINAL_TEU_CAPACITY.get(class_name, 0.0) or 0.0),
             "sample_size": int(subset.shape[0]),
         }
     return payload

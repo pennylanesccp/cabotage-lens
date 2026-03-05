@@ -66,6 +66,8 @@ DEFAULTS: Dict[str, Any] = {
     "port_moves_per_call_input": 0.0,
     "port_ops_scenario": DEFAULT_PORT_OPS_SCENARIO,
     "t_per_teu_default": 14.0,
+    "allocation_mode": "auto",
+    "allocation_load_factor": 0.8,
     "full_call_mode": False,
     "map_style": "Voyager",
     "map_show_first_last": True,
@@ -517,12 +519,16 @@ def _build_map_deck(geo: Dict[str, Any]) -> pdk.Deck:
 def _scenario_payload() -> Dict[str, Any]:
     cargo_teu_value = float(st.session_state.cargo_teu_input)
     t_per_teu_default = max(float(st.session_state.t_per_teu_default), 0.1)
+    allocation_mode = str(st.session_state.allocation_mode).strip().lower()
+    allocation_load_factor = min(max(float(st.session_state.allocation_load_factor), 0.01), 1.0)
     return {
         "origin": st.session_state.origin.strip(),
         "destiny": st.session_state.destiny.strip(),
         "cargo_t": float(st.session_state.cargo_t),
         "cargo_teu": None if cargo_teu_value <= 0.0 else cargo_teu_value,
         "t_per_teu_default": t_per_teu_default,
+        "allocation_mode": None if allocation_mode == "auto" else allocation_mode,
+        "allocation_load_factor": allocation_load_factor,
         "truck_key": str(st.session_state.truck_key),
         "ors_profile": str(st.session_state.profile),
         "overwrite_road": bool(st.session_state.overwrite_road),
@@ -568,6 +574,7 @@ def _render_header(version: str, payload: Dict[str, Any]) -> None:
                 <span class='scenario-chip'><b>Cargo:</b> {payload['cargo_t']:.1f} t</span>
                 <span class='scenario-chip'><b>Cargo:</b> {cargo_teu_resolved} TEU</span>
                 <span class='scenario-chip'><b>Vessel:</b> {payload['vessel_class']}</span>
+                <span class='scenario-chip'><b>Allocation:</b> {payload['allocation_mode'] or 'auto(container->teu_share)'}</span>
                 <span class='scenario-chip'><b>Hoteling:</b> {'ON' if payload['include_hoteling'] else 'OFF'}</span>
                 <span class='scenario-chip'><b>Port ops:</b> {'ON' if payload['include_port_ops'] else 'OFF'}</span>
             </div>
@@ -698,6 +705,10 @@ def _render_results(results: Dict[str, Any]) -> None:
     sample_size = int(inputs.get("vessel_sample_size") or 0)
     cargo_share = float(inputs.get("cargo_allocation_share") or 0.0)
     cargo_teu_resolved = int(inputs.get("cargo_teu_resolved") or 0)
+    allocation_mode_used = str(inputs.get("allocation_mode_used") or "")
+    share_old_dwt = inputs.get("share_old_dwt")
+    share_new_teu = inputs.get("share_new_teu")
+    ratio_new_vs_old = inputs.get("ratio_new_vs_old")
 
     if vessel_class and sea_fuel_nm:
         st.caption(
@@ -705,7 +716,11 @@ def _render_results(results: Dict[str, Any]) -> None:
         )
     st.caption(
         "Cargo allocation: "
+        f"mode={allocation_mode_used or 'n/a'} | "
         f"share={cargo_share:.4f} | "
+        f"old_dwt={(f'{float(share_old_dwt):.4f}' if isinstance(share_old_dwt, (int, float)) else 'n/a')} | "
+        f"new_teu={(f'{float(share_new_teu):.4f}' if isinstance(share_new_teu, (int, float)) else 'n/a')} | "
+        f"ratio={(f'{float(ratio_new_vs_old):.3f}' if isinstance(ratio_new_vs_old, (int, float)) else 'n/a')} | "
         f"fuel_g_per_tnm={(f'{float(sea_fuel_twork):.3f}' if isinstance(sea_fuel_twork, (int, float)) else 'n/a')} | "
         f"resolved cargo={cargo_teu_resolved} TEU"
     )
@@ -756,6 +771,8 @@ def _run_analysis(payload: Dict[str, Any]) -> tuple[Dict[str, Any] | None, Dict[
         port_moves_per_call=payload["port_moves_per_call"],
         cargo_teu=payload["cargo_teu"],
         t_per_teu_default=payload["t_per_teu_default"],
+        allocation_mode=payload["allocation_mode"],
+        allocation_load_factor=payload["allocation_load_factor"],
         full_call_mode=payload["full_call_mode"],
         port_ops_scenario=payload["port_ops_scenario"],
     )
@@ -838,6 +855,14 @@ def main() -> None:
     if st.session_state.vessel_class not in class_options:
         st.session_state.vessel_class = DEFAULT_VESSEL_CLASS
 
+    allocation_mode_options = ["auto", "teu_share", "dwt_share"]
+    if st.session_state.allocation_mode not in allocation_mode_options:
+        st.session_state.allocation_mode = "auto"
+    try:
+        st.session_state.allocation_load_factor = min(max(float(st.session_state.allocation_load_factor), 0.01), 1.0)
+    except (TypeError, ValueError):
+        st.session_state.allocation_load_factor = 0.8
+
     port_ops_scenarios = list_port_ops_scenarios()
     if st.session_state.port_ops_scenario not in port_ops_scenarios:
         st.session_state.port_ops_scenario = (
@@ -881,6 +906,21 @@ def main() -> None:
                 options=class_options,
                 key="vessel_class",
                 help="MRV class median fuel intensity is used for sea sailing.",
+            )
+            st.selectbox(
+                "Allocation mode",
+                options=["auto", "teu_share", "dwt_share"],
+                key="allocation_mode",
+                help="auto defaults to teu_share for container classes and keeps dwt_share as fallback.",
+            )
+            st.number_input(
+                "TEU load factor",
+                min_value=0.01,
+                max_value=1.0,
+                step=0.05,
+                key="allocation_load_factor",
+                help="Default from Costa papers is 0.8 (80% of nominal TEU capacity).",
+                disabled=(st.session_state.allocation_mode == "dwt_share"),
             )
 
             st.markdown("##### Port")
