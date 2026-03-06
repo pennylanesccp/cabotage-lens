@@ -31,8 +31,16 @@ def fmt_currency_brl(value: Any) -> str:
     return f"R$ {safe_float(value):,.2f}"
 
 
+def fmt_currency_brl_rounded(value: Any) -> str:
+    return f"R$ {safe_float(value):,.0f}"
+
+
 def fmt_emissions_kg(value: Any) -> str:
     return f"{safe_float(value):,.1f} kg CO2e"
+
+
+def fmt_distance_km_rounded(value: Any) -> str:
+    return f"{safe_float(value):,.0f} km"
 
 
 def _sig_fig_decimals(value: float, sig_figs: int = 3) -> int:

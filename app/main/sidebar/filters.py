@@ -8,7 +8,7 @@ from typing import List
 import streamlit as st
 
 from modules.addressing.resolver import resolve_point_null_safe
-from modules.infra.database_manager import db_session, list_place_names
+from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, list_place_names
 from modules.infra.log_manager import get_logger
 from modules.road.router import ORSClient, ORSConfig
 
@@ -46,12 +46,22 @@ def _resolution_executor() -> ThreadPoolExecutor:
 
 
 def _db_route_place_names(db_path_str: str) -> list[str]:
-    try:
-        with db_session(Path(db_path_str)) as conn:
-            return [str(value).strip() for value in list_place_names(conn, limit=100_000) if str(value).strip()]
-    except Exception as exc:
-        _log.warning("Failed to list route place names from %s: %s", db_path_str, exc)
-        return []
+    candidate_paths = [Path(db_path_str)]
+    default_path = Path(DEFAULT_DB_PATH)
+    if default_path not in candidate_paths:
+        candidate_paths.append(default_path)
+
+    collected: set[str] = set()
+    for candidate_path in candidate_paths:
+        try:
+            with db_session(candidate_path) as conn:
+                for value in list_place_names(conn, limit=100_000):
+                    value_clean = str(value).strip()
+                    if value_clean:
+                        collected.add(value_clean)
+        except Exception as exc:
+            _log.warning("Failed to list route place names from %s: %s", candidate_path, exc)
+    return sorted(collected, key=str.casefold)
 
 
 def _resolve_custom_location_label(value: str) -> tuple[str | None, str | None]:
@@ -148,10 +158,7 @@ def _route_endpoint_options(db_path_str: str, current_values: list[str]) -> list
         if value_clean:
             options.add(value_clean)
 
-    for value in _db_route_place_names(db_path_str):
-        value_clean = str(value).strip()
-        if value_clean:
-            options.add(value_clean)
+    options.update(_db_route_place_names(db_path_str))
 
     return sorted(options, key=str.casefold)
 
@@ -174,13 +181,10 @@ def _on_location_change(field_name: str, options: list[str]) -> None:
 def _render_location_field(field_name: str, label: str, options: list[str]) -> None:
     loading = bool(st.session_state.get(_loading_key(field_name), False))
     loading_attr = "true" if loading else "false"
-    st.markdown(
-        (
-            "<span class='location-field-marker' "
-            f"data-field='{field_name}' "
-            f"data-loading='{loading_attr}'></span>"
-        ),
-        unsafe_allow_html=True,
+    st.html(
+        "<span class='location-field-marker' "
+        f"data-field='{field_name}' "
+        f"data-loading='{loading_attr}'></span>"
     )
     st.selectbox(
         label,

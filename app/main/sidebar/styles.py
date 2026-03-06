@@ -24,11 +24,16 @@ def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool 
                 opacity: 0 !important;
                 visibility: hidden !important;
             }}
+            {container_selector} div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:last-child {{
+                opacity: 0 !important;
+                visibility: hidden !important;
+            }}
             {container_selector} div[data-testid="stSelectbox"] div[data-baseweb="select"]::after {{
                 content: "";
                 position: absolute;
                 top: 50%;
                 right: 0.85rem;
+                z-index: 2;
                 width: 0.95rem;
                 height: 0.95rem;
                 margin-top: -0.475rem;
@@ -47,6 +52,9 @@ def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool 
             @keyframes sidebar-field-spinner {{
                 from {{ transform: rotate(0deg); }}
                 to {{ transform: rotate(360deg); }}
+            }}
+            section[data-testid="stSidebar"] div[data-testid="element-container"]:has(.location-field-marker) {{
+                display: none !important;
             }}
             .location-field-marker {{
                 display: none;

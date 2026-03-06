@@ -42,7 +42,7 @@ BASE_CSS = """
     }
     .summary-groups {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.9rem;
         margin: 0.55rem 0 0.9rem 0;
     }
@@ -71,36 +71,17 @@ BASE_CSS = """
         text-transform: uppercase;
     }
     .summary-card h3 {
-        margin: 0 0 0.8rem 0;
+        margin: 0 0 0.85rem 0;
         color: #f8fafc;
-        font-size: 1.08rem;
+        font-size: 1rem;
         line-height: 1.2;
-    }
-    .summary-card__metrics {
-        display: grid;
-        gap: 0.55rem;
-    }
-    .summary-card__row {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 1rem;
-        padding-top: 0.45rem;
-        border-top: 1px solid rgba(148, 163, 184, 0.16);
-    }
-    .summary-card__row:first-child {
-        padding-top: 0;
-        border-top: 0;
-    }
-    .summary-card__label {
-        color: #cbd5e1;
-        font-size: 0.86rem;
     }
     .summary-card__value {
         color: #f8fafc;
-        font-size: 1rem;
-        font-weight: 600;
-        text-align: right;
+        font-size: 1.22rem;
+        font-weight: 700;
+        line-height: 1.15;
+        margin: 0;
     }
     .map-shell {
         min-height: 560px;
@@ -149,7 +130,12 @@ BASE_CSS = """
     .details-placeholder strong {
         color: #f8fafc;
     }
-    @media (max-width: 900px) {
+    @media (max-width: 1100px) {
+        .summary-groups {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 720px) {
         .summary-groups {
             grid-template-columns: 1fr;
         }
