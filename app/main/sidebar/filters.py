@@ -7,6 +7,7 @@ from typing import List
 
 import streamlit as st
 
+from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, list_place_names
 from modules.infra.log_manager import get_logger
@@ -18,6 +19,10 @@ from app.main.utils.formatters import clean_place_label
 _log = get_logger("streamlit_app")
 _LOCATION_FIELDS: tuple[tuple[str, str], ...] = (("origin", "Origin"), ("destiny", "Destination"))
 _POLL_SECONDS = 0.35
+
+
+def _is_coordinate_label(value: str) -> bool:
+    return parse_lat_lon_string(str(value).strip()) is not None
 
 
 def _state_key(field_name: str, suffix: str) -> str:
@@ -57,7 +62,7 @@ def _db_route_place_names(db_path_str: str) -> list[str]:
             with db_session(candidate_path) as conn:
                 for value in list_place_names(conn, limit=100_000):
                     value_clean = str(value).strip()
-                    if value_clean:
+                    if value_clean and not _is_coordinate_label(value_clean):
                         collected.add(value_clean)
         except Exception as exc:
             _log.warning("Failed to list route place names from %s: %s", candidate_path, exc)
@@ -155,7 +160,7 @@ def _route_endpoint_options(db_path_str: str, current_values: list[str]) -> list
     options: set[str] = set()
     for value in current_values:
         value_clean = str(value).strip()
-        if value_clean:
+        if value_clean and not _is_coordinate_label(value_clean):
             options.add(value_clean)
 
     options.update(_db_route_place_names(db_path_str))
@@ -179,13 +184,6 @@ def _on_location_change(field_name: str, options: list[str]) -> None:
 
 
 def _render_location_field(field_name: str, label: str, options: list[str]) -> None:
-    loading = bool(st.session_state.get(_loading_key(field_name), False))
-    loading_attr = "true" if loading else "false"
-    st.html(
-        "<span class='location-field-marker' "
-        f"data-field='{field_name}' "
-        f"data-loading='{loading_attr}'></span>"
-    )
     st.selectbox(
         label,
         options=options,

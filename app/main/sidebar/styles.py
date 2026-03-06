@@ -9,12 +9,7 @@ def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool 
         if not is_loading:
             continue
 
-        container_selector = (
-            "section[data-testid=\"stSidebar\"] "
-            "div[data-testid=\"element-container\"]"
-            f":has(.location-field-marker[data-field=\"{field_name}\"][data-loading=\"true\"])"
-            " + div[data-testid=\"element-container\"]"
-        )
+        container_selector = f"section[data-testid=\"stSidebar\"] .st-key-{field_name}"
         loading_rules.append(
             f"""
             {container_selector} div[data-testid="stSelectbox"] div[data-baseweb="select"] {{
@@ -52,20 +47,6 @@ def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool 
             @keyframes sidebar-field-spinner {{
                 from {{ transform: rotate(0deg); }}
                 to {{ transform: rotate(360deg); }}
-            }}
-            section[data-testid="stSidebar"] div[data-testid="stSelectbox"],
-            section[data-testid="stSidebar"] div[data-testid="stNumberInput"] {{
-                margin: 0 0 0.9rem 0 !important;
-            }}
-            section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"] {{
-                margin: 0 0 0.38rem 0 !important;
-                padding: 0 !important;
-            }}
-            section[data-testid="stSidebar"] div[data-testid="element-container"]:has(.location-field-marker) {{
-                display: none !important;
-            }}
-            .location-field-marker {{
-                display: none;
             }}
             {''.join(loading_rules)}
         </style>
