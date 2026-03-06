@@ -143,7 +143,6 @@ def _any_location_loading() -> bool:
 
 def _route_endpoint_options(db_path_str: str, current_values: list[str]) -> list[str]:
     options: set[str] = set()
-
     for value in current_values:
         value_clean = str(value).strip()
         if value_clean:
@@ -174,12 +173,13 @@ def _on_location_change(field_name: str, options: list[str]) -> None:
 
 def _render_location_field(field_name: str, label: str, options: list[str]) -> None:
     loading = bool(st.session_state.get(_loading_key(field_name), False))
+    loading_attr = "true" if loading else "false"
     with st.container():
         st.markdown(
             (
                 "<span class='location-field-marker' "
                 f"data-field='{field_name}' "
-                f"data-loading='{\"true\" if loading else \"false\"}'></span>"
+                f"data-loading='{loading_attr}'></span>"
             ),
             unsafe_allow_html=True,
         )
