@@ -98,24 +98,32 @@ Local development conventions:
 
 ## Versioning (pyproject.toml) - REQUIRED
 
-Whenever you make a change that affects shipped code or behavior, update `[project].version` in `pyproject.toml` using SemVer: `MAJOR.MINOR.PATCH`.
+Whenever you make a change that affects shipped code or behavior, update `[project].version` in `pyproject.toml` using this repo's versioning scheme: `RELEASE.MAJOR.MINOR`.
 
-Bump rules (default to smallest meaningful bump):
+Version slot meanings:
 
-- PATCH (x.y.Z): bug fixes, refactors, performance improvements without behavior break.
-- MINOR (x.Y.z): backward-compatible feature additions.
-- MAJOR (X.y.z): breaking changes.
+- `RELEASE` (`X.y.z`)
+  - Reserved for release line changes only.
+  - This repository is still on release line `1`.
+  - Do not change the first slot unless the user explicitly asks for a release bump.
+- `MAJOR` (`x.Y.z`)
+  - Use for major changes in shipped behavior.
+  - Use when the change is large, cross-cutting, or intentionally significant.
+- `MINOR` (`x.y.Z`)
+  - Use for minor shipped changes.
+  - This is the default bump for fixes, refactors, UI tweaks, and small features.
 
 Mapping to Conventional Commits:
 
-- `fix(...)`, `perf(...)`, `refactor(...)` -> PATCH
-- `feat(...)` -> MINOR
-- `!` in subject or `BREAKING CHANGE:` footer -> MAJOR
+- `fix(...)`, `perf(...)`, `refactor(...)` -> bump `MINOR`
+- `feat(...)` -> bump `MINOR` by default, or `MAJOR` if the feature is substantial
+- `!` in subject or `BREAKING CHANGE:` footer -> bump `MAJOR`, not `RELEASE`
 - `docs(...)`, `test(...)`, `chore(...)` -> no bump unless runtime behavior changed
 
 Notes:
 
-- If uncertain, bump PATCH.
+- If uncertain, bump `MINOR`.
+- Do not refer to this repo's versioning as SemVer in future edits.
 - Keep mirrored version fields consistent if they exist.
 - Mention version bump in commit body bullets when files changed.
 
