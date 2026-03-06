@@ -12,6 +12,7 @@ _log = get_logger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _PORTS_JSON_PATH = _REPO_ROOT / "data" / "processed" / "cabotage_data" / "ports_br.json"
+BELEM_PORT_KEY = normalize_port_name("Porto de Belem")
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,11 @@ def load_master_route_ports() -> tuple[MarineRoutePort, ...]:
     return route_ports
 
 
+@lru_cache(maxsize=1)
+def load_master_route_indices() -> dict[str, int]:
+    return {route_port.key: idx for idx, route_port in enumerate(load_master_route_ports())}
+
+
 def resolve_master_route_slice(
     *,
     origin_port_name: str,
@@ -117,6 +123,22 @@ def resolve_master_route_slice(
     selected[0] = MarineRoutePort(name=selected[0].name, key=selected[0].key, latlon=_as_latlon(origin_latlon))
     selected[-1] = MarineRoutePort(name=selected[-1].name, key=selected[-1].key, latlon=_as_latlon(dest_latlon))
     return selected
+
+
+def get_master_route_index(port_key: str) -> int | None:
+    return load_master_route_indices().get(normalize_port_name(port_key))
+
+
+def is_river_leg(
+    start_port_key: str,
+    end_port_key: str,
+) -> bool:
+    belem_idx = get_master_route_index(BELEM_PORT_KEY)
+    start_idx = get_master_route_index(start_port_key)
+    end_idx = get_master_route_index(end_port_key)
+    if belem_idx is None or start_idx is None or end_idx is None:
+        return False
+    return min(start_idx, end_idx) >= belem_idx
 
 
 def _build_record_lookups(records: list[dict[str, object]]) -> tuple[dict[str, dict[str, object]], dict[str, str]]:

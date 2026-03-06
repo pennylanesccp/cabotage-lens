@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import math
 from typing import Sequence
 
-from app.main.map.routing.geometry_utils import EPS, offset_latlon_km
+from app.main.map.routing.geometry_utils import EPS, offset_latlon_km, segment_perpendicular_unit
 from app.main.map.routing.water_validation import distance_to_water_km, is_water_point
 from modules.infra.log_manager import get_logger
 
@@ -76,7 +75,7 @@ def correct_point_to_water(
     if is_water_point(point_latlon, reference_path, tolerance_km=tolerance_km):
         return point_latlon
 
-    unit_east, unit_north = _segment_perpendicular_unit(leg_start_latlon, leg_end_latlon)
+    unit_east, unit_north = segment_perpendicular_unit(leg_start_latlon, leg_end_latlon)
     best_candidate = point_latlon
     best_distance = distance_to_water_km(point_latlon, reference_path)
     max_steps = max(int(round(float(max_search_km) / max(float(step_km), EPS))), 1)
@@ -118,21 +117,3 @@ def correct_point_to_water(
         point_latlon[1],
     )
     return best_candidate
-
-
-def _segment_perpendicular_unit(
-    start_latlon: tuple[float, float],
-    end_latlon: tuple[float, float],
-) -> tuple[float, float]:
-    mean_lat = math.radians((start_latlon[0] + end_latlon[0]) / 2.0)
-    cos_lat = max(abs(math.cos(mean_lat)), 0.01)
-
-    dx = (end_latlon[1] - start_latlon[1]) * 111.320 * cos_lat
-    dy = (end_latlon[0] - start_latlon[0]) * 110.574
-    length = math.hypot(dx, dy)
-    if length <= EPS:
-        return 1.0, 0.0
-
-    unit_east = -dy / length
-    unit_north = dx / length
-    return unit_east, unit_north

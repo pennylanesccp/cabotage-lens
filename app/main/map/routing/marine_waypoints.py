@@ -16,7 +16,6 @@ def _repair_port_text(name: str) -> str:
     text = str(name or "").strip()
     if not text:
         return ""
-
     if any(marker in text for marker in ("Ã", "Â", "â", "¢", "€", "™")):
         try:
             repaired = text.encode("latin1").decode("utf-8")

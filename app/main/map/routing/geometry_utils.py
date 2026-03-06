@@ -120,6 +120,36 @@ def offset_latlon_km(lat: float, lon: float, *, east_km: float = 0.0, north_km: 
     return lat_out, lon_out
 
 
+def latlon_delta_km(
+    origin_latlon: tuple[float, float],
+    target_latlon: tuple[float, float],
+) -> tuple[float, float]:
+    mean_lat = math.radians((origin_latlon[0] + target_latlon[0]) / 2.0)
+    cos_lat = max(abs(math.cos(mean_lat)), 0.01)
+
+    east_km = (float(target_latlon[1]) - float(origin_latlon[1])) * 111.320 * cos_lat
+    north_km = (float(target_latlon[0]) - float(origin_latlon[0])) * KM_PER_DEG_LAT
+    return east_km, north_km
+
+
+def segment_perpendicular_unit(
+    start_latlon: tuple[float, float],
+    end_latlon: tuple[float, float],
+) -> tuple[float, float]:
+    mean_lat = math.radians((start_latlon[0] + end_latlon[0]) / 2.0)
+    cos_lat = max(abs(math.cos(mean_lat)), 0.01)
+
+    dx = (end_latlon[1] - start_latlon[1]) * 111.320 * cos_lat
+    dy = (end_latlon[0] - start_latlon[0]) * KM_PER_DEG_LAT
+    length = math.hypot(dx, dy)
+    if length <= EPS:
+        return 1.0, 0.0
+
+    unit_east = -dy / length
+    unit_north = dx / length
+    return unit_east, unit_north
+
+
 def point_to_segment_distance_km(
     point_latlon: tuple[float, float],
     start_latlon: tuple[float, float],
