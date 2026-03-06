@@ -11,5 +11,5 @@ def render_run_button() -> bool:
     if run_disabled:
         st.caption("Fill origin, destination, and cargo above zero.")
 
-    return st.button("Run analysis", type="primary", use_container_width=True, disabled=run_disabled)
+    return st.button("Run analysis", type="primary", width="stretch", disabled=run_disabled)
 

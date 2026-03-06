@@ -101,7 +101,7 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
 
 def render_breakdown(results: Mapping[str, Any]) -> None:
     st.markdown("**Total summary**")
-    st.dataframe(_summary_table(results), hide_index=True, use_container_width=True)
+    st.dataframe(_summary_table(results), hide_index=True, width="stretch")
     st.markdown("**Multimodal leg breakdown**")
-    st.dataframe(_legs_table(results), hide_index=True, use_container_width=True)
+    st.dataframe(_legs_table(results), hide_index=True, width="stretch")
 

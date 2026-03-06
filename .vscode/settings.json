@@ -8,7 +8,6 @@
     "files.exclude": {
         "**/terraform.tfvars.example": true,
         "**/.terraform*": true,
-        ".streamlit": true,
         "*.egg*": true,
         "**/__pycache__": true,
         "**/*venv*": true,
