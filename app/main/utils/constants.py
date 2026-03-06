@@ -46,7 +46,7 @@ DEFAULTS: Dict[str, Any] = {
     "map_show_ports": True,
     "map_show_labels": True,
     "map_sea_path_style": "Coastal lane (default)",
-    "map_sea_n_points": 200,
+    "map_sea_n_points": 100,
     "map_sea_curvature": 0.25,
     "map_sea_smooth_window": 7,
     "map_pitch": 30,

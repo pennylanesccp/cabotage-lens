@@ -46,7 +46,7 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.checkbox("Show ports", key="map_show_ports")
     st.checkbox("Show labels", key="map_show_labels")
     st.selectbox("Sea path style", options=["Coastal lane (default)", "Arc (pretty)"], key="map_sea_path_style")
-    st.slider("Sea lane points", min_value=50, max_value=400, step=10, key="map_sea_n_points", disabled=not bool(st.session_state.map_show_sea))
+    st.slider("Sea points per segment", min_value=50, max_value=400, step=10, key="map_sea_n_points", disabled=not bool(st.session_state.map_show_sea))
     st.slider(
         "Sea arc curvature",
         min_value=0.0,

@@ -5,6 +5,7 @@ from bisect import bisect_right
 from typing import Iterable, Sequence
 
 EPS = 1e-12
+KM_PER_DEG_LAT = 110.574
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -110,3 +111,42 @@ def smooth_lonlat_path(path_lonlat: Sequence[Sequence[float]], smooth_window: in
     smoothed[0] = [float(path_lonlat[0][0]), float(path_lonlat[0][1])]
     smoothed[-1] = [float(path_lonlat[-1][0]), float(path_lonlat[-1][1])]
     return smoothed
+
+
+def offset_latlon_km(lat: float, lon: float, *, east_km: float = 0.0, north_km: float = 0.0) -> tuple[float, float]:
+    cos_lat = max(abs(math.cos(math.radians(lat))), 0.01)
+    lat_out = float(lat) + (float(north_km) / KM_PER_DEG_LAT)
+    lon_out = float(lon) + (float(east_km) / (111.320 * cos_lat))
+    return lat_out, lon_out
+
+
+def point_to_segment_distance_km(
+    point_latlon: tuple[float, float],
+    start_latlon: tuple[float, float],
+    end_latlon: tuple[float, float],
+) -> float:
+    point_lat, point_lon = point_latlon
+    start_lat, start_lon = start_latlon
+    end_lat, end_lon = end_latlon
+
+    mean_lat = (point_lat + start_lat + end_lat) / 3.0
+    cos_lat = max(abs(math.cos(math.radians(mean_lat))), 0.01)
+
+    px = point_lon * cos_lat * 111.320
+    py = point_lat * KM_PER_DEG_LAT
+    ax = start_lon * cos_lat * 111.320
+    ay = start_lat * KM_PER_DEG_LAT
+    bx = end_lon * cos_lat * 111.320
+    by = end_lat * KM_PER_DEG_LAT
+
+    dx = bx - ax
+    dy = by - ay
+    seg_len_sq = (dx * dx) + (dy * dy)
+    if seg_len_sq <= EPS:
+        return math.hypot(px - ax, py - ay)
+
+    t = ((px - ax) * dx + (py - ay) * dy) / seg_len_sq
+    t = max(0.0, min(1.0, t))
+    proj_x = ax + (t * dx)
+    proj_y = ay + (t * dy)
+    return math.hypot(px - proj_x, py - proj_y)

@@ -40,7 +40,7 @@ def build_route_rows(
         dest_port_name=port_destiny_name,
         origin_latlon=po_coords,
         dest_latlon=pd_coords,
-        n_points=int(state.get("map_sea_n_points", 200)),
+        n_points=int(state.get("map_sea_n_points", 100)),
         smooth_window=int(state.get("map_sea_smooth_window", 7)),
         style=str(state.get("map_sea_path_style", "Coastal lane (default)")),
         curvature=float(state.get("map_sea_curvature", 0.25)),
