@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-# apps/app_streamlit.py
+# app/app_streamlit.py
 # -*- coding: utf-8 -*-
 
-"""Legacy compatibility wrapper for app/app_streamlit.py."""
+"""Streamlit page entrypoint."""
 
 from __future__ import annotations
 
-from app.app_streamlit import main
+from app.main.page import main
 
 
 if __name__ == "__main__":
     main()
-
