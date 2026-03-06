@@ -61,9 +61,9 @@ This section is the navigation index for all human-readable documentation and hi
 
 ### Source Code & Supporting Material
 
-* `apps/`  
-  * User-facing CLIs / “apps” that orchestrate the full pipeline (e.g. multimodal comparisons, heatmaps).  
-  * Each app is a thin wrapper that calls into the library code in `modules/`.
+* `app/`  
+  * User-facing Streamlit entrypoint and UI package.  
+  * Contains `app/app_streamlit.py` plus the modular page implementation under `app/main/`.
 
 * `scripts/`  
   * Lower-level maintenance / utility scripts (e.g. bulk route generation, data refreshers).  
@@ -71,14 +71,14 @@ This section is the navigation index for all human-readable documentation and hi
 
 * `modules/`  
   * Main Python library for this project.  
-  * Contains routing, cabotage, fuel/emissions, cost, persistence, and logging components used by both `apps/` and `scripts/`.
+  * Contains routing, cabotage, fuel/emissions, cost, persistence, and logging components used by both `app/` and `scripts/`.
 
 * `calcs/`  
   * Validation and “scratch” calculations, sanity checks, and calibration helpers.  
   * Useful when tracing how a given parameter or factor was derived numerically.
 
 * `tests/`  
-  * Automated tests that validate core behavior of modules and CLI apps.  
+  * Automated tests that validate core behavior of modules and the main app.  
   * Use these as the main reference for expected inputs/outputs when modifying internals.
 
 ### Data, Database and Logs
@@ -172,7 +172,7 @@ This project is a pure-Python, CLI-first toolkit built for reproducible freight 
   * Linters / formatters (if configured) are run locally; see project-level config files when present.
 
 * **Logging & Diagnostics**  
-  * Unified logging based on Python’s `logging` module, with module-level loggers for `apps/`, `scripts/` and `modules/`.  
+  * Unified logging based on Python’s `logging` module, with module-level loggers for `app/`, `scripts/` and `modules/`.  
   * Log files are written to `logs/` and are the main tool for diagnosing routing issues, database behavior and modeling errors.
 
 ---
@@ -186,12 +186,12 @@ At a high level, this repository is organized as a **library-first** Python proj
 ### Layered Design
 
 1. **CLI / User Interface Layer**
-   * **`apps/`**  
-     * High-level entry points for running full comparisons (e.g. road-only vs multimodal for a set of O–D pairs).  
-     * Each app is a small CLI wrapper that parses arguments, loads configuration, and calls into `modules/`.
+   * **`app/`**  
+     * User-facing Streamlit entrypoint plus modular UI components.  
+     * Keeps the presentation layer thin while delegating calculations and persistence to `modules/`.
    * **`scripts/`**  
      * Lower-level utilities (e.g. bulk road-leg precomputation, cache maintenance, one-off experiments).  
-     * More “power-user” oriented than `apps/`, but still rely on the same core modules.
+     * More “power-user” oriented than `app/`, but still rely on the same core modules.
 
 2. **Domain Logic Layer (`modules/`)**
    * **Core / shared components**  
@@ -215,7 +215,7 @@ At a high level, this repository is organized as a **library-first** Python proj
 
 3. **Support & Quality Layer**
    * **`tests/`**  
-     * Automated tests that target `modules/` directly (and optionally `apps/` + `scripts/`).  
+     * Automated tests that target `modules/` directly (and optionally `app/` + `scripts/`).  
      * Act as executable documentation for expected behavior of routing, cabotage, fuel/emissions and cost calculations.
    * **`calcs/`**  
      * One-off or semi-structured calculation notebooks/scripts used for calibration and sanity checks.  
@@ -280,7 +280,7 @@ The project is structured as a library-first Python repository with a small numb
 
 ```text
 .
-├── apps/             # High-level CLI apps (user-facing tools)
+├── app/              # Streamlit app entrypoint and UI package
 ├── calcs/            # Calibration, validation and scratch calculations
 ├── data/             # Static input data, reference tables and SQLite databases
 ├── logs/             # Runtime logs from apps and scripts
@@ -295,8 +295,8 @@ The project is structured as a library-first Python repository with a small numb
 
 ### Top-Level Structure
 
-* `apps/`
-  High-level CLI apps (user-facing tools). Each app:
+* `app/`
+  User-facing Streamlit entrypoint and UI package. The app layer:
 
   * Parses command-line arguments.
   * Loads configuration (API keys, paths, defaults).
@@ -470,7 +470,7 @@ All structured inputs for the model live under the `data/` directory and are tre
     * Vessel hotel/ops energy vs. observed benchmarks.  
     * Truck fuel consumption vs. published statistics.  
   * Primarily consumed by:
-    * Scripts and notebooks in `calcs/`, not by the main CLI apps.
+    * Scripts and notebooks in `calcs/`, not by the main app.
 
 ### Relationship With Code
 
@@ -793,7 +793,7 @@ From lowest to highest precedence:
    * Take precedence over any default value in the config module.
 
 4. **CLI arguments**  
-   * For apps in `apps/` and scripts in `scripts/`, command-line flags override both config defaults and environment variables for that run.
+   * For the entrypoint in `app/` and scripts in `scripts/`, command-line flags override both config defaults and environment variables for that run.
 
 ### Required Environment Variables
 
@@ -863,7 +863,7 @@ Before running any CLI app or script:
 2. Install dependencies: `pip install -r requirements.txt`.
 3. Export the routing API key environment variable.
 4. (Optional) Adjust logging level, paths or SQLite DB location via environment variables if needed.
-5. Run the desired `apps/` or `scripts/` entrypoint.
+5. Run the desired `app/` or `scripts/` entrypoint.
 
 ---
 
@@ -944,13 +944,13 @@ From the repository root:
 ```bash
 python -m venv venv
 pip install -r requirements.txt
-streamlit run app/main/page.py
+streamlit run app/app_streamlit.py
 ```
 
 Minimal smoke check (non-interactive):
 
 ```bash
-python -m py_compile app/main/page.py
+python -m py_compile app/app_streamlit.py
 ```
 
 ### 5. Configure Environment Variables
@@ -988,7 +988,7 @@ pytest
 Typical development loop:
 
 1. Activate the virtual environment (`venv`).
-2. Edit code under `modules/`, `apps/` or `scripts/`.
+2. Edit code under `modules/`, `app/` or `scripts/`.
 3. Run the relevant CLI or script (see later sections for details).
 4. Inspect logs under `logs/` and the SQLite database under `data/` (routing cache and scenario results).
 5. (Optional) Run tests before committing changes.
@@ -997,56 +997,38 @@ This setup ensures a clean separation between project dependencies and your glob
 
 ---
 
-## Running the Main Apps
+## Running the Main App
 
-High-level workflows are exposed as **CLI apps** under the `apps/` directory. Each app is a thin wrapper around the core library in `modules/` and is meant to be run directly from the command line.
+The main user-facing interface lives under `app/`. The supported entrypoint is `app/app_streamlit.py`, which delegates to the modular UI code in `app/main/`.
 
 ### General Invocation Pattern
 
 From the project root (`carbon-footprint/`), after activating your virtualenv:
 
-* Run an app by **module name**:
+* Preferred Windows launcher:
 
-  ```bash
-  python -m apps.<app_name> --help
+  ```powershell
+  .\run_streamlit.ps1
   ```
 
-* Or run the corresponding **file** directly:
+* Or run Streamlit directly:
 
   ```bash
-  python apps/<app_name>.py --help
+  streamlit run app/app_streamlit.py
   ```
 
-Replace `<app_name>` with the actual filename (without the `.py` extension) found under `apps/`.
+* Direct Python execution is also supported:
 
-> **Tip:** Run `ls apps/` (or `dir apps` on Windows) to list the available apps and then call each with `--help` to see its options.
+  ```bash
+  python app/app_streamlit.py
+  ```
 
-### Common CLI Features
+### App Responsibilities
 
-All apps follow a consistent interface:
+The app layer is responsible for:
 
-* Standard `--help` flag
-
-  * Prints a short description, usage examples and the full list of arguments.
-
-* Typical arguments (may vary by app):
-
-  * `--origin` / `--destiny`
-
-    * Free-text address, CEP or `lat,lon` pairs.
-
-  * `--cargo-mass-t`
-
-    * Cargo mass in tonnes used for tonne-km and per-TEU calculations.
-
-  * Mode / scenario selectors (e.g. `--mode`, `--scenario`, or similar)
-
-    * Let you choose between road-only, cabotage, or combined analyses, when supported by the app.
-
-Each app is responsible for:
-
-1. Parsing CLI arguments.
-2. Loading configuration (including environment variables).
+1. Loading configuration and environment variables.
+2. Capturing user inputs in the Streamlit UI.
 3. Calling orchestration functions in `modules/` to:
 
    * Build required road and sea legs.
@@ -1057,24 +1039,9 @@ Each app is responsible for:
 ### Typical Workflow
 
 1. Ensure the routing cache and input tables in `data/` are correctly populated (see the **Command-Line Scripts** section for precomputation utilities).
-
-2. Choose an app under `apps/` that matches your task (e.g. fixed-origin comparison, O–D sweep, or a specific experiment used in the thesis).
-
-3. Run it with the desired arguments, for example:
-
-   ```bash
-   python -m apps.<app_name> \
-       --origin "São Paulo, SP" \
-       --destiny "Salvador, BA" \
-       --cargo-mass-t 20
-   ```
-
-4. Inspect:
-
-   * The updated values stored in the SQLite database under `data/` (e.g. routing cache, scenario tables).
-   * Detailed logs for the run in `logs/`, including cache usage, ORS calls, and high-level fuel/emissions/cost summaries.
-
-This pattern is the same for all current and future apps: discover the app under `apps/`, inspect `--help`, then run with your scenario parameters and read results from the database and logs.
+2. Launch the app with `.\run_streamlit.ps1` or `streamlit run app/app_streamlit.py`.
+3. Provide origin, destiny and cargo inputs in the UI.
+4. Inspect the rendered results, the updated SQLite data under `data/`, and the logs under `logs/`.
 
 ---
 
@@ -1173,7 +1140,7 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
 * **Logging helpers**
 
   * Wrapper around the standard `logging` module.
-  * Provides a consistent logger factory used across `apps/`, `scripts/` and `modules/`.
+  * Provides a consistent logger factory used across `app/`, `scripts/` and `modules/`.
   * Ensures uniform log formatting and file naming under `logs/`.
 
 * **General-purpose utilities**
@@ -1321,7 +1288,7 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
 
   * Optional diagnostic plots (e.g. distributions of distances, fuel per TEU) used during calibration and sanity checks.
 
-All higher-level behavior exposed by `apps/` and `scripts/` is built by composing these module functions. For any specific analysis or bug, the recommended starting point is to locate the relevant subpackage under `modules/` (road, cabotage, fuel, costs, persistence, plotting/diagnostics) and follow the call chain from there.
+All higher-level behavior exposed by `app/` and `scripts/` is built by composing these module functions. For any specific analysis or bug, the recommended starting point is to locate the relevant subpackage under `modules/` (road, cabotage, fuel, costs, persistence, plotting/diagnostics) and follow the call chain from there.
 
 ---
 
@@ -1336,7 +1303,7 @@ The road routing engine is the only component allowed to talk to the **OpenRoute
 * Persist all successfully computed legs in a **SQLite cache**, keyed by canonical origin/destiny labels (and flags like HGV).
 * Expose a simple Python interface used by:
 
-  * CLI apps under `apps/` (end-user tools),
+  * The user-facing app under `app/`,
   * Command-line scripts under `scripts/` (precomputation and batch runs),
   * Higher-level services in `modules.fuel` and cabotage logic.
 
@@ -2125,7 +2092,7 @@ The codebase follows a **Python-first, type-hinted** style with a focus on clari
 
     * Standard library
     * Third-party packages
-    * Local modules (`modules.*`, `apps.*`, `scripts.*`)
+    * Local modules (`modules.*`, `app.*`, `scripts.*`)
 
   * Prefer absolute imports from the project root wherever possible.
 
@@ -2143,7 +2110,7 @@ The codebase follows a **Python-first, type-hinted** style with a focus on clari
   * Keep modules **small and cohesive**:
 
     * Prefer several short functions over a single thousand-line script.
-    * Domain logic (routing, cabotage, fuel, costs, persistence) lives in `modules/`, not in `apps/` or `scripts/`.
+    * Domain logic (routing, cabotage, fuel, costs, persistence) lives in `modules/`, not in `app/` or `scripts/`.
 
   * CLI entrypoints should:
 
@@ -2240,7 +2207,7 @@ For any analysis (road-only or multimodal), results are determined by:
 
   * Static parameter tables (ports, vessels, factors, prices, etc.).
   * The SQLite database file that holds cached road legs and any auxiliary tables.
-* The **CLI arguments** passed to apps/scripts:
+* The **CLI arguments** passed to app/scripts:
 
   * Origin, destiny, cargo mass, scenario flags, etc.
 * The **environment variables** used:
@@ -2463,9 +2430,9 @@ The project is intentionally **library-first** and structured so that new modes,
 
 ### Typical Extension Paths
 
-* **New CLI apps**
+* **New app entrypoints**
 
-  * Add a new file under `apps/` (for example `apps/new_scenario_runner.py`).
+  * Add a new entrypoint under `app/` (for example `app/new_scenario_runner.py`).
 
   * Pattern:
 
@@ -2474,7 +2441,7 @@ The project is intentionally **library-first** and structured so that new modes,
     * Call orchestration functions in `modules/` (routing, cabotage, fuel, costs).
     * Persist results through the existing SQLite layer and log the full run.
 
-  * Use an existing app under `apps/` as a template for:
+  * Use an existing entrypoint under `app/` as a template for:
 
     * Logger setup
     * Argument structure
@@ -2539,7 +2506,7 @@ The project is intentionally **library-first** and structured so that new modes,
 
     * Optionally wrap these orchestration functions in:
 
-      * A new CLI app under `apps/` for end users.
+      * A new app entrypoint under `app/` for end users.
       * Or a new script under `scripts/` for batch-style experiments.
 
 ### Working With Data & SQLite
@@ -2573,7 +2540,7 @@ The project is intentionally **library-first** and structured so that new modes,
 
 * Try to keep the public API of `modules/` stable:
 
-  * If you must change function signatures used by apps/scripts:
+  * If you must change function signatures used by app/scripts:
 
     * Update all call sites in the same commit.
     * Prefer adding optional parameters over breaking existing ones where feasible.

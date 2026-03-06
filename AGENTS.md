@@ -10,7 +10,7 @@ Mission: Maintain and evolve the carbon-footprint toolkit for road vs cabotage c
 
 This repository is a Python project focused on multimodal freight evaluation:
 
-- `apps/` - user-facing app entrypoints (currently `app_streamlit.py`)
+- `app/` - user-facing app entrypoint and Streamlit UI package
 - `scripts/` - CLI workflows (`compare_single.py`, `compare_bulk.py`)
 - `modules/` - domain and infrastructure code (routing, cabotage, fuel, costs, persistence)
 - `data/` - versioned inputs plus processed artifacts (including SQLite database)
@@ -38,7 +38,7 @@ Core flow:
 
 ## Architecture constraints
 
-1. Keep `modules/` as the main logic layer; `apps/` and `scripts/` should stay thin orchestrators.
+1. Keep `modules/` as the main logic layer; `app/` and `scripts/` should stay thin orchestrators.
 2. Preserve routing cache behavior (avoid unnecessary ORS calls).
 3. Prefer explicit typed data structures and clear boundaries between:
    - geometry building
@@ -92,7 +92,7 @@ Local development conventions:
 - `scripts/` commands should be safe to rerun.
 - Fail with clear diagnostics when required config is missing.
 - Keep user-facing output readable for both quick checks and debugging.
-- Preserve compatibility with `python apps/app_streamlit.py` and direct script execution.
+- Preserve compatibility with `python app/app_streamlit.py` and direct script execution.
 
 ---
 
@@ -137,7 +137,7 @@ Conventional Commits rules:
 
 - Subject format: `type(scope): short imperative summary`
 - Allowed types: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `perf`
-- Suggested scopes for this repo: `apps`, `scripts`, `modules`, `road`, `multimodal`, `fuel`, `costs`, `infra`, `db`, `data`, `deps`, `docs`
+- Suggested scopes for this repo: `app`, `scripts`, `modules`, `road`, `multimodal`, `fuel`, `costs`, `infra`, `db`, `data`, `deps`, `docs`
 
 Body format (required when files changed):
 
