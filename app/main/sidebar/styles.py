@@ -53,6 +53,14 @@ def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool 
                 from {{ transform: rotate(0deg); }}
                 to {{ transform: rotate(360deg); }}
             }}
+            section[data-testid="stSidebar"] div[data-testid="stSelectbox"],
+            section[data-testid="stSidebar"] div[data-testid="stNumberInput"] {{
+                margin: 0 0 0.9rem 0 !important;
+            }}
+            section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"] {{
+                margin: 0 0 0.38rem 0 !important;
+                padding: 0 !important;
+            }}
             section[data-testid="stSidebar"] div[data-testid="element-container"]:has(.location-field-marker) {{
                 display: none !important;
             }}
