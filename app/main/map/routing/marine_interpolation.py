@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from app.main.map.routing.geometry_utils import dedupe_latlon_path
+from app.main.map.routing.marine_leg_interpolation import interpolate_leg_intermediate_points
 
 
 def interpolate_segment_latlon(
@@ -12,16 +13,14 @@ def interpolate_segment_latlon(
     n_points: int = 100,
 ) -> list[tuple[float, float]]:
     count = max(int(n_points), 2)
-    start_lat, start_lon = start_latlon
-    end_lat, end_lon = end_latlon
+    if count == 2:
+        return [(float(start_latlon[0]), float(start_latlon[1])), (float(end_latlon[0]), float(end_latlon[1]))]
 
-    points: list[tuple[float, float]] = []
-    for idx in range(count):
-        fraction = idx / (count - 1)
-        lat = start_lat + ((end_lat - start_lat) * fraction)
-        lon = start_lon + ((end_lon - start_lon) * fraction)
-        points.append((float(lat), float(lon)))
-    return points
+    return [
+        (float(start_latlon[0]), float(start_latlon[1])),
+        *interpolate_leg_intermediate_points(start_latlon, end_latlon, n_points=count - 2),
+        (float(end_latlon[0]), float(end_latlon[1])),
+    ]
 
 
 def interpolate_path_latlon(

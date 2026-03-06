@@ -10,6 +10,32 @@ from modules.infra.log_manager import get_logger
 _log = get_logger(__name__)
 
 
+def correct_leg_intermediate_points(
+    intermediate_points: Sequence[tuple[float, float]],
+    *,
+    leg_start_latlon: tuple[float, float],
+    leg_end_latlon: tuple[float, float],
+    reference_path: Sequence[tuple[float, float]],
+    tolerance_km: float = 8.0,
+    step_km: float = 1.0,
+    max_search_km: float = 20.0,
+) -> list[tuple[float, float]]:
+    corrected: list[tuple[float, float]] = []
+    for point_latlon in intermediate_points:
+        corrected.append(
+            correct_point_to_water(
+                point_latlon=point_latlon,
+                leg_start_latlon=leg_start_latlon,
+                leg_end_latlon=leg_end_latlon,
+                reference_path=reference_path,
+                tolerance_km=tolerance_km,
+                step_km=step_km,
+                max_search_km=max_search_km,
+            )
+        )
+    return corrected
+
+
 def correct_path_to_water(
     path_latlon: Sequence[tuple[float, float]],
     *,
@@ -22,28 +48,26 @@ def correct_path_to_water(
     if len(path) < 3:
         return path
 
-    corrected = [path[0]]
-    for idx in range(1, len(path) - 1):
-        corrected.append(
-            _correct_point_to_water(
-                point_latlon=path[idx],
-                prev_latlon=corrected[-1],
-                next_latlon=path[idx + 1],
-                reference_path=reference_path,
-                tolerance_km=tolerance_km,
-                step_km=step_km,
-                max_search_km=max_search_km,
-            )
-        )
-    corrected.append(path[-1])
-    return corrected
+    return [
+        path[0],
+        *correct_leg_intermediate_points(
+            path[1:-1],
+            leg_start_latlon=path[0],
+            leg_end_latlon=path[-1],
+            reference_path=reference_path,
+            tolerance_km=tolerance_km,
+            step_km=step_km,
+            max_search_km=max_search_km,
+        ),
+        path[-1],
+    ]
 
 
-def _correct_point_to_water(
+def correct_point_to_water(
     *,
     point_latlon: tuple[float, float],
-    prev_latlon: tuple[float, float],
-    next_latlon: tuple[float, float],
+    leg_start_latlon: tuple[float, float],
+    leg_end_latlon: tuple[float, float],
     reference_path: Sequence[tuple[float, float]],
     tolerance_km: float,
     step_km: float,
@@ -52,7 +76,7 @@ def _correct_point_to_water(
     if is_water_point(point_latlon, reference_path, tolerance_km=tolerance_km):
         return point_latlon
 
-    unit_east, unit_north = _segment_perpendicular_unit(prev_latlon, next_latlon)
+    unit_east, unit_north = _segment_perpendicular_unit(leg_start_latlon, leg_end_latlon)
     best_candidate = point_latlon
     best_distance = distance_to_water_km(point_latlon, reference_path)
     max_steps = max(int(round(float(max_search_km) / max(float(step_km), EPS))), 1)

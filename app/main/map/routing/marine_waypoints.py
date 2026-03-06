@@ -6,9 +6,25 @@ from typing import Iterable
 
 
 def normalize_port_name(name: str) -> str:
-    normalized = unicodedata.normalize("NFKD", str(name or "").strip())
+    text = _repair_port_text(name)
+    normalized = unicodedata.normalize("NFKD", text)
     ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
     return re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
+
+
+def _repair_port_text(name: str) -> str:
+    text = str(name or "").strip()
+    if not text:
+        return ""
+
+    if any(marker in text for marker in ("Ã", "Â", "â", "¢", "€", "™")):
+        try:
+            repaired = text.encode("latin1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return text
+        if repaired:
+            return repaired.strip()
+    return text
 
 
 NAMED_MARINE_POINTS: dict[str, tuple[float, float]] = {

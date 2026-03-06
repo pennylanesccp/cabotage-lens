@@ -6,7 +6,12 @@ from pathlib import Path
 from typing import Sequence
 
 from app.main.map.routing.geometry_utils import dedupe_latlon_path, haversine_km, point_to_segment_distance_km
-from app.main.map.routing.marine_waypoints import NAMED_MARINE_POINTS
+from app.main.map.routing.marine_manual_overrides import apply_manual_route_overrides
+from app.main.map.routing.marine_waypoints import (
+    NAMED_MARINE_POINTS,
+    point_names_to_latlon,
+    resolve_port_approach_point_names,
+)
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -68,6 +73,35 @@ def select_reference_water_lane_slice(
     if origin_idx <= dest_idx:
         return points[origin_idx : dest_idx + 1]
     return list(reversed(points[dest_idx : origin_idx + 1]))
+
+
+def build_leg_reference_path(
+    *,
+    origin_port_name: str,
+    dest_port_name: str,
+    origin_latlon: tuple[float, float],
+    dest_latlon: tuple[float, float],
+) -> list[tuple[float, float]]:
+    origin_approach = point_names_to_latlon(resolve_port_approach_point_names(origin_port_name))
+    dest_approach = point_names_to_latlon(resolve_port_approach_point_names(dest_port_name))
+
+    origin_anchor = origin_approach[-1] if origin_approach else origin_latlon
+    dest_anchor = dest_approach[-1] if dest_approach else dest_latlon
+
+    water_lane = select_reference_water_lane_slice(origin_anchor, dest_anchor)
+    water_lane = apply_manual_route_overrides(
+        water_lane,
+        origin_port_name=origin_port_name,
+        dest_port_name=dest_port_name,
+    )
+
+    return dedupe_latlon_path(
+        [origin_latlon]
+        + origin_approach
+        + water_lane
+        + list(reversed(dest_approach))
+        + [dest_latlon]
+    )
 
 
 def distance_to_water_km(
