@@ -5,10 +5,8 @@ from typing import Any, Dict, Mapping, Tuple
 import pydeck as pdk
 import streamlit.components.v1 as components
 
-from app.main.cards.summary import render_cards_overlay
 from app.main.map.ports import build_port_and_endpoint_points
 from app.main.map.routes import build_route_rows
-from app.main.styles import MAP_OVERLAY_CSS
 from app.main.utils.constants import MAP_STYLES
 from app.main.utils.formatters import clean_place_label, safe_float
 
@@ -234,17 +232,5 @@ def render_map(geo: Mapping[str, Any], results: Mapping[str, Any] | None, state:
         iframe_width="100%",
         iframe_height=map_height,
     )
-
-    overlay_html = render_cards_overlay(results)
-
-    if "</head>" in deck_html:
-        deck_html = deck_html.replace("</head>", MAP_OVERLAY_CSS + "</head>", 1)
-    else:
-        deck_html = MAP_OVERLAY_CSS + deck_html
-
-    if "<body>" in deck_html:
-        deck_html = deck_html.replace("<body>", f"<body><div id='overlay-root'>{overlay_html}</div>", 1)
-    else:
-        deck_html = f"<div id='overlay-root'>{overlay_html}</div>" + deck_html
 
     components.html(deck_html, height=map_height, scrolling=False)

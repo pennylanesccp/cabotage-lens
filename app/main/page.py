@@ -5,6 +5,7 @@ from typing import Any, Iterable
 
 import streamlit as st
 
+from app.main.cards import render_summary_cards
 from modules.core.env_loader import load_repo_env
 from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
@@ -100,6 +101,8 @@ def main() -> None:
 
     geo = st.session_state.last_geo
     results = st.session_state.last_results
+
+    render_summary_cards(results)
 
     if geo:
         if st.session_state.map_center_lat is None or st.session_state.map_center_lon is None:

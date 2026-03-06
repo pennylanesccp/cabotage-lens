@@ -3,48 +3,57 @@ from __future__ import annotations
 from html import escape
 from typing import Any, Mapping
 
-from app.main.cards.metrics import best_option, multimodal_total_distance
-from app.main.utils.formatters import fmt_currency_brl, fmt_distance_km, fmt_emissions_kg, safe_float
+import streamlit as st
+
+from app.main.cards.metrics import multimodal_total_distance
+from app.main.utils.formatters import fmt_currency_brl_compact, fmt_distance_km_compact, fmt_emissions_compact
 
 
-def render_cards_overlay(results: Mapping[str, Any] | None) -> str:
-    if not results:
-        return (
-            "<div class='map-overlay-cards'>"
-            "<article class='overlay-card overlay-note'>"
-            "<h4>Run analysis</h4>"
-            "<p>Map overlays appear here with route totals.</p>"
-            "</article>"
-            "</div>"
-        )
+def _metric_row(label: str, value: str) -> str:
+    return (
+        "<div class='summary-card__row'>"
+        f"<span class='summary-card__label'>{escape(label)}</span>"
+        f"<strong class='summary-card__value'>{escape(value)}</strong>"
+        "</div>"
+    )
 
-    road = results.get("road_only", {})
-    mm = results.get("multimodal", {})
-    comp = results.get("comparison", {})
 
-    road_cost = safe_float(road.get("cost"))
-    mm_cost = safe_float(mm.get("total_cost"))
-    road_co2e = safe_float(road.get("co2e"))
-    mm_co2e = safe_float(mm.get("total_co2e"))
-
+def _route_card(title: str, accent: str, metrics: list[tuple[str, str]]) -> str:
+    rows = "".join(_metric_row(label=label, value=value) for label, value in metrics)
     return f"""
-<div class='map-overlay-cards'>
-  <article class='overlay-card'>
-    <h4>Road</h4>
-    <p>{fmt_distance_km(road.get('distance_km'))}</p>
-    <p>{fmt_currency_brl(road_cost)}</p>
-    <p>{fmt_emissions_kg(road_co2e)}</p>
-  </article>
-  <article class='overlay-card'>
-    <h4>Multimodal (Road + Cabotage)</h4>
-    <p>{fmt_distance_km(multimodal_total_distance(results))}</p>
-    <p>{fmt_currency_brl(mm_cost)}</p>
-    <p>{fmt_emissions_kg(mm_co2e)}</p>
-  </article>
-  <article class='overlay-card overlay-highlight'>
-    <h4>Best option: {escape(best_option(results))}</h4>
-    <p>Delta cost: {fmt_currency_brl(comp.get('delta_cost'))}</p>
-    <p>Delta emissions: {fmt_emissions_kg(comp.get('delta_co2e'))}</p>
-  </article>
-</div>
-"""
+    <article class='summary-card' data-accent='{escape(accent)}'>
+      <p class='summary-card__eyebrow'>Scenario</p>
+      <h3>{escape(title)}</h3>
+      <div class='summary-card__metrics'>
+        {rows}
+      </div>
+    </article>
+    """
+
+
+def _value_or_placeholder(results: Mapping[str, Any] | None, value: str) -> str:
+    return value if results else "-"
+
+
+def render_summary_cards(results: Mapping[str, Any] | None) -> None:
+    road = (results or {}).get("road_only", {})
+    multimodal = (results or {}).get("multimodal", {})
+
+    multimodal_metrics = [
+        ("Total cost", _value_or_placeholder(results, fmt_currency_brl_compact(multimodal.get("total_cost")))),
+        ("Total emissions", _value_or_placeholder(results, fmt_emissions_compact(multimodal.get("total_co2e")))),
+        ("Distance", _value_or_placeholder(results, fmt_distance_km_compact(multimodal_total_distance(results or {})))),
+    ]
+    road_metrics = [
+        ("Total cost", _value_or_placeholder(results, fmt_currency_brl_compact(road.get("cost")))),
+        ("Total emissions", _value_or_placeholder(results, fmt_emissions_compact(road.get("co2e")))),
+        ("Distance", _value_or_placeholder(results, fmt_distance_km_compact(road.get("distance_km")))),
+    ]
+
+    cards_html = (
+        "<section class='summary-groups'>"
+        + _route_card("Multimodal", "multimodal", multimodal_metrics)
+        + _route_card("Road Only", "road", road_metrics)
+        + "</section>"
+    )
+    st.markdown(cards_html, unsafe_allow_html=True)
