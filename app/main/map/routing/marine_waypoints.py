@@ -14,8 +14,10 @@ def normalize_port_name(name: str) -> str:
 NAMED_MARINE_POINTS: dict[str, tuple[float, float]] = {
     "rio-grande-bar": (-32.0033177, -51.9103981),
     "rio-grande-offshore": (-31.0886323, -50.5679546),
-    "santa-catarina-offshore": (-28.5946528, -48.7221994),
-    "paranagua-offshore": (-25.4726867, -48.2077995),
+    "imbituba-offshore": (-28.5946528, -48.7221994),
+    "itajai-offshore": (-26.9000000, -48.4300000),
+    "sao-francisco-offshore": (-26.2400000, -48.3800000),
+    "paranagua-offshore": (-25.5810196, -48.3159652),
     "santos-offshore": (-23.7242888, -45.3660921),
     "sepetiba-exit": (-23.3120185, -44.4925682),
     "rio-bay-exit": (-22.7912770, -41.0846480),
@@ -40,7 +42,9 @@ NAMED_MARINE_POINTS: dict[str, tuple[float, float]] = {
 
 FALLBACK_TRUNK_POINT_NAMES: tuple[str, ...] = (
     "rio-grande-offshore",
-    "santa-catarina-offshore",
+    "imbituba-offshore",
+    "itajai-offshore",
+    "sao-francisco-offshore",
     "paranagua-offshore",
     "santos-offshore",
     "rio-bay-exit",
@@ -64,11 +68,11 @@ FALLBACK_TRUNK_POINT_NAMES: tuple[str, ...] = (
 
 PORT_APPROACH_POINT_NAMES: dict[str, tuple[str, ...]] = {
     normalize_port_name("Porto do Rio Grande"): ("rio-grande-bar", "rio-grande-offshore"),
-    normalize_port_name("Porto de Imbituba"): ("santa-catarina-offshore",),
-    normalize_port_name("Porto de Navegantes"): ("santa-catarina-offshore",),
-    normalize_port_name("Porto de Itajai"): ("santa-catarina-offshore",),
-    normalize_port_name("Porto de Itapoa"): ("paranagua-offshore",),
-    normalize_port_name("Porto de Sao Francisco do Sul"): ("paranagua-offshore",),
+    normalize_port_name("Porto de Imbituba"): ("imbituba-offshore",),
+    normalize_port_name("Porto de Navegantes"): ("itajai-offshore",),
+    normalize_port_name("Porto de Itajai"): ("itajai-offshore",),
+    normalize_port_name("Porto de Itapoa"): ("sao-francisco-offshore",),
+    normalize_port_name("Porto de Sao Francisco do Sul"): ("sao-francisco-offshore",),
     normalize_port_name("Porto de Paranagua"): ("paranagua-offshore",),
     normalize_port_name("Porto de Santos"): ("santos-offshore",),
     normalize_port_name("Porto de Sao Sebastiao"): ("santos-offshore",),
@@ -94,7 +98,9 @@ PORT_APPROACH_POINT_NAMES: dict[str, tuple[str, ...]] = {
 }
 
 _TO_MANAUS_FROM_SOUTH = (
-    "santa-catarina-offshore",
+    "imbituba-offshore",
+    "itajai-offshore",
+    "sao-francisco-offshore",
     "paranagua-offshore",
     "santos-offshore",
     "rio-bay-exit",
