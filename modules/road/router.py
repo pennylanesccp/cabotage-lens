@@ -38,6 +38,7 @@ from modules.infra.database_manager import (
 )
 from modules.road.ors import ORSConfig, RateLimited, NoRoute, ORSClient
 from modules.addressing.resolver import resolve_point_null_safe
+from modules.addressing.text import ascii_place_text
 
 _log = get_logger(__name__)
 
@@ -87,8 +88,8 @@ def get_or_create_leg(
     # We need string labels for DB lookups
     def _extract_label(val: Any) -> str:
         if isinstance(val, dict):
-            return str(val.get("label") or val.get("input") or "Unknown")
-        return str(val)
+            return ascii_place_text(val.get("label") or val.get("input") or "Unknown")
+        return ascii_place_text(val)
 
     origin_label = _extract_label(origin)
     destiny_label = _extract_label(destiny)

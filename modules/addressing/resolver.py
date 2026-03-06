@@ -16,6 +16,7 @@ from typing import Any, Optional, TYPE_CHECKING
 
 from modules.core.models import GeoPoint
 from modules.addressing.coords import parse_lat_lon_string
+from modules.addressing.text import ascii_place_text
 
 # Use TYPE_CHECKING to avoid circular imports if strictly typing,
 # but here we just import the client class for annotation.
@@ -47,7 +48,7 @@ def resolve_point(
             lat=float(value.lat), 
             lon=float(value.lon), 
             uf=getattr(value, "uf", None), 
-            label=getattr(value, "label", "Point")
+            label=ascii_place_text(getattr(value, "label", "Point"))
         )
     
     if isinstance(value, dict):
@@ -58,7 +59,7 @@ def resolve_point(
                 lat=float(lat), 
                 lon=float(lon), 
                 uf=value.get("uf"), # Can be None
-                label=value.get("label", "Point")
+                label=ascii_place_text(value.get("label", "Point"))
             )
 
     # 2. Coordinate String ("-23.5, -46.6")
@@ -69,7 +70,7 @@ def resolve_point(
             lat=coords[0], 
             lon=coords[1], 
             uf=None, 
-            label=val_str
+            label=ascii_place_text(val_str)
         )
 
     # 3. CEP (Postal Code) - regex check for 8 digits
@@ -86,7 +87,7 @@ def resolve_point(
                 
                 # Try to extract state/region for UF
                 uf = props.get("region_a") or props.get("region")
-                label = props.get("label") or f"CEP {val_str}"
+                label = ascii_place_text(props.get("label") or f"CEP {val_str}")
                 
                 return GeoPoint(lat=c[1], lon=c[0], uf=uf, label=label)
         except Exception as e:
@@ -102,7 +103,7 @@ def resolve_point(
             props = f.get("properties", {})
             
             uf = props.get("region_a") or props.get("region")
-            label = props.get("label") or val_str
+            label = ascii_place_text(props.get("label") or val_str)
             
             return GeoPoint(lat=c[1], lon=c[0], uf=uf, label=label)
     except Exception as e:

@@ -9,6 +9,7 @@ import streamlit as st
 
 from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
+from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, list_place_names
 from modules.infra.log_manager import get_logger
 from modules.road.router import ORSClient, ORSConfig
@@ -65,7 +66,7 @@ def _db_route_place_names(db_path_str: str) -> list[str]:
         try:
             with db_session(candidate_path) as conn:
                 for value in list_place_names(conn, limit=100_000):
-                    value_clean = str(value).strip()
+                    value_clean = ascii_place_text(value)
                     if value_clean and not _is_coordinate_label(value_clean):
                         collected.add(value_clean)
         except Exception as exc:
@@ -87,7 +88,7 @@ def _resolve_custom_location_label(value: str) -> tuple[str | None, str | None]:
     if not point:
         return None, "Address resolution failed."
 
-    resolved_label = clean_place_label(point.label) or str(point.label).strip()
+    resolved_label = ascii_place_text(point.label) or ascii_place_text(query)
     return resolved_label, None
 
 
@@ -108,9 +109,9 @@ def _clear_location_resolution(field_name: str, *, keep_error: bool = False) -> 
 
 
 def _canonical_option(value: str, options: list[str]) -> str | None:
-    normalized = clean_place_label(value).casefold()
+    normalized = ascii_place_key(value)
     for option in options:
-        if clean_place_label(option).casefold() == normalized:
+        if ascii_place_key(option) == normalized:
             return option
     return None
 
@@ -174,7 +175,7 @@ def _apply_resolved_location_values() -> None:
 def _route_endpoint_options(db_path_str: str, current_values: list[str]) -> list[str]:
     options: set[str] = set()
     for value in current_values:
-        value_clean = str(value).strip()
+        value_clean = ascii_place_text(value)
         if value_clean and not _is_coordinate_label(value_clean):
             options.add(value_clean)
 

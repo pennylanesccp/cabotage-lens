@@ -27,6 +27,7 @@ if __name__ == "__main__":
         sys.path.insert(0, str(ROOT))
 
 from modules.addressing.resolver import resolve_point_null_safe
+from modules.addressing.text import ascii_place_text
 from modules.cabotage.sea_matrix import SeaMatrix
 from modules.infra.database_manager import DEFAULT_DB_PATH
 from modules.infra.log_manager import get_logger
@@ -124,13 +125,13 @@ def build_path_geometry(
         return None
 
     origin_pt: Point = {
-        "label": p_origin.label,
+        "label": ascii_place_text(p_origin.label),
         "lat": p_origin.lat,
         "lon": p_origin.lon,
         "uf": p_origin.uf,
     }
     destiny_pt: Point = {
-        "label": p_destiny.label,
+        "label": ascii_place_text(p_destiny.label),
         "lat": p_destiny.lat,
         "lon": p_destiny.lon,
         "uf": p_destiny.uf,

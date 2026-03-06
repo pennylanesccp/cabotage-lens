@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import math
-import re
 from typing import Any, List
+
+from modules.addressing.text import clean_place_text
 
 
 def safe_float(value: Any) -> float:
@@ -13,14 +14,7 @@ def safe_float(value: Any) -> float:
 
 
 def clean_place_label(label: Any) -> str:
-    text = str(label or "").strip()
-    if not text:
-        return ""
-
-    text = re.sub(r"\s*,\s*(?:brazil|brasil)\s*$", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\s*,\s*,+", ", ", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip(" ,")
+    return clean_place_text(label)
 
 
 def fmt_distance_km(value: Any) -> str:
