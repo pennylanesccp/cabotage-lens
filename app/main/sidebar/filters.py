@@ -45,6 +45,10 @@ def _pending_key(field_name: str) -> str:
     return _state_key(field_name, "pending_value")
 
 
+def _resolved_key(field_name: str) -> str:
+    return _state_key(field_name, "resolved_value")
+
+
 @st.cache_resource
 def _resolution_executor() -> ThreadPoolExecutor:
     return ThreadPoolExecutor(max_workers=2, thread_name_prefix="streamlit-geocode")
@@ -92,6 +96,7 @@ def _ensure_location_state(field_name: str) -> None:
     st.session_state.setdefault(_future_key(field_name), None)
     st.session_state.setdefault(_error_key(field_name), None)
     st.session_state.setdefault(_pending_key(field_name), "")
+    st.session_state.setdefault(_resolved_key(field_name), None)
 
 
 def _clear_location_resolution(field_name: str, *, keep_error: bool = False) -> None:
@@ -119,6 +124,7 @@ def _start_location_resolution(field_name: str, raw_value: str) -> None:
     _log.info("Resolving %s input: %s", field_name, value)
     st.session_state[_error_key(field_name)] = None
     st.session_state[_pending_key(field_name)] = value
+    st.session_state[_resolved_key(field_name)] = None
     st.session_state[_loading_key(field_name)] = True
     st.session_state[_future_key(field_name)] = _resolution_executor().submit(_resolve_custom_location_label, value)
 
@@ -139,11 +145,11 @@ def _sync_location_resolution(field_name: str) -> bool:
     _clear_location_resolution(field_name, keep_error=True)
     if resolved_label:
         _log.info("Resolved %s input to: %s", field_name, resolved_label)
-        st.session_state[field_name] = resolved_label
+        st.session_state[_resolved_key(field_name)] = resolved_label
         st.session_state[_error_key(field_name)] = None
     else:
         _log.warning("Failed to resolve %s input: %s", field_name, error_message or "unknown error")
-        st.session_state[field_name] = pending_value
+        st.session_state[_resolved_key(field_name)] = pending_value
         st.session_state[_error_key(field_name)] = error_message or "Address resolution failed."
     return True
 
@@ -154,6 +160,15 @@ def _sync_all_location_resolutions() -> bool:
 
 def _any_location_loading() -> bool:
     return any(bool(st.session_state.get(_loading_key(field_name), False)) for field_name, _ in _LOCATION_FIELDS)
+
+
+def _apply_resolved_location_values() -> None:
+    for field_name, _ in _LOCATION_FIELDS:
+        resolved_value = st.session_state.get(_resolved_key(field_name))
+        if resolved_value is None:
+            continue
+        st.session_state[field_name] = str(resolved_value).strip()
+        st.session_state[_resolved_key(field_name)] = None
 
 
 def _route_endpoint_options(db_path_str: str, current_values: list[str]) -> list[str]:
@@ -203,6 +218,7 @@ def render_filters() -> List[str]:
         _ensure_location_state(field_name)
 
     _sync_all_location_resolutions()
+    _apply_resolved_location_values()
 
     route_name_options = _route_endpoint_options(
         db_path_str=str(st.session_state.db_path_str),
@@ -217,7 +233,7 @@ def render_filters() -> List[str]:
     for field_name, label in _LOCATION_FIELDS:
         _render_location_field(field_name, label, route_name_options)
 
-    st.number_input("Cargo (t)", min_value=0.0, step=0.5, key="cargo_t")
+    st.number_input("Cargo (t)", min_value=0.0, step=0.5, format="%g", key="cargo_t")
 
     @st.fragment(run_every=_POLL_SECONDS if _any_location_loading() else None)
     def _poll_location_resolution() -> None:

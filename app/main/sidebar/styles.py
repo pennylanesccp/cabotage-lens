@@ -19,10 +19,6 @@ def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool 
                 opacity: 0 !important;
                 visibility: hidden !important;
             }}
-            {container_selector} div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:last-child {{
-                opacity: 0 !important;
-                visibility: hidden !important;
-            }}
             {container_selector} div[data-testid="stSelectbox"] div[data-baseweb="select"]::after {{
                 content: "";
                 position: absolute;
