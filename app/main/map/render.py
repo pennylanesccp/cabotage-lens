@@ -4,6 +4,7 @@ from typing import Any, Dict, Mapping, Tuple
 
 import pydeck as pdk
 import streamlit.components.v1 as components
+import streamlit as st
 
 from app.main.map.ports import build_port_and_endpoint_points
 from app.main.map.routes import build_route_rows
@@ -234,3 +235,18 @@ def render_map(geo: Mapping[str, Any], results: Mapping[str, Any] | None, state:
     )
 
     components.html(deck_html, height=map_height, scrolling=False)
+
+
+def render_map_placeholder() -> None:
+    st.markdown(
+        """
+        <section class='map-shell'>
+            <div class='map-shell__content'>
+                <p class='map-shell__eyebrow'>Map</p>
+                <h3>Route canvas ready</h3>
+                <p>Run an analysis to render the road and cabotage paths here, keeping the same layout you see after a scenario completes.</p>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )

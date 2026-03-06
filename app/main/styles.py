@@ -102,6 +102,53 @@ BASE_CSS = """
         font-weight: 600;
         text-align: right;
     }
+    .map-shell {
+        min-height: 560px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 22px;
+        background:
+            radial-gradient(420px 180px at 20% 10%, rgba(56, 189, 248, 0.12), transparent 60%),
+            radial-gradient(360px 220px at 85% 15%, rgba(45, 212, 191, 0.11), transparent 55%),
+            linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(8, 15, 29, 0.98)),
+            #0f172a;
+        box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08), 0 18px 42px rgba(2, 6, 23, 0.24);
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    .map-shell__content {
+        max-width: 28rem;
+        padding: 1.4rem;
+        text-align: center;
+    }
+    .map-shell__eyebrow {
+        margin: 0 0 0.35rem 0;
+        color: #38bdf8;
+        font-size: 0.76rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+    .map-shell h3 {
+        margin: 0;
+        color: #f8fafc;
+        font-size: 1.35rem;
+    }
+    .map-shell p {
+        margin: 0.5rem 0 0 0;
+        color: #cbd5e1;
+        font-size: 0.94rem;
+        line-height: 1.5;
+    }
+    .details-placeholder {
+        color: #cbd5e1;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        margin: 0.15rem 0;
+    }
+    .details-placeholder strong {
+        color: #f8fafc;
+    }
     @media (max-width: 900px) {
         .summary-groups {
             grid-template-columns: 1fr;

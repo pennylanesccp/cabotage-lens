@@ -13,7 +13,23 @@ def render_details(payload: Mapping[str, Any], geo: Mapping[str, Any] | None, re
     st.markdown("### Details")
 
     if not results:
-        st.info("Run an analysis to populate breakdown, assumptions, and debug details.")
+        with st.expander("Breakdown", expanded=True):
+            st.markdown(
+                "<p class='details-placeholder'><strong>Breakdown pending.</strong> Run an analysis to populate route totals and leg-level comparisons.</p>",
+                unsafe_allow_html=True,
+            )
+
+        with st.expander("Assumptions", expanded=False):
+            st.markdown(
+                "<p class='details-placeholder'><strong>Assumptions pending.</strong> The parameter descriptions will appear here after the first successful scenario run.</p>",
+                unsafe_allow_html=True,
+            )
+
+        with st.expander("Debug", expanded=False):
+            st.markdown(
+                "<p class='details-placeholder'><strong>Debug pending.</strong> Execution logs, payload details, and geometry diagnostics will appear here after a run.</p>",
+                unsafe_allow_html=True,
+            )
         return
 
     with st.expander("Breakdown", expanded=True):

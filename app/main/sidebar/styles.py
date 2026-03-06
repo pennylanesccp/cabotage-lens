@@ -11,8 +11,9 @@ def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool 
 
         container_selector = (
             "section[data-testid=\"stSidebar\"] "
-            "div[data-testid=\"stVerticalBlock\"]"
+            "div[data-testid=\"element-container\"]"
             f":has(.location-field-marker[data-field=\"{field_name}\"][data-loading=\"true\"])"
+            " + div[data-testid=\"element-container\"]"
         )
         loading_rules.append(
             f"""
@@ -48,10 +49,7 @@ def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool 
                 to {{ transform: rotate(360deg); }}
             }}
             .location-field-marker {{
-                display: block;
-                width: 0;
-                height: 0;
-                overflow: hidden;
+                display: none;
             }}
             {''.join(loading_rules)}
         </style>

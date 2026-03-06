@@ -14,7 +14,7 @@ from modules.multimodal.container_efficiency import (
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
 
 from app.main.details import render_details
-from app.main.map import fit_view, map_points, render_map
+from app.main.map import fit_view, map_points, render_map, render_map_placeholder
 from app.main.sidebar import render_sidebar
 from app.main.styles import inject_css
 from app.main.utils.constants import PAGE_ICON, PAGE_LAYOUT, PAGE_TITLE, ROOT
@@ -113,7 +113,7 @@ def main() -> None:
 
         render_map(geo, results=results, state=st.session_state)
     else:
-        st.info("Run an analysis to render the map.")
+        render_map_placeholder()
 
     render_details(payload=payload, geo=geo, results=results)
 

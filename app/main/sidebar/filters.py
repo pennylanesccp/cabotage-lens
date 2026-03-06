@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List
 
@@ -45,12 +45,12 @@ def _resolution_executor() -> ThreadPoolExecutor:
     return ThreadPoolExecutor(max_workers=2, thread_name_prefix="streamlit-geocode")
 
 
-@st.cache_data(show_spinner=False, ttl=60)
 def _db_route_place_names(db_path_str: str) -> list[str]:
     try:
         with db_session(Path(db_path_str)) as conn:
             return [str(value).strip() for value in list_place_names(conn, limit=100_000) if str(value).strip()]
-    except Exception:
+    except Exception as exc:
+        _log.warning("Failed to list route place names from %s: %s", db_path_str, exc)
         return []
 
 
@@ -110,9 +110,9 @@ def _start_location_resolution(field_name: str, raw_value: str) -> None:
 
 def _sync_location_resolution(field_name: str) -> bool:
     future = st.session_state.get(_future_key(field_name))
-    if not st.session_state.get(_loading_key(field_name)) or not isinstance(future, Future):
+    if not st.session_state.get(_loading_key(field_name)) or future is None:
         return False
-    if not future.done():
+    if not hasattr(future, "done") or not future.done():
         return False
 
     pending_value = str(st.session_state.get(_pending_key(field_name), "")).strip()
@@ -174,27 +174,26 @@ def _on_location_change(field_name: str, options: list[str]) -> None:
 def _render_location_field(field_name: str, label: str, options: list[str]) -> None:
     loading = bool(st.session_state.get(_loading_key(field_name), False))
     loading_attr = "true" if loading else "false"
-    with st.container():
-        st.markdown(
-            (
-                "<span class='location-field-marker' "
-                f"data-field='{field_name}' "
-                f"data-loading='{loading_attr}'></span>"
-            ),
-            unsafe_allow_html=True,
-        )
-        st.selectbox(
-            label,
-            options=options,
-            key=field_name,
-            accept_new_options=True,
-            format_func=clean_place_label,
-            on_change=_on_location_change,
-            args=(field_name, options),
-        )
-        error_message = str(st.session_state.get(_error_key(field_name)) or "").strip()
-        if error_message:
-            st.caption(error_message)
+    st.markdown(
+        (
+            "<span class='location-field-marker' "
+            f"data-field='{field_name}' "
+            f"data-loading='{loading_attr}'></span>"
+        ),
+        unsafe_allow_html=True,
+    )
+    st.selectbox(
+        label,
+        options=options,
+        key=field_name,
+        accept_new_options=True,
+        format_func=clean_place_label,
+        on_change=_on_location_change,
+        args=(field_name, options),
+    )
+    error_message = str(st.session_state.get(_error_key(field_name)) or "").strip()
+    if error_message:
+        st.caption(error_message)
 
 
 def render_filters() -> List[str]:
@@ -207,27 +206,21 @@ def render_filters() -> List[str]:
         db_path_str=str(st.session_state.db_path_str),
         current_values=[str(st.session_state.origin), str(st.session_state.destiny)],
     )
-    refresh_interval = _POLL_SECONDS if _any_location_loading() else None
 
-    @st.fragment(run_every=refresh_interval)
-    def _render_filters_fragment() -> None:
-        state_changed = _sync_all_location_resolutions()
-        options = _route_endpoint_options(
-            db_path_str=str(st.session_state.db_path_str),
-            current_values=[str(st.session_state.origin), str(st.session_state.destiny)],
-        )
-        apply_sidebar_styles(
-            origin_loading=bool(st.session_state.get(_loading_key("origin"), False)),
-            destiny_loading=bool(st.session_state.get(_loading_key("destiny"), False)),
-        )
+    apply_sidebar_styles(
+        origin_loading=bool(st.session_state.get(_loading_key("origin"), False)),
+        destiny_loading=bool(st.session_state.get(_loading_key("destiny"), False)),
+    )
 
-        for field_name, label in _LOCATION_FIELDS:
-            _render_location_field(field_name, label, options)
+    for field_name, label in _LOCATION_FIELDS:
+        _render_location_field(field_name, label, route_name_options)
 
-        st.number_input("Cargo (t)", min_value=0.0, step=0.5, key="cargo_t")
+    st.number_input("Cargo (t)", min_value=0.0, step=0.5, key="cargo_t")
 
-        if state_changed and not _any_location_loading():
+    @st.fragment(run_every=_POLL_SECONDS if _any_location_loading() else None)
+    def _poll_location_resolution() -> None:
+        if _sync_all_location_resolutions():
             st.rerun()
 
-    _render_filters_fragment()
+    _poll_location_resolution()
     return route_name_options

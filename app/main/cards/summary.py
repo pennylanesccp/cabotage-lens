@@ -20,15 +20,13 @@ def _metric_row(label: str, value: str) -> str:
 
 def _route_card(title: str, accent: str, metrics: list[tuple[str, str]]) -> str:
     rows = "".join(_metric_row(label=label, value=value) for label, value in metrics)
-    return f"""
-    <article class='summary-card' data-accent='{escape(accent)}'>
-      <p class='summary-card__eyebrow'>Scenario</p>
-      <h3>{escape(title)}</h3>
-      <div class='summary-card__metrics'>
-        {rows}
-      </div>
-    </article>
-    """
+    return (
+        f"<article class='summary-card' data-accent='{escape(accent)}'>"
+        "<p class='summary-card__eyebrow'>Scenario</p>"
+        f"<h3>{escape(title)}</h3>"
+        f"<div class='summary-card__metrics'>{rows}</div>"
+        "</article>"
+    )
 
 
 def _value_or_placeholder(results: Mapping[str, Any] | None, value: str) -> str:
