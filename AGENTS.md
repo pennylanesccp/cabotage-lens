@@ -98,34 +98,37 @@ Local development conventions:
 
 ## Versioning (pyproject.toml) - REQUIRED
 
-Whenever you make a change that affects shipped code or behavior, update `[project].version` in `pyproject.toml` using this repo's versioning scheme: `RELEASE.MAJOR.MINOR`.
+Whenever you make a change that affects shipped code or behavior, update `[project].version` in `pyproject.toml` using this repo's versioning scheme: `RELEASE.MAJOR.FEATURE.BUGFIX` (`x.y.z.w`).
 
 Version slot meanings:
 
-- `RELEASE` (`X.y.z`)
+- `RELEASE` (`X.y.z.w`)
   - Reserved for release line changes only.
   - This repository is still on release line `1`.
   - Do not change the first slot unless the user explicitly asks for a release bump.
-- `MAJOR` (`x.Y.z`)
+- `MAJOR` (`x.Y.z.w`)
   - Use for major changes in shipped behavior.
   - Use when the change is large, cross-cutting, or intentionally significant.
-- `MINOR` (`x.y.Z`)
-  - Use for minor shipped changes.
-  - This is the default bump for fixes, refactors, UI tweaks, and small features.
+- `FEATURE` (`x.y.Z.w`)
+  - Use for minor shipped features and user-visible enhancements that are not major changes.
+- `BUGFIX` (`x.y.z.W`)
+  - Use for bugfixes, small refactors, UI tweaks, and maintenance updates that affect shipped behavior.
+  - This is the default bump when the change is not clearly a major change or a minor feature.
 
 Mapping to Conventional Commits:
 
-- `fix(...)`, `perf(...)`, `refactor(...)` -> bump `MINOR`
-- `feat(...)` -> bump `MINOR` by default, or `MAJOR` if the feature is substantial
+- `fix(...)`, `perf(...)`, `refactor(...)` -> bump `BUGFIX`
+- `feat(...)` -> bump `FEATURE` by default, or `MAJOR` if the feature is substantial
 - `!` in subject or `BREAKING CHANGE:` footer -> bump `MAJOR`, not `RELEASE`
 - `docs(...)`, `test(...)`, `chore(...)` -> no bump unless runtime behavior changed
 
 Notes:
 
-- If uncertain, bump `MINOR`.
+- If uncertain, bump `BUGFIX`.
 - Do not refer to this repo's versioning as SemVer in future edits.
 - Keep mirrored version fields consistent if they exist.
 - Mention version bump in commit body bullets when files changed.
+- When converting an older 3-part version to this 4-part format, preserve `RELEASE` and `MAJOR`, initialize `FEATURE` to `0` unless historical feature counts are explicitly known, and carry the old trailing slot into `BUGFIX`.
 
 ---
 
