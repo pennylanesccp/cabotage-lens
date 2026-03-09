@@ -31,6 +31,7 @@ from modules.infra.database_manager import (
       db_session
     , ensure_main_table
     , get_run
+    , get_run_by_coords
     , upsert_run
     , delete_key
     , DEFAULT_DB_PATH
@@ -96,6 +97,16 @@ def get_or_create_leg(
     destiny_label = _extract_label(destiny)
     requested_profile = normalize_profile(profile)
 
+    def _get_coord(obj: Any, key: str) -> Optional[float]:
+        if isinstance(obj, dict):
+            return float(obj[key]) if obj.get(key) is not None else None
+        return None
+
+    origin_lat = _get_coord(origin, "lat")
+    origin_lon = _get_coord(origin, "lon")
+    destiny_lat = _get_coord(destiny, "lat")
+    destiny_lon = _get_coord(destiny, "lon")
+
     # 2. Check Cache
     with db_session(db_path) as conn:
         ensure_main_table(conn, table_name=table_name)
@@ -116,6 +127,7 @@ def get_or_create_leg(
                 deleted,
             )
         else:
+            cache_lookup = "label"
             row = get_run(
                 conn,
                 origin=origin_label,
@@ -123,11 +135,24 @@ def get_or_create_leg(
                 profile_requested=requested_profile,
                 table_name=table_name,
             )
+            if not row and None not in (origin_lat, origin_lon, destiny_lat, destiny_lon):
+                row = get_run_by_coords(
+                    conn,
+                    origin_lat=float(origin_lat),
+                    origin_lon=float(origin_lon),
+                    destiny_lat=float(destiny_lat),
+                    destiny_lon=float(destiny_lon),
+                    profile_requested=requested_profile,
+                    table_name=table_name,
+                )
+                if row:
+                    cache_lookup = "coords"
             if row and row.get("distance_km") is not None:
                 _log.info(
-                    "Road cache hit: %s -> %s requested_profile=%s used_profile=%s distance_km=%.3f",
+                    "Road cache hit: %s -> %s lookup=%s requested_profile=%s used_profile=%s distance_km=%.3f",
                     origin_label,
                     destiny_label,
+                    cache_lookup,
                     requested_profile,
                     row.get("profile_used") or requested_profile,
                     float(row["distance_km"]),
@@ -162,25 +187,16 @@ def get_or_create_leg(
     if dist_km is not None and prof_used:
         is_hgv = profile_is_hgv(prof_used)
 
-    # 4. Persist to DB
-    # We need coordinates for the DB. If inputs were dicts, use them. 
-    # If strings, we rely on what ORS returned or resolved.
-    # For simplicity here, we try to extract from input or leave None (DB allows NULL).
-    def _get_coord(obj: Any, key: str) -> Optional[float]:
-        if isinstance(obj, dict):
-            return float(obj[key]) if obj.get(key) is not None else None
-        return None
-
     if dist_km is not None:
         with db_session(db_path) as conn:
             upsert_run(
                 conn,
                 origin=origin_label,
-                origin_lat=_get_coord(origin, "lat"),
-                origin_lon=_get_coord(origin, "lon"),
+                origin_lat=origin_lat,
+                origin_lon=origin_lon,
                 destiny=destiny_label,
-                destiny_lat=_get_coord(destiny, "lat"),
-                destiny_lon=_get_coord(destiny, "lon"),
+                destiny_lat=destiny_lat,
+                destiny_lon=destiny_lon,
                 distance_km=dist_km,
                 profile_requested=requested_profile,
                 profile_used=prof_used,

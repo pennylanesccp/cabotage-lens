@@ -216,6 +216,65 @@ def get_run(
     return _row_to_dict(row)
 
 
+def get_run_by_coords(
+    conn: sqlite3.Connection,
+    *,
+    origin_lat: float,
+    origin_lon: float,
+    destiny_lat: float,
+    destiny_lon: float,
+    profile_requested: Optional[str] = None,
+    table_name: str = DEFAULT_TABLE,
+    tolerance_deg: float = 1e-5,
+) -> Optional[Dict[str, Any]]:
+    """Fetch one cached leg by coordinates when labels are unstable."""
+    ensure_main_table(conn, table_name)
+    requested = normalize_profile(profile_requested)
+    row = conn.execute(
+        f"""
+        SELECT
+              origin_name
+            , destiny_name
+            , distance_km
+            , is_hgv
+            , origin_lat
+            , origin_lon
+            , destiny_lat
+            , destiny_lon
+            , profile_requested
+            , profile_used
+            , insertion_timestamp
+            , updated_timestamp
+        FROM {table_name}
+        WHERE profile_requested = ?
+          AND origin_lat IS NOT NULL
+          AND origin_lon IS NOT NULL
+          AND destiny_lat IS NOT NULL
+          AND destiny_lon IS NOT NULL
+          AND ABS(origin_lat - ?) <= ?
+          AND ABS(origin_lon - ?) <= ?
+          AND ABS(destiny_lat - ?) <= ?
+          AND ABS(destiny_lon - ?) <= ?
+        ORDER BY updated_timestamp DESC, insertion_timestamp DESC
+        LIMIT 1
+        """,
+        (
+            requested,
+            float(origin_lat),
+            float(tolerance_deg),
+            float(origin_lon),
+            float(tolerance_deg),
+            float(destiny_lat),
+            float(tolerance_deg),
+            float(destiny_lon),
+            float(tolerance_deg),
+        ),
+    ).fetchone()
+    if not row:
+        return None
+    return _row_to_dict(row)
+
+
 def overwrite_keys(
     conn: sqlite3.Connection,
     *,

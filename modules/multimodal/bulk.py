@@ -76,6 +76,22 @@ def _require_distance(leg: Dict[str, Any], leg_name: str) -> None:
         raise RuntimeError(f"{leg_name} road distance is unavailable")
 
 
+def _classify_failure(exc: Exception) -> tuple[str, str, bool]:
+    """
+    Classify expected per-destination failures so they are logged cleanly and
+    persisted with a more useful status.
+    """
+    message = str(exc).strip() or exc.__class__.__name__
+    lowered = message.lower()
+
+    if "road distance is unavailable" in lowered:
+        return "no_road_route", message, False
+    if "failed to resolve destination" in lowered:
+        return "geocode_failed", message, False
+
+    return "error", message, True
+
+
 def _build_summary_row(destiny_input: str, geo: Dict[str, Any], res: Dict[str, Any], flat: Dict[str, Any]) -> Dict[str, Any]:
     inputs = res.get("inputs", {})
     comparison = res.get("comparison", {})
@@ -367,7 +383,11 @@ def run_bulk_evaluation(
             )
         except Exception as exc:
             fail_count += 1
-            _log.error("Bulk destination failed: %s", exc, exc_info=True)
+            failure_status, failure_message, log_trace = _classify_failure(exc)
+            if log_trace:
+                _log.error("Bulk destination failed: %s", failure_message, exc_info=True)
+            else:
+                _log.warning("Bulk destination skipped: %s (%s)", destiny_input, failure_message)
             try:
                 _persist_bulk_outcome(
                     db_path=resolved_db_path,
@@ -392,8 +412,8 @@ def run_bulk_evaluation(
                     allocation_load_factor=allocation_load_factor,
                     full_call_mode=full_call_mode,
                     port_ops_scenario=port_ops_scenario,
-                    status="error",
-                    error_message=str(exc),
+                    status=failure_status,
+                    error_message=failure_message,
                     geo=geo,
                     res=res,
                     flat=flat,
@@ -409,8 +429,8 @@ def run_bulk_evaluation(
                 {
                     "destiny_input": str(destiny_input),
                     "destiny_name": destiny_name,
-                    "status": "error",
-                    "error_msg": str(exc),
+                    "status": failure_status,
+                    "error_msg": failure_message,
                 }
             )
 
