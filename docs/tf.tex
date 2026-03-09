@@ -1,0 +1,394 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{url}
+
+\geometry{margin=2.5cm}
+\setstretch{1.15}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.2em}
+\sisetup{locale = DE}
+\urlstyle{same}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue,
+  pdftitle={Comparacao entre transporte rodoviario e cabotagem no Brasil},
+  pdfauthor={Repositorio carbon-footprint}
+}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+{\Large Ferramenta computacional para compara\c{c}\~ao entre transporte rodovi\'ario e transporte multimodal com cabotagem no Brasil\par}
+\vspace{1.5cm}
+{\large Rascunho t\'ecnico-cient\'ifico elaborado a partir do reposit\'orio \texttt{carbon-footprint}\par}
+\vfill
+{\large Documento de trabalho em estilo de monografia / relat\'orio final\par}
+\vspace{0.5cm}
+{\large \today\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+
+\chapter*{Resumo}
+\addcontentsline{toc}{chapter}{Resumo}
+Este trabalho apresenta o rascunho de uma formula\c{c}\~ao metodol\'ogica e computacional para compara\c{c}\~oes \emph{door-to-door} entre o transporte rodovi\'ario de cargas e uma alternativa multimodal composta por trecho rodovi\'ario inicial, trecho mar\'itimo de cabotagem e trecho rodovi\'ario final no contexto brasileiro. O texto foi constru\'ido diretamente a partir dos artefatos, c\'odigos-fonte, tabelas processadas e documentos de refer\^encia existentes no reposit\'orio \texttt{carbon-footprint}, preservando, portanto, ader\^encia estrita ao estado real de implementa\c{c}\~ao do projeto. O problema de pesquisa decorre da elevada depend\^encia da matriz nacional de transporte de cargas em rela\c{c}\~ao ao modo rodovi\'ario e da necessidade de instrumentos anal\'iticos que permitam avaliar, com rastreabilidade, quando a cabotagem pode representar vantagem energ\'etica e clim\'atica em rela\c{c}\~ao ao fluxo puramente terrestre. A metodologia operacionaliza um modelo baseado em atividades, no qual cada perna log\'istica \'e explicitamente representada, roteirizada e avaliada em termos de dist\^ancia, consumo de combust\'ivel, emiss\~oes e custos energ\'eticos. Para os trechos rodovi\'arios, emprega-se roteamento via OpenRouteService e um modelo de consumo ancorado em combina\c{c}\~oes veiculares, eixos e carga transportada. Para o trecho mar\'itimo, utiliza-se uma matriz de dist\^ancias porto a porto e fatores derivados de classes de efici\^encia de navios porta-cont\^eineres processadas a partir de dados MRV, complementadas por um submodelo de consumo em opera\c{c}\~ao de hoteling e por um submodelo de opera\c{c}\~oes portu\'arias baseado em movimentos de cont\^eineres. A arquitetura do sistema organiza a l\'ogica de neg\'ocio em m\'odulos especializados, exp\~oe interfaces via aplica\c{c}\~ao Streamlit e \emph{scripts} de linha de comando, e utiliza SQLite como camada local de persist\^encia e cache. Como o objetivo deste texto \'e documentar com rigor o desenho do sistema e seu fundamento te\'orico, n\~ao s\~ao fabricados resultados num\'ericos inexistentes; em seu lugar, descreve-se com precis\~ao como os resultados s\~ao produzidos, armazenados e interpretados, al\'em de explicitar as hip\'oteses, fronteiras e limita\c{c}\~oes do modelo atual.
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+This report presents a methodological and computational draft for \emph{door-to-door} comparisons between road freight transport and a multimodal alternative composed of an initial road leg, a coastal shipping leg, and a final road leg in Brazil. The document is grounded directly on the source code, processed datasets, internal methodological notes, and local literature files available in the \texttt{carbon-footprint} repository, and therefore reflects the actual implementation status of the project rather than an idealized design. The research problem emerges from the high dependence of Brazilian freight flows on road transport and from the need for reproducible analytical tools able to identify when cabotage may offer lower energy use and lower carbon emissions than all-road transport. The proposed approach is activity-based and leg-specific: each leg is built, routed, and evaluated separately in terms of distance, fuel use, emissions, and energy-related cost. Road legs are computed through OpenRouteService and a truck fuel model parameterized by axle configuration, payload capacity, and carried cargo. The maritime leg is evaluated through a port-to-port distance matrix and vessel-class efficiency parameters derived from processed MRV data for container ships, complemented by hoteling and port-operations submodels. The software architecture keeps the main logic in reusable modules, provides user access through a Streamlit interface and command-line scripts, and uses SQLite as the local persistence and caching layer. Since this draft is intended to document the methodological design with scientific rigor, no fabricated numerical findings are introduced; instead, the report details how outputs are generated, stored, and interpreted, and discusses the assumptions, boundaries, and limitations of the current implementation.
+
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Introdu\c{c}\~ao}
+\label{chap:introducao}
+
+O transporte de cargas no Brasil \'e condicionado por uma combina\c{c}\~ao particularmente desafiadora de grande extens\~ao territorial, distribui\c{c}\~ao espacial desigual da atividade econ\^omica, concentra\c{c}\~ao populacional ao longo do litoral e forte depend\^encia hist\'orica do modo rodovi\'ario. Em termos operacionais, essa depend\^encia significa que uma fra\c{c}\~ao expressiva dos fluxos log\'isticos inter-regionais \'e realizada por longas viagens terrestres, frequentemente sujeitas a custos energ\'eticos elevados, vulnerabilidade \`a oscila\c{c}\~ao de pre\c{c}os de combust\'iveis, congestionamentos urbanos e gargalos de infraestrutura. A literatura local reunida no reposit\'orio sugere que a cabotagem brasileira ocupa uma posi\c{c}\~ao estrat\'egica nesse contexto: por um lado, apresenta potencial para capturar parte dos fluxos conteinerizados de longa dist\^ancia; por outro, enfrenta restri\c{c}\~oes operacionais, de servi\c{c}o e de competitividade que impedem uma substitui\c{c}\~ao simples do transporte rodovi\'ario por rotas mar\'itimas \citep{icct2022,competitiveness2024,users2022}.
+
+O problema torna-se ainda mais relevante quando enquadrado sob a agenda de descarboniza\c{c}\~ao dos transportes. Em discuss\~oes internacionais sobre \emph{modal shift}, transporte de curta dist\^ancia por mar e efici\^encia energ\'etica de cadeias log\'isticas, a compara\c{c}\~ao entre uma rota inteiramente rodovi\'aria e uma alternativa mar\'itima n\~ao pode ser reduzida \`a mera dist\^ancia porto a porto. A efici\^encia relativa depende da carga considerada, da classe do navio, dos trechos de acesso terrestre, do padr\~ao de opera\c{c}\~ao portu\'aria e da forma como se aloca o consumo do navio \`a remessa efetivamente transportada \citep{shortsea2019,eumrv2025,drybulk2019}. No caso brasileiro, essa complexidade \'e ampliada pela geografia costeira, pela diversidade de portos e pela heterogeneidade de corredores terrestres, o que exige ferramentas de compara\c{c}\~ao transparentes, reprodut\'iveis e sens\'iveis a hip\'oteses operacionais.
+
+\'E nesse ponto que se insere o reposit\'orio \texttt{carbon-footprint}. O projeto implementa uma ferramenta computacional dedicada \`a compara\c{c}\~ao de cen\'arios rodovi\'arios e multimodais, com foco em emiss\~oes, consumo energ\'etico e custos diretamente associados ao uso de combust\'iveis. Em vez de modelar o sistema log\'istico como uma caixa-preta agregada, a solu\c{c}\~ao adota uma filosofia baseada em atividades: resolve as coordenadas de origem e destino, identifica portos de acesso, constr\'oi as pernas rodovi\'arias e mar\'itimas, estima o consumo de combust\'iveis por etapa e persiste os resultados em banco SQLite para reuso posterior. Tal abordagem aproxima o projeto de trabalhos que tratam a avalia\c{c}\~ao modal como um problema de rede e de composi\c{c}\~ao de pernas log\'isticas, e n\~ao apenas como compara\c{c}\~ao entre fatores m\'edios por tonelada-quil\^ometro \citep{competitiveness2024,shortsea2019}.
+
+Sob a perspectiva cient\'ifica, o problema de pesquisa pode ser formulado da seguinte maneira: como operacionalizar, em ambiente computacional reprodut\'ivel, uma compara\c{c}\~ao \emph{door-to-door} entre o modo rodovi\'ario e uma alternativa rodovi\'ario--cabotagem--rodovi\'ario para pares origem-destino no Brasil, preservando rastreabilidade metodol\'ogica sobre dist\^ancias, fatores de consumo, hip\'oteses de aloca\c{c}\~ao de carga e opera\c{c}\~oes portu\'arias? A quest\~ao \'e menos trivial do que aparenta. Uma compara\c{c}\~ao desse tipo precisa decidir, entre outros aspectos, como estimar o desempenho energ\'etico de caminh\~oes de diferentes configura\c{c}\~oes, como representar o desempenho energ\'etico de navios a partir de classes reais de efici\^encia, como atribuir \`a carga analisada apenas uma fra\c{c}\~ao do consumo do navio, e como incorporar consumos que n\~ao ocorrem em navega\c{c}\~ao estrita, como hoteling e movimenta\c{c}\~ao em terminal.
+
+O objetivo geral deste trabalho \'e documentar, em linguagem acad\^emica, a metodologia e a implementa\c{c}\~ao do sistema desenvolvido no reposit\'orio, explicitando seus fundamentos te\'oricos, suas fontes de dados, sua arquitetura de software e suas limita\c{c}\~oes atuais. Como objetivos espec\'ificos, busca-se: descrever o contexto log\'istico e ambiental que motiva a compara\c{c}\~ao entre rodovi\'ario e cabotagem; sintetizar a literatura local e internacional pertinente a transporte multimodal, cabotagem, emiss\~oes mar\'itimas e modelagem baseada em atividades; explicar detalhadamente a formula\c{c}\~ao computacional adotada para construir e avaliar cen\'arios; registrar como o sistema organiza seus m\'odulos, artefatos processados, interfaces e persist\^encia; e delimitar com honestidade metodol\'ogica aquilo que o projeto j\'a entrega, aquilo que est\'a parametrizado para evolu\c{c}\~ao futura e aquilo que ainda permanece fora do escopo.
+
+O escopo do presente texto acompanha o escopo observ\'avel no c\'odigo e nos dados dispon\'iveis. A compara\c{c}\~ao principal concentra-se em duas alternativas: uma rota rodovi\'aria direta entre origem e destino e uma rota multimodal composta por \emph{first mile} rodovi\'ario at\'e um porto de origem, trecho mar\'itimo entre portos brasileiros e \emph{last mile} rodovi\'ario at\'e o destino final. As emiss\~oes tratadas na implementa\c{c}\~ao ativa s\~ao, predominantemente, do tipo \emph{tank-to-wheel} ou \emph{fuel combustion based}; o custo modelado de maneira expl\'icita \'e o custo energ\'etico associado a diesel, bunker mar\'itimo e, quando aplic\'avel, combust\'ivel consumido em opera\c{c}\~oes portu\'arias. A ferramenta n\~ao pretende, em seu estado atual, representar integralmente fretes de mercado, tempos de tr\^ansito, tarifas portu\'arias, custos de capital empatado, emiss\~oes de constru\c{c}\~ao de infraestrutura ou uma an\'alise de ciclo de vida completa, embora parte da literatura reunida no reposit\'orio discuta exatamente essas extens\~oes \citep{decarb2024,lifecycle2020,maritimelca2024}.
+
+Este documento est\'a organizado da seguinte forma. O Cap\'itulo~\ref{chap:fundamentacao} discute a fundamenta\c{c}\~ao te\'orica e a literatura utilizada para situar a cabotagem, a compara\c{c}\~ao modal e a contabilidade de emiss\~oes. O Cap\'itulo~\ref{chap:dados} descreve os dados, os artefatos processados e a organiza\c{c}\~ao do reposit\'orio. O Cap\'itulo~\ref{chap:metodologia} apresenta a metodologia de modelagem, com \'enfase nas equa\c{c}\~oes e hip\'oteses operacionais efetivamente implementadas. O Cap\'itulo~\ref{chap:implementacao} detalha a arquitetura do sistema e sua operacionaliza\c{c}\~ao em aplica\c{c}\~ao e \emph{scripts}. O Cap\'itulo~\ref{chap:resultados} discute a estrutura de gera\c{c}\~ao e interpreta\c{c}\~ao de resultados. O Cap\'itulo~\ref{chap:limitacoes} sintetiza limites, hip\'oteses e amea\c{c}as \`a validade. Por fim, o Cap\'itulo~\ref{chap:conclusao} apresenta as considera\c{c}\~oes finais.
+
+\chapter{Fundamenta\c{c}\~ao te\'orica e revis\~ao da literatura}
+\label{chap:fundamentacao}
+
+\section{Transporte multimodal, cabotagem e competitividade log\'istica}
+
+A cabotagem brasileira costuma ser discutida como um segmento com potencial de expans\~ao tanto por motivos econ\^omicos quanto ambientais. O relat\'orio do ICCT dedicado \`a navega\c{c}\~ao costeira no Brasil argumenta que a combina\c{c}\~ao entre crescimento da demanda, press\~oes regulat\'orias e oportunidades de descarboniza\c{c}\~ao pode abrir novas perspectivas para o setor \citep{icct2022}. Em paralelo, estudos voltados \`a competitividade de redes multimodais mostram que a atratividade da cabotagem depende fortemente da integra\c{c}\~ao entre hinterl\^and terrestre, frequ\^encia de servi\c{c}o, localiza\c{c}\~ao dos terminais e custos de transbordo \citep{competitiveness2024}. Isso implica que n\~ao existe superioridade modal universal: a cabotagem tende a ser vantajosa em alguns corredores e pouco competitiva em outros, sobretudo quando o acr\'escimo de acessos terrestres e opera\c{c}\~oes portu\'arias supera os ganhos de escala obtidos no mar.
+
+Essa leitura \'e particularmente importante para um projeto computacional como o presente. A literatura de competitividade multimodal sugere que a unidade adequada de an\'alise n\~ao \'e apenas o trecho oce\^anico, mas o itiner\'ario log\'istico completo. Ao adotar uma compara\c{c}\~ao \emph{door-to-door}, o reposit\'orio se aproxima dessa tradi\c{c}\~ao anal\'itica: a avalia\c{c}\~ao considera explicitamente a necessidade de acesso rodovi\'ario aos portos e evita assumir que o navio substitui integralmente a rota rodovi\'aria direta. Tamb\'em se aproxima de evid\^encias sobre a experi\^encia dos usu\'arios da cabotagem brasileira, segundo as quais o desempenho percebido do servi\c{c}o \'e resultado de um pacote log\'istico mais amplo, e n\~ao apenas do transporte mar\'itimo isolado \citep{users2022}.
+
+\section{Mudan\c{c}a modal e contabilidade de emiss\~oes no transporte de cargas}
+
+Estudos internacionais sobre transporte mar\'itimo de curta dist\^ancia frequentemente destacam o potencial do modo aquavi\'ario para reduzir emiss\~oes por unidade de carga transportada, mas ressaltam que esse potencial depende de como a compara\c{c}\~ao \'e estruturada \citep{shortsea2019,external2022}. Trabalhos desse tipo chamam aten\c{c}\~ao para pelo menos tr\^es pontos. Primeiro, a unidade funcional importa: resultados por tonelada-quil\^ometro, por cont\^einer, por viagem ou por corredor podem conduzir a conclus\~oes distintas. Segundo, a taxa de ocupa\c{c}\~ao do ativo \'e decisiva. Um navio energeticamente eficiente pode perder vantagem se sua capacidade efetiva for pouco utilizada ou se o consumo for indevidamente alocado a uma remessa muito pequena. Terceiro, custos e emiss\~oes associados \`as interfaces portu\'arias e aos acessos terrestres n\~ao devem ser omitidos quando a pergunta de pesquisa \'e \emph{door-to-door}.
+
+No estado atual do reposit\'orio, essas preocupa\c{c}\~oes se traduzem em decis\~oes metodol\'ogicas concretas. O sistema n\~ao utiliza apenas um fator agregado fixo para cabotagem; ele calcula separadamente a navega\c{c}\~ao principal, o hoteling e as opera\c{c}\~oes portu\'arias, e aplica regras de aloca\c{c}\~ao de carga inspiradas no transporte conteinerizado. Essa escolha \'e coerente com a literatura baseada em dados observados de desempenho de navios. Revis\~oes recentes sobre o uso de bases MRV na avalia\c{c}\~ao de efici\^encia energ\'etica destacam justamente o valor de se extrair classes emp\'iricas de desempenho em vez de depender apenas de coeficientes te\'oricos homog\^eneos \citep{eumrv2025}. Avalia\c{c}\~oes pioneiras com dados MRV de graneleiros europeus j\'a apontavam o potencial dessa fonte para medir consumo e emiss\~oes com maior granularidade operacional \citep{drybulk2019}. O projeto em estudo transfere essa l\'ogica para a cabotagem conteinerizada brasileira por meio de um processo local de consolida\c{c}\~ao de classes de efici\^encia para navios porta-cont\^eineres.
+
+\section{Transporte conteinerizado, opera\c{c}\~oes portu\'arias e hoteling}
+
+A efici\^encia ambiental de cadeias conteinerizadas depende tanto da navega\c{c}\~ao quanto das opera\c{c}\~oes realizadas nos terminais. Em contextos emp\'iricos diversos, estudos sobre emiss\~oes em ber\c{c}o e sobre consumo em fases de hoteling mostram que uma parcela n\~ao desprez\'ivel do invent\'ario de combust\'ivel pode ocorrer quando o navio n\~ao est\'a em velocidade de cruzeiro, mas mantendo servi\c{c}os auxiliares, refrigera\c{c}\~ao, gera\c{c}\~ao el\'etrica e sistemas de bordo \citep{berth2009,shipops2022}. O guia metodol\'ogico EMEP/EEA, citado explicitamente nos documentos internos do projeto, oferece uma rela\c{c}\~ao pr\'atica entre consumo em navega\c{c}\~ao e consumo associado a motores auxiliares, permitindo converter um consumo principal em uma taxa hor\'aria de hoteling sob hip\'oteses transparentes \citep{emep2023}.
+
+De forma an\'aloga, a etapa portu\'aria n\~ao pode ser tratada como custo nulo. O processamento local contido em \texttt{docs/port\_ops\_model.md} e no artefato \texttt{port\_ops\_params\_santos.json} mostra que o reposit\'orio adota um modelo baseado em movimentos de cont\^eineres, distinguindo equipamentos como RTG de p\'atio e caminh\~oes de terminal. A escolha dialoga com estudos espec\'ificos sobre uso de energia em RTGs e solu\c{c}\~oes h\'ibridas de redu\c{c}\~ao de diesel \citep{rtg2017,hybridrtg2021}. Em vez de atribuir arbitrariamente um custo fixo por escala, o modelo local transforma a movimenta\c{c}\~ao de cont\^eineres em litros de diesel por movimento, o que torna a avalia\c{c}\~ao mais aderente \`a f\'isica operacional do terminal, ainda que o conjunto de par\^ametros inicial esteja concentrado no contexto do Porto de Santos.
+
+\section{Combust\'iveis mar\'itimos, escopo ambiental e limites de compara\c{c}\~ao}
+
+Parte importante da literatura local reunida no reposit\'orio trata de trajet\'orias de descarboniza\c{c}\~ao mar\'itima e de combust\'iveis alternativos \citep{decarb2024,lifecycle2020,maritimelca2024}. Esses trabalhos s\~ao valiosos por duas raz\~oes. A primeira \'e substantiva: mostram que o desempenho ambiental da cabotagem no longo prazo n\~ao pode ser reduzido ao uso continuado de VLSFO, havendo espa\c{c}o para rotas de transi\c{c}\~ao envolvendo HVO, LNG, biodiesel ou outras alternativas. A segunda \'e metodol\'ogica: evidenciam que indicadores \emph{tank-to-wheel} e avalia\c{c}\~oes de ciclo de vida respondem a perguntas diferentes. Uma rota pode parecer vantajosa em emiss\~oes de combust\~ao direta e, ainda assim, exigir reavalia\c{c}\~ao quando se incorporam emiss\~oes \emph{well-to-tank}, mudan\c{c}as de uso da terra ou infraestrutura de abastecimento.
+
+O projeto documentado neste relat\'orio faz uma escolha deliberadamente mais restrita. A implementa\c{c}\~ao ativa fixa o combust\'ivel mar\'itimo principal em VLSFO e utiliza fatores de emiss\~ao diretamente associados \`a combust\~ao do combust\'ivel consumido. O mesmo vale para o diesel rodovi\'ario e para o diesel utilizado nas opera\c{c}\~oes portu\'arias. Essa restri\c{c}\~ao n\~ao invalida o modelo; ao contr\'ario, define com clareza a pergunta respondida pela ferramenta: dadas as hip\'oteses operacionais atuais e mantendo constante a natureza do combust\'ivel principal, em que medida uma rota multimodal pode reduzir consumo direto de energia e emiss\~oes de combust\~ao quando comparada ao transporte rodovi\'ario? A honestidade sobre o escopo \'e essencial para que a interpreta\c{c}\~ao dos resultados n\~ao extrapole o que o sistema de fato calcula.
+
+\chapter{Dados, artefatos processados e arquitetura do reposit\'orio}
+\label{chap:dados}
+
+\section{Estrutura geral do reposit\'orio}
+
+O reposit\'orio est\'a organizado de forma compat\'ivel com uma separa\c{c}\~ao entre l\'ogica de dom\'inio, interfaces de uso, artefatos processados e rotinas auxiliares de c\'alculo. O diret\'orio \texttt{modules/} concentra a maior parte da l\'ogica de neg\'ocio. Nele se encontram componentes para roteamento rodovi\'ario, tratamento de endere\c{c}os, busca de portos, avalia\c{c}\~ao multimodal, custos, combust\'iveis, persist\^encia e visualiza\c{c}\~ao. O diret\'orio \texttt{app/} cont\'em a aplica\c{c}\~ao Streamlit que exp\~oe a ferramenta ao usu\'ario final, enquanto \texttt{scripts/} oferece fluxos reexecut\'aveis em linha de comando para compara\c{c}\~oes unit\'arias e em lote. O diret\'orio \texttt{calcs/} re\'une rotinas de prepara\c{c}\~ao e auditoria metodol\'ogica, incluindo gera\c{c}\~ao da matriz mar\'itima, constru\c{c}\~ao das classes de efici\^encia de navios, verifica\c{c}\~ao de roteabilidade e consolida\c{c}\~ao dos par\^ametros portu\'arios. Por sua vez, \texttt{data/} agrega insumos brutos, tabelas processadas e o banco SQLite, ao passo que \texttt{tests/} registra testes automatizados e cadernos explorat\'orios utilizados na valida\c{c}\~ao de partes do modelo.
+
+Essa organiza\c{c}\~ao n\~ao \'e apenas conven\c{c}\~ao de engenharia de software; ela sustenta a reprodutibilidade metodol\'ogica. A exist\^encia de diret\'orios espec\'ificos para dados processados, de \emph{scripts} determin\'isticos para constru\c{c}\~ao de artefatos e de um banco local que atua simultaneamente como cache e como reposit\'orio de resultados reduz o risco de depend\^encia impl\'icita de estados tempor\'arios ou interven\c{c}\~oes manuais n\~ao documentadas. Essa preocupa\c{c}\~ao com a rastreabilidade aparece de forma consistente no \texttt{README.md}, nos documentos internos de metodologia e na pr\'opria divis\~ao das responsabilidades entre arquivos.
+
+\section{Fontes de dados e artefatos processados}
+
+O modelo depende de um conjunto heterog\^eneo de entradas, algumas provenientes de bases p\'ublicas e outras resultantes de processamento local. A Tabela~\ref{tab:artefatos-centrais} sintetiza os artefatos mais centrais para a implementa\c{c}\~ao ativa observada no reposit\'orio.
+
+\begin{longtable}{p{4.0cm} p{3.0cm} p{7.5cm}}
+\caption{Artefatos processados centrais do reposit\'orio e sua fun\c{c}\~ao metodol\'ogica}
+\label{tab:artefatos-centrais}\\
+\toprule
+Artefato & Localiza\c{c}\~ao & Fun\c{c}\~ao no modelo \\
+\midrule
+\endfirsthead
+\toprule
+Artefato & Localiza\c{c}\~ao & Fun\c{c}\~ao no modelo \\
+\midrule
+\endhead
+\texttt{ports\_br.json} & \texttt{data/processed/cabotage\_data/} & Cadastro estruturado de portos brasileiros, com nomes, \emph{slugs}, coordenadas e, em v\'arios casos, coordenadas de gate para conex\~ao terrestre. \\
+\texttt{sea\_matrix.json} & \texttt{data/processed/cabotage\_data/} & Matriz sim\'etrica de dist\^ancias mar\'itimas porto a porto, em quil\^ometros, gerada pelo m\'etodo \texttt{geografos\_plus\_searoute\_v2\_aliases}. \\
+\texttt{container\_ship\_efficiency\_classes.json} & \texttt{data/processed/cabotage\_data/} & Par\^ametros de efici\^encia de classes de navios porta-cont\^eineres, incluindo medianas de consumo por milha n\'autica, intensidade em g/(t$\cdot$nm), \emph{size proxy} e capacidade nominal em TEU. \\
+\texttt{container\_ship\_hoteling\_rate\_by\_class.json} & \texttt{data/processed/cabotage\_data/} & Taxas hor\'arias de consumo em hoteling derivadas a partir das mesmas classes de navios, com base em raz\~ao auxiliar/principal inspirada no guia EMEP/EEA. \\
+\texttt{port\_ops\_params\_santos.json} & \texttt{data/processed/cabotage\_data/} & Par\^ametros do submodelo de opera\c{c}\~oes portu\'arias, incluindo cen\'arios \texttt{santos\_diesel\_heavy} e \texttt{santos\_partially\_electrified}. \\
+\texttt{latest\_diesel\_prices.csv} & \texttt{data/processed/road\_data/} & Pre\c{c}os de diesel por unidade da federa\c{c}\~ao, usados para estimar custo energ\'etico rodovi\'ario a partir da m\'edia entre UF de origem e destino. \\
+\texttt{santos\_bunker\_brl.txt} & \texttt{data/processed/maritime\_fuel/} & S\'erie local do pre\c{c}o de bunker mar\'itimo em BRL por tonelada m\'etrica, usada na valora\c{c}\~ao do consumo de VLSFO. \\
+\texttt{carbon\_footprint.sqlite} & \texttt{data/processed/database/} & Banco SQLite que armazena cache de rotas e resultados de compara\c{c}\~oes unit\'arias ou em lote. \\
+\bottomrule
+\end{longtable}
+
+Alguns desses artefatos s\~ao derivados de fontes prim\'arias explicitamente documentadas no reposit\'orio. As rotinas ligadas a diesel utilizam como base o levantamento semanal de pre\c{c}os por estado da Ag\^encia Nacional do Petr\'oleo, G\'as Natural e Biocombust\'iveis \citep{anp2026}. O conjunto de dados de atraca\c{c}\~oes utilizado em parte das rotinas de prepara\c{c}\~ao de dados mar\'itimos remete \`a base operacional da Ag\^encia Nacional de Transportes Aquavi\'arios \citep{antaq2025}. Os par\^ametros de opera\c{c}\~oes portu\'arias remetem a uma planilha local de apoio e \`a literatura complementar sobre consumo de equipamentos de terminal \citep{workbookdados,rtg2017,hybridrtg2021}. J\'a as classes de efici\^encia mar\'itima decorrem de um processo interno documentado em \texttt{docs/mrv\_container\_efficiency.md}, no qual dados MRV s\~ao filtrados, limpos e agregados em classes compat\'iveis com a estrutura do modelo.
+
+\section{Artefatos documentais internos}
+
+Um tra\c{c}o metodologicamente relevante do projeto \'e a exist\^encia de documentos internos que funcionam como ponte entre literatura acad\^emica, pr\'e-processamento de dados e implementa\c{c}\~ao. Entre eles, destacam-se \texttt{docs/methodology\_audit.md}, que identifica explicitamente qual trilha de c\'alculo est\'a ativa no reposit\'orio; \texttt{docs/mrv\_container\_efficiency.md}, que descreve o processo de cria\c{c}\~ao das classes de navios; \texttt{docs/hoteling\_model.md}, que documenta a derivac\~ao da taxa de hoteling; \texttt{docs/port\_ops\_model.md}, que fundamenta o submodelo de terminal; e \texttt{docs/costa\_allocation\_validation.md}, que registra a discuss\~ao sobre regras de aloca\c{c}\~ao da carga ao navio. Em um trabalho acad\^emico tradicional, parte desse material estaria dispersa em cadernos de pesquisa ou em ap\^endices n\~ao versionados; aqui, por estar incorporado ao reposit\'orio, ele se torna audit\'avel e pass\'ivel de cita\c{c}\~ao metodol\'ogica indireta no presente texto.
+
+\section{Par\^ametros mar\'itimos centrais}
+
+Os artefatos processados permitem registrar valores concretos utilizados pela implementa\c{c}\~ao ativa. A Tabela~\ref{tab:classes-navios} resume os par\^ametros centrais das tr\^es classes de navios porta-cont\^eineres empregadas no c\'alculo mar\'itimo.
+
+\begin{table}[htbp]
+\centering
+\caption{Par\^ametros centrais das classes de navios porta-cont\^eineres utilizadas pelo modelo}
+\label{tab:classes-navios}
+\begin{tabular}{lrrrrr}
+\toprule
+Classe & Amostra & \multicolumn{1}{p{2.1cm}}{Capacidade nominal (TEU)} & \multicolumn{1}{p{2.1cm}}{Mediana kg/nm} & \multicolumn{1}{p{2.1cm}}{Mediana g/(t$\cdot$nm)} & \multicolumn{1}{p{2.1cm}}{Hoteling t/h} \\
+\midrule
+\texttt{container\_small} & 3172 & 2800 & 93.145 & 12.145 & 0.12148 \\
+\texttt{container\_feeder} & 1406 & 3800 & 168.780 & 6.070 & 0.26715 \\
+\texttt{container\_large} & 3100 & 5000 & 270.310 & 3.280 & 0.44365 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Esses valores mostram um aspecto fundamental do desenho metodol\'ogico: o modelo n\~ao trabalha com um ``navio m\'edio'' abstrato para toda a cabotagem. Ele distingue classes cujo consumo absoluto por milha aumenta com o porte da embarca\c{c}\~ao, mas cuja intensidade espec\'ifica por tonelada-milha cai de forma expressiva. Em termos anal\'iticos, isso \'e coerente com a literatura internacional sobre efici\^encia de navega\c{c}\~ao conteinerizada \citep{shortsea2019,eumrv2025}. Em termos computacionais, isso permite testar como uma mesma remessa pode apresentar desempenho distinto caso seja alocada a um \emph{feeder} ou a um navio maior, especialmente quando se considera a regra de participa\c{c}\~ao da carga na capacidade operacional do navio.
+
+\chapter{Metodologia de modelagem}
+\label{chap:metodologia}
+
+\section{Filosofia geral do modelo}
+
+A metodologia implementada no reposit\'orio pode ser descrita como uma compara\c{c}\~ao de cen\'arios log\'isticos baseada em atividades, com desagrega\c{c}\~ao por pernas de transporte e por fontes de consumo energ\'etico. Em vez de partir de um fator agregado \'unico para o modo rodovi\'ario e outro para a cabotagem, o sistema constr\'oi explicitamente dois arranjos concorrentes para um mesmo par origem--destino: um cen\'ario \emph{road-only}, correspondente \`a liga\c{c}\~ao rodovi\'aria direta, e um cen\'ario multimodal \emph{road--sea--road}, composto por acesso rodovi\'ario ao porto de origem, trecho mar\'itimo entre portos brasileiros e distribui\c{c}\~ao rodovi\'aria at\'e o destino final. Cada componente do itiner\'ario gera m\'etricas pr\'oprias de dist\^ancia, combust\'ivel, emiss\~oes e custo energ\'etico, que s\~ao depois agregadas.
+
+Tal filosofia responde a um requisito central de auditabilidade. Se uma determinada rota multimodal se mostrar melhor ou pior do que a alternativa rodovi\'aria, o sistema permite identificar em qual parte da cadeia essa diferen\c{c}a foi gerada: se na extens\~ao dos acessos terrestres, na intensidade espec\'ifica do navio, no consumo em hoteling, nas opera\c{c}\~oes portu\'arias ou na combina\c{c}\~ao entre esses fatores. Isso \'e particularmente importante para uma aplica\c{c}\~ao voltada \`a compara\c{c}\~ao de cabotagem, porque a superioridade ambiental do trecho mar\'itimo isolado n\~ao garante superioridade do servi\c{c}o \emph{door-to-door} completo.
+
+\section{Representa\c{c}\~ao do par origem--destino e constru\c{c}\~ao da geometria}
+
+O ponto de partida do modelo \'e um par origem--destino informado como texto, cidade ou localidade equivalente. A resolu\c{c}\~ao de coordenadas \'e realizada por componentes do pacote \texttt{modules/addressing/}, em articula\c{c}\~ao com a integra\c{c}\~ao ao OpenRouteService. Uma vez obtidas as coordenadas dos pontos terminais, o sistema constr\'oi o cen\'ario rodovi\'ario direto e, em paralelo, identifica os portos de acesso mais pr\'oximos para a alternativa multimodal. A sele\c{c}\~ao de porto n\~ao depende, no estado atual, de malha de servi\c{c}os mar\'itimos ou frequ\^encia de escalas; ela \'e feita por proximidade geogr\'afica, usando c\'alculo do tipo \emph{haversine} entre o ponto terrestre e as coordenadas de gate ou centr\'oide do porto.
+
+Essa escolha traduz uma hip\'otese operacional clara. O sistema presume que, na aus\^encia de uma camada observada de oferta de servi\c{c}o, a porta de entrada mais plaus\'ivel para a cadeia multimodal \'e o porto geograficamente mais pr\'oximo em cada extremidade. Em estudos de rede mais completos, seria desej\'avel combinar essa heur\'istica com frequ\^encia de linhas, tempo de espera, disponibilidade de cont\^eineres e servi\c{c}os efetivamente operantes \citep{competitiveness2024}. Ainda assim, como ponto de partida para uma ferramenta comparativa reproduz\'ivel, a regra de proximidade apresenta a vantagem de ser determin\'istica, audit\'avel e facilmente generaliz\'avel para v\'arios pares origem--destino.
+
+Para os trechos rodovi\'arios, a constru\c{c}\~ao da geometria e da dist\^ancia depende do OpenRouteService, com perfil preferencial \texttt{driving-hgv}. O roteador implementado em \texttt{modules/road/router.py} consulta inicialmente o cache SQLite e, apenas quando a rota n\~ao existe localmente, aciona a API externa. H\'a ainda um mecanismo de conting\^encia para \texttt{driving-car} caso o perfil pesado n\~ao retorne resultado. Para o trecho mar\'itimo, a avalia\c{c}\~ao num\'erica utiliza a matriz \texttt{sea\_matrix.json}. A interface gr\'afica do aplicativo possui componentes adicionais para desenho visual de trajet\'orias mar\'itimas, interpola\c{c}\~ao costeira e corre\c{c}\~oes cartogr\'aficas; entretanto, para o balan\c{c}o energ\'etico, a dist\^ancia relevante \'e a registrada na matriz porto a porto.
+
+\section{Modelo rodovi\'ario}
+
+No cen\'ario rodovi\'ario direto, o modelo requer a massa da carga e um \emph{preset} de caminh\~ao. Os \emph{presets} atualmente dispon\'iveis incluem configura\c{c}\~oes como \texttt{semi\_27t}, \texttt{carreta\_6ax\_30t}, \texttt{bitrain\_7ax\_36t} e \texttt{rodotrem\_9ax\_48t}, al\'em de uma op\c{c}\~ao autom\'atica baseada no peso. Cada configura\c{c}\~ao \'e associada a capacidade \'util, n\'umero de eixos e um patamar de efici\^encia de refer\^encia em quil\^ometros por litro. O arquivo \texttt{modules/fuel/truck\_specs.py} registra valores de refer\^encia por n\'umero de eixos, enquanto \texttt{modules/fuel/road\_fuel\_model.py} ajusta essa efici\^encia em fun\c{c}\~ao da rela\c{c}\~ao entre massa transportada e capacidade do ve\'iculo.
+
+O n\'umero de viagens necess\'arias para transportar uma remessa de massa \(M\), usando um ve\'iculo com capacidade \'util \(P\), \'e dado por:
+\begin{equation}
+n_{\text{viagens}} = \left\lceil \frac{M}{P} \right\rceil .
+\label{eq:trips-road}
+\end{equation}
+No c\'odigo atual, esse arredondamento superior garante que a remessa inteira seja atendida mesmo quando sua massa excede a capacidade de um \'unico caminh\~ao. A quilometragem total efetiva do cen\'ario rodovi\'ario passa, portanto, a ser a dist\^ancia roteirizada multiplicada pelo n\'umero de viagens requeridas.
+
+Se \(d_{\text{rod}}\) representa a dist\^ancia do trecho rodovi\'ario em quil\^ometros e \(\eta_{\text{rod}}\) a efici\^encia ajustada do caminh\~ao em km/L, o consumo total de diesel do trecho pode ser representado por:
+\begin{equation}
+L_{\text{rod}} = \frac{d_{\text{rod}}}{\eta_{\text{rod}}} \cdot n_{\text{viagens}} .
+\label{eq:litros-road}
+\end{equation}
+O custo energ\'etico rodovi\'ario \'e obtido multiplicando esse volume pelo pre\c{c}o de diesel \(p_{\text{diesel}}\), calculado no sistema como a m\'edia simples entre os pre\c{c}os da UF de origem e da UF de destino:
+\begin{equation}
+C_{\text{rod}} = L_{\text{rod}} \cdot p_{\text{diesel}} .
+\label{eq:custo-road}
+\end{equation}
+As emiss\~oes diretas de \(\mathrm{CO_2e}\) associadas ao diesel rodovi\'ario utilizam, na implementa\c{c}\~ao ativa, um fator de \num{2.68} kgCO2e/L. Assim,
+\begin{equation}
+E_{\text{rod}} = L_{\text{rod}} \cdot 2.68 .
+\label{eq:emissoes-road}
+\end{equation}
+
+\'E relevante notar que o modelo rodovi\'ario atualmente adota \emph{empty backhaul share} igual a zero na trilha ativa do avaliador multimodal. Em termos pr\'aticos, isso significa que o consumo calculado corresponde apenas \`as viagens carregadas necess\'arias para movimentar a remessa, sem imputar consumo adicional para retorno vazio. Trata-se de uma hip\'otese defens\'avel para compara\c{c}\~oes estritamente vinculadas \`a remessa analisada, mas que tende a subestimar o custo sist\^emico completo de opera\c{c}\~oes rodovi\'arias quando se deseja representar o circuito log\'istico completo do transportador.
+
+\section{Modelo mar\'itimo principal}
+
+O trecho de cabotagem \'e parametrizado por uma classe de navio porta-cont\^eineres e pela dist\^ancia entre o porto de origem e o porto de destino. O reposit\'orio define como padr\~ao a classe \texttt{container\_feeder}, mas permite selecionar outras classes dispon\'iveis no artefato processado. A dist\^ancia mar\'itima \'e lida da matriz \texttt{sea\_matrix.json}; no avaliador, ela \'e convertida de quil\^ometros para milhas n\'auticas, pois os fatores de consumo da frota est\~ao expressos por milha n\'autica.
+
+O c\'alculo preferencial de consumo mar\'itimo n\~ao parte do consumo absoluto mediano por milha, mas da intensidade mediana em gramas de combust\'ivel por tonelada e por milha n\'autica, denotada aqui por \(I_{\text{mar}}\). Se \(M\) representa a massa da carga em toneladas e \(d_{\text{nm}}\) a dist\^ancia mar\'itima em milhas n\'auticas, o consumo total do navio atribu\'ivel \`a remessa pode ser escrito como:
+\begin{equation}
+F_{\text{nav}} = \frac{I_{\text{mar}} \cdot M \cdot d_{\text{nm}}}{1000} .
+\label{eq:fuel-sea-intensity}
+\end{equation}
+Nessa express\~ao, o fator \(1000\) converte gramas para quilogramas. No caso da classe \texttt{container\_feeder}, por exemplo, a mediana de intensidade atualmente registrada no artefato \'e de \num{6.07} g/(t$\cdot$nm). Isso significa que o consumo mar\'itimo atribu\'ido \`a remessa cresce linearmente com a carga transportada e com a dist\^ancia entre portos, de forma compat\'ivel com a l\'ogica de indicadores espec\'ificos por atividade.
+
+O c\'odigo tamb\'em preserva um caminho alternativo de c\'alculo baseado em consumo absoluto do navio por milha n\'autica e participa\c{c}\~ao da carga no navio. Essa participa\c{c}\~ao pode ser estimada por duas regras: uma baseada em capacidade conteinerizada operacional e outra baseada em um \emph{proxy} de porte em toneladas. Seja \(T\) a quantidade de TEU atribu\'ida \`a remessa, \(Q_{\text{TEU}}\) a capacidade nominal da classe em TEU e \(\lambda\) o fator operacional de ocupa\c{c}\~ao, fixado em \num{0.8} na trilha principal. A participa\c{c}\~ao conteinerizada \'e:
+\begin{equation}
+\alpha_{\text{TEU}} = \frac{T}{Q_{\text{TEU}} \cdot \lambda} .
+\label{eq:share-teu}
+\end{equation}
+Quando a quantidade de TEU n\~ao \'e fornecida explicitamente, o sistema pode deriv\'a-la a partir da massa da remessa e do par\^ametro padr\~ao de \num{14} t/TEU, utilizado tamb\'em nas opera\c{c}\~oes portu\'arias. Como alternativa, pode-se usar a participa\c{c}\~ao por massa:
+\begin{equation}
+\alpha_{\text{massa}} = \frac{M}{S_{\text{med}}} ,
+\label{eq:share-mass}
+\end{equation}
+em que \(S_{\text{med}}\) representa a mediana do \emph{size proxy} em toneladas para a classe selecionada. Para classes conteinerizadas com capacidade em TEU definida, a implementa\c{c}\~ao privilegia \(\alpha_{\text{TEU}}\); a regra de massa atua como conting\^encia.
+
+O custo energ\'etico do trecho mar\'itimo principal \'e calculado pela multiplica\c{c}\~ao entre o consumo de VLSFO atribu\'ido \`a remessa e o pre\c{c}o local de bunker em BRL por tonelada m\'etrica, convertido internamente em BRL por quilograma. As emiss\~oes diretas s\~ao obtidas pelo fator \num{3.21} kgCO2e/kg para VLSFO, registrado em \texttt{modules/fuel/emissions.py}. Logo,
+\begin{equation}
+E_{\text{nav}} = F_{\text{nav}} \cdot 3.21 .
+\label{eq:emissoes-nav}
+\end{equation}
+
+\section{Submodelo de hoteling}
+
+O consumo em hoteling \'e modelado como um acr\'escimo ao consumo de navega\c{c}\~ao principal, com base em taxas hor\'arias por classe de navio. O documento interno \texttt{docs/hoteling\_model.md} registra explicitamente a raz\~ao auxiliar/principal \(r = 0.25\) e a rela\c{c}\~ao funcional extra\'ida do guia EMEP/EEA:
+\begin{equation}
+\phi_{\text{hotel}} = \frac{0.40 \cdot r}{0.80 + 0.30 \cdot r}.
+\label{eq:ratio-hoteling}
+\end{equation}
+Para \(r = 0.25\), obt\'em-se \(\phi_{\text{hotel}} \approx 0.1142857\), valor compat\'ivel com o artefato processado. O sistema converte essa rela\c{c}\~ao em uma taxa de consumo em hoteling por hora, denotada por \(\dot{F}_{\text{hotel}}\), espec\'ifica para cada classe.
+
+Se \(h\) representa as horas de hoteling por escala e \(N_{\text{portos}}\) o n\'umero de chamadas portu\'arias da cadeia, o consumo total do navio em hoteling \'e dado por:
+\begin{equation}
+F_{\text{hotel,navio}} = \dot{F}_{\text{hotel}} \cdot h \cdot N_{\text{portos}} .
+\label{eq:hoteling-total-ship}
+\end{equation}
+Na implementa\c{c}\~ao padr\~ao, assumem-se \num{14} h por chamada e duas chamadas portu\'arias, correspondentes a embarque e desembarque. O consumo atribu\'ido \`a remessa resulta da multiplica\c{c}\~ao desse total pela participa\c{c}\~ao da carga \(\alpha\):
+\begin{equation}
+F_{\text{hotel}} = F_{\text{hotel,navio}} \cdot \alpha .
+\label{eq:hoteling-allocated}
+\end{equation}
+As emiss\~oes e o custo s\~ao calculados com o mesmo combust\'ivel mar\'itimo principal, o que refor\c{c}a o car\'ater conservador e simplificado do modelo atual.
+
+\section{Submodelo de opera\c{c}\~oes portu\'arias}
+
+O submodelo de terminal traduz a movimenta\c{c}\~ao da remessa em movimentos de cont\^eineres e, em seguida, em consumo de equipamentos. A regra padr\~ao de convers\~ao entre massa e unidades conteinerizadas adota \(14\) toneladas por TEU, salvo quando o usu\'ario fornece explicitamente a quantidade de TEU. Seja \(T\) o total de TEU associado \`a remessa e \(m_e\) o n\'umero de movimentos por cont\^einer de um equipamento \(e\). O total de movimentos do equipamento em toda a cadeia de dois portos pode ser expresso como:
+\begin{equation}
+N_e = T \cdot m_e \cdot N_{\text{portos}} .
+\label{eq:moves-equipment}
+\end{equation}
+Com isso, se \(\ell_e\) representa o consumo de diesel por movimento, o volume consumido pelo equipamento \(e\) \'e:
+\begin{equation}
+L_e = N_e \cdot \ell_e .
+\label{eq:liters-equipment}
+\end{equation}
+O consumo total de opera\c{c}\~oes portu\'arias \'e a soma sobre os equipamentos considerados:
+\begin{equation}
+L_{\text{porto}} = \sum_e L_e .
+\label{eq:liters-port}
+\end{equation}
+
+No cen\'ario \texttt{santos\_diesel\_heavy}, os artefatos processados registram, em mediana, \num{4.0} movimentos por cont\^einer para RTG com \num{0.355148} L/movimento e \num{2.0} movimentos por cont\^einer para caminh\~ao de terminal com \num{0.494671} L/movimento. Os fatores de STS permanecem zerados por aus\^encia de coeficiente expl\'icito no conjunto atual de refer\^encias, o que significa que o submodelo se concentra nos equipamentos para os quais h\'a base emp\'irica local documentada. No cen\'ario \texttt{santos\_partially\_electrified}, apenas o RTG sofre redu\c{c}\~ao do diesel por movimento, para uma mediana de \num{0.2317} L/movimento, como aproxima\c{c}\~ao inspirada na literatura sobre RTG h\'ibrido \citep{hybridrtg2021}. Em ambos os casos, os fatores el\'etricos est\~ao zerados no artefato ativo, de modo que o modelo atual contabiliza essencialmente diesel.
+
+As emiss\~oes portu\'arias diretas s\~ao obtidas multiplicando o diesel consumido em terminal pelo fator de emiss\~ao adotado para diesel. O custo \'e calculado com o mesmo pre\c{c}o de diesel utilizado para a compara\c{c}\~ao rodovi\'aria, o que n\~ao significa que a opera\c{c}\~ao portu\'aria tenha a mesma estrutura de pre\c{c}os de mercado da opera\c{c}\~ao rodovi\'aria; significa apenas que a ferramenta est\'a monetizando o componente energ\'etico de forma consistente entre subm\'odulos.
+
+\section{Agrega\c{c}\~ao e indicadores comparativos}
+
+No cen\'ario multimodal, o consumo total de combust\'ivel \'e a soma do diesel consumido nos acessos rodovi\'arios, do VLSFO consumido na navega\c{c}\~ao principal, do VLSFO consumido em hoteling e do diesel consumido nas opera\c{c}\~oes portu\'arias:
+\begin{equation}
+F_{\text{mm}} = L_{\text{first}} + L_{\text{last}} + F_{\text{nav}} + F_{\text{hotel}} + L_{\text{porto}} .
+\label{eq:fuel-multimodal}
+\end{equation}
+Como h\'a combust\'iveis diferentes, o sistema preserva internamente a decomposi\c{c}\~ao por fonte e agrega diretamente custo e emiss\~oes, e n\~ao apenas massas de combust\'ivel. Assim, o custo total multimodal \'e:
+\begin{equation}
+C_{\text{mm}} = C_{\text{first}} + C_{\text{last}} + C_{\text{nav}} + C_{\text{hotel}} + C_{\text{porto}},
+\label{eq:cost-mm}
+\end{equation}
+ao passo que as emiss\~oes totais s\~ao:
+\begin{equation}
+E_{\text{mm}} = E_{\text{first}} + E_{\text{last}} + E_{\text{nav}} + E_{\text{hotel}} + E_{\text{porto}}.
+\label{eq:emissions-mm}
+\end{equation}
+
+Com esses totais, a ferramenta calcula indicadores de diferen\c{c}a absoluta e relativa entre os cen\'arios. O avaliador implementa, por exemplo, uma m\'etrica de economia percentual de custo:
+\begin{equation}
+\Delta C_{\%} = \left(1 - \frac{C_{\text{mm}}}{C_{\text{rod}}}\right) \cdot 100,
+\label{eq:savings-pct}
+\end{equation}
+desde que \(C_{\text{rod}} > 0\). M\'etricas an\'alogas podem ser constru\'idas para emiss\~oes. O valor desses indicadores n\~ao reside apenas na compara\c{c}\~ao bin\'aria final, mas na capacidade de identificar sensibilidade a pressupostos como classe do navio, fator de carga, n\'umero de horas em hoteling, cen\'ario portu\'ario e \emph{preset} rodovi\'ario.
+
+\section{Reprodutibilidade e atualiza\c{c}\~ao dos cen\'arios}
+
+Do ponto de vista metodol\'ogico, um aspecto merit\'orio do projeto \'e a tentativa de tornar o modelo atualiz\'avel sem reescrever toda a l\'ogica central. Pre\c{c}os de diesel podem ser atualizados pela rota de tratamento existente em \texttt{modules/costs/diesel\_price\_updater.py}; pre\c{c}os de bunker podem ser substitu\'idos por novos registros locais; classes de efici\^encia mar\'itima podem ser reconstru\'idas a partir dos \emph{scripts} em \texttt{calcs/}; e cen\'arios portu\'arios adicionais podem ser incorporados pela edi\c{c}\~ao do arquivo JSON correspondente. Em outras palavras, a metodologia est\'a fortemente parametrizada por tabelas e artefatos versionados, o que favorece reprodutibilidade, rastreabilidade e evolu\c{c}\~ao incremental.
+
+Essa caracter\'istica diferencia o projeto de compara\c{c}\~oes pontuais produzidas apenas em planilhas ad hoc. Ainda que v\'arias simplifica\c{c}\~oes permane\c{c}am ativas, elas est\~ao explicitadas em arquivos, fun\c{c}\~oes e documentos rastre\'aveis. Para fins de pesquisa aplicada, isso constitui um ganho substantivo: eventuais revis\~oes de hip\'oteses podem ser feitas de modo controlado, e suas consequ\^encias podem ser testadas em novos cen\'arios sem perda de coer\^encia interna.
+
+\chapter{Implementa\c{c}\~ao computacional e operacionaliza\c{c}\~ao}
+\label{chap:implementacao}
+
+\section{Camadas de software e responsabilidades}
+
+A implementa\c{c}\~ao observada no reposit\'orio adota uma separa\c{c}\~ao relativamente n\'itida entre camadas de interface, l\'ogica de dom\'inio e infraestrutura. O n\'ucleo do problema multimodal reside sobretudo no subpacote \texttt{modules/multimodal/}. O arquivo \texttt{builder.py} monta a geometria l\'ogica do cen\'ario, resolvendo coordenadas, escolhendo portos e obtendo dist\^ancias para as pernas terrestres e mar\'itimas. O arquivo \texttt{evaluator.py} transforma essa geometria em resultados quantitativos, combinando modelos de combust\'ivel, fatores de emiss\~ao, pre\c{c}os e submodelos auxiliares. Ao redor desse n\'ucleo, os pacotes \texttt{modules/fuel/}, \texttt{modules/costs/}, \texttt{modules/road/}, \texttt{modules/ports/} e \texttt{modules/infra/} oferecem servi\c{c}os especializados.
+
+Essa separa\c{c}\~ao atende a uma das restri\c{c}\~oes arquiteturais mais importantes do projeto: manter \texttt{modules/} como camada principal de l\'ogica, deixando \texttt{app/} e \texttt{scripts/} como orquestradores relativamente finos. Tal escolha melhora a testabilidade e reduz o risco de diverg\^encia entre a aplica\c{c}\~ao gr\'afica e a interface de linha de comando. De fato, tanto \texttt{scripts/compare\_single.py} quanto \texttt{scripts/compare\_bulk.py} acionam a mesma l\'ogica central de constru\c{c}\~ao e avalia\c{c}\~ao de cen\'arios. A aplica\c{c}\~ao Streamlit segue o mesmo princ\'ipio por meio de utilit\'arios em \texttt{app/main/utils/pipeline.py}, que consolidam os par\^ametros de entrada e encaminham a execu\c{c}\~ao para os m\'odulos de dom\'inio.
+
+\section{Integra\c{c}\~ao com OpenRouteService}
+
+O OpenRouteService exerce dois pap\'eis principais no sistema: geocodifica\c{c}\~ao e roteamento rodovi\'ario. O projeto exige a vari\'avel de ambiente \texttt{ORS\_API\_KEY}, preferencialmente provida por arquivo \texttt{.env}, e sua aus\^encia implica falha clara na configura\c{c}\~ao. Essa depend\^encia externa \'e central para a utilidade pr\'atica da ferramenta, pois \'e ela que permite transformar uma consulta textual de origem e destino em coordenadas e, em seguida, em dist\^ancias rodovi\'arias compat\'iveis com a malha vi\'aria.
+
+Ao mesmo tempo, a implementa\c{c}\~ao foi desenhada para minimizar chamadas desnecess\'arias \`a API. O roteador rodovi\'ario consulta antes o banco SQLite por rotas j\'a resolvidas, em tabela dedicada de cache. Apenas na aus\^encia de resultado persiste-se a necessidade de consulta externa. Esse mecanismo \'e coerente com o car\'ater idempotente desejado para os fluxos do projeto: um mesmo par origem--destino, sob a mesma l\'ogica de perfil de ve\'iculo, n\~ao deve consumir repetidamente cota de API se sua rota j\'a foi obtida e armazenada localmente.
+
+\section{SQLite como fonte local de verdade}
+
+O banco \texttt{data/processed/database/carbon\_footprint.sqlite} ocupa papel estrutural no reposit\'orio. Em vez de atuar apenas como conveni\^encia tempor\'aria, ele foi tratado nas instru\c{c}\~oes do projeto como fonte local de verdade para rotas em cache e resultados persistidos. O m\'odulo \texttt{modules/infra/db/core.py} configura o banco com \emph{write-ahead logging}, sincroniza\c{c}\~ao normal, \emph{foreign keys} ativas e \emph{busy timeout}, indicando uma preocupa\c{c}\~ao expl\'icita com robustez operacional. A tabela \texttt{routes}, mantida por \texttt{road\_cache.py}, guarda dist\^ancias e geometrias rodovi\'arias com \'indice \'unico por origem, destino e tipo de perfil pesado, o que torna o cache semanticamente consistente com o uso pretendido.
+
+O banco tamb\'em armazena resultados de compara\c{c}\~oes unit\'arias e em lote, por meio de tabelas como \texttt{analysis\_results} e \texttt{bulk\_results}. A exist\^encia desses registros permite que a ferramenta seja utilizada n\~ao apenas para c\'alculos pontuais em interface, mas tamb\'em para formar um acervo cumulativo de cen\'arios avaliados. Isso abre caminho para an\'alises comparativas posteriores, constru\c{c}\~ao de pain\'eis e auditoria dos resultados. Entretanto, como ser\'a discutido adiante, o esquema atual de unicidade dessas tabelas ainda n\~ao captura toda a dimensionalidade dos pressupostos de cen\'ario, o que representa uma limita\c{c}\~ao importante para usos anal\'iticos mais extensos.
+
+\section{Aplica\c{c}\~ao, \emph{scripts} e mecanismos de inspe\c{c}\~ao}
+
+A aplica\c{c}\~ao principal do projeto \'e iniciada por \texttt{app/app\_streamlit.py}. O pacote \texttt{app/main/} organiza a interface em componentes relativamente especializados: h\'a elementos de barra lateral para entrada de filtros e hip\'oteses, cart\~oes de resumo, mapas, detalhes de premissas e detalhamento de \emph{breakdown}. Em particular, o arquivo \texttt{app/main/details/assumptions.py} constitui um espelho \'util do estado do modelo, pois torna vis\'iveis ao usu\'ario hip\'oteses como \emph{preset} do caminh\~ao, classe do navio, fonte do diesel, combust\'ivel mar\'itimo, modo de aloca\c{c}\~ao, fator de carga operacional em TEU, cen\'ario portu\'ario e premissas de hoteling.
+
+Na interface de linha de comando, \texttt{scripts/compare\_single.py} permite avaliar um par origem--destino com par\^ametros fornecidos pelo usu\'ario, persistindo um resumo achatado no banco. J\'a \texttt{scripts/compare\_bulk.py} opera sobre conjuntos maiores, gerando resultados em lote e tamb\'em um resumo export\'avel. Em ambos os casos, os fluxos foram desenhados para serem seguros \`a reexecu\c{c}\~ao, em conson\^ancia com as conven\c{c}\~oes do projeto.
+
+Por fim, o diret\'orio \texttt{tests/} desempenha fun\c{c}\~ao de apoio importante, ainda que n\~ao configure uma malha completa de testes de regress\~ao para todo o sistema. O arquivo \texttt{tests/test\_cargo\_allocation.py}, por exemplo, valida a l\'ogica de participa\c{c}\~ao da carga em termos de TEU operacional. A presen\c{c}a de cadernos como \texttt{road\_tests.ipynb}, \texttt{cabotage\_tests.ipynb} e \texttt{database\_ops.ipynb} sugere que o projeto foi desenvolvido com uma combina\c{c}\~ao de experimenta\c{c}\~ao interativa e consolida\c{c}\~ao gradual em m\'odulos reutiliz\'aveis, o que \'e comum em projetos aplicados de pesquisa computacional.
+
+\chapter{Estrutura de gera\c{c}\~ao e an\'alise de resultados}
+\label{chap:resultados}
+
+\section{Forma dos resultados produzidos pelo sistema}
+
+O avaliador multimodal produz uma estrutura de sa\'ida detalhada, contendo m\'etricas agregadas e decomposi\c{c}\~oes internas. Para o cen\'ario rodovi\'ario, o sistema registra ao menos dist\^ancia, litros de diesel, emiss\~oes e custo. Para o cen\'ario multimodal, al\'em desses agregados, h\'a decomposi\c{c}\~ao por \emph{first mile}, \emph{last mile}, navega\c{c}\~ao principal, hoteling e opera\c{c}\~oes portu\'arias. Em termos anal\'iticos, essa estrutura permite responder perguntas mais sofisticadas do que uma simples compara\c{c}\~ao final entre dois totais. \'E poss\'ivel, por exemplo, identificar se um corredor falha ambientalmente por excesso de trecho rodovi\'ario de acesso, por baixa participa\c{c}\~ao da carga no navio, por penalidade portu\'aria excessiva ou por escolha pouco adequada de classe de embarca\c{c}\~ao.
+
+Os \emph{scripts} persistem uma vers\~ao achatada desse resultado em tabelas SQLite, o que facilita consultas posteriores e exporta\c{c}\~oes. A exist\^encia desse armazenamento local \'e importante para a reprodutibilidade do processo anal\'itico: um resultado n\~ao permanece apenas na mem\'oria de uma sess\~ao de interface, mas pode ser reconstitu\'ido e inspecionado. Ainda assim, do ponto de vista de uma pesquisa acad\^emica voltada a rastrear cen\'arios, seria desej\'avel evoluir o esquema para registrar de forma mais abrangente os metadados completos de premissas, inclusive quando dois cen\'arios compartilham o mesmo destino, mas divergem em classe de navio, fator de carga, \emph{preset} do caminh\~ao ou cen\'ario de opera\c{c}\~oes portu\'arias.
+
+\section{Resultados efetivos versus estrutura de an\'alise}
+
+Este relat\'orio deliberadamente n\~ao introduz resultados num\'ericos finais n\~ao verificados diretamente a partir de uma execu\c{c}\~ao do projeto ou de consultas confirmadas ao banco local. A restri\c{c}\~ao segue a exig\^encia metodol\'ogica de n\~ao fabricar experimentos, tabelas ou conclus\~oes emp\'iricas inexistentes. Em lugar disso, o texto descreve a estrutura pela qual tais resultados s\~ao produzidos. Quando executado, o sistema entrega dist\^ancias roteirizadas, consumo de diesel nos trechos terrestres, consumo mar\'itimo atribu\'ido \`a remessa, consumo em hoteling, consumo em terminal, custos energ\'eticos correspondentes, emiss\~oes diretas e indicadores percentuais de diferen\c{c}a entre cen\'arios.
+
+Essa postura n\~ao enfraquece o trabalho; ao contr\'ario, preserva sua validade cient\'ifica. Em um projeto ainda em evolu\c{c}\~ao, a documenta\c{c}\~ao rigorosa da l\'ogica de gera\c{c}\~ao de resultados \'e etapa t\~ao importante quanto a apresenta\c{c}\~ao de um conjunto espec\'ifico de sa\'idas. Al\'em disso, a pr\'opria estrutura do reposit\'orio indica que o sistema foi concebido para ser usado iterativamente, com novos pares origem--destino, atualiza\c{c}\~oes de combust\'iveis, revis\~oes de par\^ametros mar\'itimos e eventual amplia\c{c}\~ao do conjunto de portos ou regras operacionais. O valor cient\'ifico, portanto, reside tanto nos resultados pontuais quanto na metodologia reexecut\'avel que os produz.
+
+\section{Quest\~oes anal\'iticas que a ferramenta permite investigar}
+
+Mesmo sem apresentar um experimento fechado nesta etapa, \'e poss\'ivel delimitar as perguntas que a ferramenta j\'a est\'a apta a investigar de modo consistente. Uma primeira quest\~ao diz respeito \`a condi\c{c}\~ao sob a qual a redu\c{c}\~ao de intensidade energ\'etica no trecho mar\'itimo compensa o acr\'escimo de acessos rodovi\'arios e de opera\c{c}\~oes portu\'arias. Uma segunda refere-se \`a sensibilidade da compara\c{c}\~ao \`a classe de navio e \`a carga operacional em TEU, aspecto particularmente importante porque o modelo adota uma aloca\c{c}\~ao proporcional da remessa \`a capacidade efetivamente utilizada. Uma terceira quest\~ao envolve o papel das opera\c{c}\~oes de terminal: em rotas de menor dist\^ancia mar\'itima, a penalidade de duas escalas e das movimenta\c{c}\~oes associadas pode reduzir substancialmente a vantagem esperada da cabotagem. Finalmente, o sistema permite examinar o efeito de varia\c{c}\~oes de pre\c{c}os energ\'eticos, o que \'e relevante em contextos de oscila\c{c}\~ao de diesel e bunker.
+
+Essa capacidade investigativa mostra que o projeto n\~ao \'e apenas uma calculadora de emiss\~oes, mas uma plataforma de apoio \`a an\'alise de cen\'arios. Em trabalhos futuros, a partir da execu\c{c}\~ao sistem\'atica dos \emph{scripts} sobre conjuntos amplos de origem--destino, ser\'a poss\'ivel construir mapas de corredores favor\'aveis ou desfavor\'aveis \`a cabotagem, tipologias de sensibilidade e estudos de prioriza\c{c}\~ao de interven\c{c}\~ao log\'istica.
+
+\chapter{Hip\'oteses, limites e amea\c{c}as \`a validade}
+\label{chap:limitacoes}
+
+Como toda modelagem aplicada, a ferramenta documentada neste trabalho depende de escolhas simplificadoras. A primeira diz respeito ao escopo ambiental. As emiss\~oes tratadas na trilha ativa s\~ao predominantemente de combust\~ao direta, tanto no rodovi\'ario quanto no mar\'itimo e nas opera\c{c}\~oes portu\'arias. Isso significa que a ferramenta responde bem a perguntas do tipo \emph{tank-to-wheel}, mas ainda n\~ao substitui uma avalia\c{c}\~ao de ciclo de vida completa. A literatura reunida no pr\'oprio reposit\'orio deixa claro que esse passo adicional \'e relevante quando se discutem combust\'iveis alternativos ou cadeias completas de descarboniza\c{c}\~ao \citep{decarb2024,maritimelca2024,biodiesel2017}.
+
+A segunda limita\c{c}\~ao refere-se ao custo econ\^omico modelado. O sistema monetiza o consumo de combust\'ivel, mas n\~ao representa, em sua trilha principal, fretes de mercado, ped\'agios, m\~ao de obra, tarifas portu\'arias, armazenagem, seguro, custo do tempo ou penalidades por confiabilidade. Por essa raz\~ao, o termo ``custo'' precisa ser lido, neste contexto, como custo energ\'etico direto. Trata-se de uma dimens\~ao relevante e compar\'avel, mas n\~ao de um substituto integral para custo log\'istico total.
+
+A terceira limita\c{c}\~ao est\'a na representa\c{c}\~ao da rede mar\'itima. A matriz \texttt{sea\_matrix.json} sintetiza dist\^ancias porto a porto e informa ter sido gerada por combina\c{c}\~ao de fontes geogr\'aficas e de \emph{searouting}. Embora isso permita grande agilidade de c\'alculo, a matriz n\~ao representa frequ\^encia de servi\c{c}os, janelas operacionais, restri\c{c}\~oes de calado ou sequenciamento real de escalas. Al\'em disso, a inspe\c{c}\~ao do artefato mostra a exist\^encia de algumas entradas fora da diagonal com valor zero, o que sugere a necessidade de auditoria adicional de consist\^encia para determinados pares de portos. Em uma aplica\c{c}\~ao anal\'itica rigorosa, tais anomalias devem ser tratadas explicitamente antes de qualquer interpreta\c{c}\~ao emp\'irica de larga escala.
+
+Uma quarta limita\c{c}\~ao diz respeito \`a escolha do porto de acesso. O crit\'erio atual de porto mais pr\'oximo por dist\^ancia geogr\'afica \'e reproduz\'ivel, mas n\~ao necessariamente otimiza custo, tempo ou disponibilidade de servi\c{c}o. Em muitos casos reais, o porto economicamente preferido n\~ao \'e o mais pr\'oximo, mas o que oferece melhor combina\c{c}\~ao de frequ\^encia, capacidade, conex\~ao terrestre e condi\c{c}\~oes comerciais. O projeto, portanto, oferece uma aproxima\c{c}\~ao inicial plaus\'ivel, mas n\~ao uma representa\c{c}\~ao completa de escolha modal observada.
+
+Uma quinta limita\c{c}\~ao recai sobre as opera\c{c}\~oes portu\'arias. O modelo ativo est\'a claramente ancorado em um conjunto de par\^ametros referidos ao Porto de Santos, com cen\'arios adicionais derivados por redu\c{c}\~ao proxy de diesel em RTGs. Essa escolha \'e metodologicamente aceit\'avel como ponto de partida, mas n\~ao deve ser confundida com um invent\'ario nacional de opera\c{c}\~oes de terminal. Outros portos brasileiros podem apresentar equipamentos, produtividade, mix energ\'etico e padr\~oes de opera\c{c}\~ao substancialmente distintos.
+
+Uma sexta limita\c{c}\~ao est\'a na representa\c{c}\~ao do navio e da remessa. O modelo assume VLSFO como combust\'ivel mar\'itimo principal, restringe a frota a classes de porta-cont\^eineres derivadas de MRV e aloca o consumo da embarca\c{c}\~ao \`a remessa por uma regra proporcional. Essa abordagem \'e tecnicamente coerente e superior a fatores m\'edios agregados sem rastreabilidade; contudo, ainda n\~ao representa heterogeneidades como velocidade efetiva da viagem, condi\c{c}\~oes meteorol\'ogicas, opera\c{c}\~ao em \emph{slow steaming}, \emph{reefer load}, mistura de cargas ou estrutura comercial do servi\c{c}o.
+
+Por fim, h\'a limita\c{c}\~oes estritamente informacionais e de persist\^encia. O esquema atual de resultados em SQLite n\~ao preserva, em todas as tabelas, uma chave composta suficientemente rica para distinguir cen\'arios que compartilham origem ou destino, mas divergem em hip\'oteses. Em consequ\^encia, o banco funciona bem como persist\^encia operacional local, mas ainda pode ser insuficiente como banco anal\'itico de cen\'arios sem evolu\c{c}\~ao de esquema. Da mesma forma, os testes automatizados existentes cobrem apenas parte da l\'ogica do sistema. Esses pontos n\~ao anulam a validade da ferramenta, mas delimitam claramente o n\'ivel de confian\c{c}a adequado para cada tipo de uso.
+
+\chapter{Considera\c{c}\~oes finais}
+\label{chap:conclusao}
+
+Este relat\'orio apresentou uma primeira reda\c{c}\~ao substantiva, em linguagem acad\^emica, da metodologia e da implementa\c{c}\~ao do projeto \texttt{carbon-footprint}. O exame do reposit\'orio mostra que a ferramenta j\'a ultrapassou o n\'ivel de um prot\'otipo conceitual gen\'erico: h\'a uma arquitetura coerente de m\'odulos, integra\c{c}\~ao funcional com OpenRouteService, persist\^encia local em SQLite, parametriza\c{c}\~ao por artefatos processados e uma trilha metodol\'ogica ativa claramente identific\'avel. O sistema compara rotas rodovi\'arias diretas com alternativas multimodais compostas por acesso terrestre, cabotagem e distribui\c{c}\~ao final, estimando consumo de combust\'iveis, emiss\~oes diretas e custos energ\'eticos por etapa. Ao faz\^e-lo, incorpora elementos que muitas compara\c{c}\~oes simplificadas omitem, como hoteling, participa\c{c}\~ao da remessa na capacidade do navio e consumo de equipamentos portu\'arios.
+
+Do ponto de vista cient\'ifico, a principal contribui\c{c}\~ao do projeto est\'a em transformar uma pergunta frequentemente tratada de modo gen\'erico --- se a cabotagem emite menos do que o rodovi\'ario --- em uma rotina comparativa reprodut\'ivel, sens\'ivel a corredor, classe de embarca\c{c}\~ao, massa transportada e hip\'oteses operacionais. Essa contribui\c{c}\~ao n\~ao deve ser superestimada: a ferramenta ainda n\~ao cobre custo log\'istico total, n\~ao representa integralmente a oferta real de servi\c{c}os mar\'itimos e permanece concentrada em emiss\~oes diretas e cen\'arios portu\'arios parametrizados localmente. Ainda assim, o estado atual do reposit\'orio j\'a sustenta uma base metodol\'ogica robusta para evolu\c{c}\~oes futuras, inclusive amplia\c{c}\~ao do escopo econ\^omico, refino de rede portu\'aria, incorpora\c{c}\~ao de combust\'iveis alternativos e consolida\c{c}\~ao de campanhas sistem\'aticas de experimentos sobre corredores brasileiros.
+
+Em termos de continuidade do texto acad\^emico, os pr\'oximos passos naturais consistem em executar o sistema sobre um conjunto definido de pares origem--destino, consolidar tabelas e figuras derivadas diretamente do banco SQLite e transformar a estrutura anal\'itica aqui descrita em uma se\c{c}\~ao emp\'irica completa. Com isso, a monografia ou relat\'orio final poder\'a combinar aquilo que este rascunho j\'a oferece --- fundamenta\c{c}\~ao, metodologia, arquitetura e discuss\~ao cr\'itica das hip\'oteses --- com evid\^encias num\'ericas plenamente reproduz\'iveis e interpretadas no contexto log\'istico brasileiro.
+
+\bibliographystyle{unsrtnat}
+\IfFileExists{docs/references.bib}{\bibliography{docs/references}}{\bibliography{references}}
+
+\end{document}
