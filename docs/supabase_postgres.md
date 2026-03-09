@@ -21,6 +21,8 @@ SUPABASE_DB_SSLMODE=require
 ORS_API_KEY=your-openrouteservice-key
 ```
 
+CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatically. `.env` remains supported, but it is no longer required if you keep all secrets in the Streamlit file.
+
 Optional legacy fallback:
 
 ```env
