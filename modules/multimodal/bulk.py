@@ -10,8 +10,6 @@ recomputing analytical results on every rerun.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -31,6 +29,7 @@ from modules.multimodal.builder import (
 )
 from modules.multimodal.evaluator import evaluate_path
 from modules.multimodal.persistence import flatten_evaluation_for_db
+from modules.multimodal.scenario_keys import build_bulk_scenario_key, normalize_bulk_place_input
 from modules.ports.ports_nearest import find_nearest_port
 from modules.road.router import get_or_create_leg
 
@@ -70,11 +69,6 @@ def _dedupe_preserve_order(values: Iterable[str]) -> List[str]:
         _log.warning("Skipped %d duplicated destination entries in bulk input.", duplicates)
 
     return ordered
-
-
-def _build_scenario_key(payload: Dict[str, Any]) -> str:
-    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def _require_distance(leg: Dict[str, Any], leg_name: str) -> None:
@@ -238,6 +232,7 @@ def run_bulk_evaluation(
     origin_pt = resolve_point_for_geometry(origin, ors)
     if not origin_pt:
         raise RuntimeError(f"Failed to resolve bulk origin: {origin}")
+    origin_input_norm = normalize_bulk_place_input(origin)
 
     origin_port = find_nearest_port(origin_pt["lat"], origin_pt["lon"], ports)
     origin_port_node = build_port_node(origin_port)
@@ -253,8 +248,8 @@ def run_bulk_evaluation(
 
     for index, destiny_input in enumerate(deduped_destinations, start=1):
         scenario_payload = {
-            "input_origin": str(origin).strip(),
-            "input_destiny": str(destiny_input).strip(),
+            "input_origin": origin_input_norm,
+            "input_destiny": normalize_bulk_place_input(destiny_input),
             "cargo_t": float(cargo_t),
             "truck_key": str(truck_key),
             "ors_profile": str(profile),
@@ -271,7 +266,7 @@ def run_bulk_evaluation(
             "full_call_mode": bool(full_call_mode),
             "port_ops_scenario": str(port_ops_scenario),
         }
-        scenario_key = _build_scenario_key(scenario_payload)
+        scenario_key = build_bulk_scenario_key(scenario_payload)
         destiny_name = str(destiny_input).strip()
         geo: Optional[Dict[str, Any]] = None
         res: Optional[Dict[str, Any]] = None
