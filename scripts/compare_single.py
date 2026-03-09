@@ -24,7 +24,7 @@ from modules.core.env_loader import load_repo_env
 
 load_repo_env(ROOT / ".env")
 
-from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, upsert_multimodal_result
+from modules.infra.database_manager import DEFAULT_DB_PATH, connection_target_summary, db_session, upsert_multimodal_result
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal.container_efficiency import CONTAINER_VESSEL_CLASSES, DEFAULT_VESSEL_CLASS
 from modules.multimodal.persistence import flatten_evaluation_for_db
@@ -180,14 +180,20 @@ def main() -> int:
         help="Port ops scenario from data/processed/cabotage_data/port_ops_params_santos.json",
     )
 
-    parser.add_argument("--table", default="analysis_results", help="Target SQLite table")
-    parser.add_argument("--db-path", default=DEFAULT_DB_PATH, type=Path)
+    parser.add_argument("--table", default="analysis_results", help="Target persisted results table")
+    parser.add_argument(
+        "--db-path",
+        default=DEFAULT_DB_PATH,
+        type=Path,
+        help="Legacy SQLite path override. Ignored when the Postgres backend is active.",
+    )
     parser.add_argument("--json", action="store_true", help="Output raw JSON")
     parser.add_argument("--pretty", action="store_true", help="Pretty JSON output")
     parser.add_argument("--log-level", default="INFO")
 
     args = parser.parse_args()
     init_logging(level=args.log_level, write_to_file=False)
+    _log.info("Database target: %s", connection_target_summary(args.db_path))
 
     from modules.multimodal import build_path_geometry, evaluate_path
 
@@ -232,10 +238,13 @@ def main() -> int:
         res=results,
     )
 
-    with db_session(args.db_path) as conn:
-        upsert_multimodal_result(conn, table_name=args.table, **flat_record)
-        if not args.json:
-            _log.info("Saved result to table '%s'.", args.table)
+    try:
+        with db_session(args.db_path) as conn:
+            upsert_multimodal_result(conn, table_name=args.table, **flat_record)
+            if not args.json:
+                _log.info("Saved result to table '%s'.", args.table)
+    except Exception as exc:
+        _log.warning("Result persistence failed; returning computed output only: %s", exc)
 
     if args.json or args.pretty:
         print(json.dumps(results, indent=2 if args.pretty else None, ensure_ascii=False))

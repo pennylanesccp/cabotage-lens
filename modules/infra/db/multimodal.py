@@ -8,13 +8,13 @@ Multimodal Results (DDL & DML).
 Manages analytical tables storing the final comparison:
 Road Only vs. Multimodal (Cabotage).
 
-Note: Tables are dynamically named (e.g., "SP_to_BR_50tons").
+Note: Tables are dynamically named (for example `analysis_results`) and now
+work on both Postgres and legacy SQLite.
 """
 
 from __future__ import annotations
 
-import sqlite3
-from typing import Any, Dict, List, Optional, Mapping
+from typing import Any, Dict, Optional
 
 # Path Bootstrap: Add repo root to sys.path so we can import 'modules.*'
 import sys
@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from modules.infra.db.core import to_float
+from modules.infra.db.core import DBConnection, mark_schema_ready, safe_table_name, schema_is_ready, to_float
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS {table} (
     , delta_cost_r        REAL
     , delta_co2e_kg       REAL
     
-    , insertion_timestamp TIMESTAMP NOT NULL DEFAULT (datetime('now'))
+    , insertion_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -72,10 +72,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_{table}_dest
     ON {table} (destiny_name);
 """
 
-def ensure_results_table(conn: sqlite3.Connection, table_name: str) -> None:
+def ensure_results_table(conn: DBConnection, table_name: str) -> None:
     """Create a specific results table."""
-    conn.execute(_DDL_SQL.format(table=table_name))
-    conn.execute(_IDX_SQL.format(table=table_name))
+    table = safe_table_name(table_name)
+    if schema_is_ready(conn, "multimodal_results", table):
+        return
+    conn.execute(_DDL_SQL.format(table=table))
+    conn.execute(_IDX_SQL.format(table=table))
+    mark_schema_ready(conn, "multimodal_results", table)
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -83,7 +87,7 @@ def ensure_results_table(conn: sqlite3.Connection, table_name: str) -> None:
 # ────────────────────────────────────────────────────────────────────────────────
 
 def upsert_result(
-      conn: sqlite3.Connection
+      conn: DBConnection
     , table_name: str
     , *
     , origin_name: str
@@ -93,7 +97,7 @@ def upsert_result(
     # Road Baseline
     , road_distance_km: Optional[float] = None
     , road_fuel_liters: Optional[float] = None
-    , road_fuel_kg: Optional[float] = None      # <--- ADDED THIS
+    , road_fuel_kg: Optional[float] = None
     , road_fuel_cost_r: Optional[float] = None
     , road_co2e_kg: Optional[float] = None
     
@@ -121,10 +125,11 @@ def upsert_result(
     """
     Insert comparison result. 
     """
-    ensure_results_table(conn, table_name)
+    table = safe_table_name(table_name)
+    ensure_results_table(conn, table)
 
     sql = f"""
-    INSERT INTO {table_name} (
+    INSERT INTO {table} (
           origin_name, destiny_name, cargo_t
         , road_distance_km, road_fuel_liters, road_fuel_kg, road_fuel_cost_r, road_co2e_kg
         , mm_road_fuel_liters, mm_road_fuel_kg, mm_road_fuel_cost_r, mm_road_co2e_kg
@@ -173,7 +178,7 @@ if __name__ == "__main__":
     from modules.infra.db.core import db_session
     print("--- Multimodal DB Smoke Test ---")
     
-    with db_session(":memory:") as conn:
+    with db_session("smoke_test_multimodal.sqlite", backend="sqlite") as conn:
         upsert_result(
             conn, "test_results",
             origin_name="SP", destiny_name="RJ", cargo_t=10,
@@ -181,4 +186,5 @@ if __name__ == "__main__":
             road_fuel_kg=150.0
         )
         print("Upsert successful.")
+    Path("smoke_test_multimodal.sqlite").unlink(missing_ok=True)
     print("--- Done ---")

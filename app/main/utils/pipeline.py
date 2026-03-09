@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 from typing import Any, Dict, Mapping, Tuple
 
 from modules.infra.log_manager import get_logger
@@ -59,18 +58,18 @@ def run_analysis(
 ) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None, str]:
     _log.info("Routing: %s -> %s (%.3ft)", payload["origin"], payload["destiny"], payload["cargo_t"])
 
-    db_path = resolve_runtime_db_path(db_path_str)
+    db_target = resolve_runtime_db_path(db_path_str)
 
     geo = build_path_geometry(
         payload["origin"],
         payload["destiny"],
         ors_profile=payload["ors_profile"],
         overwrite_road=payload["overwrite_road"],
-        db_path=Path(db_path),
+        db_path=db_target,
     )
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")
-        return None, None, "Failed to build route geometry. Check inputs and API key.", str(db_path)
+        return None, None, "Failed to build route geometry. Check inputs and API key.", str(db_target)
 
     _log.info("Calculating costs and emissions...")
     results = evaluate_path(
@@ -96,8 +95,8 @@ def run_analysis(
             geo,
             None,
             "Failed to evaluate route. Ensure processed artifacts exist in data/processed/cabotage_data.",
-            str(db_path),
+            str(db_target),
         )
 
     _log.info("Analysis finished.")
-    return geo, results, None, str(db_path)
+    return geo, results, None, str(db_target)

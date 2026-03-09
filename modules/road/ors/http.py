@@ -7,9 +7,12 @@ ORS HTTP Engine.
 
 Manages the low-level details of communicating with the ORS API.
 Key responsibilities:
-1.  **Caching:** Persists responses to SQLite to save quota/money.
+1.  **Caching:** Persists responses to an optional local SQLite HTTP cache to save quota/money.
 2.  **Resilience:** Automatically retries transient failures (5xx).
 3.  **Compliance:** Respects Rate Limits (429) by raising specific exceptions.
+
+This cache is intentionally separate from the primary route-distance and
+evaluation persistence backend.
 """
 
 from __future__ import annotations

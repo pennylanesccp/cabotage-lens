@@ -60,7 +60,11 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.slider("Bearing", min_value=-180, max_value=180, key="map_bearing")
 
     st.markdown("##### App")
-    st.text_input("DB path", key="db_path_str")
+    st.text_input(
+        "Database target",
+        key="db_path_str",
+        help="Shows the active Postgres target when configured, or a legacy SQLite path override otherwise.",
+    )
     st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], key="log_level")
     st.checkbox("Write log file", key="write_log_file")
     st.slider("Debug log lines", min_value=50, max_value=1000, step=50, key="log_last_n")

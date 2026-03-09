@@ -10,7 +10,6 @@ routing cache and are safe to recompute and upsert on reruns.
 
 from __future__ import annotations
 
-import sqlite3
 import sys
 from pathlib import Path
 from typing import Optional
@@ -19,7 +18,15 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from modules.infra.db.core import bool_to_int, to_float
+from modules.infra.db.core import (
+    DBConnection,
+    bool_to_int,
+    current_timestamp_sql,
+    mark_schema_ready,
+    safe_table_name,
+    schema_is_ready,
+    to_float,
+)
 
 DEFAULT_TABLE = "bulk_evaluation_results"
 
@@ -76,8 +83,8 @@ CREATE TABLE IF NOT EXISTS {table} (
     , diesel_price_r_per_l      REAL
     , diesel_price_source       TEXT
     , bunker_price_r_per_t      REAL
-    , insertion_timestamp       TIMESTAMP NOT NULL DEFAULT (datetime('now'))
-    , updated_timestamp         TIMESTAMP NOT NULL DEFAULT (datetime('now'))
+    , insertion_timestamp       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    , updated_timestamp         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -87,14 +94,18 @@ _IDX_SQL = (
 )
 
 
-def ensure_results_table(conn: sqlite3.Connection, table_name: str = DEFAULT_TABLE) -> None:
-    conn.execute(_DDL_SQL.format(table=table_name))
+def ensure_results_table(conn: DBConnection, table_name: str = DEFAULT_TABLE) -> None:
+    table = safe_table_name(table_name)
+    if schema_is_ready(conn, "bulk_results", table):
+        return
+    conn.execute(_DDL_SQL.format(table=table))
     for sql in _IDX_SQL:
-        conn.execute(sql.format(table=table_name))
+        conn.execute(sql.format(table=table))
+    mark_schema_ready(conn, "bulk_results", table)
 
 
 def upsert_result(
-    conn: sqlite3.Connection,
+    conn: DBConnection,
     *,
     scenario_key: str,
     origin_name: str,
@@ -149,10 +160,11 @@ def upsert_result(
     bunker_price_r_per_t: Optional[float] = None,
     table_name: str = DEFAULT_TABLE,
 ) -> None:
-    ensure_results_table(conn, table_name)
+    table = safe_table_name(table_name)
+    ensure_results_table(conn, table)
 
     sql = f"""
-    INSERT INTO {table_name} (
+    INSERT INTO {table} (
           scenario_key
         , origin_name
         , destiny_name
@@ -259,7 +271,7 @@ def upsert_result(
         , diesel_price_r_per_l     = excluded.diesel_price_r_per_l
         , diesel_price_source      = excluded.diesel_price_source
         , bunker_price_r_per_t     = excluded.bunker_price_r_per_t
-        , updated_timestamp        = datetime('now')
+        , updated_timestamp        = {current_timestamp_sql()}
     """
 
     params = (

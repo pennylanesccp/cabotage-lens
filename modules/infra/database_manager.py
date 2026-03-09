@@ -21,9 +21,11 @@ if str(ROOT) not in sys.path:
 # 1. Core Connectivity
 from modules.infra.db.core import (
       DEFAULT_DB_PATH
+    , connection_target_summary
     , connect
     , db_session
 )
+from modules.infra.db.settings import load_database_settings
 
 # 2. Road Caching (Routes Table)
 from modules.infra.db.road_cache import (
@@ -54,7 +56,7 @@ from modules.infra.db.bulk_results import (
 # Export public API
 __all__ = [
     "DEFAULT_DB_PATH", "DEFAULT_TABLE",
-    "connect", "db_session",
+    "connection_target_summary", "connect", "db_session", "load_database_settings",
     "ensure_main_table", "get_run", "get_run_by_coords", "upsert_run", "list_runs", "list_place_names", "overwrite_keys", "delete_key",
     "ensure_multimodal_results_table", "upsert_multimodal_result",
     "DEFAULT_BULK_RESULTS_TABLE", "ensure_bulk_results_table", "upsert_bulk_result",
@@ -73,7 +75,7 @@ if __name__ == "__main__":
     
     try:
         # Test the facade works by using the imported symbols
-        with db_session(":memory:") as conn:
+        with db_session(":memory:", backend="sqlite") as conn:
             ensure_main_table(conn)
             upsert_run(
                 conn,

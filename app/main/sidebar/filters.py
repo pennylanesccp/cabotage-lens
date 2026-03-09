@@ -11,6 +11,7 @@ from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, list_place_names
+from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import get_logger
 from modules.road.router import ORSClient, ORSConfig
 
@@ -56,13 +57,17 @@ def _resolution_executor() -> ThreadPoolExecutor:
 
 
 def _db_route_place_names(db_path_str: str) -> list[str]:
-    candidate_paths = [Path(db_path_str)]
-    default_path = Path(DEFAULT_DB_PATH)
-    if default_path not in candidate_paths:
-        candidate_paths.append(default_path)
+    settings = load_database_settings()
+    if settings.is_postgres:
+        candidate_targets: list[str | Path] = [db_path_str]
+    else:
+        candidate_targets = [Path(db_path_str)]
+        default_path = Path(DEFAULT_DB_PATH)
+        if default_path not in candidate_targets:
+            candidate_targets.append(default_path)
 
     collected: set[str] = set()
-    for candidate_path in candidate_paths:
+    for candidate_path in candidate_targets:
         try:
             with db_session(candidate_path) as conn:
                 for value in list_place_names(conn, limit=100_000):

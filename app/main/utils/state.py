@@ -8,6 +8,7 @@ from typing import Any, Mapping
 
 import streamlit as st
 
+from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import get_logger, init_logging
 
 from app.main.utils.constants import DEFAULTS, ROOT
@@ -63,7 +64,11 @@ def validated_log_level(value: Any, default: str = "INFO") -> str:
     return candidate if candidate in allowed else default
 
 
-def resolve_runtime_db_path(configured_path: Any = None) -> Path:
+def resolve_runtime_db_path(configured_path: Any = None) -> str:
+    settings = load_database_settings()
+    if settings.is_postgres:
+        return settings.display_target
+
     configured = configured_path if configured_path is not None else secret_or_env("CARBON_DB_PATH", DEFAULTS["db_path_str"])
     candidate = Path(str(configured)).expanduser()
     if not candidate.is_absolute():
@@ -73,15 +78,28 @@ def resolve_runtime_db_path(configured_path: Any = None) -> Path:
         candidate.parent.mkdir(parents=True, exist_ok=True)
         with candidate.open("a", encoding="utf-8"):
             pass
-        return candidate.resolve()
+        return str(candidate.resolve())
     except OSError:
         fallback = Path(tempfile.gettempdir()) / "carbon-footprint" / "carbon_footprint.sqlite"
         fallback.parent.mkdir(parents=True, exist_ok=True)
-        return fallback.resolve()
+        return str(fallback.resolve())
 
 
 def bootstrap_runtime_env() -> None:
-    for key in ("ORS_API_KEY", "CARBON_LOG_LEVEL"):
+    for key in (
+        "ORS_API_KEY",
+        "CARBON_LOG_LEVEL",
+        "CARBON_DB_BACKEND",
+        "CARBON_DB_PATH",
+        "DATABASE_URL",
+        "SUPABASE_DB_URL",
+        "SUPABASE_DB_HOST",
+        "SUPABASE_DB_PORT",
+        "SUPABASE_DB_NAME",
+        "SUPABASE_DB_USER",
+        "SUPABASE_DB_PASSWORD",
+        "SUPABASE_DB_SSLMODE",
+    ):
         value = secret_or_env(key)
         if value is not None:
             normalized = str(value).strip()

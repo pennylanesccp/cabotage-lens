@@ -120,7 +120,7 @@ def _build_summary_row(destiny_input: str, geo: Dict[str, Any], res: Dict[str, A
 
 def _persist_bulk_outcome(
     *,
-    db_path: Path,
+    db_path: Path | str,
     table_name: str,
     scenario_key: str,
     input_origin: str,
@@ -217,7 +217,7 @@ def run_bulk_evaluation(
     truck_key: str,
     profile: str,
     overwrite_road: bool = False,
-    db_path: Path = DEFAULT_DB_PATH,
+    db_path: Path | str = DEFAULT_DB_PATH,
     results_table: str = DEFAULT_BULK_RESULTS_TABLE,
     vessel_class: str,
     include_hoteling: bool,
@@ -344,34 +344,42 @@ def run_bulk_evaluation(
                 raise RuntimeError("Path evaluation failed")
 
             flat = flatten_evaluation_for_db(origin_pt["label"], destiny_name, res)
-            _persist_bulk_outcome(
-                db_path=resolved_db_path,
-                table_name=results_table,
-                scenario_key=scenario_key,
-                input_origin=scenario_payload["input_origin"],
-                input_destiny=scenario_payload["input_destiny"],
-                origin_name=origin_pt["label"],
-                destiny_name=destiny_name,
-                truck_key=truck_key,
-                ors_profile=profile,
-                cargo_t=cargo_t,
-                vessel_class=vessel_class,
-                include_hoteling=include_hoteling,
-                hoteling_hours_per_call=hoteling_hours_per_call,
-                port_calls=port_calls,
-                include_port_ops=include_port_ops,
-                port_moves_per_call=port_moves_per_call,
-                cargo_teu=cargo_teu,
-                t_per_teu_default=t_per_teu_default,
-                allocation_mode=allocation_mode,
-                allocation_load_factor=allocation_load_factor,
-                full_call_mode=full_call_mode,
-                port_ops_scenario=port_ops_scenario,
-                status="ok",
-                geo=geo,
-                res=res,
-                flat=flat,
-            )
+            try:
+                _persist_bulk_outcome(
+                    db_path=resolved_db_path,
+                    table_name=results_table,
+                    scenario_key=scenario_key,
+                    input_origin=scenario_payload["input_origin"],
+                    input_destiny=scenario_payload["input_destiny"],
+                    origin_name=origin_pt["label"],
+                    destiny_name=destiny_name,
+                    truck_key=truck_key,
+                    ors_profile=profile,
+                    cargo_t=cargo_t,
+                    vessel_class=vessel_class,
+                    include_hoteling=include_hoteling,
+                    hoteling_hours_per_call=hoteling_hours_per_call,
+                    port_calls=port_calls,
+                    include_port_ops=include_port_ops,
+                    port_moves_per_call=port_moves_per_call,
+                    cargo_teu=cargo_teu,
+                    t_per_teu_default=t_per_teu_default,
+                    allocation_mode=allocation_mode,
+                    allocation_load_factor=allocation_load_factor,
+                    full_call_mode=full_call_mode,
+                    port_ops_scenario=port_ops_scenario,
+                    status="ok",
+                    geo=geo,
+                    res=res,
+                    flat=flat,
+                )
+            except Exception as persist_exc:
+                _log.error(
+                    "Failed to persist bulk success outcome for %s: %s",
+                    destiny_input,
+                    persist_exc,
+                    exc_info=True,
+                )
 
             summary_rows.append(_build_summary_row(str(destiny_input), geo, res, flat))
             success_count += 1

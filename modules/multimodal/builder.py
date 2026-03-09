@@ -99,12 +99,12 @@ def load_routing_assets(
     *,
     ports_json_path: Optional[Path] = None,
     sea_matrix_path: Optional[Path] = None,
-    db_path: Optional[Path] = None,
-) -> tuple[ORSClient, list[Dict[str, Any]], SeaMatrix, Path]:
+    db_path: Optional[Path | str] = None,
+) -> tuple[ORSClient, list[Dict[str, Any]], SeaMatrix, Path | str]:
     """Load reusable routing dependencies for one or many evaluations."""
     p_json = _resolve_path(ports_json_path, _DEFAULT_PORTS_JSON)
     s_json = _resolve_path(sea_matrix_path, _DEFAULT_SEA_MATRIX_JSON)
-    d_path = Path(db_path).resolve() if db_path is not None else Path(DEFAULT_DB_PATH).resolve()
+    d_path: Path | str = db_path if db_path is not None else DEFAULT_DB_PATH
 
     ors = _cached_ors_client(os.getenv("ORS_API_KEY", ""))
     ports = _cached_ports(str(p_json))
@@ -149,12 +149,12 @@ def build_path_geometry_from_resolved(
     sea_matrix: SeaMatrix,
     ors_profile: str = "driving-hgv",
     overwrite_road: bool = False,
-    db_path: Optional[Path] = None,
+    db_path: Optional[Path | str] = None,
     port_origin: Optional[Dict[str, Any]] = None,
     first_mile_leg: Optional[Dict[str, Any]] = None,
 ) -> Optional[PathGeometry]:
     """Build geometry from already resolved endpoints and shared routing assets."""
-    d_path = Path(db_path).resolve() if db_path is not None else Path(DEFAULT_DB_PATH).resolve()
+    d_path: Path | str = db_path if db_path is not None else DEFAULT_DB_PATH
 
     po_data = port_origin or find_nearest_port(origin_pt["lat"], origin_pt["lon"], ports)
     pd_data = find_nearest_port(destiny_pt["lat"], destiny_pt["lon"], ports)
@@ -214,7 +214,7 @@ def build_path_geometry(
     overwrite_road: bool = False,
     ports_json_path: Optional[Path] = None,
     sea_matrix_path: Optional[Path] = None,
-    db_path: Optional[Path] = None,
+    db_path: Optional[Path | str] = None,
 ) -> Optional[PathGeometry]:
     """Resolve and compute all legs needed for multimodal comparison."""
     ors, ports, sea_matrix, d_path = load_routing_assets(

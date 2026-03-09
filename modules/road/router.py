@@ -108,65 +108,74 @@ def get_or_create_leg(
     destiny_lon = _get_coord(destiny, "lon")
 
     # 2. Check Cache
-    with db_session(db_path) as conn:
-        ensure_main_table(conn, table_name=table_name)
-        
-        if overwrite:
-            deleted = delete_key(
-                conn,
-                origin=origin_label,
-                destiny=destiny_label,
-                profile_requested=requested_profile,
-                table_name=table_name,
-            )
-            _log.info(
-                "Road cache overwrite: %s -> %s requested_profile=%s deleted=%d",
-                origin_label,
-                destiny_label,
-                requested_profile,
-                deleted,
-            )
-        else:
-            cache_lookup = "label"
-            row = get_run(
-                conn,
-                origin=origin_label,
-                destiny=destiny_label,
-                profile_requested=requested_profile,
-                table_name=table_name,
-            )
-            if not row and None not in (origin_lat, origin_lon, destiny_lat, destiny_lon):
-                row = get_run_by_coords(
+    try:
+        with db_session(db_path) as conn:
+            ensure_main_table(conn, table_name=table_name)
+
+            if overwrite:
+                deleted = delete_key(
                     conn,
-                    origin_lat=float(origin_lat),
-                    origin_lon=float(origin_lon),
-                    destiny_lat=float(destiny_lat),
-                    destiny_lon=float(destiny_lon),
+                    origin=origin_label,
+                    destiny=destiny_label,
                     profile_requested=requested_profile,
                     table_name=table_name,
                 )
-                if row:
-                    cache_lookup = "coords"
-            if row and row.get("distance_km") is not None:
                 _log.info(
-                    "Road cache hit: %s -> %s lookup=%s requested_profile=%s used_profile=%s distance_km=%.3f",
+                    "Road cache overwrite: %s -> %s requested_profile=%s deleted=%d",
                     origin_label,
                     destiny_label,
-                    cache_lookup,
                     requested_profile,
-                    row.get("profile_used") or requested_profile,
-                    float(row["distance_km"]),
+                    deleted,
                 )
-                return {
-                    "origin_name": row["origin"],
-                    "destiny_name": row["destiny"],
-                    "distance_km": row["distance_km"],
-                    "is_hgv": row["is_hgv"],
-                    "profile_requested": row["profile_requested"],
-                    "profile_used": row.get("profile_used") or requested_profile,
-                    "cached": True,
-                    "source": "cache",
-                }
+            else:
+                cache_lookup = "label"
+                row = get_run(
+                    conn,
+                    origin=origin_label,
+                    destiny=destiny_label,
+                    profile_requested=requested_profile,
+                    table_name=table_name,
+                )
+                if not row and None not in (origin_lat, origin_lon, destiny_lat, destiny_lon):
+                    row = get_run_by_coords(
+                        conn,
+                        origin_lat=float(origin_lat),
+                        origin_lon=float(origin_lon),
+                        destiny_lat=float(destiny_lat),
+                        destiny_lon=float(destiny_lon),
+                        profile_requested=requested_profile,
+                        table_name=table_name,
+                    )
+                    if row:
+                        cache_lookup = "coords"
+                if row and row.get("distance_km") is not None:
+                    _log.info(
+                        "Road cache hit: %s -> %s lookup=%s requested_profile=%s used_profile=%s distance_km=%.3f",
+                        origin_label,
+                        destiny_label,
+                        cache_lookup,
+                        requested_profile,
+                        row.get("profile_used") or requested_profile,
+                        float(row["distance_km"]),
+                    )
+                    return {
+                        "origin_name": row["origin"],
+                        "destiny_name": row["destiny"],
+                        "distance_km": row["distance_km"],
+                        "is_hgv": row["is_hgv"],
+                        "profile_requested": row["profile_requested"],
+                        "profile_used": row.get("profile_used") or requested_profile,
+                        "cached": True,
+                        "source": "cache",
+                    }
+    except Exception as exc:
+        _log.warning(
+            "Road cache read failed, continuing without cache: %s -> %s requested_profile=%s error=%s",
+            origin_label,
+            destiny_label,
+            requested_profile,
+            exc,
+        )
 
     # 3. Calculate Route (API)
     _log.info(
@@ -188,29 +197,38 @@ def get_or_create_leg(
         is_hgv = profile_is_hgv(prof_used)
 
     if dist_km is not None:
-        with db_session(db_path) as conn:
-            upsert_run(
-                conn,
-                origin=origin_label,
-                origin_lat=origin_lat,
-                origin_lon=origin_lon,
-                destiny=destiny_label,
-                destiny_lat=destiny_lat,
-                destiny_lon=destiny_lon,
-                distance_km=dist_km,
-                profile_requested=requested_profile,
-                profile_used=prof_used,
-                is_hgv=is_hgv,
-                table_name=table_name,
+        try:
+            with db_session(db_path) as conn:
+                upsert_run(
+                    conn,
+                    origin=origin_label,
+                    origin_lat=origin_lat,
+                    origin_lon=origin_lon,
+                    destiny=destiny_label,
+                    destiny_lat=destiny_lat,
+                    destiny_lon=destiny_lon,
+                    distance_km=dist_km,
+                    profile_requested=requested_profile,
+                    profile_used=prof_used,
+                    is_hgv=is_hgv,
+                    table_name=table_name,
+                )
+            _log.info(
+                "Road distance cached: %s -> %s requested_profile=%s used_profile=%s distance_km=%.3f",
+                origin_label,
+                destiny_label,
+                requested_profile,
+                prof_used,
+                float(dist_km),
             )
-        _log.info(
-            "Road distance cached: %s -> %s requested_profile=%s used_profile=%s distance_km=%.3f",
-            origin_label,
-            destiny_label,
-            requested_profile,
-            prof_used,
-            float(dist_km),
-        )
+        except Exception as exc:
+            _log.error(
+                "Road cache write failed, continuing with in-memory result: %s -> %s requested_profile=%s error=%s",
+                origin_label,
+                destiny_label,
+                requested_profile,
+                exc,
+            )
     else:
         _log.warning(
             "Routing returned no distance and will not be cached: %s -> %s requested_profile=%s",
