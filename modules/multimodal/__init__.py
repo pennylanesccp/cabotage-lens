@@ -26,4 +26,10 @@ def evaluate_path(*args: Any, **kwargs: Any) -> dict:
     return _evaluate_path(*args, **kwargs)
 
 
-__all__ = ["build_path_geometry", "evaluate_path"]
+def run_bulk_evaluation(*args: Any, **kwargs: Any) -> dict:
+    from modules.multimodal.bulk import run_bulk_evaluation as _run_bulk_evaluation
+
+    return _run_bulk_evaluation(*args, **kwargs)
+
+
+__all__ = ["build_path_geometry", "evaluate_path", "run_bulk_evaluation"]

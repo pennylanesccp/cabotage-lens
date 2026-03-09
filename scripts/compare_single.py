@@ -27,57 +27,10 @@ load_repo_env(ROOT / ".env")
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, upsert_multimodal_result
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal.container_efficiency import CONTAINER_VESSEL_CLASSES, DEFAULT_VESSEL_CLASS
+from modules.multimodal.persistence import flatten_evaluation_for_db
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
 
 _log = get_logger("compare_single")
-_DIESEL_DENSITY_KG_PER_L = 0.84
-
-
-def _flatten_for_db(origin_name: str, destiny_name: str, res: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert nested evaluator output into flat DB payload."""
-    road_only = res.get("road_only", {})
-    mm = res.get("multimodal", {})
-
-    first = mm.get("first_mile", {})
-    last = mm.get("last_mile", {})
-    sea = mm.get("sea", {})
-    comp = res.get("comparison", {})
-
-    road_liters = float(road_only.get("liters") or 0.0)
-    road_fuel_kg = float(road_only.get("fuel_kg") or (road_liters * _DIESEL_DENSITY_KG_PER_L))
-
-    mm_road_liters = float(first.get("liters") or 0.0) + float(last.get("liters") or 0.0)
-    mm_road_kg = float(first.get("fuel_kg") or 0.0) + float(last.get("fuel_kg") or 0.0)
-    if mm_road_kg <= 0.0 and mm_road_liters > 0.0:
-        mm_road_kg = mm_road_liters * _DIESEL_DENSITY_KG_PER_L
-
-    sea_fuel_kg = float(sea.get("fuel_kg") or 0.0)
-
-    total_fuel_kg = mm_road_kg + sea_fuel_kg
-
-    return {
-        "origin_name": origin_name,
-        "destiny_name": destiny_name,
-        "cargo_t": res["inputs"]["cargo_t"],
-        "road_distance_km": road_only.get("distance_km"),
-        "road_fuel_liters": road_liters,
-        "road_fuel_kg": road_fuel_kg,
-        "road_fuel_cost_r": road_only.get("cost"),
-        "road_co2e_kg": road_only.get("co2e"),
-        "mm_road_fuel_liters": mm_road_liters,
-        "mm_road_fuel_kg": mm_road_kg,
-        "mm_road_fuel_cost_r": float(first.get("cost") or 0.0) + float(last.get("cost") or 0.0),
-        "mm_road_co2e_kg": float(first.get("co2e") or 0.0) + float(last.get("co2e") or 0.0),
-        "sea_km": sea.get("distance_km"),
-        "sea_fuel_kg": sea_fuel_kg,
-        "sea_fuel_cost_r": sea.get("cost"),
-        "sea_co2e_kg": sea.get("co2e"),
-        "total_fuel_kg": total_fuel_kg,
-        "total_fuel_cost_r": mm.get("total_cost"),
-        "total_co2e_kg": mm.get("total_co2e"),
-        "delta_cost_r": comp.get("delta_cost"),
-        "delta_co2e_kg": comp.get("delta_co2e"),
-    }
 
 
 def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
@@ -273,7 +226,7 @@ def main() -> int:
         _log.error("Failed to evaluate path.")
         return 1
 
-    flat_record = _flatten_for_db(
+    flat_record = flatten_evaluation_for_db(
         origin_name=geo["origin"]["label"],
         destiny_name=geo["destiny"]["label"],
         res=results,

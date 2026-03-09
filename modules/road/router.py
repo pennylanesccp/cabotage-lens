@@ -30,7 +30,7 @@ from modules.infra.log_manager import init_logging, get_logger
 from modules.infra.database_manager import (
       db_session
     , ensure_main_table
-    , list_runs
+    , get_run
     , upsert_run
     , delete_key
     , DEFAULT_DB_PATH
@@ -39,6 +39,7 @@ from modules.infra.database_manager import (
 from modules.road.ors import ORSConfig, RateLimited, NoRoute, ORSClient
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_text
+from modules.infra.db.road_cache import normalize_profile, profile_is_hgv
 
 _log = get_logger(__name__)
 
@@ -93,41 +94,73 @@ def get_or_create_leg(
 
     origin_label = _extract_label(origin)
     destiny_label = _extract_label(destiny)
+    requested_profile = normalize_profile(profile)
 
     # 2. Check Cache
     with db_session(db_path) as conn:
         ensure_main_table(conn, table_name=table_name)
         
         if overwrite:
-            _log.info(f"Overwrite requested. Clearing cache for {origin_label} -> {destiny_label}")
-            delete_key(conn, origin=origin_label, destiny=destiny_label, table_name=table_name)
+            deleted = delete_key(
+                conn,
+                origin=origin_label,
+                destiny=destiny_label,
+                profile_requested=requested_profile,
+                table_name=table_name,
+            )
+            _log.info(
+                "Road cache overwrite: %s -> %s requested_profile=%s deleted=%d",
+                origin_label,
+                destiny_label,
+                requested_profile,
+                deleted,
+            )
         else:
-            cached = list_runs(conn, origin=origin_label, destiny=destiny_label, table_name=table_name, limit=1)
-            if cached:
-                row = cached[0]
-                _log.info(f"Cache HIT: {origin_label} -> {destiny_label} ({row['distance_km']} km)")
+            row = get_run(
+                conn,
+                origin=origin_label,
+                destiny=destiny_label,
+                profile_requested=requested_profile,
+                table_name=table_name,
+            )
+            if row and row.get("distance_km") is not None:
+                _log.info(
+                    "Road cache hit: %s -> %s requested_profile=%s used_profile=%s distance_km=%.3f",
+                    origin_label,
+                    destiny_label,
+                    requested_profile,
+                    row.get("profile_used") or requested_profile,
+                    float(row["distance_km"]),
+                )
                 return {
                     "origin_name": row["origin"],
                     "destiny_name": row["destiny"],
                     "distance_km": row["distance_km"],
                     "is_hgv": row["is_hgv"],
-                    "profile_used": None, # Was cached
-                    "cached": True
+                    "profile_requested": row["profile_requested"],
+                    "profile_used": row.get("profile_used") or requested_profile,
+                    "cached": True,
+                    "source": "cache",
                 }
 
     # 3. Calculate Route (API)
-    _log.info(f"Cache MISS. Routing: {origin_label} -> {destiny_label}")
+    _log.info(
+        "Road cache miss: %s -> %s requested_profile=%s",
+        origin_label,
+        destiny_label,
+        requested_profile,
+    )
     
     try:
-        prof_used, dist_km = _calculate_route(ors, origin, destiny, profile, fallback_to_car)
+        prof_used, dist_km = _calculate_route(ors, origin, destiny, requested_profile, fallback_to_car)
     except RateLimited:
         _log.critical("ORS Rate Limit Reached during leg calculation.")
         raise
 
     # Determine is_hgv flag
     is_hgv: Optional[bool] = None
-    if dist_km is not None:
-        is_hgv = (prof_used == "driving-hgv")
+    if dist_km is not None and prof_used:
+        is_hgv = profile_is_hgv(prof_used)
 
     # 4. Persist to DB
     # We need coordinates for the DB. If inputs were dicts, use them. 
@@ -138,18 +171,36 @@ def get_or_create_leg(
             return float(obj[key]) if obj.get(key) is not None else None
         return None
 
-    with db_session(db_path) as conn:
-        upsert_run(
-            conn,
-            origin=origin_label,
-            origin_lat=_get_coord(origin, "lat"),
-            origin_lon=_get_coord(origin, "lon"),
-            destiny=destiny_label,
-            destiny_lat=_get_coord(destiny, "lat"),
-            destiny_lon=_get_coord(destiny, "lon"),
-            distance_km=dist_km,
-            is_hgv=is_hgv,
-            table_name=table_name
+    if dist_km is not None:
+        with db_session(db_path) as conn:
+            upsert_run(
+                conn,
+                origin=origin_label,
+                origin_lat=_get_coord(origin, "lat"),
+                origin_lon=_get_coord(origin, "lon"),
+                destiny=destiny_label,
+                destiny_lat=_get_coord(destiny, "lat"),
+                destiny_lon=_get_coord(destiny, "lon"),
+                distance_km=dist_km,
+                profile_requested=requested_profile,
+                profile_used=prof_used,
+                is_hgv=is_hgv,
+                table_name=table_name,
+            )
+        _log.info(
+            "Road distance cached: %s -> %s requested_profile=%s used_profile=%s distance_km=%.3f",
+            origin_label,
+            destiny_label,
+            requested_profile,
+            prof_used,
+            float(dist_km),
+        )
+    else:
+        _log.warning(
+            "Routing returned no distance and will not be cached: %s -> %s requested_profile=%s",
+            origin_label,
+            destiny_label,
+            requested_profile,
         )
 
     return {
@@ -157,8 +208,10 @@ def get_or_create_leg(
         "destiny_name": destiny_label,
         "distance_km": dist_km,
         "is_hgv": is_hgv,
+        "profile_requested": requested_profile,
         "profile_used": prof_used,
-        "cached": False
+        "cached": False,
+        "source": "api",
     }
 
 
