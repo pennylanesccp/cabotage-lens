@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+from modules.core.secrets import get_secret
 
 DEFAULT_SQLITE_DB_PATH = Path("data/processed/database/carbon_footprint.sqlite")
 _VALID_BACKENDS = {"sqlite", "postgres"}
 
 
-def _clean_env(name: str) -> Optional[str]:
-    value = os.getenv(name)
+def _clean_secret(name: str) -> Optional[str]:
+    value = get_secret(name)
     if value is None:
         return None
     text = str(value).strip()
@@ -18,18 +19,18 @@ def _clean_env(name: str) -> Optional[str]:
 
 
 def _default_backend() -> str:
-    explicit = (_clean_env("CARBON_DB_BACKEND") or "").lower()
+    explicit = (_clean_secret("CARBON_DB_BACKEND") or "").lower()
     if explicit in _VALID_BACKENDS:
         return explicit
 
-    if _clean_env("SUPABASE_DB_URL") or _clean_env("DATABASE_URL"):
+    if _clean_secret("SUPABASE_DB_URL") or _clean_secret("DATABASE_URL"):
         return "postgres"
 
     required = (
-        _clean_env("SUPABASE_DB_HOST"),
-        _clean_env("SUPABASE_DB_NAME"),
-        _clean_env("SUPABASE_DB_USER"),
-        _clean_env("SUPABASE_DB_PASSWORD"),
+        _clean_secret("SUPABASE_DB_HOST"),
+        _clean_secret("SUPABASE_DB_NAME"),
+        _clean_secret("SUPABASE_DB_USER"),
+        _clean_secret("SUPABASE_DB_PASSWORD"),
     )
     if all(required):
         return "postgres"
@@ -79,15 +80,15 @@ def load_database_settings(*, backend_override: Optional[str] = None) -> Databas
     if backend not in _VALID_BACKENDS:
         raise ValueError(f"Unsupported database backend: {backend}")
 
-    sqlite_path = Path(_clean_env("CARBON_DB_PATH") or DEFAULT_SQLITE_DB_PATH)
-    dsn = _clean_env("SUPABASE_DB_URL") or _clean_env("DATABASE_URL")
+    sqlite_path = Path(_clean_secret("CARBON_DB_PATH") or DEFAULT_SQLITE_DB_PATH)
+    dsn = _clean_secret("SUPABASE_DB_URL") or _clean_secret("DATABASE_URL")
 
-    host = _clean_env("SUPABASE_DB_HOST")
-    port_text = _clean_env("SUPABASE_DB_PORT") or "5432"
-    name = _clean_env("SUPABASE_DB_NAME") or "postgres"
-    user = _clean_env("SUPABASE_DB_USER") or "postgres"
-    password = _clean_env("SUPABASE_DB_PASSWORD")
-    sslmode = _clean_env("SUPABASE_DB_SSLMODE") or "require"
+    host = _clean_secret("SUPABASE_DB_HOST")
+    port_text = _clean_secret("SUPABASE_DB_PORT") or "5432"
+    name = _clean_secret("SUPABASE_DB_NAME") or "postgres"
+    user = _clean_secret("SUPABASE_DB_USER") or "postgres"
+    password = _clean_secret("SUPABASE_DB_PASSWORD")
+    sslmode = _clean_secret("SUPABASE_DB_SSLMODE") or "require"
 
     try:
         port = int(port_text)
@@ -108,7 +109,7 @@ def load_database_settings(*, backend_override: Optional[str] = None) -> Databas
         ]
         if missing:
             joined = ", ".join(missing)
-            raise RuntimeError(f"Postgres backend selected but required environment variables are missing: {joined}")
+            raise RuntimeError(f"Postgres backend selected but required Streamlit secrets are missing: {joined}")
         postgres_dsn = _build_postgres_dsn(
             host=str(host),
             port=port,

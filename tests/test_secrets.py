@@ -1,0 +1,39 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+from modules.core.secrets import get_secret, load_local_secrets
+
+
+class StreamlitSecretsTests(unittest.TestCase):
+    def test_load_local_secrets_reads_toml(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            secrets_path.write_text('ORS_API_KEY = "abc123"\nCARBON_WRITE_LOG_FILE = false\n', encoding="utf-8")
+
+            loaded = load_local_secrets(secrets_path)
+
+        self.assertEqual(loaded["ORS_API_KEY"], "abc123")
+        self.assertFalse(loaded["CARBON_WRITE_LOG_FILE"])
+
+    def test_get_secret_returns_default_for_blank_value(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            secrets_path.write_text('ORS_API_KEY = "  "\n', encoding="utf-8")
+
+            value = get_secret("ORS_API_KEY", "fallback", path=secrets_path, include_runtime=False)
+
+        self.assertEqual(value, "fallback")
+
+    def test_get_secret_preserves_boolean_false(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            secrets_path.write_text("CARBON_WRITE_LOG_FILE = false\n", encoding="utf-8")
+
+            value = get_secret("CARBON_WRITE_LOG_FILE", True, path=secrets_path, include_runtime=False)
+
+        self.assertFalse(value)
+
+
+if __name__ == "__main__":
+    unittest.main()

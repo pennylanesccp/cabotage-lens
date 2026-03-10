@@ -6,27 +6,27 @@ The repository now uses Supabase Postgres as the primary persistence backend for
 - Bulk evaluation outputs (`bulk_evaluation_results`)
 - Single-run analytical result tables (`analysis_results` and other compatible legacy result tables)
 
-## Environment variables
+## Streamlit secrets
 
-Set these in `.env` for local runs or in Streamlit Community Cloud secrets:
+Set these in `.streamlit/secrets.toml` for local runs or in Streamlit Community Cloud secrets:
 
-```env
-CARBON_DB_BACKEND=postgres
-SUPABASE_DB_HOST=db.your-project-ref.supabase.co
-SUPABASE_DB_PORT=5432
-SUPABASE_DB_NAME=postgres
-SUPABASE_DB_USER=postgres
-SUPABASE_DB_PASSWORD=your-supabase-password
-SUPABASE_DB_SSLMODE=require
-ORS_API_KEY=your-openrouteservice-key
+```toml
+CARBON_DB_BACKEND = "postgres"
+SUPABASE_DB_HOST = "db.your-project-ref.supabase.co"
+SUPABASE_DB_PORT = 5432
+SUPABASE_DB_NAME = "postgres"
+SUPABASE_DB_USER = "postgres"
+SUPABASE_DB_PASSWORD = "your-supabase-password"
+SUPABASE_DB_SSLMODE = "require"
+ORS_API_KEY = "your-openrouteservice-key"
 ```
 
-CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatically. `.env` remains supported, but it is no longer required if you keep all secrets in the Streamlit file.
+CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatically. `.env` is no longer read.
 
 Optional legacy fallback:
 
-```env
-CARBON_DB_PATH=data/processed/database/carbon_footprint.sqlite
+```toml
+CARBON_DB_PATH = "data/processed/database/carbon_footprint.sqlite"
 ```
 
 `CARBON_DB_PATH` is only used when `CARBON_DB_BACKEND=sqlite` or by one-off SQLite maintenance tools.

@@ -20,10 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from modules.core.env_loader import load_repo_env
-
-load_repo_env(ROOT / ".env")
-
 from modules.infra.database_manager import DEFAULT_DB_PATH, connection_target_summary, db_session, upsert_multimodal_result
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal.container_efficiency import CONTAINER_VESSEL_CLASSES, DEFAULT_VESSEL_CLASS

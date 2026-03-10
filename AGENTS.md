@@ -29,9 +29,9 @@ Core flow:
 ## Non-negotiables
 
 - SQLite is the local source of truth for cached routes and scenario outputs.
-- ORS API calls must use `ORS_API_KEY` from environment variables (prefer `.env`).
+- ORS API calls must use `ORS_API_KEY` from Streamlit secrets.
 - Pipeline behavior must remain idempotent where possible.
-- Never commit secrets (`.env`, API keys, credentials).
+- Never commit secrets (`.streamlit/secrets.toml`, API keys, credentials).
 - Keep calculations auditable and reproducible from tracked code + tracked data files.
 
 ---
@@ -60,19 +60,19 @@ Core flow:
 
 ## Environment and configuration
 
-Required variable:
+Required secret:
 
 - `ORS_API_KEY` - OpenRouteService key for geocoding and routing.
 
-Optional variable:
+Optional secret:
 
 - `CARBON_LOG_LEVEL` - logging verbosity override (`DEBUG`, `INFO`, etc.).
 
 Local development conventions:
 
 - Use `venv` virtual environment.
-- Use `.env` for local secrets and settings.
-- `.env.example` should provide safe placeholders only.
+- Use `.streamlit/secrets.toml` for local secrets and settings.
+- `.streamlit/secrets.toml.example` should provide safe placeholders only.
 
 ---
 

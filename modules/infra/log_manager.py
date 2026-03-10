@@ -11,11 +11,12 @@ including backward-compatible keyword aliases used by older modules.
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, List, Optional
+
+from modules.core.secrets import get_secret
 
 _DEFAULT_LOG_DIR = Path("logs")
 _current_log_file: Optional[Path] = None
@@ -82,9 +83,9 @@ def init_logging(
     if write_output is not None:
         write_to_file = bool(write_output)
 
-    env_level = os.getenv("CARBON_LOG_LEVEL")
-    if env_level:
-        level = env_level.upper()
+    secret_level = get_secret("CARBON_LOG_LEVEL")
+    if secret_level:
+        level = str(secret_level).upper()
 
     numeric_level = getattr(logging, str(level).upper(), logging.INFO)
     root_logger = logging.getLogger()

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List
@@ -10,6 +9,7 @@ import streamlit as st
 from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_key, ascii_place_text
+from modules.core.secrets import get_secret
 from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, list_place_names
 from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import get_logger
@@ -84,9 +84,9 @@ def _resolve_custom_location_label(value: str) -> tuple[str | None, str | None]:
     if not query:
         return None, None
 
-    api_key = str(os.getenv("ORS_API_KEY", "")).strip()
+    api_key = str(get_secret("ORS_API_KEY", "")).strip()
     if not api_key:
-        return None, "ORS_API_KEY is not configured."
+        return None, "ORS_API_KEY is not configured in Streamlit secrets."
 
     ors = ORSClient(ORSConfig(api_key=api_key))
     point = resolve_point_null_safe(query, ors, _log)

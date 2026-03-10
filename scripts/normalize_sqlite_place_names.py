@@ -24,13 +24,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from modules.addressing.text import ascii_place_text
-from modules.core.env_loader import load_repo_env
 from modules.infra.database_manager import DEFAULT_DB_PATH
 from modules.infra.log_manager import get_logger, init_logging
 from modules.infra.db.road_cache import normalize_profile
 from modules.multimodal.scenario_keys import build_bulk_scenario_key, normalize_bulk_place_input
-
-load_repo_env(ROOT / ".env")
 
 _log = get_logger("normalize_sqlite_place_names")
 

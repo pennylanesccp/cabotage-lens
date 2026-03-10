@@ -16,10 +16,11 @@ Exports:
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+from modules.core.secrets import get_secret
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Main Configuration Class
@@ -60,10 +61,10 @@ class Config:
     default_country: str = "BR"
     default_locale: str = "pt-BR"
 
-    # --- Environment ---
-    # Auto-loads API key from environment if available
+    # --- Streamlit secrets ---
+    # Auto-loads API key from Streamlit secrets if available
     ors_api_key: Optional[str] = field(
-        default_factory=lambda: os.getenv("ORS_API_KEY")
+        default_factory=lambda: get_secret("ORS_API_KEY")
     )
 
     def __post_init__(self) -> None:

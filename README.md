@@ -142,7 +142,7 @@ This project is a pure-Python, CLI-first toolkit built for reproducible freight 
 * **OpenRouteService (ORS)**  
   * Used for all road routing in both road-only and multimodal (road–sea–road) scenarios.  
   * Heavy-vehicle routing is based on the **`driving-hgv`** profile; geocoding uses the standard ORS endpoints.  
-  * Accessed via HTTPS with an API key sourced from environment variables.  
+  * Accessed via HTTPS with an API key sourced from Streamlit secrets.
   * Responses are cached locally in SQLite so identical legs do not re-hit the API.
 
 * **No Cloud Dependencies by Default**  
@@ -765,14 +765,14 @@ This keeps the repository focused on **one source of truth** for numerical outpu
   * A run is fully determined by:
     * The code version (Git commit),
     * The contents of `data/` (including the SQLite file),
-    * The CLI arguments and environment variables used.
+    * The CLI arguments and Streamlit secret overrides used.
   * As long as the database is preserved, any subsequent analysis can be re-run or extended by reading the same tables, without regenerating intermediate artifacts.
 
 ---
 
-## Configuration & Environment Variables
+## Configuration & Streamlit Secrets
 
-Runtime configuration is centralized and kept minimal. Defaults are defined in code, and only a small number of values must be supplied via environment variables (primarily the routing API key). All configuration is designed so the model can be re-run on any machine using the same open, versioned data under `data/` and the same SQLite database file.
+Runtime configuration is centralized and kept minimal. Defaults are defined in code, and only a small number of values must be supplied via Streamlit secrets (primarily the routing API key). Both the Streamlit app and the CLI scripts read the same `.streamlit/secrets.toml` file in local development. All configuration is designed so the model can be re-run on any machine using the same open, versioned data under `data/` and the same SQLite database file.
 
 ### Configuration Sources (Precedence)
 
@@ -788,36 +788,34 @@ From lowest to highest precedence:
      * Tuning parameters (timeouts, retry counts, etc.).  
    * This is the recommended place to inspect or change defaults.
 
-3. **Environment variables**  
+3. **Streamlit secrets**
    * Used to inject secrets and override selected defaults **without** editing code.  
    * Take precedence over any default value in the config module.
 
 4. **CLI arguments**  
-   * For the entrypoint in `app/` and scripts in `scripts/`, command-line flags override both config defaults and environment variables for that run.
+   * For the entrypoint in `app/` and scripts in `scripts/`, command-line flags override both config defaults and Streamlit secrets for that run.
 
-### Required Environment Variables
+### Required Streamlit Secrets
 
-At minimum, you must provide an environment variable containing the **OpenRouteService (ORS) API key**, used by the road routing client:
+At minimum, you must provide the **OpenRouteService (ORS) API key** in Streamlit secrets, used by the road routing client:
 
 * **Routing API key**  
-  * A single environment variable holds your ORS key (see `modules/config.py` or the ORS client module for the exact name expected by the current code).  
-  * If this variable is missing, any code path that touches the routing API will fail fast with a clear error message.
+  * A single Streamlit secret holds your ORS key: `ORS_API_KEY`.
+  * If this secret is missing, any code path that touches the routing API will fail fast with a clear error message.
 
-Example (shell):
+Example (`.streamlit/secrets.toml`):
 
-```bash
-export ORS_API_KEY="your-real-openrouteservice-key"
+```toml
+ORS_API_KEY = "your-real-openrouteservice-key"
 ```
 
-> Replace `ORS_API_KEY` with the exact variable name used in the config/client module if it differs.
+### Optional Streamlit Secrets
 
-### Optional Environment Variables
-
-The project recognizes a small set of optional variables to tweak behavior at runtime:
+The project recognizes a small set of optional secrets to tweak behavior at runtime:
 
 * **Logging configuration**
 
-  * Optional variable(s) to override:
+  * Optional secret(s) to override:
 
     * Global log level (e.g. from `INFO` to `DEBUG`).
     * Log file location (e.g. a custom `logs/` directory).
@@ -825,7 +823,7 @@ The project recognizes a small set of optional variables to tweak behavior at ru
 
 * **HTTP / network tuning**
 
-  * Optional overrides for:
+  * Optional secrets for:
 
     * Request timeout for ORS calls.
     * Maximum retries or backoff parameters.
@@ -833,27 +831,25 @@ The project recognizes a small set of optional variables to tweak behavior at ru
 
 * **Paths & storage**
 
-  * Optional overrides for:
+  * Optional secrets for:
 
     * SQLite database location (routing cache and scenario results DB file).
     * Custom base directories for `logs/` (e.g. mounted volumes on a server).
 
-Exact variable names and defaults are documented in the config and client modules (e.g. `modules/config.py`, `modules/road/ors_client.py`).
+Exact secret names and defaults are documented in the config and client modules.
 
 ### Managing Secrets
 
 * **Do not commit secrets**
 
-  * API keys and other secrets are supplied via environment variables only.
-  * `.gitignore` should prevent common secret files (e.g. `.env`, local config dumps) from being committed.
+  * API keys and other secrets are supplied via Streamlit secrets only.
+  * `.gitignore` should prevent local secret files (for example, `.streamlit/secrets.toml`) from being committed.
 
-* **Local convenience (`.env` or similar)**
+* **Local setup**
 
-  * In local development, you may optionally use tools like `direnv` or a `.env` loader script:
-
-    * Store your secrets in a local-only file.
-    * Load them into the environment before running apps or tests.
-  * The repository itself does not depend on any specific `.env` tooling.
+  * In local development, copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`.
+  * Fill in local-only values there before running the app or the scripts.
+  * The repository no longer reads `.env`.
 
 ### Quick Setup Checklist
 
@@ -861,8 +857,8 @@ Before running any CLI app or script:
 
 1. Create and activate a Python virtual environment.
 2. Install dependencies: `pip install -r requirements.txt`.
-3. Export the routing API key environment variable.
-4. (Optional) Adjust logging level, paths or SQLite DB location via environment variables if needed.
+3. Create `.streamlit/secrets.toml` with `ORS_API_KEY`.
+4. (Optional) Adjust logging level, paths or SQLite DB location via Streamlit secrets if needed.
 5. Run the desired `app/` or `scripts/` entrypoint.
 
 ---
@@ -953,21 +949,25 @@ Minimal smoke check (non-interactive):
 python -m py_compile app/app_streamlit.py
 ```
 
-### 5. Configure Environment Variables
+### 5. Configure Streamlit Secrets
 
-Before running tools that call the routing API and write into the SQLite database, export the required environment variable(s) (see the previous **Configuration & Environment Variables** section):
+Before running tools that call the routing API and write into the SQLite database, create `.streamlit/secrets.toml` from the example file (see the previous **Configuration & Streamlit Secrets** section):
 
 ```bash
-export ORS_API_KEY="your-real-openrouteservice-key"
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 ```
 
-On Windows PowerShell:
+Then edit `.streamlit/secrets.toml` and set at least:
+
+```toml
+ORS_API_KEY = "your-real-openrouteservice-key"
+```
+
+On Windows PowerShell, you can create the local file with:
 
 ```powershell
-$env:ORS_API_KEY = "your-real-openrouteservice-key"
+Copy-Item .streamlit\secrets.toml.example .streamlit\secrets.toml
 ```
-
-Replace `ORS_API_KEY` with the actual variable name used by the code if it differs.
 
 ### 6. Basic Sanity Check
 
@@ -1027,7 +1027,7 @@ From the project root (`carbon-footprint/`), after activating your virtualenv:
 
 The app layer is responsible for:
 
-1. Loading configuration and environment variables.
+1. Loading configuration and Streamlit secrets.
 2. Capturing user inputs in the Streamlit UI.
 3. Calling orchestration functions in `modules/` to:
 
@@ -1158,7 +1158,7 @@ All domain logic lives under the `modules/` package. CLI apps and scripts are th
   * Thin HTTP client for OpenRouteService (ORS) geocoding and directions.
   * Handles:
 
-    * Auth via environment variable.
+    * Auth via Streamlit secret.
     * Timeouts, retries and basic rate-limit handling.
     * JSON parsing and error surfacing.
 
@@ -1315,7 +1315,7 @@ The whole stack is built on open tooling (Python + SQLite) and a public routing 
 
   * Forward geocoding (text → coordinates),
   * Routing (coordinates → distance, duration, geometry).
-* ORS API key is read from an **environment variable** (see the configuration section).
+* ORS API key is read from the **`ORS_API_KEY` Streamlit secret** (see the configuration section).
 * Network behavior:
 
   * Configurable timeouts and retry logic for transient errors,
@@ -1903,7 +1903,7 @@ Logging is centralized so that every CLI app, script and core module writes stru
     * Logs at `DEBUG` or higher (full trace for diagnostics).
 * Log level overrides:
 
-  * Can be adjusted globally through a configuration setting or environment variable.
+  * Can be adjusted globally through a configuration setting or Streamlit secret.
   * For example, enabling `DEBUG` for development or setting it back to `INFO` for routine runs.
 * Format:
 
@@ -2210,7 +2210,7 @@ For any analysis (road-only or multimodal), results are determined by:
 * The **CLI arguments** passed to app/scripts:
 
   * Origin, destiny, cargo mass, scenario flags, etc.
-* The **environment variables** used:
+* The **Streamlit secrets** used:
 
   * ORS API key (affects the ability to call ORS when the cache is cold).
   * Optional overrides like log level or custom paths.
@@ -2260,7 +2260,7 @@ Any difference between two runs can be traced to changes in:
 * Code.
 * Input tables (`data/`).
 * Cache contents (SQLite database).
-* CLI arguments or environment overrides.
+* CLI arguments or Streamlit secret overrides.
 
 ### When Results Can Change
 
@@ -2297,7 +2297,7 @@ To reproduce a past experiment as closely as possible:
 
      * Static tables (ports, vessels, fuel factors, prices).
      * The SQLite database file with cached legs.
-3. Ensure environment variables match the original setup (names and key flags; the actual secret value of the ORS key does not affect already-cached distances).
+3. Ensure Streamlit secrets match the original setup (names and key flags; the actual secret value of the ORS key does not affect already-cached distances).
 4. Re-run the same command(s) with the same CLI arguments.
 5. Compare:
 

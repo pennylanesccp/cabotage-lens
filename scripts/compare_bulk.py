@@ -21,10 +21,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from modules.core.env_loader import load_repo_env
-
-load_repo_env(ROOT / ".env")
-
 from modules.infra.database_manager import DEFAULT_BULK_RESULTS_TABLE, DEFAULT_DB_PATH, connection_target_summary
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal.bulk import load_destinations

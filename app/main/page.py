@@ -6,7 +6,6 @@ from typing import Any, Iterable
 import streamlit as st
 
 from app.main.cards import render_summary_cards
-from modules.core.env_loader import load_repo_env
 from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
     list_vessel_classes,
@@ -17,12 +16,10 @@ from app.main.details import render_details
 from app.main.map import fit_view, map_points, render_map, render_map_placeholder
 from app.main.sidebar import render_sidebar
 from app.main.styles import inject_css
-from app.main.utils.constants import PAGE_ICON, PAGE_LAYOUT, PAGE_TITLE, ROOT
+from app.main.utils.constants import PAGE_ICON, PAGE_LAYOUT, PAGE_TITLE
 from app.main.utils.formatters import clean_place_label, safe_float
 from app.main.utils.pipeline import build_scenario_payload, run_analysis
 from app.main.utils.state import attach_streamlit_logging, init_state
-
-load_repo_env(ROOT / ".env")
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout=PAGE_LAYOUT)
 

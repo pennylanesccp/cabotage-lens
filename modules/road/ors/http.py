@@ -178,7 +178,7 @@ class ORSHttpClient:
         # 3. Validate API Key before hitting network
         if not self.cfg.api_key:
             _log.error("Attempted API call without ORS_API_KEY.")
-            raise ORSError("ORS API Key is missing. Please set ORS_API_KEY env var.")
+            raise ORSError("ORS API Key is missing. Set ORS_API_KEY in Streamlit secrets.")
 
         # 4. Network Call
         url = f"{self.cfg.base_url}{endpoint}"

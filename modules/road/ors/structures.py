@@ -11,10 +11,11 @@ OpenRouteService client. This module contains no logic, only definitions.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+from modules.core.secrets import get_secret
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Constants
@@ -22,7 +23,7 @@ from typing import Optional
 
 DEFAULT_BASE_URL = "https://api.openrouteservice.org"
 DEFAULT_USER_AGENT = "CarbonFootprint-ORS/2.0"
-ENV_API_KEY = "ORS_API_KEY"
+SECRET_API_KEY = "ORS_API_KEY"
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Exceptions
@@ -65,7 +66,7 @@ class ORSConfig:
     ----------
     api_key : str, optional
         The OpenRouteService API key. If None, the client will attempt
-        to load it from the `ORS_API_KEY` environment variable.
+        to load it from the `ORS_API_KEY` Streamlit secret.
     base_url : str
         The root URL for the API. Defaults to the public ORS instance.
     cache_path : Path, optional
@@ -101,10 +102,10 @@ class ORSConfig:
     def __post_init__(self) -> None:
         """
         Auto-configuration hook.
-        Loads the API key from the environment if one wasn't provided explicitly.
+        Loads the API key from Streamlit secrets if one wasn't provided explicitly.
         """
         if not self.api_key:
-            self.api_key = os.getenv(ENV_API_KEY)
+            self.api_key = get_secret(SECRET_API_KEY)
 
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -117,10 +118,9 @@ if __name__ == "__main__":
     cfg = ORSConfig()
     print(f"Defaults loaded. Base URL: {cfg.base_url}")
     
-    # 2. Test Env Var Loading
-    os.environ[ENV_API_KEY] = "test_env_key"
-    cfg_env = ORSConfig()
-    print(f"Env key loaded: {cfg_env.api_key}")
+    # 2. Test Explicit Key Loading
+    cfg_key = ORSConfig(api_key="test_secret_key")
+    print(f"Explicit key loaded: {cfg_key.api_key}")
     
     # 3. Test Exception Hierarchy
     try:

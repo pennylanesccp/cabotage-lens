@@ -13,7 +13,6 @@ Builds the geometric inputs required by the evaluator:
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional, TypedDict, cast
@@ -28,6 +27,7 @@ if __name__ == "__main__":
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_text
 from modules.cabotage.sea_matrix import SeaMatrix
+from modules.core.secrets import get_secret
 from modules.infra.database_manager import DEFAULT_DB_PATH
 from modules.infra.log_manager import get_logger
 from modules.ports.ports_index import load_ports
@@ -106,7 +106,7 @@ def load_routing_assets(
     s_json = _resolve_path(sea_matrix_path, _DEFAULT_SEA_MATRIX_JSON)
     d_path: Path | str = db_path if db_path is not None else DEFAULT_DB_PATH
 
-    ors = _cached_ors_client(os.getenv("ORS_API_KEY", ""))
+    ors = _cached_ors_client(str(get_secret("ORS_API_KEY", "")))
     ports = _cached_ports(str(p_json))
     sea_matrix = _cached_sea_matrix(str(s_json))
     return ors, ports, sea_matrix, d_path

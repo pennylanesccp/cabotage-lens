@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import logging
-import os
 import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
 import streamlit as st
 
+from modules.core.secrets import get_secret
 from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import get_logger, init_logging
 
@@ -34,8 +34,8 @@ class StreamlitLogHandler(logging.Handler):
             pass
 
 
-def secret_or_env(key: str, default: Any = None) -> Any:
-    value = st.secrets.get(key, os.getenv(key))
+def secret_value(key: str, default: Any = None) -> Any:
+    value = get_secret(key, default)
     if value is None:
         return default
     if isinstance(value, str):
@@ -69,7 +69,7 @@ def resolve_runtime_db_path(configured_path: Any = None) -> str:
     if settings.is_postgres:
         return settings.display_target
 
-    configured = configured_path if configured_path is not None else secret_or_env("CARBON_DB_PATH", DEFAULTS["db_path_str"])
+    configured = configured_path if configured_path is not None else secret_value("CARBON_DB_PATH", DEFAULTS["db_path_str"])
     candidate = Path(str(configured)).expanduser()
     if not candidate.is_absolute():
         candidate = ROOT / candidate
@@ -85,39 +85,15 @@ def resolve_runtime_db_path(configured_path: Any = None) -> str:
         return str(fallback.resolve())
 
 
-def bootstrap_runtime_env() -> None:
-    for key in (
-        "ORS_API_KEY",
-        "CARBON_LOG_LEVEL",
-        "CARBON_DB_BACKEND",
-        "CARBON_DB_PATH",
-        "DATABASE_URL",
-        "SUPABASE_DB_URL",
-        "SUPABASE_DB_HOST",
-        "SUPABASE_DB_PORT",
-        "SUPABASE_DB_NAME",
-        "SUPABASE_DB_USER",
-        "SUPABASE_DB_PASSWORD",
-        "SUPABASE_DB_SSLMODE",
-    ):
-        value = secret_or_env(key)
-        if value is not None:
-            normalized = str(value).strip()
-            if normalized:
-                os.environ[key] = normalized
-
-
 def init_state(defaults: Mapping[str, Any] | None = None) -> None:
-    bootstrap_runtime_env()
-
     runtime_defaults: dict[str, Any] = dict(defaults or DEFAULTS)
     runtime_defaults["db_path_str"] = str(resolve_runtime_db_path())
     runtime_defaults["log_level"] = validated_log_level(
-        secret_or_env("CARBON_LOG_LEVEL", runtime_defaults.get("log_level", "INFO")),
+        secret_value("CARBON_LOG_LEVEL", runtime_defaults.get("log_level", "INFO")),
         default=str(runtime_defaults.get("log_level", "INFO")),
     )
     runtime_defaults["write_log_file"] = bool_from_any(
-        secret_or_env("CARBON_WRITE_LOG_FILE", runtime_defaults.get("write_log_file", False)),
+        secret_value("CARBON_WRITE_LOG_FILE", runtime_defaults.get("write_log_file", False)),
         default=bool(runtime_defaults.get("write_log_file", False)),
     )
 

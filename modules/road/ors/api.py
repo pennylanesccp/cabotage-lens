@@ -246,7 +246,7 @@ if __name__ == "__main__":
 
     print("--- ORS API Smoke Test ---")
     try:
-        # Needs valid ORS_API_KEY env var
+        # Needs valid ORS_API_KEY in Streamlit secrets
         ors = ORSClient()
         
         print("\n1. Testing Geocode (SP)...")
