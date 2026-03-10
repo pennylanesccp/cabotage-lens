@@ -24,11 +24,11 @@ For each scenario, the engine builds two comparable transport chains:
   * Port → port (sea leg),  
   * Destination port → destiny (road leg).
 
-Each leg is modeled separately for **distance**, **fuel use**, **GHG emissions (CO₂e)**, and **cost (BRL)** using transparent engineering factors and parameters stored in **open, updatable tables** under `data/`. All intermediate and final results are persisted in a **SQLite database**, which acts as the single source of truth for:
+Each leg is modeled separately for **distance**, **fuel use**, **GHG emissions (CO�e)**, and **cost (BRL)** using transparent engineering factors and parameters stored in **open, updatable tables** under `data/`. Bulk analytical outputs and shared routing caches now persist primarily in **Supabase Postgres** (with SQLite still available as an optional local fallback for maintenance workflows), which acts as the main source of truth for:
 
 * ORS-based road distances,
-* Sea-leg distances and cabotage fuel profiles,
-* Aggregated scenario indicators (fuel, emissions, cost).
+* Bulk comparison snapshots and completed batch runs,
+* Heatmap-ready indicators for cost and emissions.
 
 Because all coefficients (fuel prices, emission factors, vessel and truck parameters, port factors) are read from versioned CSV/JSON files, the model is explicitly **configurable and updatable**: updating a table or factor set and rerunning the same scenario immediately propagates new assumptions without changing code.
 

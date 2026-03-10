@@ -22,9 +22,21 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from modules.infra.database_manager import DEFAULT_BULK_RESULTS_TABLE, DEFAULT_DB_PATH, connection_target_summary
+from modules.addressing.text import ascii_place_key
+from modules.infra.database_manager import (
+    DEFAULT_BULK_RESULTS_TABLE,
+    DEFAULT_BULK_RUN_RESULTS_TABLE,
+    DEFAULT_BULK_RUNS_TABLE,
+    DEFAULT_DB_PATH,
+    BulkRunSelector,
+    connection_target_summary,
+)
 from modules.infra.db.bulk_results import ensure_results_table as ensure_bulk_results_table
 from modules.infra.db.bulk_results import upsert_result as upsert_bulk_result
+from modules.infra.db.bulk_runs import ensure_run_results_table as ensure_bulk_run_results_table
+from modules.infra.db.bulk_runs import ensure_runs_table as ensure_bulk_runs_table
+from modules.infra.db.bulk_runs import insert_run_result as insert_bulk_run_result
+from modules.infra.db.bulk_runs import upsert_run as upsert_bulk_run
 from modules.infra.db.core import db_session, safe_table_name
 from modules.infra.db.multimodal import ensure_results_table as ensure_multimodal_results_table
 from modules.infra.db.multimodal import upsert_result as upsert_multimodal_result
@@ -87,6 +99,16 @@ def _is_bulk_table(columns: set[str]) -> bool:
     return required.issubset(columns)
 
 
+def _is_bulk_runs_table(columns: set[str]) -> bool:
+    required = {"run_id", "origin_key", "cargo_t", "destination_set_id", "status"}
+    return required.issubset(columns)
+
+
+def _is_bulk_run_results_table(columns: set[str]) -> bool:
+    required = {"run_id", "scenario_key", "destination_set_id", "status"}
+    return required.issubset(columns) and "road_cost_r" in columns
+
+
 def _is_analysis_table(columns: set[str]) -> bool:
     required = {"origin_name", "destiny_name", "cargo_t", "delta_cost_r"}
     return required.issubset(columns) and "scenario_key" not in columns and "distance_km" not in columns
@@ -96,6 +118,10 @@ def _classify_table(name: str, columns: tuple[str, ...]) -> str:
     column_set = set(columns)
     if name == "http_cache":
         return "http_cache"
+    if _is_bulk_runs_table(column_set) or name == DEFAULT_BULK_RUNS_TABLE:
+        return "bulk_runs"
+    if _is_bulk_run_results_table(column_set) or name == DEFAULT_BULK_RUN_RESULTS_TABLE:
+        return "bulk_run_results"
     if _is_bulk_table(column_set) or name == DEFAULT_BULK_RESULTS_TABLE:
         return "bulk"
     if _is_route_table(column_set) or name in {"routes", "heatmap_runs"}:
@@ -234,8 +260,18 @@ def migrate_bulk_results_table(source_conn: sqlite3.Connection, target_conn: Any
                 target_conn,
                 table_name=target_table,
                 scenario_key=scenario_key,
+                run_id=_row_value(row, columns, "run_id"),
+                destination_set_id=_row_value(row, columns, "destination_set_id"),
+                origin_key=_row_value(row, columns, "origin_key"),
                 origin_name=origin_name,
+                origin_lat=_row_value(row, columns, "origin_lat"),
+                origin_lon=_row_value(row, columns, "origin_lon"),
+                origin_uf=_row_value(row, columns, "origin_uf"),
+                destiny_key=_row_value(row, columns, "destiny_key"),
                 destiny_name=destiny_name,
+                destiny_lat=_row_value(row, columns, "destiny_lat"),
+                destiny_lon=_row_value(row, columns, "destiny_lon"),
+                destiny_uf=_row_value(row, columns, "destiny_uf"),
                 input_origin=input_origin,
                 input_destiny=input_destiny,
                 cargo_t=float(_row_value(row, columns, "cargo_t", 0.0) or 0.0),
@@ -253,6 +289,8 @@ def migrate_bulk_results_table(source_conn: sqlite3.Connection, target_conn: Any
                 allocation_load_factor=_row_value(row, columns, "allocation_load_factor"),
                 full_call_mode=bool(_row_value(row, columns, "full_call_mode", 0)),
                 port_ops_scenario=_row_value(row, columns, "port_ops_scenario"),
+                port_origin_name=_row_value(row, columns, "port_origin_name"),
+                port_destiny_name=_row_value(row, columns, "port_destiny_name"),
                 status=str(_row_value(row, columns, "status", "ok") or "ok"),
                 error_message=_row_value(row, columns, "error_message"),
                 geometry_status=_row_value(row, columns, "geometry_status"),
@@ -281,6 +319,7 @@ def migrate_bulk_results_table(source_conn: sqlite3.Connection, target_conn: Any
                 delta_cost_r=_row_value(row, columns, "delta_cost_r"),
                 delta_co2e_kg=_row_value(row, columns, "delta_co2e_kg"),
                 savings_pct=_row_value(row, columns, "savings_pct"),
+                emissions_savings_pct=_row_value(row, columns, "emissions_savings_pct"),
                 diesel_price_r_per_l=_row_value(row, columns, "diesel_price_r_per_l"),
                 diesel_price_source=_row_value(row, columns, "diesel_price_source"),
                 bunker_price_r_per_t=_row_value(row, columns, "bunker_price_r_per_t"),
@@ -291,6 +330,141 @@ def migrate_bulk_results_table(source_conn: sqlite3.Connection, target_conn: Any
             _rollback_savepoint(target_conn, savepoint)
             stats.failed += 1
             _log.error("Bulk row failed from source table %s scenario_key=%s: %s", table.name, scenario_key, exc)
+
+    return stats
+
+
+def migrate_bulk_runs_table(source_conn: sqlite3.Connection, target_conn: Any, table: SourceTable) -> MigrationStats:
+    stats = MigrationStats()
+    columns = set(table.columns)
+    target_table = safe_table_name(table.name)
+    ensure_bulk_runs_table(target_conn, target_table)
+    src_table = safe_table_name(table.name)
+
+    for row in source_conn.execute(f"SELECT * FROM {src_table}"):
+        stats.found += 1
+        run_id = str(_row_value(row, columns, "run_id", "") or "").strip()
+        origin_name = str(_row_value(row, columns, "origin_name", "") or "").strip()
+        destination_set_id = str(_row_value(row, columns, "destination_set_id", "") or "").strip()
+        if not run_id or not origin_name or not destination_set_id:
+            stats.skipped_invalid += 1
+            continue
+
+        selector = BulkRunSelector(
+            origin_key=str(_row_value(row, columns, "origin_key", ascii_place_key(origin_name)) or ascii_place_key(origin_name)),
+            cargo_t=float(_row_value(row, columns, "cargo_t", 0.0) or 0.0),
+            truck_key=str(_row_value(row, columns, "truck_key", "semi_27t") or "semi_27t"),
+            ors_profile=str(_row_value(row, columns, "ors_profile", "driving-hgv") or "driving-hgv"),
+            vessel_class=_row_value(row, columns, "vessel_class"),
+            include_hoteling=bool(_row_value(row, columns, "include_hoteling", 1)),
+            hoteling_hours_per_call=float(_row_value(row, columns, "hoteling_hours_per_call", 0.0) or 0.0),
+            port_calls=int(_row_value(row, columns, "port_calls", 0) or 0),
+            include_port_ops=bool(_row_value(row, columns, "include_port_ops", 1)),
+            port_moves_per_call=_row_value(row, columns, "port_moves_per_call"),
+            cargo_teu=_row_value(row, columns, "cargo_teu"),
+            t_per_teu_default=float(_row_value(row, columns, "t_per_teu_default", 14.0) or 14.0),
+            allocation_mode=_row_value(row, columns, "allocation_mode"),
+            allocation_load_factor=float(_row_value(row, columns, "allocation_load_factor", 0.8) or 0.8),
+            full_call_mode=bool(_row_value(row, columns, "full_call_mode", 0)),
+            port_ops_scenario=str(_row_value(row, columns, "port_ops_scenario", "") or ""),
+            destination_set_id=destination_set_id,
+        )
+        savepoint = f"bulk_run_{stats.found}"
+        _open_savepoint(target_conn, savepoint)
+        try:
+            upsert_bulk_run(
+                target_conn,
+                table_name=target_table,
+                run_id=run_id,
+                selector=selector,
+                origin_name=origin_name,
+                input_origin=str(_row_value(row, columns, "input_origin", origin_name) or origin_name),
+                destination_count=int(_row_value(row, columns, "destination_count", 0) or 0),
+                success_count=int(_row_value(row, columns, "success_count", 0) or 0),
+                fail_count=int(_row_value(row, columns, "fail_count", 0) or 0),
+                status=str(_row_value(row, columns, "status", "running") or "running"),
+                error_message=_row_value(row, columns, "error_message"),
+                duration_s=_row_value(row, columns, "duration_s"),
+                started_timestamp=_row_value(row, columns, "started_timestamp"),
+                completed_timestamp=_row_value(row, columns, "completed_timestamp"),
+                updated_timestamp=_row_value(row, columns, "updated_timestamp"),
+            )
+            _release_savepoint(target_conn, savepoint)
+            stats.inserted += 1
+        except Exception as exc:
+            _rollback_savepoint(target_conn, savepoint)
+            stats.failed += 1
+            _log.error("Bulk run row failed from source table %s run_id=%s: %s", table.name, run_id, exc)
+
+    return stats
+
+
+def migrate_bulk_run_results_table(source_conn: sqlite3.Connection, target_conn: Any, table: SourceTable) -> MigrationStats:
+    stats = MigrationStats()
+    columns = set(table.columns)
+    target_table = safe_table_name(table.name)
+    ensure_bulk_run_results_table(target_conn, target_table)
+    src_table = safe_table_name(table.name)
+
+    for row in source_conn.execute(f"SELECT * FROM {src_table}"):
+        stats.found += 1
+        run_id = str(_row_value(row, columns, "run_id", "") or "").strip()
+        scenario_key = str(_row_value(row, columns, "scenario_key", "") or "").strip()
+        destination_set_id = str(_row_value(row, columns, "destination_set_id", "") or "").strip()
+        origin_name = str(_row_value(row, columns, "origin_name", "") or "").strip()
+        destiny_name = str(_row_value(row, columns, "destiny_name", "") or "").strip()
+        if not run_id or not scenario_key or not destination_set_id or not origin_name or not destiny_name:
+            stats.skipped_invalid += 1
+            continue
+
+        savepoint = f"bulk_run_result_{stats.found}"
+        _open_savepoint(target_conn, savepoint)
+        try:
+            insert_bulk_run_result(
+                target_conn,
+                table_name=target_table,
+                run_id=run_id,
+                scenario_key=scenario_key,
+                origin_key=str(_row_value(row, columns, "origin_key", ascii_place_key(origin_name)) or ascii_place_key(origin_name)),
+                origin_name=origin_name,
+                origin_lat=_row_value(row, columns, "origin_lat"),
+                origin_lon=_row_value(row, columns, "origin_lon"),
+                origin_uf=_row_value(row, columns, "origin_uf"),
+                destiny_key=str(_row_value(row, columns, "destiny_key", ascii_place_key(destiny_name)) or ascii_place_key(destiny_name)),
+                destiny_name=destiny_name,
+                destiny_lat=_row_value(row, columns, "destiny_lat"),
+                destiny_lon=_row_value(row, columns, "destiny_lon"),
+                destiny_uf=_row_value(row, columns, "destiny_uf"),
+                input_origin=str(_row_value(row, columns, "input_origin", origin_name) or origin_name),
+                input_destiny=str(_row_value(row, columns, "input_destiny", destiny_name) or destiny_name),
+                destination_set_id=destination_set_id,
+                port_origin_name=_row_value(row, columns, "port_origin_name"),
+                port_destiny_name=_row_value(row, columns, "port_destiny_name"),
+                status=str(_row_value(row, columns, "status", "ok") or "ok"),
+                error_message=_row_value(row, columns, "error_message"),
+                road_cost_r=_row_value(row, columns, "road_cost_r"),
+                multimodal_cost_r=_row_value(row, columns, "multimodal_cost_r"),
+                cost_delta_r=_row_value(row, columns, "cost_delta_r"),
+                cost_savings_pct=_row_value(row, columns, "cost_savings_pct"),
+                road_emissions_kg=_row_value(row, columns, "road_emissions_kg"),
+                multimodal_emissions_kg=_row_value(row, columns, "multimodal_emissions_kg"),
+                emissions_delta_kg=_row_value(row, columns, "emissions_delta_kg"),
+                emissions_savings_pct=_row_value(row, columns, "emissions_savings_pct"),
+                road_distance_km=_row_value(row, columns, "road_distance_km"),
+                sea_km=_row_value(row, columns, "sea_km"),
+            )
+            _release_savepoint(target_conn, savepoint)
+            stats.inserted += 1
+        except Exception as exc:
+            _rollback_savepoint(target_conn, savepoint)
+            stats.failed += 1
+            _log.error(
+                "Bulk run result row failed from source table %s run_id=%s scenario_key=%s: %s",
+                table.name,
+                run_id,
+                scenario_key,
+                exc,
+            )
 
     return stats
 
@@ -410,6 +584,10 @@ def main() -> int:
                     stats = migrate_route_cache_table(source_conn, target_conn, table)
                 elif table.kind == "bulk":
                     stats = migrate_bulk_results_table(source_conn, target_conn, table)
+                elif table.kind == "bulk_runs":
+                    stats = migrate_bulk_runs_table(source_conn, target_conn, table)
+                elif table.kind == "bulk_run_results":
+                    stats = migrate_bulk_run_results_table(source_conn, target_conn, table)
                 elif table.kind == "analysis" and bool(args.include_analysis_tables):
                     stats = migrate_analysis_table(source_conn, target_conn, table)
                 else:

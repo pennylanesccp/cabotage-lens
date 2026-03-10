@@ -4,6 +4,8 @@ The repository now uses Supabase Postgres as the primary persistence backend for
 
 - Road-distance cache (`routes`)
 - Bulk evaluation outputs (`bulk_evaluation_results`)
+- Completed bulk batches (`bulk_evaluation_runs`)
+- Heatmap-ready batch rows (`bulk_evaluation_run_results`)
 - Single-run analytical result tables (`analysis_results` and other compatible legacy result tables)
 
 ## Streamlit secrets
@@ -37,6 +39,10 @@ Apply the SQL in:
 
 `supabase/migrations/20260309_000001_carbon_footprint_core.sql`
 
+and then:
+
+`supabase/migrations/20260310_000002_bulk_heatmap_runs.sql`
+
 You can run it in the Supabase SQL editor or through your usual Postgres migration workflow.
 
 The application also creates missing tables on first use, but applying the SQL migration explicitly is the cleaner production path.
@@ -66,3 +72,4 @@ Optional flags:
 - The raw ORS HTTP response cache under `.cache/ors_cache.sqlite` remains local and optional. It is not the primary persistence layer and is not migrated to Supabase.
 - Route-cache lookups and writes now use the configured backend automatically.
 - Bulk reruns still recompute analytical outputs while reusing cached road distances when available.
+- The Streamlit heatmap page reads only completed Supabase batch runs and uses the immutable `bulk_evaluation_run_results` rows for map rendering.

@@ -52,6 +52,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Bulk route comparison")
     parser.add_argument("--origin", required=True, help="Fixed origin")
     parser.add_argument("--dests-file", required=True, type=Path, help="Path to destinations .txt")
+    parser.add_argument(
+        "--destination-set-id",
+        default=None,
+        help="Stable identifier for the destination universe; defaults to the destinations filename.",
+    )
 
     parser.add_argument("--cargo", type=float, default=27.0, help="Cargo mass in tonnes")
     parser.add_argument("--truck", default="semi_27t", help="Truck profile")
@@ -174,15 +179,17 @@ def main() -> int:
         allocation_load_factor=float(args.allocation_load_factor),
         full_call_mode=bool(args.full_call_mode),
         port_ops_scenario=str(args.port_ops_scenario),
+        destination_set_id=str(args.destination_set_id or args.dests_file.name),
     )
 
     _write_summary_csv(outcome["summary_rows"], args.output_csv)
     _log.info("Summary CSV written to: %s", args.output_csv)
     _log.info(
-        "Bulk CLI finished. success=%d fail=%d duration_s=%.2f",
+        "Bulk CLI finished. success=%d fail=%d duration_s=%.2f run_id=%s",
         int(outcome["success_count"]),
         int(outcome["fail_count"]),
         float(outcome["duration_s"]),
+        outcome.get("run_id"),
     )
     return 0
 

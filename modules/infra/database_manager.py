@@ -52,6 +52,23 @@ from modules.infra.db.bulk_results import (
     , ensure_results_table as ensure_bulk_results_table
     , upsert_result as upsert_bulk_result
 )
+from modules.infra.db.bulk_runs import (
+      DEFAULT_RUNS_TABLE as DEFAULT_BULK_RUNS_TABLE
+    , DEFAULT_RUN_RESULTS_TABLE as DEFAULT_BULK_RUN_RESULTS_TABLE
+    , BulkRunRecord
+    , BulkRunResultRecord
+    , BulkRunSelector
+    , ensure_runs_table as ensure_bulk_runs_table
+    , ensure_run_results_table as ensure_bulk_run_results_table
+    , finish_run as finish_bulk_run
+    , get_latest_completed_run
+    , insert_run_result as insert_bulk_run_result
+    , list_available_cargo_values as list_bulk_run_cargo_values
+    , list_available_origins as list_bulk_run_origins
+    , list_run_results as list_bulk_run_results
+    , start_run as start_bulk_run
+    , upsert_run as upsert_bulk_run
+)
 
 # Export public API
 __all__ = [
@@ -60,6 +77,11 @@ __all__ = [
     "ensure_main_table", "get_run", "get_run_by_coords", "upsert_run", "list_runs", "list_place_names", "overwrite_keys", "delete_key",
     "ensure_multimodal_results_table", "upsert_multimodal_result",
     "DEFAULT_BULK_RESULTS_TABLE", "ensure_bulk_results_table", "upsert_bulk_result",
+    "DEFAULT_BULK_RUNS_TABLE", "DEFAULT_BULK_RUN_RESULTS_TABLE",
+    "BulkRunSelector", "BulkRunRecord", "BulkRunResultRecord",
+    "ensure_bulk_runs_table", "ensure_bulk_run_results_table",
+    "start_bulk_run", "upsert_bulk_run", "finish_bulk_run", "insert_bulk_run_result",
+    "get_latest_completed_run", "list_bulk_run_origins", "list_bulk_run_cargo_values", "list_bulk_run_results",
 ]
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
