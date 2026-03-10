@@ -28,7 +28,6 @@ from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_text
 from modules.cabotage.sea_matrix import SeaMatrix
 from modules.core.secrets import get_secret
-from modules.infra.database_manager import DEFAULT_DB_PATH
 from modules.infra.log_manager import get_logger
 from modules.ports.ports_index import load_ports
 from modules.ports.ports_nearest import find_nearest_port
@@ -100,16 +99,15 @@ def load_routing_assets(
     ports_json_path: Optional[Path] = None,
     sea_matrix_path: Optional[Path] = None,
     db_path: Optional[Path | str] = None,
-) -> tuple[ORSClient, list[Dict[str, Any]], SeaMatrix, Path | str]:
+) -> tuple[ORSClient, list[Dict[str, Any]], SeaMatrix, Optional[Path | str]]:
     """Load reusable routing dependencies for one or many evaluations."""
     p_json = _resolve_path(ports_json_path, _DEFAULT_PORTS_JSON)
     s_json = _resolve_path(sea_matrix_path, _DEFAULT_SEA_MATRIX_JSON)
-    d_path: Path | str = db_path if db_path is not None else DEFAULT_DB_PATH
 
     ors = _cached_ors_client(str(get_secret("ORS_API_KEY", "")))
     ports = _cached_ports(str(p_json))
     sea_matrix = _cached_sea_matrix(str(s_json))
-    return ors, ports, sea_matrix, d_path
+    return ors, ports, sea_matrix, db_path
 
 
 def resolve_point_for_geometry(value: Any, ors: ORSClient) -> Optional[Point]:
@@ -154,7 +152,6 @@ def build_path_geometry_from_resolved(
     first_mile_leg: Optional[Dict[str, Any]] = None,
 ) -> Optional[PathGeometry]:
     """Build geometry from already resolved endpoints and shared routing assets."""
-    d_path: Path | str = db_path if db_path is not None else DEFAULT_DB_PATH
 
     po_data = port_origin or find_nearest_port(origin_pt["lat"], origin_pt["lon"], ports)
     pd_data = find_nearest_port(destiny_pt["lat"], destiny_pt["lon"], ports)
@@ -169,7 +166,7 @@ def build_path_geometry_from_resolved(
         destiny_pt,
         profile=ors_profile,
         overwrite=overwrite_road,
-        db_path=d_path,
+        db_path=db_path,
     )
     leg_first = first_mile_leg or get_or_create_leg(
         ors,
@@ -177,7 +174,7 @@ def build_path_geometry_from_resolved(
         po_node,
         profile=ors_profile,
         overwrite=overwrite_road,
-        db_path=d_path,
+        db_path=db_path,
     )
     leg_last = get_or_create_leg(
         ors,
@@ -185,7 +182,7 @@ def build_path_geometry_from_resolved(
         destiny_pt,
         profile=ors_profile,
         overwrite=overwrite_road,
-        db_path=d_path,
+        db_path=db_path,
     )
 
     sea_dist, sea_src = sea_matrix.km_with_source(
@@ -217,7 +214,7 @@ def build_path_geometry(
     db_path: Optional[Path | str] = None,
 ) -> Optional[PathGeometry]:
     """Resolve and compute all legs needed for multimodal comparison."""
-    ors, ports, sea_matrix, d_path = load_routing_assets(
+    ors, ports, sea_matrix, _ = load_routing_assets(
         ports_json_path=ports_json_path,
         sea_matrix_path=sea_matrix_path,
         db_path=db_path,
@@ -239,7 +236,7 @@ def build_path_geometry(
         sea_matrix=sea_matrix,
         ors_profile=ors_profile,
         overwrite_road=overwrite_road,
-        db_path=d_path,
+        db_path=db_path,
     )
 
 

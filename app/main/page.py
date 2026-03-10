@@ -78,7 +78,7 @@ def main() -> None:
     if run_clicked:
         st.session_state.ui_logs = []
         with st.spinner("Running route analysis..."):
-            geo, results, err, resolved_db_path = run_analysis(payload=payload, db_path_str=str(st.session_state.db_path_str))
+            geo, results, err, resolved_db_path = run_analysis(payload=payload)
 
         if resolved_db_path != str(st.session_state.db_path_str):
             st.session_state.db_path_str = resolved_db_path

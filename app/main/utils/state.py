@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import logging
-import tempfile
-from pathlib import Path
 from typing import Any, Mapping
 
 import streamlit as st
@@ -11,7 +9,7 @@ from modules.core.secrets import get_secret
 from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import get_logger, init_logging
 
-from app.main.utils.constants import DEFAULTS, ROOT
+from app.main.utils.constants import DEFAULTS
 
 _log = get_logger("streamlit_app")
 
@@ -64,25 +62,13 @@ def validated_log_level(value: Any, default: str = "INFO") -> str:
     return candidate if candidate in allowed else default
 
 
-def resolve_runtime_db_path(configured_path: Any = None) -> str:
-    settings = load_database_settings()
-    if settings.is_postgres:
-        return settings.display_target
-
-    configured = configured_path if configured_path is not None else secret_value("CARBON_DB_PATH", DEFAULTS["db_path_str"])
-    candidate = Path(str(configured)).expanduser()
-    if not candidate.is_absolute():
-        candidate = ROOT / candidate
-
+def resolve_runtime_db_path() -> str:
     try:
-        candidate.parent.mkdir(parents=True, exist_ok=True)
-        with candidate.open("a", encoding="utf-8"):
-            pass
-        return str(candidate.resolve())
-    except OSError:
-        fallback = Path(tempfile.gettempdir()) / "carbon-footprint" / "carbon_footprint.sqlite"
-        fallback.parent.mkdir(parents=True, exist_ok=True)
-        return str(fallback.resolve())
+        settings = load_database_settings()
+        return settings.display_target
+    except Exception as exc:
+        _log.warning("Database target could not be resolved from Streamlit secrets: %s", exc)
+        return str(DEFAULTS["db_path_str"])
 
 
 def init_state(defaults: Mapping[str, Any] | None = None) -> None:

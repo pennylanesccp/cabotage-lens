@@ -14,24 +14,23 @@ Set these in `.streamlit/secrets.toml` for local runs or in Streamlit Community 
 
 ```toml
 CARBON_DB_BACKEND = "postgres"
-SUPABASE_DB_HOST = "db.your-project-ref.supabase.co"
-SUPABASE_DB_PORT = 5432
-SUPABASE_DB_NAME = "postgres"
-SUPABASE_DB_USER = "postgres"
-SUPABASE_DB_PASSWORD = "your-supabase-password"
-SUPABASE_DB_SSLMODE = "require"
+SUPABASE_DB_URL = "postgresql://postgres.your-project-ref:your-supabase-password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 ORS_API_KEY = "your-openrouteservice-key"
 ```
 
 CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatically. `.env` is no longer read.
 
-Optional legacy fallback:
+Prefer `SUPABASE_DB_URL`, especially on IPv4-only networks. Supabase's direct `db.<project-ref>.supabase.co` hostname can resolve only to IPv6 in some environments. If you do not want to use a single DSN secret, the runtime also accepts the component-based `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_NAME`, `SUPABASE_DB_USER`, `SUPABASE_DB_PASSWORD`, and `SUPABASE_DB_SSLMODE` secrets.
+
+SQLite is no longer part of the shipped app and CLI pipeline. The only remaining SQLite usage is in one-off maintenance tools such as migration and cleanup scripts.
+
+Maintenance-only example:
 
 ```toml
 CARBON_DB_PATH = "data/processed/database/carbon_footprint.sqlite"
 ```
 
-`CARBON_DB_PATH` is only used when `CARBON_DB_BACKEND=sqlite` or by one-off SQLite maintenance tools.
+`CARBON_DB_PATH` is only used by one-off SQLite maintenance tools.
 
 ## Schema bootstrap
 
@@ -69,7 +68,7 @@ Optional flags:
 
 ## Notes
 
-- The raw ORS HTTP response cache under `.cache/ors_cache.sqlite` remains local and optional. It is not the primary persistence layer and is not migrated to Supabase.
+- The ORS client now keeps only an in-process response cache. The shipped runtime no longer writes a separate local SQLite HTTP cache file.
 - Route-cache lookups and writes now use the configured backend automatically.
 - Bulk reruns still recompute analytical outputs while reusing cached road distances when available.
 - The Streamlit heatmap page reads only completed Supabase batch runs and uses the immutable `bulk_evaluation_run_results` rows for map rendering.

@@ -9,7 +9,6 @@ from modules.infra.database_manager import (
     DEFAULT_BULK_RESULTS_TABLE,
     DEFAULT_BULK_RUN_RESULTS_TABLE,
     DEFAULT_BULK_RUNS_TABLE,
-    DEFAULT_DB_PATH,
     BulkRunSelector,
     db_session,
     finish_bulk_run,
@@ -184,7 +183,7 @@ def _emit_progress(progress_callback: Optional[ProgressCallback], **payload: Any
 
 def _persist_bulk_outcome(
     *,
-    db_path: Path | str,
+    db_path: Path | str | None,
     table_name: str,
     run_results_table: str,
     run_id: str,
@@ -349,7 +348,7 @@ def run_bulk_evaluation(
     truck_key: str,
     profile: str,
     overwrite_road: bool = False,
-    db_path: Path | str = DEFAULT_DB_PATH,
+    db_path: Path | str | None = None,
     results_table: str = DEFAULT_BULK_RESULTS_TABLE,
     runs_table: str = DEFAULT_BULK_RUNS_TABLE,
     run_results_table: str = DEFAULT_BULK_RUN_RESULTS_TABLE,

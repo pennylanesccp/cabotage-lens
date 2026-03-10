@@ -34,9 +34,10 @@ class HeatmapDataError(RuntimeError):
 
 def _require_postgres() -> None:
     settings = load_database_settings()
-    if not settings.is_postgres:
+    if not settings.is_postgres or not settings.postgres_dsn:
         raise HeatmapConfigurationError(
-            "Heatmap storage requires the Postgres backend. Configure Streamlit secrets for Supabase first."
+            "Heatmap storage requires Supabase Postgres. Configure SUPABASE_DB_URL "
+            "or the component-based SUPABASE_DB_* Streamlit secrets first."
         )
 
 

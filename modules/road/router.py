@@ -34,7 +34,6 @@ from modules.infra.database_manager import (
     , get_run_by_coords
     , upsert_run
     , delete_key
-    , DEFAULT_DB_PATH
     , DEFAULT_TABLE
 )
 from modules.road.ors import ORSConfig, RateLimited, NoRoute, ORSClient
@@ -66,7 +65,7 @@ def get_or_create_leg(
     , profile: str = "driving-hgv"
     , fallback_to_car: bool = True
     , overwrite: bool = False
-    , db_path: Path | str = DEFAULT_DB_PATH
+    , db_path: Path | str | None = None
     , table_name: str = DEFAULT_TABLE
 ) -> Dict[str, Any]:
     """
@@ -296,7 +295,6 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--pretty", action="store_true")
     parser.add_argument("--log-level", default="INFO")
-    parser.add_argument("--db-path", default=DEFAULT_DB_PATH)
     
     args = parser.parse_args(argv)
     init_logging(level=args.log_level)
@@ -321,7 +319,6 @@ def main(argv: Optional[list[str]] = None) -> int:
         destiny=_prep(p_destiny, args.destiny),
         profile=args.ors_profile,
         overwrite=args.overwrite,
-        db_path=args.db_path
     )
 
     if args.pretty:

@@ -11,8 +11,7 @@ OpenRouteService client. This module contains no logic, only definitions.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Optional
 
 from modules.core.secrets import get_secret
@@ -69,8 +68,8 @@ class ORSConfig:
         to load it from the `ORS_API_KEY` Streamlit secret.
     base_url : str
         The root URL for the API. Defaults to the public ORS instance.
-    cache_path : Path, optional
-        Path to the SQLite cache file. If None, caching is disabled.
+    cache_enabled : bool
+        Enables the in-process HTTP response cache.
     cache_ttl_s : int
         Cache expiration in seconds. 0 means infinite (never expire).
     timeout : tuple[float, float]
@@ -86,9 +85,7 @@ class ORSConfig:
     base_url: str = DEFAULT_BASE_URL
     
     # Caching Defaults
-    cache_path: Optional[Path] = field(
-        default_factory=lambda: Path(".cache/ors_cache.sqlite")
-    )
+    cache_enabled: bool = True
     cache_ttl_s: int = 2_592_000  # 30 days (30 * 24 * 3600)
 
     # HTTP Behavior

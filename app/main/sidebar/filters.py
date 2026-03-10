@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from typing import List
 
 import streamlit as st
@@ -10,7 +9,7 @@ from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.core.secrets import get_secret
-from modules.infra.database_manager import DEFAULT_DB_PATH, db_session, list_place_names
+from modules.infra.database_manager import db_session, list_place_names
 from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import get_logger
 from modules.road.router import ORSClient, ORSConfig
@@ -56,26 +55,22 @@ def _resolution_executor() -> ThreadPoolExecutor:
     return ThreadPoolExecutor(max_workers=2, thread_name_prefix="streamlit-geocode")
 
 
-def _db_route_place_names(db_path_str: str) -> list[str]:
-    settings = load_database_settings()
-    if settings.is_postgres:
-        candidate_targets: list[str | Path] = [db_path_str]
-    else:
-        candidate_targets = [Path(db_path_str)]
-        default_path = Path(DEFAULT_DB_PATH)
-        if default_path not in candidate_targets:
-            candidate_targets.append(default_path)
+def _db_route_place_names() -> list[str]:
+    try:
+        settings = load_database_settings()
+    except Exception as exc:
+        _log.warning("Skipping route place-name lookup because the database runtime is invalid: %s", exc)
+        return []
 
     collected: set[str] = set()
-    for candidate_path in candidate_targets:
-        try:
-            with db_session(candidate_path) as conn:
-                for value in list_place_names(conn, limit=100_000):
-                    value_clean = ascii_place_text(value)
-                    if value_clean and not _is_coordinate_label(value_clean):
-                        collected.add(value_clean)
-        except Exception as exc:
-            _log.warning("Failed to list route place names from %s: %s", candidate_path, exc)
+    try:
+        with db_session(backend="postgres") as conn:
+            for value in list_place_names(conn, limit=100_000):
+                value_clean = ascii_place_text(value)
+                if value_clean and not _is_coordinate_label(value_clean):
+                    collected.add(value_clean)
+    except Exception as exc:
+        _log.warning("Failed to list route place names from %s: %s", settings.display_target, exc)
     return sorted(collected, key=str.casefold)
 
 
@@ -177,14 +172,14 @@ def _apply_resolved_location_values() -> None:
         st.session_state[_resolved_key(field_name)] = None
 
 
-def _route_endpoint_options(db_path_str: str, current_values: list[str]) -> list[str]:
+def _route_endpoint_options(current_values: list[str]) -> list[str]:
     options: set[str] = set()
     for value in current_values:
         value_clean = ascii_place_text(value)
         if value_clean and not _is_coordinate_label(value_clean):
             options.add(value_clean)
 
-    options.update(_db_route_place_names(db_path_str))
+    options.update(_db_route_place_names())
 
     return sorted(options, key=str.casefold)
 
@@ -226,10 +221,7 @@ def render_filters() -> List[str]:
     _sync_all_location_resolutions()
     _apply_resolved_location_values()
 
-    route_name_options = _route_endpoint_options(
-        db_path_str=str(st.session_state.db_path_str),
-        current_values=[str(st.session_state.origin), str(st.session_state.destiny)],
-    )
+    route_name_options = _route_endpoint_options(current_values=[str(st.session_state.origin), str(st.session_state.destiny)])
 
     apply_sidebar_styles(
         origin_loading=bool(st.session_state.get(_loading_key("origin"), False)),

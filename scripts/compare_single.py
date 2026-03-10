@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from modules.infra.database_manager import DEFAULT_DB_PATH, connection_target_summary, db_session, upsert_multimodal_result
+from modules.infra.database_manager import connection_target_summary, db_session, upsert_multimodal_result
 from modules.infra.log_manager import get_logger, init_logging
 from modules.multimodal.container_efficiency import CONTAINER_VESSEL_CLASSES, DEFAULT_VESSEL_CLASS
 from modules.multimodal.persistence import flatten_evaluation_for_db
@@ -177,19 +177,13 @@ def main() -> int:
     )
 
     parser.add_argument("--table", default="analysis_results", help="Target persisted results table")
-    parser.add_argument(
-        "--db-path",
-        default=DEFAULT_DB_PATH,
-        type=Path,
-        help="Legacy SQLite path override. Ignored when the Postgres backend is active.",
-    )
     parser.add_argument("--json", action="store_true", help="Output raw JSON")
     parser.add_argument("--pretty", action="store_true", help="Pretty JSON output")
     parser.add_argument("--log-level", default="INFO")
 
     args = parser.parse_args()
     init_logging(level=args.log_level, write_to_file=False)
-    _log.info("Database target: %s", connection_target_summary(args.db_path))
+    _log.info("Database target: %s", connection_target_summary(backend="postgres"))
 
     from modules.multimodal import build_path_geometry, evaluate_path
 
@@ -201,7 +195,6 @@ def main() -> int:
         args.destiny,
         ors_profile=args.profile,
         overwrite_road=args.overwrite,
-        db_path=args.db_path,
     )
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")
@@ -235,7 +228,7 @@ def main() -> int:
     )
 
     try:
-        with db_session(args.db_path) as conn:
+        with db_session(backend="postgres") as conn:
             upsert_multimodal_result(conn, table_name=args.table, **flat_record)
             if not args.json:
                 _log.info("Saved result to table '%s'.", args.table)

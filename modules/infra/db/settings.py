@@ -8,6 +8,7 @@ from modules.core.secrets import get_secret
 
 DEFAULT_SQLITE_DB_PATH = Path("data/processed/database/carbon_footprint.sqlite")
 _VALID_BACKENDS = {"sqlite", "postgres"}
+_POSTGRES_BACKEND = "postgres"
 
 
 def _clean_secret(name: str) -> Optional[str]:
@@ -20,22 +21,14 @@ def _clean_secret(name: str) -> Optional[str]:
 
 def _default_backend() -> str:
     explicit = (_clean_secret("CARBON_DB_BACKEND") or "").lower()
-    if explicit in _VALID_BACKENDS:
-        return explicit
-
-    if _clean_secret("SUPABASE_DB_URL") or _clean_secret("DATABASE_URL"):
-        return "postgres"
-
-    required = (
-        _clean_secret("SUPABASE_DB_HOST"),
-        _clean_secret("SUPABASE_DB_NAME"),
-        _clean_secret("SUPABASE_DB_USER"),
-        _clean_secret("SUPABASE_DB_PASSWORD"),
-    )
-    if all(required):
-        return "postgres"
-
-    return "sqlite"
+    if explicit == "sqlite":
+        raise RuntimeError(
+            "SQLite is no longer supported in the main runtime. "
+            "Remove CARBON_DB_BACKEND=sqlite and configure Supabase Postgres secrets instead."
+        )
+    if explicit == _POSTGRES_BACKEND:
+        return _POSTGRES_BACKEND
+    return _POSTGRES_BACKEND
 
 
 def _build_postgres_dsn(
@@ -53,7 +46,7 @@ def _build_postgres_dsn(
 @dataclass(frozen=True)
 class DatabaseSettings:
     backend: str
-    sqlite_path: Path
+    sqlite_path: Optional[Path]
     postgres_dsn: Optional[str]
     host: Optional[str]
     port: int
@@ -72,15 +65,15 @@ class DatabaseSettings:
             if self.host and self.name and self.user:
                 return f"postgresql://{self.user}:***@{self.host}:{self.port}/{self.name}?sslmode={self.sslmode}"
             return "postgresql://***"
-        return str(self.sqlite_path)
+        return str(self.sqlite_path or DEFAULT_SQLITE_DB_PATH)
 
 
 def load_database_settings(*, backend_override: Optional[str] = None) -> DatabaseSettings:
-    backend = str(backend_override or _default_backend()).strip().lower()
+    backend = str(backend_override).strip().lower() if backend_override is not None else _default_backend()
     if backend not in _VALID_BACKENDS:
         raise ValueError(f"Unsupported database backend: {backend}")
 
-    sqlite_path = Path(_clean_secret("CARBON_DB_PATH") or DEFAULT_SQLITE_DB_PATH)
+    sqlite_path = Path(_clean_secret("CARBON_DB_PATH") or DEFAULT_SQLITE_DB_PATH) if backend == "sqlite" else None
     dsn = _clean_secret("SUPABASE_DB_URL") or _clean_secret("DATABASE_URL")
 
     host = _clean_secret("SUPABASE_DB_HOST")
@@ -96,20 +89,7 @@ def load_database_settings(*, backend_override: Optional[str] = None) -> Databas
         raise ValueError(f"Invalid SUPABASE_DB_PORT: {port_text}") from exc
 
     postgres_dsn = dsn
-    if backend == "postgres" and not postgres_dsn:
-        missing = [
-            name
-            for name, value in (
-                ("SUPABASE_DB_HOST", host),
-                ("SUPABASE_DB_NAME", name),
-                ("SUPABASE_DB_USER", user),
-                ("SUPABASE_DB_PASSWORD", password),
-            )
-            if not value
-        ]
-        if missing:
-            joined = ", ".join(missing)
-            raise RuntimeError(f"Postgres backend selected but required Streamlit secrets are missing: {joined}")
+    if backend == _POSTGRES_BACKEND and not postgres_dsn and all((host, name, user, password)):
         postgres_dsn = _build_postgres_dsn(
             host=str(host),
             port=port,

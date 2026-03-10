@@ -6,7 +6,8 @@ Core database infrastructure.
 =============================
 
 Handles:
-- Database backend selection (Supabase Postgres or legacy SQLite).
+- Database backend selection (Supabase Postgres in the main runtime, with
+  legacy SQLite kept only for tests and maintenance tools).
 - Connection lifecycle and transaction management.
 - Low-level type conversions.
 - Safe identifier validation and schema introspection helpers.
@@ -261,6 +262,12 @@ def connect(db_path: Path | str | None = DEFAULT_DB_PATH, *, backend: Optional[s
     if settings.backend == "postgres":
         if psycopg is None:
             raise RuntimeError("Postgres backend requested but psycopg is not installed.")
+        if not settings.postgres_dsn:
+            raise RuntimeError(
+                "Supabase Postgres is required for the main runtime. "
+                "Set SUPABASE_DB_URL or the SUPABASE_DB_HOST/SUPABASE_DB_NAME/"
+                "SUPABASE_DB_USER/SUPABASE_DB_PASSWORD secrets."
+            )
         _log.debug("Connecting to Postgres: %s", settings.display_target)
         raw = psycopg.connect(str(settings.postgres_dsn), connect_timeout=10)
         return DBConnection(raw, backend="postgres", target=settings.display_target)

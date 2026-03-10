@@ -63,7 +63,8 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.text_input(
         "Database target",
         key="db_path_str",
-        help="Shows the active Postgres target when configured, or a legacy SQLite path override otherwise.",
+        help="Shows the active Supabase Postgres target configured through Streamlit secrets.",
+        disabled=True,
     )
     st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], key="log_level")
     st.checkbox("Write log file", key="write_log_file")

@@ -39,10 +39,8 @@ class Config:
 
     # --- Infrastructure Paths ---
     # These defaults assume the code runs from the repository root.
-    # They can be overridden by passing arguments to the constructor.
-    db_path: Path = field(
-        default_factory=lambda: Path("data/processed/database/carbon_footprint.sqlite")
-    )
+    # The main runtime persists through Supabase Postgres rather than a local DB path.
+    db_target: str = "postgres"
     ports_path: Path = field(
         default_factory=lambda: Path("data/processed/cabotage_data/ports_br.json")
     )
@@ -69,8 +67,6 @@ class Config:
 
     def __post_init__(self) -> None:
         """Ensure paths are proper Path objects if strings were passed."""
-        if isinstance(self.db_path, str):
-            self.db_path = Path(self.db_path)
         if isinstance(self.ports_path, str):
             self.ports_path = Path(self.ports_path)
         if isinstance(self.sea_matrix_path, str):
@@ -117,15 +113,11 @@ if __name__ == "__main__":
     # 1. Test Main Config
     cfg = Config()
     print(f"Defaults loaded:")
-    print(f"  - DB Path: {cfg.db_path}")
+    print(f"  - DB Target: {cfg.db_target}")
     print(f"  - ORS Profile: {cfg.ors_profile}")
     print(f"  - API Key Present: {bool(cfg.ors_api_key)}")
-    
-    # 2. Test Path Override
-    custom = Config(db_path="custom/path.sqlite")
-    print(f"Custom DB Path (type={type(custom.db_path).__name__}): {custom.db_path}")
-    
-    # 3. Test Legacy
+
+    # 2. Test Legacy
     print(f"Legacy Defaults: {get_routing_defaults().primary_profile}")
     
     print("--- Done ---")

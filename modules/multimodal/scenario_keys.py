@@ -17,7 +17,7 @@ _PLACE_INPUT_KEYS = ("input_origin", "input_destiny")
 
 
 def normalize_bulk_place_input(value: Any) -> str:
-    """Normalize user-facing place inputs to the canonical ASCII form used in SQLite."""
+    """Normalize user-facing place inputs to the canonical ASCII form used in persisted scenario keys."""
     return ascii_place_text(value)
 
 

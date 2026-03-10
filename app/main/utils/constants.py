@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Dict
 
 from modules.fuel.truck_specs import list_truck_keys
-from modules.infra.database_manager import DEFAULT_DB_PATH
 from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO
 
@@ -56,6 +55,6 @@ DEFAULTS: Dict[str, Any] = {
     "map_center_lon": None,
     "log_level": "INFO",
     "write_log_file": False,
-    "db_path_str": str(DEFAULT_DB_PATH),
+    "db_path_str": "postgresql://***",
     "log_last_n": 300,
 }

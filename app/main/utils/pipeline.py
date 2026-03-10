@@ -54,18 +54,16 @@ def resolve_cargo_teu(payload: Mapping[str, Any]) -> int:
 
 def run_analysis(
     payload: Mapping[str, Any],
-    db_path_str: str,
 ) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None, str]:
     _log.info("Routing: %s -> %s (%.3ft)", payload["origin"], payload["destiny"], payload["cargo_t"])
 
-    db_target = resolve_runtime_db_path(db_path_str)
+    db_target = resolve_runtime_db_path()
 
     geo = build_path_geometry(
         payload["origin"],
         payload["destiny"],
         ors_profile=payload["ors_profile"],
         overwrite_road=payload["overwrite_road"],
-        db_path=db_target,
     )
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")
