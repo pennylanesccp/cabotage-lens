@@ -68,7 +68,15 @@ class DBConnection:
     def executemany(self, sql: str, seq_of_params: Iterable[Iterable[Any]]) -> Any:
         statement = self._adapt_sql(sql)
         rows = [tuple(row) for row in seq_of_params]
-        return self._raw.executemany(statement, rows)
+        if hasattr(self._raw, "executemany"):
+            return self._raw.executemany(statement, rows)
+        cursor = self._raw.cursor()
+        try:
+            cursor.executemany(statement, rows)
+        except Exception:
+            cursor.close()
+            raise
+        return cursor
 
     def commit(self) -> None:
         self._raw.commit()

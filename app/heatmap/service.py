@@ -31,6 +31,18 @@ class HeatmapDataError(RuntimeError):
     pass
 
 
+def _dedupe_preserve_order(values: List[str]) -> List[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        item = str(value).strip()
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+    return deduped
+
+
 
 def _require_postgres() -> None:
     settings = load_database_settings()
@@ -143,6 +155,16 @@ def _to_point(record: Any) -> Optional[HeatmapPoint]:
     )
 
 
+def _point_rejection_reason(record: Any) -> Optional[str]:
+    if record.destiny_lat is None or record.destiny_lon is None:
+        return "missing_coordinates"
+    if record.road_cost_r is None or record.multimodal_cost_r is None:
+        return "missing_costs"
+    if record.road_emissions_kg is None or record.multimodal_emissions_kg is None:
+        return "missing_emissions"
+    return None
+
+
 
 def default_cargo_options() -> List[float]:
     return [float(DEFAULTS["cargo_t"])]
@@ -151,13 +173,21 @@ def default_cargo_options() -> List[float]:
 
 def list_origin_options() -> List[str]:
     _require_postgres()
+    _log.info("Loading heatmap origins destination_set=%s", HEATMAP_DESTINATION_SET_ID)
     with db_session(backend="postgres") as conn:
         origins = list_bulk_run_origins(
             conn,
             destination_set_id=HEATMAP_DESTINATION_SET_ID,
             limit=2_000,
         )
-    return [ascii_place_text(origin) for origin in origins]
+    normalized = _dedupe_preserve_order([ascii_place_text(origin) for origin in origins])
+    _log.info(
+        "Loaded heatmap origins destination_set=%s raw=%d normalized=%d",
+        HEATMAP_DESTINATION_SET_ID,
+        len(origins),
+        len(normalized),
+    )
+    return normalized
 
 
 
@@ -165,8 +195,17 @@ def list_cargo_options(origin_name: str) -> List[float]:
     _require_postgres()
     default_values = default_cargo_options()
     if not str(origin_name).strip():
+        _log.info(
+            "Using default heatmap cargo options because no origin is selected values=%s",
+            ",".join(f"{value:.3f}" for value in default_values),
+        )
         return default_values
 
+    _log.info(
+        "Loading heatmap cargo options origin=%s destination_set=%s",
+        origin_name,
+        HEATMAP_DESTINATION_SET_ID,
+    )
     with db_session(backend="postgres") as conn:
         stored = list_bulk_run_cargo_values(
             conn,
@@ -177,16 +216,35 @@ def list_cargo_options(origin_name: str) -> List[float]:
 
     merged = {float(value) for value in default_values}
     merged.update(float(value) for value in stored)
-    return sorted(merged)
+    values = sorted(merged)
+    _log.info(
+        "Loaded heatmap cargo options origin=%s count=%d values=%s",
+        origin_name,
+        len(values),
+        ",".join(f"{value:.3f}" for value in values),
+    )
+    return values
 
 
 
 def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
     _require_postgres()
+    _log.info(
+        "Querying latest heatmap run origin=%s cargo_t=%.3f destination_set=%s",
+        scenario.origin_name,
+        scenario.cargo_t,
+        HEATMAP_DESTINATION_SET_ID,
+    )
     selector = _build_selector(scenario.origin_name, scenario.cargo_t)
     with db_session(backend="postgres") as conn:
         record = get_latest_completed_run(conn, selector=selector)
     if record is None:
+        _log.info(
+            "No completed heatmap run found origin=%s cargo_t=%.3f destination_set=%s",
+            scenario.origin_name,
+            scenario.cargo_t,
+            HEATMAP_DESTINATION_SET_ID,
+        )
         return None
     _log.info(
         "Latest heatmap run found: run_id=%s origin=%s cargo_t=%.3f success=%d fail=%d",
@@ -205,16 +263,38 @@ def load_latest_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
     if run_info is None:
         return None
 
+    _log.info("Loading heatmap dataset rows run_id=%s", run_info.run_id)
     with db_session(backend="postgres") as conn:
         rows = list_bulk_run_results(conn, run_id=run_info.run_id, only_success=True)
 
     points: List[HeatmapPoint] = []
+    skipped_missing_coordinates = 0
+    skipped_missing_costs = 0
+    skipped_missing_emissions = 0
     for row in rows:
+        rejection_reason = _point_rejection_reason(row)
+        if rejection_reason == "missing_coordinates":
+            skipped_missing_coordinates += 1
+            continue
+        if rejection_reason == "missing_costs":
+            skipped_missing_costs += 1
+            continue
+        if rejection_reason == "missing_emissions":
+            skipped_missing_emissions += 1
+            continue
         point = _to_point(row)
         if point is not None:
             points.append(point)
 
     if not points:
+        _log.warning(
+            "Heatmap dataset has no plottable rows run_id=%s raw_rows=%d skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d",
+            run_info.run_id,
+            len(rows),
+            skipped_missing_coordinates,
+            skipped_missing_costs,
+            skipped_missing_emissions,
+        )
         raise HeatmapDataError(
             "The latest run was found, but none of its rows have map coordinates. Run the heatmap again to refresh the dataset."
         )
@@ -226,9 +306,13 @@ def load_latest_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
         max_abs_emissions_delta=_max_abs([point.emissions_delta_kg for point in points]),
     )
     _log.info(
-        "Loaded heatmap dataset: run_id=%s rows=%d destination_set=%s",
+        "Loaded heatmap dataset: run_id=%s raw_rows=%d plotted_rows=%d skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d destination_set=%s",
         run_info.run_id,
+        len(rows),
         len(points),
+        skipped_missing_coordinates,
+        skipped_missing_costs,
+        skipped_missing_emissions,
         run_info.destination_set_id,
     )
     return dataset
@@ -282,6 +366,11 @@ def rerun_heatmap(
         raise HeatmapDataError(
             f"The rerun finished but no completed batch was found for {HEATMAP_DESTINATION_LABEL}."
         )
+    _log.info(
+        "Heatmap rerun loaded dataset run_id=%s points=%d",
+        dataset.run.run_id,
+        len(dataset.points),
+    )
     return dataset
 
 

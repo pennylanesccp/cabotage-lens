@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from typing import List
+from typing import Iterable, List
 
 import streamlit as st
 
@@ -20,6 +20,7 @@ from app.main.utils.formatters import clean_place_label
 _log = get_logger("streamlit_app")
 _LOCATION_FIELDS: tuple[tuple[str, str], ...] = (("origin", "Origin"), ("destiny", "Destination"))
 _POLL_SECONDS = 0.35
+LOCATION_RESOLUTION_POLL_SECONDS = _POLL_SECONDS
 
 
 def _is_coordinate_label(value: str) -> bool:
@@ -184,6 +185,39 @@ def _route_endpoint_options(current_values: list[str]) -> list[str]:
     return sorted(options, key=str.casefold)
 
 
+def ensure_location_state(field_name: str) -> None:
+    _ensure_location_state(field_name)
+
+
+def sync_location_resolution(field_name: str) -> bool:
+    return _sync_location_resolution(field_name)
+
+
+def apply_resolved_location_values(field_names: Iterable[str]) -> None:
+    for field_name in field_names:
+        resolved_value = st.session_state.get(_resolved_key(field_name))
+        if resolved_value is None:
+            continue
+        st.session_state[field_name] = str(resolved_value).strip()
+        st.session_state[_resolved_key(field_name)] = None
+
+
+def route_endpoint_options(current_values: list[str]) -> list[str]:
+    return _route_endpoint_options(current_values)
+
+
+def handle_location_change(field_name: str, options: list[str]) -> None:
+    _on_location_change(field_name, options)
+
+
+def location_error_message(field_name: str) -> str:
+    return str(st.session_state.get(_error_key(field_name)) or "").strip()
+
+
+def location_is_loading(field_name: str) -> bool:
+    return bool(st.session_state.get(_loading_key(field_name), False))
+
+
 def _on_location_change(field_name: str, options: list[str]) -> None:
     current_value = str(st.session_state.get(field_name, "")).strip()
     if not current_value:
@@ -206,10 +240,10 @@ def _render_location_field(field_name: str, label: str, options: list[str]) -> N
         key=field_name,
         accept_new_options=True,
         format_func=clean_place_label,
-        on_change=_on_location_change,
+        on_change=handle_location_change,
         args=(field_name, options),
     )
-    error_message = str(st.session_state.get(_error_key(field_name)) or "").strip()
+    error_message = location_error_message(field_name)
     if error_message:
         st.caption(error_message)
 

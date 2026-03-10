@@ -798,16 +798,27 @@ def list_available_origins(
     ensure_runs_table(conn, table)
     rows = conn.execute(
         f"""
-        SELECT DISTINCT origin_name
-        FROM {table}
-        WHERE status = 'completed'
-          AND destination_set_id = ?
-        ORDER BY LOWER(origin_name) ASC
+        SELECT origin_name
+        FROM (
+            SELECT DISTINCT origin_name
+            FROM {table}
+            WHERE status = 'completed'
+              AND destination_set_id = ?
+              AND TRIM(COALESCE(origin_name, '')) <> ''
+        ) AS distinct_origins
+        ORDER BY LOWER(origin_name) ASC, origin_name ASC
         LIMIT ?
         """,
         (destination_set_id, int(limit)),
     ).fetchall()
-    return [str(row[0]) for row in rows if row and row[0] is not None]
+    origins = [str(row[0]) for row in rows if row and row[0] is not None]
+    _log.debug(
+        "Listed bulk run origins destination_set=%s count=%d limit=%d",
+        destination_set_id,
+        len(origins),
+        limit,
+    )
+    return origins
 
 
 
@@ -838,6 +849,13 @@ def list_available_cargo_values(
         value = to_float(row[0])
         if value is not None:
             values.append(value)
+    _log.debug(
+        "Listed bulk run cargo values origin_key=%s destination_set=%s count=%d limit=%d",
+        origin_key,
+        destination_set_id,
+        len(values),
+        limit,
+    )
     return values
 
 
@@ -897,4 +915,11 @@ def list_run_results(
         """,
         params,
     ).fetchall()
-    return [_row_to_run_result_record(row) for row in rows]
+    records = [_row_to_run_result_record(row) for row in rows]
+    _log.debug(
+        "Listed bulk run results run_id=%s only_success=%s count=%d",
+        run_id,
+        only_success,
+        len(records),
+    )
+    return records

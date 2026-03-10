@@ -14,10 +14,10 @@ from modules.infra.db.core import db_session
 
 
 class BulkRunPersistenceTests(unittest.TestCase):
-    def _selector(self) -> BulkRunSelector:
+    def _selector(self, *, origin_key: str = "pelotas, rs", cargo_t: float = 30.0) -> BulkRunSelector:
         return BulkRunSelector(
-            origin_key="pelotas, rs",
-            cargo_t=30.0,
+            origin_key=origin_key,
+            cargo_t=cargo_t,
             truck_key="semi_27t",
             ors_profile="driving-hgv",
             vessel_class="container_small",
@@ -105,6 +105,43 @@ class BulkRunPersistenceTests(unittest.TestCase):
                 destination_set_id=selector.destination_set_id,
             )
             self.assertEqual(cargos, [30.0])
+
+    def test_list_available_origins_orders_case_insensitively_and_skips_blank_names(self) -> None:
+        with db_session(":memory:", backend="sqlite") as conn:
+            for origin_name, origin_key in [
+                ("santos, SP", "santos, sp"),
+                ("Aracaju, SE", "aracaju, se"),
+                ("santos, SP", "santos, sp"),
+                ("   ", "blank"),
+            ]:
+                run_id = start_run(
+                    conn,
+                    selector=self._selector(origin_key=origin_key),
+                    origin_name=origin_name,
+                    input_origin=origin_name,
+                    destination_count=1,
+                )
+                finish_run(
+                    conn,
+                    run_id=run_id,
+                    status="completed",
+                    success_count=1,
+                    fail_count=0,
+                    duration_s=1.0,
+                )
+
+            running_run_id = start_run(
+                conn,
+                selector=self._selector(origin_key="belem, pa"),
+                origin_name="Belem, PA",
+                input_origin="Belem, PA",
+                destination_count=1,
+            )
+            self.assertIsInstance(running_run_id, str)
+
+            origins = list_available_origins(conn, destination_set_id="city_dests_over50k.txt")
+
+            self.assertEqual(origins, ["Aracaju, SE", "santos, SP"])
 
 
 if __name__ == "__main__":
