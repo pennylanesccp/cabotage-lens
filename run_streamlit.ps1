@@ -50,6 +50,9 @@ Write-Host "Port: $Port"
 
 Push-Location $RepoRoot
 try {
+    Write-Host "Installing project in editable mode..."
+    & $VenvPython -m pip install -e .
+
     if (Test-Path $VenvStreamlit) {
         & $VenvStreamlit @streamlitArgs
     } else {
