@@ -693,7 +693,7 @@ def run_bulk_evaluation(
     )
 
     ors, ports, sea_matrix, resolved_db_path = load_routing_assets(db_path=db_path)
-    origin_pt = resolve_point_for_geometry(origin, ors)
+    origin_pt = resolve_point_for_geometry(origin, ors, db_path=resolved_db_path)
     if not origin_pt:
         raise RuntimeError(f"Failed to resolve bulk origin: {origin}")
     origin_input_norm = normalize_bulk_place_input(origin)
@@ -799,7 +799,7 @@ def run_bulk_evaluation(
             )
 
             try:
-                destiny_pt = resolve_point_for_geometry(destiny_input, ors)
+                destiny_pt = resolve_point_for_geometry(destiny_input, ors, db_path=resolved_db_path)
                 if not destiny_pt:
                     raise RuntimeError(f"Failed to resolve destination: {destiny_input}")
 

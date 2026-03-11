@@ -8,7 +8,7 @@ Manages low-level communication with the ORS API.
 Key responsibilities:
 1. In-process response caching.
 2. Retry handling for transient 5xx failures.
-3. Explicit rate-limit detection for 429 responses.
+3. Explicit quota detection for 429 responses and quota-style 403 responses.
 """
 
 from __future__ import annotations
@@ -35,6 +35,15 @@ from modules.infra.log_manager import get_logger
 from modules.road.ors.structures import ORSConfig, ORSError, RateLimited
 
 _log = get_logger(__name__)
+
+_QUOTA_ERROR_HINTS = (
+    "quota",
+    "rate limit",
+    "limit exceeded",
+    "daily",
+    "too many requests",
+    "request limit",
+)
 
 
 class _MemoryCache:
@@ -129,9 +138,14 @@ class ORSHttpClient:
             )
             duration_ms = (time.time() - t0) * 1000
 
-            if resp.status_code == 429:
-                _log.warning("ORS Rate Limit Exceeded (429).")
-                raise RateLimited(f"Quota exceeded: {resp.text}")
+            response_text = resp.text or ""
+            normalized_text = response_text.lower()
+            if resp.status_code == 429 or (
+                resp.status_code == 403
+                and any(token in normalized_text for token in _QUOTA_ERROR_HINTS)
+            ):
+                _log.warning("ORS quota limit exceeded (status=%s).", resp.status_code)
+                raise RateLimited(f"Quota exceeded ({resp.status_code}): {response_text}")
 
             resp.raise_for_status()
 

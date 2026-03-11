@@ -76,7 +76,7 @@ class BulkApproximationTests(unittest.TestCase):
     def _run_bulk(self, *, destinations: list[str], points_by_input: dict[str, dict], geos_by_label: dict[str, dict]):
         persisted: list[dict] = []
 
-        def fake_resolve_point(value, _ors):
+        def fake_resolve_point(value, _ors, **_kwargs):
             return copy.deepcopy(points_by_input.get(str(value)))
 
         def fake_build_geometry(origin_pt, destiny_pt, **_kwargs):

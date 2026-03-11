@@ -13,7 +13,7 @@ from app.main.sidebar.filters import (
     handle_location_change,
     location_error_message,
     location_is_loading,
-    route_endpoint_options,
+    route_origin_options,
     sync_location_resolution,
 )
 from app.main.sidebar.styles import apply_sidebar_styles
@@ -67,7 +67,7 @@ def _render_origin_field(field_name: str) -> None:
     sync_location_resolution(field_name)
     apply_resolved_location_values([field_name])
 
-    options = route_endpoint_options(current_values=[str(st.session_state.get(field_name, ""))])
+    options = route_origin_options(current_values=[str(st.session_state.get(field_name, ""))])
     apply_sidebar_styles(field_loading={field_name: location_is_loading(field_name)})
 
     st.selectbox(

@@ -24,10 +24,12 @@ if __name__ == "__main__":
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
 
+from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_text
 from modules.cabotage.sea_matrix import SeaMatrix
 from modules.core.secrets import get_secret
+from modules.infra.database_manager import db_session, find_place_point
 from modules.infra.log_manager import get_logger
 from modules.ports.ports_index import load_ports
 from modules.ports.ports_nearest import find_nearest_port
@@ -110,8 +112,61 @@ def load_routing_assets(
     return ors, ports, sea_matrix, db_path
 
 
-def resolve_point_for_geometry(value: Any, ors: ORSClient) -> Optional[Point]:
+def _cached_point_for_geometry(value: Any, *, db_path: Optional[Path | str] = None) -> Optional[Point]:
+    if hasattr(value, "lat") and hasattr(value, "lon"):
+        return None
+
+    query: Optional[str] = None
+    if isinstance(value, dict):
+        lat = value.get("lat") or value.get("latitude")
+        lon = value.get("lon") or value.get("longitude")
+        if lat is not None and lon is not None:
+            return None
+        query = value.get("label") or value.get("input")
+    else:
+        candidate = str(value).strip()
+        if not candidate or parse_lat_lon_string(candidate):
+            return None
+        query = candidate
+
+    query_text = ascii_place_text(query)
+    if not query_text:
+        return None
+
+    try:
+        with db_session(db_path) as conn:
+            cached_point = find_place_point(conn, place=query_text)
+    except Exception as exc:
+        _log.debug("Routes-table point lookup failed for %s: %s", query_text, exc)
+        return None
+
+    if not cached_point or cached_point.get("lat") is None or cached_point.get("lon") is None:
+        return None
+
+    _log.info(
+        "Using cached coordinates for %s from routes table role=%s",
+        query_text,
+        cached_point.get("role") or "<unknown>",
+    )
+    return {
+        "label": ascii_place_text(cached_point.get("label") or query_text),
+        "lat": float(cached_point["lat"]),
+        "lon": float(cached_point["lon"]),
+        "uf": None,
+    }
+
+
+def resolve_point_for_geometry(
+    value: Any,
+    ors: ORSClient,
+    *,
+    db_path: Optional[Path | str] = None,
+) -> Optional[Point]:
     """Resolve one origin/destination input into the normalized geometry shape."""
+    cached_point = _cached_point_for_geometry(value, db_path=db_path)
+    if cached_point is not None:
+        return cached_point
+
     point = resolve_point_null_safe(value, ors, _log)
     if not point:
         return None
@@ -221,8 +276,8 @@ def build_path_geometry(
     )
 
     _log.debug("Resolving endpoints: %r -> %r", origin_input, destiny_input)
-    origin_pt = resolve_point_for_geometry(origin_input, ors)
-    destiny_pt = resolve_point_for_geometry(destiny_input, ors)
+    origin_pt = resolve_point_for_geometry(origin_input, ors, db_path=db_path)
+    destiny_pt = resolve_point_for_geometry(destiny_input, ors, db_path=db_path)
 
     if not origin_pt or not destiny_pt:
         _log.error("Failed to geocode one or both endpoints. Aborting geometry build.")

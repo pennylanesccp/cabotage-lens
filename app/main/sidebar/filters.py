@@ -9,7 +9,7 @@ from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.core.secrets import get_secret
-from modules.infra.database_manager import db_session, list_place_names
+from modules.infra.database_manager import db_session, find_place_point, list_origin_names, list_place_names
 from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import get_logger
 from modules.road.router import ORSClient, ORSConfig
@@ -65,7 +65,7 @@ def _db_route_place_names() -> list[str]:
 
     collected: set[str] = set()
     try:
-        with db_session(backend="postgres") as conn:
+        with db_session() as conn:
             for value in list_place_names(conn, limit=100_000):
                 value_clean = ascii_place_text(value)
                 if value_clean and not _is_coordinate_label(value_clean):
@@ -75,10 +75,33 @@ def _db_route_place_names() -> list[str]:
     return sorted(collected, key=str.casefold)
 
 
+def _db_route_origin_names() -> list[str]:
+    try:
+        settings = load_database_settings()
+    except Exception as exc:
+        _log.warning("Skipping route origin lookup because the database runtime is invalid: %s", exc)
+        return []
+
+    collected: set[str] = set()
+    try:
+        with db_session() as conn:
+            for value in list_origin_names(conn, limit=100_000):
+                value_clean = ascii_place_text(value)
+                if value_clean and not _is_coordinate_label(value_clean):
+                    collected.add(value_clean)
+    except Exception as exc:
+        _log.warning("Failed to list route origins from %s: %s", settings.display_target, exc)
+    return sorted(collected, key=str.casefold)
+
+
 def _resolve_custom_location_label(value: str) -> tuple[str | None, str | None]:
     query = str(value).strip()
     if not query:
         return None, None
+
+    cached_label = _resolve_cached_location_label(query)
+    if cached_label is not None:
+        return cached_label, None
 
     api_key = str(get_secret("ORS_API_KEY", "")).strip()
     if not api_key:
@@ -91,6 +114,31 @@ def _resolve_custom_location_label(value: str) -> tuple[str | None, str | None]:
 
     resolved_label = ascii_place_text(point.label) or ascii_place_text(query)
     return resolved_label, None
+
+
+def _resolve_cached_location_label(value: str) -> str | None:
+    query = ascii_place_text(value)
+    if not query or _is_coordinate_label(query):
+        return None
+
+    try:
+        with db_session() as conn:
+            cached_point = find_place_point(conn, place=query)
+    except Exception as exc:
+        _log.debug("Routes-table lookup failed while resolving %s: %s", query, exc)
+        return None
+
+    if not cached_point:
+        return None
+
+    cached_label = ascii_place_text(cached_point.get("label") or query)
+    if cached_label:
+        _log.info(
+            "Resolved %s input from routes table without ORS call role=%s",
+            query,
+            cached_point.get("role") or "<unknown>",
+        )
+    return cached_label or None
 
 
 def _ensure_location_state(field_name: str) -> None:
@@ -185,6 +233,18 @@ def _route_endpoint_options(current_values: list[str]) -> list[str]:
     return sorted(options, key=str.casefold)
 
 
+def _route_origin_options(current_values: list[str]) -> list[str]:
+    options: set[str] = set()
+    for value in current_values:
+        value_clean = ascii_place_text(value)
+        if value_clean and not _is_coordinate_label(value_clean):
+            options.add(value_clean)
+
+    options.update(_db_route_origin_names())
+
+    return sorted(options, key=str.casefold)
+
+
 def ensure_location_state(field_name: str) -> None:
     _ensure_location_state(field_name)
 
@@ -204,6 +264,10 @@ def apply_resolved_location_values(field_names: Iterable[str]) -> None:
 
 def route_endpoint_options(current_values: list[str]) -> list[str]:
     return _route_endpoint_options(current_values)
+
+
+def route_origin_options(current_values: list[str]) -> list[str]:
+    return _route_origin_options(current_values)
 
 
 def handle_location_change(field_name: str, options: list[str]) -> None:
@@ -255,15 +319,16 @@ def render_filters() -> List[str]:
     _sync_all_location_resolutions()
     _apply_resolved_location_values()
 
-    route_name_options = _route_endpoint_options(current_values=[str(st.session_state.origin), str(st.session_state.destiny)])
+    origin_name_options = _route_origin_options(current_values=[str(st.session_state.origin)])
+    destiny_name_options = _route_endpoint_options(current_values=[str(st.session_state.destiny)])
 
     apply_sidebar_styles(
         origin_loading=bool(st.session_state.get(_loading_key("origin"), False)),
         destiny_loading=bool(st.session_state.get(_loading_key("destiny"), False)),
     )
 
-    for field_name, label in _LOCATION_FIELDS:
-        _render_location_field(field_name, label, route_name_options)
+    _render_location_field("origin", "Origin", origin_name_options)
+    _render_location_field("destiny", "Destination", destiny_name_options)
 
     st.number_input("Cargo (t)", min_value=0.0, step=0.5, format="%g", key="cargo_t")
 
@@ -273,4 +338,4 @@ def render_filters() -> List[str]:
             st.rerun()
 
     _poll_location_resolution()
-    return route_name_options
+    return destiny_name_options

@@ -554,6 +554,99 @@ def list_place_names(
     return [str(row[0]) for row in rows if row and row[0] is not None]
 
 
+def list_origin_names(
+    conn: DBConnection,
+    *,
+    table_name: str = DEFAULT_TABLE,
+    limit: int = 10_000,
+) -> List[str]:
+    """Return distinct cached origin labels only."""
+    table = safe_table_name(table_name)
+    ensure_main_table(conn, table)
+
+    sql = f"""
+    SELECT origin_name
+    FROM (
+        SELECT DISTINCT TRIM(origin_name) AS origin_name
+        FROM {table}
+        WHERE TRIM(COALESCE(origin_name, '')) <> ''
+    ) AS distinct_origins
+    ORDER BY LOWER(origin_name) ASC, origin_name ASC
+    LIMIT ?
+    """
+    rows = conn.execute(sql, (int(limit),)).fetchall()
+    return [str(row[0]) for row in rows if row and row[0] is not None]
+
+
+def find_place_point(
+    conn: DBConnection,
+    *,
+    place: str,
+    table_name: str = DEFAULT_TABLE,
+) -> Optional[Dict[str, Any]]:
+    """Look up the latest cached coordinates for a place label in the routes table."""
+    table = safe_table_name(table_name)
+    ensure_main_table(conn, table)
+    place_key = _build_place_key(place)
+    if not place_key:
+        return None
+
+    row = conn.execute(
+        f"""
+        SELECT
+              label
+            , lat
+            , lon
+            , role
+            , updated_timestamp
+            , insertion_timestamp
+        FROM (
+            SELECT
+                  origin_name AS label
+                , origin_lat AS lat
+                , origin_lon AS lon
+                , 'origin' AS role
+                , updated_timestamp
+                , insertion_timestamp
+            FROM {table}
+            WHERE origin_key = ?
+              AND origin_lat IS NOT NULL
+              AND origin_lon IS NOT NULL
+            UNION ALL
+            SELECT
+                  destiny_name AS label
+                , destiny_lat AS lat
+                , destiny_lon AS lon
+                , 'destiny' AS role
+                , updated_timestamp
+                , insertion_timestamp
+            FROM {table}
+            WHERE destiny_key = ?
+              AND destiny_lat IS NOT NULL
+              AND destiny_lon IS NOT NULL
+        ) AS points
+        ORDER BY CASE WHEN updated_timestamp IS NULL THEN 1 ELSE 0 END ASC
+               , updated_timestamp DESC
+               , CASE WHEN insertion_timestamp IS NULL THEN 1 ELSE 0 END ASC
+               , insertion_timestamp DESC
+               , label ASC
+        LIMIT 1
+        """,
+        (place_key, place_key),
+    ).fetchone()
+    if not row:
+        return None
+
+    return {
+        "label": str(row[0]),
+        "lat": to_float(row[1]),
+        "lon": to_float(row[2]),
+        "role": str(row[3]),
+        "updated_timestamp": row[4],
+        "insertion_timestamp": row[5],
+    }
+
+
 if __name__ == "__main__":
     from modules.infra.db.core import db_session
 

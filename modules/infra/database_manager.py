@@ -31,9 +31,11 @@ from modules.infra.db.settings import load_database_settings
 from modules.infra.db.road_cache import (
       DEFAULT_TABLE
     , ensure_main_table
+    , find_place_point
     , get_run
     , get_run_by_coords
     , upsert_run
+    , list_origin_names
     , list_runs
     , list_place_names
     , overwrite_keys
@@ -78,7 +80,8 @@ from modules.infra.db.bulk_runs import (
 __all__ = [
     "DEFAULT_DB_PATH", "DEFAULT_TABLE",
     "connection_target_summary", "connect", "db_session", "load_database_settings",
-    "ensure_main_table", "get_run", "get_run_by_coords", "upsert_run", "list_runs", "list_place_names", "overwrite_keys", "delete_key",
+    "ensure_main_table", "find_place_point", "get_run", "get_run_by_coords", "upsert_run",
+    "list_origin_names", "list_runs", "list_place_names", "overwrite_keys", "delete_key",
     "ensure_multimodal_results_table", "upsert_multimodal_result",
     "DEFAULT_BULK_RESULTS_TABLE", "BulkResultRecord", "BulkResultSummary",
     "ensure_bulk_results_table", "list_bulk_results", "summarize_bulk_results", "upsert_bulk_result",
