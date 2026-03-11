@@ -49,7 +49,11 @@ from modules.infra.db.multimodal import (
 # 4. Bulk Evaluation Results
 from modules.infra.db.bulk_results import (
       DEFAULT_TABLE as DEFAULT_BULK_RESULTS_TABLE
+    , BulkResultRecord
+    , BulkResultSummary
     , ensure_results_table as ensure_bulk_results_table
+    , list_results as list_bulk_results
+    , summarize_results as summarize_bulk_results
     , upsert_result as upsert_bulk_result
 )
 from modules.infra.db.bulk_runs import (
@@ -76,7 +80,8 @@ __all__ = [
     "connection_target_summary", "connect", "db_session", "load_database_settings",
     "ensure_main_table", "get_run", "get_run_by_coords", "upsert_run", "list_runs", "list_place_names", "overwrite_keys", "delete_key",
     "ensure_multimodal_results_table", "upsert_multimodal_result",
-    "DEFAULT_BULK_RESULTS_TABLE", "ensure_bulk_results_table", "upsert_bulk_result",
+    "DEFAULT_BULK_RESULTS_TABLE", "BulkResultRecord", "BulkResultSummary",
+    "ensure_bulk_results_table", "list_bulk_results", "summarize_bulk_results", "upsert_bulk_result",
     "DEFAULT_BULK_RUNS_TABLE", "DEFAULT_BULK_RUN_RESULTS_TABLE",
     "BulkRunSelector", "BulkRunRecord", "BulkRunResultRecord",
     "ensure_bulk_runs_table", "ensure_bulk_run_results_table",

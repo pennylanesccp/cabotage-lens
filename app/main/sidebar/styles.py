@@ -3,9 +3,18 @@ from __future__ import annotations
 import streamlit as st
 
 
-def apply_sidebar_styles(*, origin_loading: bool = False, destiny_loading: bool = False) -> None:
+def apply_sidebar_styles(
+    *,
+    origin_loading: bool = False,
+    destiny_loading: bool = False,
+    field_loading: dict[str, bool] | None = None,
+) -> None:
     loading_rules: list[str] = []
-    for field_name, is_loading in (("origin", origin_loading), ("destiny", destiny_loading)):
+    configured_fields = [("origin", origin_loading), ("destiny", destiny_loading)]
+    if field_loading:
+        configured_fields.extend(field_loading.items())
+
+    for field_name, is_loading in configured_fields:
         if not is_loading:
             continue
 

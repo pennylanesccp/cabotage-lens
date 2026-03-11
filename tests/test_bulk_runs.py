@@ -11,6 +11,8 @@ from modules.infra.db.bulk_runs import (
     start_run,
 )
 from modules.infra.db.bulk_results import upsert_result as upsert_bulk_result
+from modules.infra.db.bulk_results import list_results as list_bulk_results
+from modules.infra.db.bulk_results import summarize_results as summarize_bulk_results
 from modules.infra.db.core import db_session
 
 
@@ -205,6 +207,80 @@ class BulkRunPersistenceTests(unittest.TestCase):
             self.assertEqual(row[2], "Belem, PA")
             self.assertAlmostEqual(float(row[3]), 3650.0)
             self.assertAlmostEqual(float(row[4]), 250.0)
+
+    def test_bulk_results_selector_summary_supports_heatmap_queries(self) -> None:
+        selector = self._selector()
+        with db_session(":memory:", backend="sqlite") as conn:
+            upsert_bulk_result(
+                conn,
+                scenario_key="scenario-1",
+                run_id="run-1",
+                destination_set_id=selector.destination_set_id,
+                origin_key=selector.origin_key,
+                origin_name="Pelotas, RS",
+                destiny_key="manaus, am",
+                destiny_name="Manaus, AM",
+                input_origin="Pelotas, RS",
+                input_destiny="Manaus, AM",
+                cargo_t=selector.cargo_t,
+                truck_key=selector.truck_key,
+                ors_profile=selector.ors_profile,
+                vessel_class=selector.vessel_class,
+                include_hoteling=selector.include_hoteling,
+                hoteling_hours_per_call=selector.hoteling_hours_per_call,
+                port_calls=selector.port_calls,
+                include_port_ops=selector.include_port_ops,
+                port_moves_per_call=selector.port_moves_per_call,
+                cargo_teu=selector.cargo_teu,
+                t_per_teu_default=selector.t_per_teu_default,
+                allocation_mode=selector.allocation_mode,
+                allocation_load_factor=selector.allocation_load_factor,
+                full_call_mode=selector.full_call_mode,
+                port_ops_scenario=selector.port_ops_scenario,
+                status="ok",
+                road_fuel_cost_r=15000.0,
+                total_fuel_cost_r=11000.0,
+                road_co2e_kg=9000.0,
+                total_co2e_kg=5200.0,
+            )
+            upsert_bulk_result(
+                conn,
+                scenario_key="scenario-2",
+                run_id="run-2",
+                destination_set_id=selector.destination_set_id,
+                origin_key=selector.origin_key,
+                origin_name="Pelotas, RS",
+                destiny_key="belem, pa",
+                destiny_name="Belem, PA",
+                input_origin="Pelotas, RS",
+                input_destiny="Belem, PA",
+                cargo_t=selector.cargo_t,
+                truck_key=selector.truck_key,
+                ors_profile=selector.ors_profile,
+                vessel_class=selector.vessel_class,
+                include_hoteling=selector.include_hoteling,
+                hoteling_hours_per_call=selector.hoteling_hours_per_call,
+                port_calls=selector.port_calls,
+                include_port_ops=selector.include_port_ops,
+                port_moves_per_call=selector.port_moves_per_call,
+                cargo_teu=selector.cargo_teu,
+                t_per_teu_default=selector.t_per_teu_default,
+                allocation_mode=selector.allocation_mode,
+                allocation_load_factor=selector.allocation_load_factor,
+                full_call_mode=selector.full_call_mode,
+                port_ops_scenario=selector.port_ops_scenario,
+                status="no_road_route",
+                error_message="road distance unavailable",
+            )
+
+            summary = summarize_bulk_results(conn, selector=selector)
+            rows = list_bulk_results(conn, selector=selector, only_success=None)
+
+            self.assertEqual(summary.row_count, 2)
+            self.assertEqual(summary.success_count, 1)
+            self.assertEqual(summary.fail_count, 1)
+            self.assertEqual(summary.latest_run_id, "run-2")
+            self.assertEqual([row.input_destiny for row in rows], ["Belem, PA", "Manaus, AM"])
 
 
 if __name__ == "__main__":

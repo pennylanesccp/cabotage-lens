@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, List, Optional, Sequence
 
 ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from modules.addressing.text import ascii_place_key
+from modules.infra.db.bulk_runs import BulkRunSelector
 from modules.infra.db.core import (
     DBConnection,
     bool_to_int,
     current_timestamp_sql,
+    int_to_bool,
     mark_schema_ready,
     safe_table_name,
     schema_is_ready,
@@ -21,6 +24,7 @@ from modules.infra.db.core import (
 )
 
 DEFAULT_TABLE = "bulk_evaluation_results"
+_FLOAT_TOLERANCE = 1e-9
 
 _DDL_SQL = """
 CREATE TABLE IF NOT EXISTS {table} (
@@ -123,6 +127,179 @@ _OPTIONAL_COLUMNS = (
 )
 
 
+@dataclass(frozen=True)
+class BulkResultRecord:
+    scenario_key: str
+    run_id: Optional[str]
+    destination_set_id: Optional[str]
+    origin_key: Optional[str]
+    origin_name: str
+    destiny_name: str
+    input_destiny: str
+    cargo_t: float
+    truck_key: str
+    ors_profile: str
+    vessel_class: Optional[str]
+    include_hoteling: bool
+    hoteling_hours_per_call: Optional[float]
+    port_calls: Optional[int]
+    include_port_ops: bool
+    port_moves_per_call: Optional[float]
+    cargo_teu: Optional[float]
+    t_per_teu_default: Optional[float]
+    allocation_mode: Optional[str]
+    allocation_load_factor: Optional[float]
+    full_call_mode: bool
+    port_ops_scenario: Optional[str]
+    status: str
+    error_message: Optional[str]
+    destiny_lat: Optional[float]
+    destiny_lon: Optional[float]
+    destiny_uf: Optional[str]
+    port_destiny_name: Optional[str]
+    road_fuel_cost_r: Optional[float]
+    total_fuel_cost_r: Optional[float]
+    delta_cost_r: Optional[float]
+    savings_pct: Optional[float]
+    road_co2e_kg: Optional[float]
+    total_co2e_kg: Optional[float]
+    delta_co2e_kg: Optional[float]
+    emissions_savings_pct: Optional[float]
+    road_distance_km: Optional[float]
+    sea_km: Optional[float]
+    is_approximation: bool
+    route_source: Optional[str]
+    updated_timestamp: Any
+
+
+@dataclass(frozen=True)
+class BulkResultSummary:
+    row_count: int
+    success_count: int
+    fail_count: int
+    latest_updated_timestamp: Any
+    latest_run_id: Optional[str]
+
+
+def _normalize_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _nullable_clause(column: str, value: Any, *, params: list[Any], clauses: list[str], numeric: bool = False) -> None:
+    if value is None:
+        clauses.append(f"{column} IS NULL")
+        return
+    if numeric:
+        clauses.append(f"ABS({column} - ?) <= ?")
+        params.extend((float(value), _FLOAT_TOLERANCE))
+        return
+    clauses.append(f"{column} = ?")
+    params.append(value)
+
+
+def _selector_clauses(selector: BulkRunSelector) -> tuple[list[str], list[Any]]:
+    clauses: list[str] = []
+    params: list[Any] = []
+    _nullable_clause("origin_key", selector.origin_key, params=params, clauses=clauses)
+    _nullable_clause("cargo_t", selector.cargo_t, params=params, clauses=clauses, numeric=True)
+    _nullable_clause("truck_key", selector.truck_key, params=params, clauses=clauses)
+    _nullable_clause("ors_profile", selector.ors_profile, params=params, clauses=clauses)
+    _nullable_clause("vessel_class", selector.vessel_class, params=params, clauses=clauses)
+    _nullable_clause("include_hoteling", bool_to_int(selector.include_hoteling), params=params, clauses=clauses)
+    _nullable_clause(
+        "hoteling_hours_per_call",
+        selector.hoteling_hours_per_call,
+        params=params,
+        clauses=clauses,
+        numeric=True,
+    )
+    _nullable_clause("port_calls", int(selector.port_calls), params=params, clauses=clauses)
+    _nullable_clause("include_port_ops", bool_to_int(selector.include_port_ops), params=params, clauses=clauses)
+    _nullable_clause(
+        "port_moves_per_call",
+        selector.port_moves_per_call,
+        params=params,
+        clauses=clauses,
+        numeric=True,
+    )
+    _nullable_clause("cargo_teu", selector.cargo_teu, params=params, clauses=clauses, numeric=True)
+    _nullable_clause(
+        "t_per_teu_default",
+        selector.t_per_teu_default,
+        params=params,
+        clauses=clauses,
+        numeric=True,
+    )
+    _nullable_clause("allocation_mode", selector.allocation_mode, params=params, clauses=clauses)
+    _nullable_clause(
+        "allocation_load_factor",
+        selector.allocation_load_factor,
+        params=params,
+        clauses=clauses,
+        numeric=True,
+    )
+    _nullable_clause("full_call_mode", bool_to_int(selector.full_call_mode), params=params, clauses=clauses)
+    _nullable_clause("port_ops_scenario", selector.port_ops_scenario, params=params, clauses=clauses)
+    _nullable_clause("destination_set_id", selector.destination_set_id, params=params, clauses=clauses)
+    return clauses, params
+
+
+def _row_to_result_record(row: Sequence[Any]) -> BulkResultRecord:
+    return BulkResultRecord(
+        scenario_key=str(row[0]),
+        run_id=_normalize_text(row[1]),
+        destination_set_id=_normalize_text(row[2]),
+        origin_key=_normalize_text(row[3]),
+        origin_name=str(row[4]),
+        destiny_name=str(row[5]),
+        input_destiny=str(row[6]),
+        cargo_t=float(row[7]),
+        truck_key=str(row[8]),
+        ors_profile=str(row[9]),
+        vessel_class=_normalize_text(row[10]),
+        include_hoteling=bool(int_to_bool(row[11])),
+        hoteling_hours_per_call=to_float(row[12]),
+        port_calls=_safe_int(row[13], default=0) if row[13] is not None else None,
+        include_port_ops=bool(int_to_bool(row[14])),
+        port_moves_per_call=to_float(row[15]),
+        cargo_teu=to_float(row[16]),
+        t_per_teu_default=to_float(row[17]),
+        allocation_mode=_normalize_text(row[18]),
+        allocation_load_factor=to_float(row[19]),
+        full_call_mode=bool(int_to_bool(row[20])),
+        port_ops_scenario=_normalize_text(row[21]),
+        status=str(row[22]),
+        error_message=_normalize_text(row[23]),
+        destiny_lat=to_float(row[24]),
+        destiny_lon=to_float(row[25]),
+        destiny_uf=_normalize_text(row[26]),
+        port_destiny_name=_normalize_text(row[27]),
+        road_fuel_cost_r=to_float(row[28]),
+        total_fuel_cost_r=to_float(row[29]),
+        delta_cost_r=to_float(row[30]),
+        savings_pct=to_float(row[31]),
+        road_co2e_kg=to_float(row[32]),
+        total_co2e_kg=to_float(row[33]),
+        delta_co2e_kg=to_float(row[34]),
+        emissions_savings_pct=to_float(row[35]),
+        road_distance_km=to_float(row[36]),
+        sea_km=to_float(row[37]),
+        is_approximation=bool(int_to_bool(row[38])),
+        route_source=_normalize_text(row[39]),
+        updated_timestamp=row[40],
+    )
+
+
 def _ensure_column(conn: DBConnection, table_name: str, column_name: str, ddl: str) -> None:
     if column_name in table_columns(conn, table_name):
         return
@@ -179,6 +356,121 @@ def ensure_results_table(conn: DBConnection, table_name: str = DEFAULT_TABLE) ->
         conn.execute(sql.format(table=table))
     mark_schema_ready(conn, "bulk_results", table)
 
+
+def summarize_results(
+    conn: DBConnection,
+    *,
+    selector: BulkRunSelector,
+    table_name: str = DEFAULT_TABLE,
+) -> BulkResultSummary:
+    table = safe_table_name(table_name)
+    ensure_results_table(conn, table)
+    clauses, params = _selector_clauses(selector)
+    where = " AND ".join(clauses) if clauses else "1=1"
+    row = conn.execute(
+        f"""
+        SELECT
+              COUNT(*) AS row_count
+            , SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS success_count
+            , SUM(CASE WHEN status <> 'ok' THEN 1 ELSE 0 END) AS fail_count
+            , MAX(updated_timestamp) AS latest_updated_timestamp
+            , (
+                SELECT run_id
+                FROM {table} AS latest_row
+                WHERE {where}
+                ORDER BY updated_timestamp DESC, insertion_timestamp DESC
+                LIMIT 1
+              ) AS latest_run_id
+        FROM {table}
+        WHERE {where}
+        """,
+        params + params,
+    ).fetchone()
+    if not row:
+        return BulkResultSummary(
+            row_count=0,
+            success_count=0,
+            fail_count=0,
+            latest_updated_timestamp=None,
+            latest_run_id=None,
+        )
+    return BulkResultSummary(
+        row_count=_safe_int(row[0]),
+        success_count=_safe_int(row[1]),
+        fail_count=_safe_int(row[2]),
+        latest_updated_timestamp=row[3],
+        latest_run_id=_normalize_text(row[4]),
+    )
+
+
+def list_results(
+    conn: DBConnection,
+    *,
+    selector: BulkRunSelector,
+    only_success: Optional[bool] = None,
+    table_name: str = DEFAULT_TABLE,
+) -> List[BulkResultRecord]:
+    table = safe_table_name(table_name)
+    ensure_results_table(conn, table)
+    clauses, params = _selector_clauses(selector)
+    if only_success is True:
+        clauses.append("status = ?")
+        params.append("ok")
+    elif only_success is False:
+        clauses.append("status <> ?")
+        params.append("ok")
+    where = " AND ".join(clauses) if clauses else "1=1"
+    rows = conn.execute(
+        f"""
+        SELECT
+              scenario_key
+            , run_id
+            , destination_set_id
+            , origin_key
+            , origin_name
+            , destiny_name
+            , input_destiny
+            , cargo_t
+            , truck_key
+            , ors_profile
+            , vessel_class
+            , include_hoteling
+            , hoteling_hours_per_call
+            , port_calls
+            , include_port_ops
+            , port_moves_per_call
+            , cargo_teu
+            , t_per_teu_default
+            , allocation_mode
+            , allocation_load_factor
+            , full_call_mode
+            , port_ops_scenario
+            , status
+            , error_message
+            , destiny_lat
+            , destiny_lon
+            , destiny_uf
+            , port_destiny_name
+            , road_fuel_cost_r
+            , total_fuel_cost_r
+            , delta_cost_r
+            , savings_pct
+            , road_co2e_kg
+            , total_co2e_kg
+            , delta_co2e_kg
+            , emissions_savings_pct
+            , road_distance_km
+            , sea_km
+            , is_approximation
+            , route_source
+            , updated_timestamp
+        FROM {table}
+        WHERE {where}
+        ORDER BY destiny_name ASC, updated_timestamp DESC
+        """,
+        params,
+    ).fetchall()
+    return [_row_to_result_record(row) for row in rows]
 
 
 def upsert_result(

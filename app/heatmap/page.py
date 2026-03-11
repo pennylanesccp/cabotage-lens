@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from html import escape
-from typing import Any
+from typing import Any, Iterable
 
 import streamlit as st
 
 from modules.infra.log_manager import get_logger
+from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS, list_vessel_classes
+from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
 
 from app.heatmap.config import (
     HEATMAP_DEFAULT_METRIC,
@@ -16,29 +18,20 @@ from app.heatmap.map import render_heatmap_map, render_legend
 from app.heatmap.service import (
     HeatmapConfigurationError,
     HeatmapDataError,
-    get_latest_run_info,
+    get_heatmap_status,
     list_cargo_options,
+    load_current_dataset,
     rerun_heatmap,
-    load_latest_dataset,
+    run_heatmap,
 )
-from app.main.sidebar.filters import (
-    LOCATION_RESOLUTION_POLL_SECONDS,
-    apply_resolved_location_values,
-    ensure_location_state,
-    handle_location_change,
-    location_error_message,
-    location_is_loading,
-    route_endpoint_options,
-    sync_location_resolution,
-)
+from app.heatmap.sidebar import render_sidebar
 from app.heatmap.types import HeatmapDataset, HeatmapScenario
+from app.main.sidebar.filters import location_is_loading
 from app.main.styles import inject_css
-from app.main.utils.formatters import clean_place_label
 from app.main.utils.state import attach_streamlit_logging, init_state
 
 _log = get_logger(__name__)
 _HEATMAP_ORIGIN_FIELD = "heatmap_origin"
-
 
 
 def _init_page_state() -> None:
@@ -47,6 +40,44 @@ def _init_page_state() -> None:
     st.session_state.setdefault("heatmap_metric", HEATMAP_DEFAULT_METRIC)
     st.session_state.setdefault("heatmap_dataset", None)
 
+
+def _normalize_choice(session_key: str, valid_options: Iterable[str], default_value: str) -> None:
+    options = list(valid_options)
+    if not options:
+        st.session_state[session_key] = default_value
+        return
+    if st.session_state.get(session_key) not in options:
+        st.session_state[session_key] = default_value if default_value in options else options[0]
+
+
+def _optional_positive_float(value: Any) -> float | None:
+    try:
+        candidate = float(value)
+    except (TypeError, ValueError):
+        return None
+    return None if candidate <= 0.0 else candidate
+
+
+def _current_scenario() -> HeatmapScenario:
+    allocation_mode = str(st.session_state.get("allocation_mode", "auto")).strip().lower()
+    return HeatmapScenario(
+        origin_name=str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
+        cargo_t=float(st.session_state.get("heatmap_cargo", 30.0)),
+        truck_key=str(st.session_state.get("truck_key", "")),
+        ors_profile=str(st.session_state.get("profile", "driving-hgv")),
+        vessel_class=str(st.session_state.get("vessel_class", "")),
+        include_hoteling=bool(st.session_state.get("include_hoteling", True)),
+        hoteling_hours_per_call=float(st.session_state.get("hoteling_hours_per_call", 14.0)),
+        port_calls=int(st.session_state.get("port_calls", 2)),
+        include_port_ops=bool(st.session_state.get("include_port_ops", True)),
+        port_moves_per_call=_optional_positive_float(st.session_state.get("port_moves_per_call_input", 0.0)),
+        cargo_teu=_optional_positive_float(st.session_state.get("cargo_teu_input", 0.0)),
+        t_per_teu_default=max(float(st.session_state.get("t_per_teu_default", 14.0)), 0.1),
+        allocation_mode=(None if allocation_mode == "auto" else allocation_mode),
+        allocation_load_factor=min(max(float(st.session_state.get("allocation_load_factor", 0.8)), 0.01), 1.0),
+        full_call_mode=bool(st.session_state.get("full_call_mode", False)),
+        port_ops_scenario=str(st.session_state.get("port_ops_scenario", "")),
+    )
 
 
 def _format_timestamp(value: Any) -> str:
@@ -58,7 +89,6 @@ def _format_timestamp(value: Any) -> str:
     return text or "Unknown"
 
 
-
 def _render_header() -> None:
     st.markdown(
         f"""
@@ -66,7 +96,7 @@ def _render_header() -> None:
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
             <p style='margin: 0.65rem 0 0 0; max-width: 52rem; color: #334155;'>
-                Compare where multimodal freight wins or loses across Brazil using the latest completed batch stored in Supabase. Green always means multimodal advantage, red means road advantage.
+                Compare where multimodal freight wins or loses across Brazil using the current comparison table stored in Supabase. Run missing fills only unfound destinies; rerun overwrites only the comparison rows for this scenario.
             </p>
         </section>
         """,
@@ -74,60 +104,19 @@ def _render_header() -> None:
     )
 
 
-
-def _current_scenario() -> HeatmapScenario:
-    return HeatmapScenario(
-        origin_name=str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
-        cargo_t=float(st.session_state.get("heatmap_cargo", 30.0)),
-    )
-
-
-def _render_origin_field() -> None:
-    ensure_location_state(_HEATMAP_ORIGIN_FIELD)
-    sync_location_resolution(_HEATMAP_ORIGIN_FIELD)
-    apply_resolved_location_values([_HEATMAP_ORIGIN_FIELD])
-
-    options = route_endpoint_options(current_values=[str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, ""))])
-    _log.debug("Prepared heatmap origin options count=%d", len(options))
-
-    st.selectbox(
-        "Origin",
-        options=[""] + options,
-        key=_HEATMAP_ORIGIN_FIELD,
-        accept_new_options=True,
-        format_func=lambda value: "Select an origin" if not value else clean_place_label(value),
-        on_change=handle_location_change,
-        args=(_HEATMAP_ORIGIN_FIELD, options),
-    )
-
-    error_message = location_error_message(_HEATMAP_ORIGIN_FIELD)
-    if error_message:
-        st.caption(error_message)
-
-    @st.fragment(run_every=LOCATION_RESOLUTION_POLL_SECONDS if location_is_loading(_HEATMAP_ORIGIN_FIELD) else None)
-    def _poll_origin_resolution() -> None:
-        if sync_location_resolution(_HEATMAP_ORIGIN_FIELD):
-            st.rerun()
-
-    _poll_origin_resolution()
-
-
-
 def _clear_loaded_dataset_if_stale(scenario: HeatmapScenario) -> None:
     dataset = st.session_state.get("heatmap_dataset")
     if not isinstance(dataset, HeatmapDataset):
         return
-    if dataset.run.origin_name != scenario.origin_name or float(dataset.run.cargo_t) != float(scenario.cargo_t):
+    if dataset.scenario != scenario:
         _log.debug(
-            "Clearing stale heatmap dataset cached_run_id=%s cached_origin=%s cached_cargo_t=%.3f selected_origin=%s selected_cargo_t=%.3f",
-            dataset.run.run_id,
-            dataset.run.origin_name,
-            float(dataset.run.cargo_t),
+            "Clearing stale heatmap dataset cached_origin=%s cached_cargo_t=%.3f selected_origin=%s selected_cargo_t=%.3f",
+            dataset.scenario.origin_name,
+            float(dataset.scenario.cargo_t),
             scenario.origin_name,
             float(scenario.cargo_t),
         )
         st.session_state.heatmap_dataset = None
-
 
 
 def _progress_callback(progress_bar: Any, status_box: Any):
@@ -149,7 +138,6 @@ def _progress_callback(progress_bar: Any, status_box: Any):
     return _callback
 
 
-
 def _render_dataset(dataset: HeatmapDataset) -> None:
     metric = st.radio(
         "View",
@@ -161,27 +149,61 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
 
     better_cost = sum(1 for point in dataset.points if point.cost_delta_r > 0)
     better_emissions = sum(1 for point in dataset.points if point.emissions_delta_kg > 0)
-    cols = st.columns(3)
+    cols = st.columns(4)
     cols[0].metric("Destinations loaded", f"{len(dataset.points)}")
-    cols[1].metric("Multimodal better on cost", f"{better_cost}")
-    cols[2].metric("Multimodal better on emissions", f"{better_emissions}")
+    cols[1].metric("Stored rows", f"{dataset.run.found_count}/{dataset.run.destination_count}")
+    cols[2].metric("Multimodal better on cost", f"{better_cost}")
+    cols[3].metric("Multimodal better on emissions", f"{better_emissions}")
 
     render_legend(metric)
     render_heatmap_map(dataset, metric)
 
+
+def _load_dataset_into_session(scenario: HeatmapScenario) -> None:
+    dataset = load_current_dataset(scenario)
+    if dataset is not None:
+        st.session_state.heatmap_dataset = dataset
 
 
 def render_page() -> None:
     init_state()
     _init_page_state()
     inject_css()
+
+    class_options = list(list_vessel_classes())
+    _normalize_choice("vessel_class", class_options, DEFAULT_VESSEL_CLASS)
+    _normalize_choice("allocation_mode", ["auto", "teu_share", "dwt_share"], "auto")
+    try:
+        st.session_state.allocation_load_factor = min(max(float(st.session_state.allocation_load_factor), 0.01), 1.0)
+    except (TypeError, ValueError):
+        st.session_state.allocation_load_factor = 0.8
+    port_ops_scenarios = list(list_port_ops_scenarios())
+    _normalize_choice("port_ops_scenario", port_ops_scenarios, DEFAULT_PORT_OPS_SCENARIO)
+
     attach_streamlit_logging(
         level=str(st.session_state.log_level),
         write_to_file=bool(st.session_state.write_log_file),
     )
 
+    cargo_options = [float(st.session_state.get("heatmap_cargo", 30.0))]
+    try:
+        cargo_options = list_cargo_options(str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip())
+    except Exception as exc:
+        _log.exception("Failed to load heatmap cargo options origin=%s", st.session_state.get(_HEATMAP_ORIGIN_FIELD, ""))
+        st.error(f"Failed to load available cargo values: {exc}")
+    finally:
+        current_cargo = float(st.session_state.get("heatmap_cargo", 30.0))
+        if current_cargo not in cargo_options:
+            cargo_options = sorted(set(cargo_options + [current_cargo]))
+
+    render_sidebar(
+        origin_field_key=_HEATMAP_ORIGIN_FIELD,
+        cargo_options=cargo_options,
+        class_options=class_options,
+        port_ops_scenarios=port_ops_scenarios,
+    )
+
     _render_header()
-    _render_origin_field()
 
     scenario = _current_scenario()
     _clear_loaded_dataset_if_stale(scenario)
@@ -190,40 +212,15 @@ def render_page() -> None:
         st.info("Resolving origin...")
         return
 
-    try:
-        cargo_options = list_cargo_options(scenario.origin_name)
-    except Exception as exc:
-        _log.exception("Failed to load heatmap cargo options origin=%s", scenario.origin_name)
-        st.error(f"Failed to load available cargo values: {exc}")
-        return
-
-    if float(st.session_state.heatmap_cargo) not in cargo_options:
-        cargo_options = sorted(set(cargo_options + [float(st.session_state.heatmap_cargo)]))
-
-    st.selectbox(
-        "Cargo (t)",
-        options=cargo_options,
-        key="heatmap_cargo",
-        format_func=lambda value: f"{float(value):,.1f} t",
-    )
-
-    scenario = _current_scenario()
-    _clear_loaded_dataset_if_stale(scenario)
-
-    st.caption(
-        f"Hidden defaults match the main comparison flow. The heatmap rerun uses the stored destination universe: {HEATMAP_DESTINATION_LABEL}."
-    )
-
     if not scenario.origin_name:
-        st.info("Select an origin to inspect the latest stored heatmap or trigger a rerun.")
+        st.info("Select an origin in the sidebar to inspect current heatmap rows or launch a run.")
         return
 
-    latest_run = None
     try:
-        latest_run = get_latest_run_info(scenario)
+        status = get_heatmap_status(scenario)
     except HeatmapConfigurationError as exc:
         _log.error(
-            "Heatmap latest-run lookup unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
+            "Heatmap status lookup unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
             scenario.origin_name,
             scenario.cargo_t,
             exc,
@@ -232,41 +229,19 @@ def render_page() -> None:
         return
     except Exception as exc:
         _log.exception(
-            "Failed to query latest heatmap batch origin=%s cargo_t=%.3f",
+            "Failed to query heatmap comparison status origin=%s cargo_t=%.3f",
             scenario.origin_name,
             scenario.cargo_t,
         )
-        st.error(f"Failed to query the latest heatmap batch: {exc}")
+        st.error(f"Failed to query the current heatmap status: {exc}")
         return
 
-    load_clicked = False
-    rerun_clicked = False
-
-    if latest_run is None:
-        st.warning("No completed heatmap batch was found for this origin and cargo in Supabase.")
-        rerun_clicked = st.button("Generate results", type="primary")
-    else:
-        st.success(
-            f"Values last updated on {_format_timestamp(latest_run.completed_timestamp or latest_run.updated_timestamp)}."
-        )
-        st.caption(
-            f"Completed batch: {latest_run.success_count}/{latest_run.destination_count} destinations succeeded. Run again if you want to refresh the Supabase results."
-        )
-        button_cols = st.columns(2)
-        load_clicked = button_cols[0].button("Load latest", type="primary")
-        rerun_clicked = button_cols[1].button("Run again")
-
-    if load_clicked:
-        _log.info(
-            "Heatmap UI requested latest dataset origin=%s cargo_t=%.3f",
-            scenario.origin_name,
-            scenario.cargo_t,
-        )
+    if st.session_state.get("heatmap_dataset") is None and status.found_count > 0:
         try:
-            dataset = load_latest_dataset(scenario)
+            _load_dataset_into_session(scenario)
         except HeatmapDataError as exc:
             _log.warning(
-                "Heatmap dataset is not plottable origin=%s cargo_t=%.3f error=%s",
+                "Heatmap comparison rows are not plottable origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
                 exc,
@@ -274,30 +249,73 @@ def render_page() -> None:
             st.error(str(exc))
         except Exception as exc:
             _log.exception(
-                "Failed to load latest heatmap rows origin=%s cargo_t=%.3f",
+                "Failed to load current heatmap rows origin=%s cargo_t=%.3f",
                 scenario.origin_name,
                 scenario.cargo_t,
             )
-            st.error(f"Failed to load the latest heatmap rows: {exc}")
+            st.error(f"Failed to load the current heatmap rows: {exc}")
+
+    if status.updated_timestamp is None:
+        st.warning("No comparison rows are stored yet for this scenario in Supabase.")
+    else:
+        st.success(f"Latest comparison update: {_format_timestamp(status.updated_timestamp)}.")
+        st.caption(
+            (
+                f"Stored rows: {status.found_count}/{status.destination_count}. "
+                f"ok={status.success_count} fail={status.fail_count} missing={status.missing_count}. "
+                "Run missing only fills unfound destinies; rerun overwrites the comparison rows for this scenario."
+            )
+        )
+
+    st.caption(
+        "This page never overwrites the canonical routes cache. It only writes to the bulk comparison tables used by the heatmap."
+    )
+
+    if status.found_count <= 0:
+        run_missing_label = "Run batch"
+    else:
+        run_missing_label = "Run missing"
+
+    button_cols = st.columns(2)
+    run_missing_clicked = button_cols[0].button(
+        run_missing_label,
+        type="primary",
+        disabled=(status.found_count > 0 and status.missing_count <= 0),
+    )
+    rerun_clicked = button_cols[1].button("Rerun all")
+
+    if run_missing_clicked:
+        _log.info(
+            "Heatmap UI requested missing-only run origin=%s cargo_t=%.3f",
+            scenario.origin_name,
+            scenario.cargo_t,
+        )
+        progress_bar = st.progress(0.0)
+        status_box = st.empty()
+        status_box.markdown("Starting missing-only run...")
+        try:
+            dataset = run_heatmap(
+                scenario,
+                rerun=False,
+                progress_callback=_progress_callback(progress_bar, status_box),
+            )
+        except Exception as exc:
+            _log.exception(
+                "Heatmap missing-only run failed origin=%s cargo_t=%.3f",
+                scenario.origin_name,
+                scenario.cargo_t,
+            )
+            progress_bar.empty()
+            status_box.empty()
+            st.error(f"Heatmap run failed: {exc}")
         else:
-            if dataset is None:
-                _log.warning(
-                    "Heatmap dataset load returned no completed batch origin=%s cargo_t=%.3f",
-                    scenario.origin_name,
-                    scenario.cargo_t,
-                )
-                st.warning("No completed heatmap batch is currently available for this selection.")
-            else:
-                _log.info(
-                    "Heatmap dataset loaded into session run_id=%s points=%d",
-                    dataset.run.run_id,
-                    len(dataset.points),
-                )
-                st.session_state.heatmap_dataset = dataset
+            progress_bar.progress(1.0)
+            status_box.markdown("Run completed. Comparison table refreshed.")
+            st.session_state.heatmap_dataset = dataset
 
     if rerun_clicked:
         _log.info(
-            "Heatmap UI requested rerun origin=%s cargo_t=%.3f",
+            "Heatmap UI requested rerun-all origin=%s cargo_t=%.3f",
             scenario.origin_name,
             scenario.cargo_t,
         )
@@ -311,7 +329,7 @@ def render_page() -> None:
             )
         except Exception as exc:
             _log.exception(
-                "Heatmap rerun failed origin=%s cargo_t=%.3f",
+                "Heatmap rerun-all failed origin=%s cargo_t=%.3f",
                 scenario.origin_name,
                 scenario.cargo_t,
             )
@@ -320,12 +338,7 @@ def render_page() -> None:
             st.error(f"Heatmap rerun failed: {exc}")
         else:
             progress_bar.progress(1.0)
-            status_box.markdown("Rerun completed. Loading the latest Supabase results.")
-            _log.info(
-                "Heatmap rerun completed run_id=%s points=%d",
-                dataset.run.run_id,
-                len(dataset.points),
-            )
+            status_box.markdown("Rerun completed. Comparison table overwritten for this scenario.")
             st.session_state.heatmap_dataset = dataset
 
     dataset = st.session_state.get("heatmap_dataset")
@@ -333,6 +346,5 @@ def render_page() -> None:
         _render_dataset(dataset)
         return
 
-    if latest_run is not None:
-        st.info("A completed batch is available. Load the latest results or run the batch again.")
-
+    if status.found_count > 0:
+        st.info("Stored comparison rows were found. Run missing, rerun all, or adjust the sidebar scenario.")

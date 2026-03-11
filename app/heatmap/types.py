@@ -8,16 +8,32 @@ from typing import Any, List, Optional
 class HeatmapScenario:
     origin_name: str
     cargo_t: float
+    truck_key: str
+    ors_profile: str
+    vessel_class: str
+    include_hoteling: bool
+    hoteling_hours_per_call: float
+    port_calls: int
+    include_port_ops: bool
+    port_moves_per_call: Optional[float]
+    cargo_teu: Optional[float]
+    t_per_teu_default: float
+    allocation_mode: Optional[str]
+    allocation_load_factor: float
+    full_call_mode: bool
+    port_ops_scenario: str
 
 
 @dataclass(frozen=True)
 class HeatmapRunInfo:
-    run_id: str
+    run_id: Optional[str]
     origin_name: str
     cargo_t: float
     destination_count: int
+    found_count: int
     success_count: int
     fail_count: int
+    missing_count: int
     duration_s: Optional[float]
     completed_timestamp: Any
     updated_timestamp: Any
@@ -46,6 +62,7 @@ class HeatmapPoint:
 
 @dataclass(frozen=True)
 class HeatmapDataset:
+    scenario: HeatmapScenario
     run: HeatmapRunInfo
     points: List[HeatmapPoint]
     max_abs_cost_delta: float

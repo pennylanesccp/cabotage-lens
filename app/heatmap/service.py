@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from modules.addressing.text import ascii_place_key, ascii_place_text
@@ -8,13 +9,15 @@ from modules.infra.database_manager import (
     BulkRunSelector,
     db_session,
     get_latest_completed_run,
+    list_bulk_results,
     list_bulk_run_cargo_values,
     list_bulk_run_origins,
-    list_bulk_run_results,
     load_database_settings,
+    summarize_bulk_results,
 )
 from modules.infra.log_manager import get_logger
 from modules.multimodal.bulk import load_destinations, run_bulk_evaluation
+from modules.multimodal.scenario_keys import normalize_bulk_place_input
 
 from app.heatmap.config import HEATMAP_DESTINATION_LABEL, HEATMAP_DESTINATION_SET_ID, HEATMAP_DESTINATIONS_PATH
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapRunInfo, HeatmapScenario
@@ -43,6 +46,12 @@ def _dedupe_preserve_order(values: List[str]) -> List[str]:
     return deduped
 
 
+@lru_cache(maxsize=1)
+def _heatmap_destinations() -> tuple[str, ...]:
+    destination_path = HEATMAP_DESTINATIONS_PATH.resolve()
+    destinations = _dedupe_preserve_order(load_destinations(destination_path))
+    return tuple(destinations)
+
 
 def _require_postgres() -> None:
     settings = load_database_settings()
@@ -51,55 +60,6 @@ def _require_postgres() -> None:
             "Heatmap storage requires Supabase Postgres. Configure SUPABASE_DB_URL "
             "or the component-based SUPABASE_DB_* Streamlit secrets first."
         )
-
-
-
-def _hidden_defaults() -> Dict[str, Any]:
-    cargo_teu_raw = float(DEFAULTS.get("cargo_teu_input", 0.0))
-    port_moves_raw = float(DEFAULTS.get("port_moves_per_call_input", 0.0))
-    allocation_mode = str(DEFAULTS.get("allocation_mode", "auto")).strip().lower()
-    return {
-        "truck_key": str(DEFAULTS["truck_key"]),
-        "profile": str(DEFAULTS["profile"]),
-        "vessel_class": str(DEFAULTS["vessel_class"]),
-        "include_hoteling": bool(DEFAULTS["include_hoteling"]),
-        "hoteling_hours_per_call": float(DEFAULTS["hoteling_hours_per_call"]),
-        "port_calls": int(DEFAULTS["port_calls"]),
-        "include_port_ops": bool(DEFAULTS["include_port_ops"]),
-        "port_moves_per_call": (None if port_moves_raw <= 0.0 else port_moves_raw),
-        "cargo_teu": (None if cargo_teu_raw <= 0.0 else cargo_teu_raw),
-        "t_per_teu_default": float(DEFAULTS["t_per_teu_default"]),
-        "allocation_mode": (None if allocation_mode == "auto" else allocation_mode),
-        "allocation_load_factor": float(DEFAULTS["allocation_load_factor"]),
-        "full_call_mode": bool(DEFAULTS["full_call_mode"]),
-        "port_ops_scenario": str(DEFAULTS["port_ops_scenario"]),
-        "destination_set_id": HEATMAP_DESTINATION_SET_ID,
-    }
-
-
-
-def _build_selector(origin_name: str, cargo_t: float) -> BulkRunSelector:
-    defaults = _hidden_defaults()
-    return BulkRunSelector(
-        origin_key=ascii_place_key(origin_name),
-        cargo_t=float(cargo_t),
-        truck_key=str(defaults["truck_key"]),
-        ors_profile=str(defaults["profile"]),
-        vessel_class=str(defaults["vessel_class"]),
-        include_hoteling=bool(defaults["include_hoteling"]),
-        hoteling_hours_per_call=float(defaults["hoteling_hours_per_call"]),
-        port_calls=int(defaults["port_calls"]),
-        include_port_ops=bool(defaults["include_port_ops"]),
-        port_moves_per_call=defaults["port_moves_per_call"],
-        cargo_teu=defaults["cargo_teu"],
-        t_per_teu_default=float(defaults["t_per_teu_default"]),
-        allocation_mode=defaults["allocation_mode"],
-        allocation_load_factor=float(defaults["allocation_load_factor"]),
-        full_call_mode=bool(defaults["full_call_mode"]),
-        port_ops_scenario=str(defaults["port_ops_scenario"]),
-        destination_set_id=str(defaults["destination_set_id"]),
-    )
-
 
 
 def _max_abs(values: List[float]) -> float:
@@ -111,29 +71,41 @@ def _max_abs(values: List[float]) -> float:
     return candidate if candidate > 0 else 1.0
 
 
-
-def _to_run_info(record: Any) -> HeatmapRunInfo:
+def _to_run_info(
+    scenario: HeatmapScenario,
+    *,
+    row_count: int,
+    success_count: int,
+    fail_count: int,
+    latest_updated_timestamp: Any,
+    latest_run_id: Optional[str],
+    duration_s: Optional[float],
+    completed_timestamp: Any,
+) -> HeatmapRunInfo:
+    destination_count = len(_heatmap_destinations())
+    found_count = min(int(row_count), destination_count)
     return HeatmapRunInfo(
-        run_id=record.run_id,
-        origin_name=record.origin_name,
-        cargo_t=float(record.cargo_t),
-        destination_count=int(record.destination_count),
-        success_count=int(record.success_count),
-        fail_count=int(record.fail_count),
-        duration_s=record.duration_s,
-        completed_timestamp=record.completed_timestamp,
-        updated_timestamp=record.updated_timestamp,
-        destination_set_id=record.destination_set_id,
+        run_id=latest_run_id,
+        origin_name=scenario.origin_name,
+        cargo_t=float(scenario.cargo_t),
+        destination_count=destination_count,
+        found_count=found_count,
+        success_count=int(success_count),
+        fail_count=int(fail_count),
+        missing_count=max(destination_count - found_count, 0),
+        duration_s=duration_s,
+        completed_timestamp=completed_timestamp,
+        updated_timestamp=latest_updated_timestamp,
+        destination_set_id=HEATMAP_DESTINATION_SET_ID,
     )
-
 
 
 def _to_point(record: Any) -> Optional[HeatmapPoint]:
     if record.destiny_lat is None or record.destiny_lon is None:
         return None
-    if record.road_cost_r is None or record.multimodal_cost_r is None:
+    if record.road_fuel_cost_r is None or record.total_fuel_cost_r is None:
         return None
-    if record.road_emissions_kg is None or record.multimodal_emissions_kg is None:
+    if record.road_co2e_kg is None or record.total_co2e_kg is None:
         return None
     return HeatmapPoint(
         destiny_name=record.destiny_name,
@@ -141,13 +113,13 @@ def _to_point(record: Any) -> Optional[HeatmapPoint]:
         destiny_lon=float(record.destiny_lon),
         destiny_uf=record.destiny_uf,
         port_destiny_name=record.port_destiny_name,
-        road_cost_r=float(record.road_cost_r),
-        multimodal_cost_r=float(record.multimodal_cost_r),
-        cost_delta_r=float(record.cost_delta_r or 0.0),
-        cost_savings_pct=record.cost_savings_pct,
-        road_emissions_kg=float(record.road_emissions_kg),
-        multimodal_emissions_kg=float(record.multimodal_emissions_kg),
-        emissions_delta_kg=float(record.emissions_delta_kg or 0.0),
+        road_cost_r=float(record.road_fuel_cost_r),
+        multimodal_cost_r=float(record.total_fuel_cost_r),
+        cost_delta_r=float(record.delta_cost_r or 0.0),
+        cost_savings_pct=record.savings_pct,
+        road_emissions_kg=float(record.road_co2e_kg),
+        multimodal_emissions_kg=float(record.total_co2e_kg),
+        emissions_delta_kg=float(record.delta_co2e_kg or 0.0),
         emissions_savings_pct=record.emissions_savings_pct,
         road_distance_km=record.road_distance_km,
         sea_km=record.sea_km,
@@ -158,17 +130,37 @@ def _to_point(record: Any) -> Optional[HeatmapPoint]:
 def _point_rejection_reason(record: Any) -> Optional[str]:
     if record.destiny_lat is None or record.destiny_lon is None:
         return "missing_coordinates"
-    if record.road_cost_r is None or record.multimodal_cost_r is None:
+    if record.road_fuel_cost_r is None or record.total_fuel_cost_r is None:
         return "missing_costs"
-    if record.road_emissions_kg is None or record.multimodal_emissions_kg is None:
+    if record.road_co2e_kg is None or record.total_co2e_kg is None:
         return "missing_emissions"
     return None
-
 
 
 def default_cargo_options() -> List[float]:
     return [float(DEFAULTS["cargo_t"])]
 
+
+def _build_selector(scenario: HeatmapScenario) -> BulkRunSelector:
+    return BulkRunSelector(
+        origin_key=ascii_place_key(scenario.origin_name),
+        cargo_t=float(scenario.cargo_t),
+        truck_key=str(scenario.truck_key),
+        ors_profile=str(scenario.ors_profile),
+        vessel_class=str(scenario.vessel_class),
+        include_hoteling=bool(scenario.include_hoteling),
+        hoteling_hours_per_call=float(scenario.hoteling_hours_per_call),
+        port_calls=int(scenario.port_calls),
+        include_port_ops=bool(scenario.include_port_ops),
+        port_moves_per_call=scenario.port_moves_per_call,
+        cargo_teu=scenario.cargo_teu,
+        t_per_teu_default=float(scenario.t_per_teu_default),
+        allocation_mode=scenario.allocation_mode,
+        allocation_load_factor=float(scenario.allocation_load_factor),
+        full_call_mode=bool(scenario.full_call_mode),
+        port_ops_scenario=str(scenario.port_ops_scenario),
+        destination_set_id=HEATMAP_DESTINATION_SET_ID,
+    )
 
 
 def list_origin_options() -> List[str]:
@@ -188,7 +180,6 @@ def list_origin_options() -> List[str]:
         len(normalized),
     )
     return normalized
-
 
 
 def list_cargo_options(origin_name: str) -> List[float]:
@@ -226,46 +217,90 @@ def list_cargo_options(origin_name: str) -> List[float]:
     return values
 
 
-
-def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
+def get_heatmap_status(scenario: HeatmapScenario) -> HeatmapRunInfo:
     _require_postgres()
+    selector = _build_selector(scenario)
     _log.info(
-        "Querying latest heatmap run origin=%s cargo_t=%.3f destination_set=%s",
+        "Querying heatmap comparison status origin=%s cargo_t=%.3f destination_set=%s",
         scenario.origin_name,
         scenario.cargo_t,
         HEATMAP_DESTINATION_SET_ID,
     )
-    selector = _build_selector(scenario.origin_name, scenario.cargo_t)
     with db_session(backend="postgres") as conn:
-        record = get_latest_completed_run(conn, selector=selector)
-    if record is None:
-        _log.info(
-            "No completed heatmap run found origin=%s cargo_t=%.3f destination_set=%s",
-            scenario.origin_name,
-            scenario.cargo_t,
-            HEATMAP_DESTINATION_SET_ID,
-        )
-        return None
-    _log.info(
-        "Latest heatmap run found: run_id=%s origin=%s cargo_t=%.3f success=%d fail=%d",
-        record.run_id,
-        record.origin_name,
-        record.cargo_t,
-        record.success_count,
-        record.fail_count,
+        summary = summarize_bulk_results(conn, selector=selector)
+        latest_completed = get_latest_completed_run(conn, selector=selector)
+
+    status = _to_run_info(
+        scenario,
+        row_count=summary.row_count,
+        success_count=summary.success_count,
+        fail_count=summary.fail_count,
+        latest_updated_timestamp=(
+            summary.latest_updated_timestamp
+            or (None if latest_completed is None else latest_completed.updated_timestamp)
+        ),
+        latest_run_id=summary.latest_run_id or (None if latest_completed is None else latest_completed.run_id),
+        duration_s=None if latest_completed is None else latest_completed.duration_s,
+        completed_timestamp=None if latest_completed is None else latest_completed.completed_timestamp,
     )
-    return _to_run_info(record)
+    _log.info(
+        (
+            "Heatmap comparison status origin=%s cargo_t=%.3f found=%d success=%d fail=%d "
+            "missing=%d latest_run_id=%s"
+        ),
+        scenario.origin_name,
+        scenario.cargo_t,
+        status.found_count,
+        status.success_count,
+        status.fail_count,
+        status.missing_count,
+        status.run_id or "<none>",
+    )
+    return status
 
 
+def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
+    status = get_heatmap_status(scenario)
+    return status if status.updated_timestamp is not None else None
 
-def load_latest_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
-    run_info = get_latest_run_info(scenario)
-    if run_info is None:
+
+def _existing_destination_inputs(scenario: HeatmapScenario) -> set[str]:
+    selector = _build_selector(scenario)
+    with db_session(backend="postgres") as conn:
+        rows = list_bulk_results(conn, selector=selector, only_success=None)
+    return {
+        normalize_bulk_place_input(row.input_destiny).casefold()
+        for row in rows
+        if str(row.input_destiny).strip()
+    }
+
+
+def pending_destinations(scenario: HeatmapScenario) -> List[str]:
+    existing = _existing_destination_inputs(scenario)
+    pending = [
+        destination
+        for destination in _heatmap_destinations()
+        if normalize_bulk_place_input(destination).casefold() not in existing
+    ]
+    _log.info(
+        "Computed pending heatmap destinations origin=%s cargo_t=%.3f pending=%d total=%d",
+        scenario.origin_name,
+        scenario.cargo_t,
+        len(pending),
+        len(_heatmap_destinations()),
+    )
+    return pending
+
+
+def load_current_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
+    status = get_heatmap_status(scenario)
+    if status.found_count <= 0:
         return None
 
-    _log.info("Loading heatmap dataset rows run_id=%s", run_info.run_id)
+    selector = _build_selector(scenario)
+    _log.info("Loading heatmap comparison rows origin=%s cargo_t=%.3f", scenario.origin_name, scenario.cargo_t)
     with db_session(backend="postgres") as conn:
-        rows = list_bulk_run_results(conn, run_id=run_info.run_id, only_success=True)
+        rows = list_bulk_results(conn, selector=selector, only_success=True)
 
     points: List[HeatmapPoint] = []
     skipped_missing_coordinates = 0
@@ -288,96 +323,128 @@ def load_latest_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
 
     if not points:
         _log.warning(
-            "Heatmap dataset has no plottable rows run_id=%s raw_rows=%d skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d",
-            run_info.run_id,
+            "Heatmap comparison rows are not plottable origin=%s cargo_t=%.3f success_rows=%d skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d",
+            scenario.origin_name,
+            scenario.cargo_t,
             len(rows),
             skipped_missing_coordinates,
             skipped_missing_costs,
             skipped_missing_emissions,
         )
         raise HeatmapDataError(
-            "The latest run was found, but none of its rows have map coordinates. Run the heatmap again to refresh the dataset."
+            "Stored comparison rows were found, but none of them have plottable map values. Use rerun to refresh the comparison table."
         )
 
     dataset = HeatmapDataset(
-        run=run_info,
+        scenario=scenario,
+        run=status,
         points=points,
         max_abs_cost_delta=_max_abs([point.cost_delta_r for point in points]),
         max_abs_emissions_delta=_max_abs([point.emissions_delta_kg for point in points]),
     )
     _log.info(
-        "Loaded heatmap dataset: run_id=%s raw_rows=%d plotted_rows=%d skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d destination_set=%s",
-        run_info.run_id,
-        len(rows),
+        "Loaded heatmap dataset origin=%s cargo_t=%.3f plotted_rows=%d success_rows=%d missing=%d",
+        scenario.origin_name,
+        scenario.cargo_t,
         len(points),
-        skipped_missing_coordinates,
-        skipped_missing_costs,
-        skipped_missing_emissions,
-        run_info.destination_set_id,
+        len(rows),
+        status.missing_count,
     )
     return dataset
 
 
+def load_latest_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
+    return load_current_dataset(scenario)
 
-def rerun_heatmap(
+
+def run_heatmap(
     scenario: HeatmapScenario,
     *,
-    overwrite_road: bool = False,
+    rerun: bool,
     progress_callback: Optional[Any] = None,
 ) -> HeatmapDataset:
     _require_postgres()
-    destination_path = HEATMAP_DESTINATIONS_PATH.resolve()
-    destinations = load_destinations(destination_path)
-    if not destinations:
-        raise HeatmapDataError(f"Heatmap destinations file is empty: {destination_path}")
+    all_destinations = list(_heatmap_destinations())
+    if not all_destinations:
+        raise HeatmapDataError(f"Heatmap destinations file is empty: {HEATMAP_DESTINATIONS_PATH.resolve()}")
 
-    defaults = _hidden_defaults()
+    if rerun:
+        destinations_to_process = all_destinations
+        mode_label = "rerun"
+    else:
+        destinations_to_process = pending_destinations(scenario)
+        mode_label = "missing-only run"
+
+    if not destinations_to_process:
+        _log.info(
+            "Heatmap %s skipped because no destinations need processing origin=%s cargo_t=%.3f",
+            mode_label,
+            scenario.origin_name,
+            scenario.cargo_t,
+        )
+        dataset = load_current_dataset(scenario)
+        if dataset is None:
+            raise HeatmapDataError(
+                f"No stored heatmap rows were found for {HEATMAP_DESTINATION_LABEL}. Use rerun to populate the comparison table."
+            )
+        return dataset
+
     _log.info(
-        "Starting heatmap rerun: origin=%s cargo_t=%.3f destination_set=%s destinations=%d",
+        "Starting heatmap %s origin=%s cargo_t=%.3f destination_set=%s destinations=%d overwrite_road=%s",
+        mode_label,
         scenario.origin_name,
         scenario.cargo_t,
         HEATMAP_DESTINATION_SET_ID,
-        len(destinations),
+        len(destinations_to_process),
+        False,
     )
     run_bulk_evaluation(
         origin=scenario.origin_name,
-        dest_list=destinations,
+        dest_list=destinations_to_process,
         cargo_t=float(scenario.cargo_t),
-        truck_key=str(defaults["truck_key"]),
-        profile=str(defaults["profile"]),
-        overwrite_road=bool(overwrite_road),
-        vessel_class=str(defaults["vessel_class"]),
-        include_hoteling=bool(defaults["include_hoteling"]),
-        hoteling_hours_per_call=float(defaults["hoteling_hours_per_call"]),
-        port_calls=int(defaults["port_calls"]),
-        include_port_ops=bool(defaults["include_port_ops"]),
-        port_moves_per_call=defaults["port_moves_per_call"],
-        cargo_teu=defaults["cargo_teu"],
-        t_per_teu_default=float(defaults["t_per_teu_default"]),
-        allocation_mode=defaults["allocation_mode"],
-        allocation_load_factor=float(defaults["allocation_load_factor"]),
-        full_call_mode=bool(defaults["full_call_mode"]),
-        port_ops_scenario=str(defaults["port_ops_scenario"]),
+        truck_key=str(scenario.truck_key),
+        profile=str(scenario.ors_profile),
+        overwrite_road=False,
+        vessel_class=str(scenario.vessel_class),
+        include_hoteling=bool(scenario.include_hoteling),
+        hoteling_hours_per_call=float(scenario.hoteling_hours_per_call),
+        port_calls=int(scenario.port_calls),
+        include_port_ops=bool(scenario.include_port_ops),
+        port_moves_per_call=scenario.port_moves_per_call,
+        cargo_teu=scenario.cargo_teu,
+        t_per_teu_default=float(scenario.t_per_teu_default),
+        allocation_mode=scenario.allocation_mode,
+        allocation_load_factor=float(scenario.allocation_load_factor),
+        full_call_mode=bool(scenario.full_call_mode),
+        port_ops_scenario=str(scenario.port_ops_scenario),
         destination_set_id=HEATMAP_DESTINATION_SET_ID,
         progress_callback=progress_callback,
     )
-    dataset = load_latest_dataset(scenario)
+    dataset = load_current_dataset(scenario)
     if dataset is None:
         raise HeatmapDataError(
-            f"The rerun finished but no completed batch was found for {HEATMAP_DESTINATION_LABEL}."
+            f"The heatmap {mode_label} finished but no comparison rows were found for {HEATMAP_DESTINATION_LABEL}."
         )
     _log.info(
-        "Heatmap rerun loaded dataset run_id=%s points=%d",
-        dataset.run.run_id,
+        "Heatmap %s loaded dataset origin=%s cargo_t=%.3f points=%d",
+        mode_label,
+        scenario.origin_name,
+        scenario.cargo_t,
         len(dataset.points),
     )
     return dataset
 
 
+def rerun_heatmap(
+    scenario: HeatmapScenario,
+    *,
+    progress_callback: Optional[Any] = None,
+) -> HeatmapDataset:
+    return run_heatmap(scenario, rerun=True, progress_callback=progress_callback)
+
 
 def describe_hidden_defaults() -> Dict[str, Any]:
-    return dict(_hidden_defaults())
-
+    return dict(DEFAULTS)
 
 
 def scenario_to_dict(scenario: HeatmapScenario) -> Dict[str, Any]:
