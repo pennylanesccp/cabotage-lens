@@ -28,6 +28,7 @@ from app.heatmap.sidebar import render_run_actions, render_sidebar
 from app.heatmap.types import HeatmapDataset, HeatmapScenario
 from app.main.sidebar.filters import location_is_loading
 from app.main.styles import inject_css
+from app.main.utils.constants import DEFAULT_ORIGIN
 from app.main.utils.state import attach_streamlit_logging, init_state
 
 _log = get_logger(__name__)
@@ -35,7 +36,7 @@ _HEATMAP_ORIGIN_FIELD = "heatmap_origin"
 
 
 def _init_page_state() -> None:
-    st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, str(DEFAULTS["origin"]))
+    st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, str(DEFAULT_ORIGIN))
     st.session_state.setdefault("heatmap_cargo", 30.0)
     st.session_state.setdefault("heatmap_metric", HEATMAP_DEFAULT_METRIC)
     st.session_state.setdefault("heatmap_dataset", None)
