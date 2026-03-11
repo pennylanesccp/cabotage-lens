@@ -7,17 +7,20 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$AppPath = Join-Path $RepoRoot 'app\app_streamlit.py'
+$AppPath = Join-Path $RepoRoot 'app\EcoFreight_Brazil.py'
+$LegacyNamedAppPath = Join-Path $RepoRoot 'app\app_streamlit.py'
 $FallbackAppPath = Join-Path $RepoRoot 'app\main\page.py'
 $LegacyRootAppPath = Join-Path $RepoRoot 'streamlit_app.py'
 
 if (-not (Test-Path $AppPath)) {
-    if (Test-Path $FallbackAppPath) {
+    if (Test-Path $LegacyNamedAppPath) {
+        $AppPath = $LegacyNamedAppPath
+    } elseif (Test-Path $FallbackAppPath) {
         $AppPath = $FallbackAppPath
     } elseif (Test-Path $LegacyRootAppPath) {
         $AppPath = $LegacyRootAppPath
     } else {
-        throw "Streamlit app not found. Expected '$AppPath' (or '$FallbackAppPath' / '$LegacyRootAppPath')."
+        throw "Streamlit app not found. Expected '$AppPath' (or '$LegacyNamedAppPath' / '$FallbackAppPath' / '$LegacyRootAppPath')."
     }
 }
 

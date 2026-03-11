@@ -22,7 +22,7 @@ CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatica
 
 Prefer `SUPABASE_DB_URL`, especially on IPv4-only networks. Supabase's direct `db.<project-ref>.supabase.co` hostname can resolve only to IPv6 in some environments. If you do not want to use a single DSN secret, the runtime also accepts the component-based `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_NAME`, `SUPABASE_DB_USER`, `SUPABASE_DB_PASSWORD`, and `SUPABASE_DB_SSLMODE` secrets.
 
-SQLite is no longer part of the shipped app and CLI pipeline. The only remaining SQLite usage is in one-off maintenance tools such as migration and cleanup scripts.
+SQLite is no longer part of the shipped app and CLI pipeline. The only remaining SQLite usage is in one-off maintenance tools under `legacy/sqlite/`.
 
 Maintenance-only example:
 
@@ -51,13 +51,13 @@ The application also creates missing tables on first use, but applying the SQL m
 Inspect the source SQLite schema first:
 
 ```powershell
-.\venv\Scripts\python.exe .\scripts\migrate_sqlite_to_supabase.py --dry-run --log-level INFO
+.\venv\Scripts\python.exe .\legacy\sqlite\migrate_sqlite_to_supabase.py --dry-run --log-level INFO
 ```
 
 Run the migration:
 
 ```powershell
-.\venv\Scripts\python.exe .\scripts\migrate_sqlite_to_supabase.py --log-level INFO
+.\venv\Scripts\python.exe .\legacy\sqlite\migrate_sqlite_to_supabase.py --log-level INFO
 ```
 
 Optional flags:

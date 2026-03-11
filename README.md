@@ -63,10 +63,10 @@ This section is the navigation index for all human-readable documentation and hi
 
 * `app/`  
   * User-facing Streamlit entrypoint and UI package.  
-  * Contains `app/app_streamlit.py` plus the modular page implementation under `app/main/`.
+  * Contains `app/EcoFreight_Brazil.py` plus the modular page implementation under `app/main/`.
 
 * `scripts/`  
-  * Lower-level maintenance / utility scripts (e.g. bulk route generation, data refreshers).  
+  * Supported CLI entrypoints and developer utilities (e.g. bulk route generation, data refreshers).  
   * Intended for power users and development workflows, not end-users.
 
 * `modules/`  
@@ -353,11 +353,11 @@ The project is structured as a library-first Python repository with a small numb
   * Provide executable examples of expected behavior and database interactions.
   * Help ensure numerical stability when factors or code are updated.
 
-* `trash/`
-  Archived or deprecated code and experiments:
+* `legacy/`
+  Archived or deprecated code and one-off maintenance utilities:
 
-  * Kept separate from the main library to avoid confusion.
-  * Useful as historical reference when revisiting old design decisions.
+  * Keeps historical SQLite migration and cleanup helpers out of the shipped runtime surface.
+  * Useful as reference when revisiting older persistence workflows.
 
 * `.gitignore`
   Git ignore rules:
@@ -940,13 +940,13 @@ From the repository root:
 ```bash
 python -m venv venv
 pip install -r requirements.txt
-streamlit run app/app_streamlit.py
+streamlit run app/EcoFreight_Brazil.py
 ```
 
 Minimal smoke check (non-interactive):
 
 ```bash
-python -m py_compile app/app_streamlit.py
+python -m py_compile app/EcoFreight_Brazil.py
 ```
 
 ### 5. Configure Streamlit Secrets
@@ -999,7 +999,7 @@ This setup ensures a clean separation between project dependencies and your glob
 
 ## Running the Main App
 
-The main user-facing interface lives under `app/`. The supported entrypoint is `app/app_streamlit.py`, which delegates to the modular UI code in `app/main/`.
+The main user-facing interface lives under `app/`. The supported entrypoint is `app/EcoFreight_Brazil.py`, which delegates to the modular UI code in `app/main/`.
 
 ### General Invocation Pattern
 
@@ -1014,13 +1014,13 @@ From the project root (`carbon-footprint/`), after activating your virtualenv:
 * Or run Streamlit directly:
 
   ```bash
-  streamlit run app/app_streamlit.py
+  streamlit run app/EcoFreight_Brazil.py
   ```
 
 * Direct Python execution is also supported:
 
   ```bash
-  python app/app_streamlit.py
+  python app/EcoFreight_Brazil.py
   ```
 
 ### App Responsibilities
@@ -1039,7 +1039,7 @@ The app layer is responsible for:
 ### Typical Workflow
 
 1. Ensure the routing cache and input tables in `data/` are correctly populated (see the **Command-Line Scripts** section for precomputation utilities).
-2. Launch the app with `.\run_streamlit.ps1` or `streamlit run app/app_streamlit.py`.
+2. Launch the app with `.\run_streamlit.ps1` or `streamlit run app/EcoFreight_Brazil.py`.
 3. Provide origin, destiny and cargo inputs in the UI.
 4. Inspect the rendered results, the updated SQLite data under `data/`, and the logs under `logs/`.
 
@@ -2602,7 +2602,7 @@ This codebase is under active development as part of the graduation project. The
 
 ### Codebase & Architecture
 
-* Some **legacy modules and scripts** still exist in a more monolithic style and are parked under `trash/` or older folders. They are kept only as historical reference and are not guaranteed to work with the latest APIs.
+* Some **legacy modules and scripts** still exist in a more monolithic style and are parked under `legacy/` or older folders. They are kept only as historical reference and are not guaranteed to work with the latest APIs.
 * Not all modules have been fully migrated to:
 
   * Centralized configuration helpers.
