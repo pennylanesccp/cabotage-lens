@@ -9,12 +9,18 @@ from app.main.map.routing.geometry_utils import (
     segment_perpendicular_unit,
 )
 from app.main.map.routing.marine_leg_interpolation import interpolate_leg_intermediate_points
-from app.main.map.routing.marine_point_correction import correct_point_to_water
+from app.main.map.routing.marine_point_correction import PointCorrectionResult, correct_point_to_water_result
 from app.main.map.routing.water_validation import build_leg_reference_path, is_water_point
+from modules.infra.log_manager import get_logger
 
-COASTAL_TOLERANCE_KM = 2.5
+_log = get_logger(__name__)
+
+# Keep this strict: the water validator uses a reference maritime corridor, so
+# a broad tolerance lets inland points slip through as "water" without any fix.
+COASTAL_WATER_HIT_TOLERANCE_KM = 0.15
 COASTAL_STEP_KM = 0.1
 COASTAL_MAX_SEARCH_KM = 20.0
+COASTAL_MAX_ITERATIONS = 200
 COASTAL_EXTRA_OFFSHORE_MARGIN_KM = 0.15
 COASTAL_SHOULDER_BORROW_KM = 0.4
 
@@ -45,18 +51,20 @@ def build_coastal_leg_points(
         dest_latlon=leg_end_latlon,
     )
     unit_east, unit_north = segment_perpendicular_unit(leg_start_latlon, leg_end_latlon)
-    raw_corrected_points = [
-        correct_point_to_water(
+    correction_results = [
+        correct_point_to_water_result(
             point_latlon=point_latlon,
             leg_start_latlon=leg_start_latlon,
             leg_end_latlon=leg_end_latlon,
             reference_path=reference_path,
-            tolerance_km=COASTAL_TOLERANCE_KM,
+            tolerance_km=COASTAL_WATER_HIT_TOLERANCE_KM,
             step_km=COASTAL_STEP_KM,
             max_search_km=COASTAL_MAX_SEARCH_KM,
+            max_iterations=COASTAL_MAX_ITERATIONS,
         )
         for point_latlon in base_points
     ]
+    raw_corrected_points = [result.corrected_point_latlon for result in correction_results]
     raw_offsets_km = [
         _signed_lateral_offset_km(
             base_point,
@@ -81,7 +89,7 @@ def build_coastal_leg_points(
         unit_north=unit_north,
         reference_path=reference_path,
     )
-    return [
+    final_points = [
         _point_at_offset(
             base_point,
             offset_km=offset_km,
@@ -90,6 +98,13 @@ def build_coastal_leg_points(
         )
         for base_point, offset_km in zip(base_points, final_offsets_km)
     ]
+    _log_coastal_leg_summary(
+        origin_port_name=origin_port_name,
+        dest_port_name=dest_port_name,
+        correction_results=correction_results,
+        final_offsets_km=final_offsets_km,
+    )
+    return final_points
 
 
 def _signed_lateral_offset_km(
@@ -337,7 +352,7 @@ def _is_valid_offset(
         unit_east=unit_east,
         unit_north=unit_north,
     )
-    return is_water_point(candidate_point, reference_path, tolerance_km=COASTAL_TOLERANCE_KM)
+    return is_water_point(candidate_point, reference_path, tolerance_km=COASTAL_WATER_HIT_TOLERANCE_KM)
 
 
 def _point_at_offset(
@@ -381,3 +396,44 @@ def _offset_sign(value: float) -> int:
     if value < -EPS:
         return -1
     return 0
+
+
+def _log_coastal_leg_summary(
+    *,
+    origin_port_name: str,
+    dest_port_name: str,
+    correction_results: Sequence[PointCorrectionResult],
+    final_offsets_km: Sequence[float],
+) -> None:
+    if not correction_results:
+        return
+
+    moved_points = 0
+    unresolved_points = 0
+    max_correction_distance_km = 0.0
+    max_abs_final_offset_km = 0.0
+
+    for result in correction_results:
+        correction_distance_km = float(result.correction_distance_km or 0.0)
+        if correction_distance_km > EPS:
+            moved_points += 1
+        if not result.reached_water:
+            unresolved_points += 1
+        max_correction_distance_km = max(max_correction_distance_km, correction_distance_km)
+
+    if final_offsets_km:
+        max_abs_final_offset_km = max(abs(float(offset_km)) for offset_km in final_offsets_km)
+
+    _log.debug(
+        (
+            "Coastal maritime leg summary %s -> %s base_points=%d moved=%d unresolved=%d "
+            "max_correction_km=%.3f max_final_offset_km=%.3f"
+        ),
+        origin_port_name,
+        dest_port_name,
+        len(correction_results),
+        moved_points,
+        unresolved_points,
+        max_correction_distance_km,
+        max_abs_final_offset_km,
+    )
