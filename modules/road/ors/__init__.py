@@ -8,7 +8,7 @@ OpenRouteService Client Package.
 Exports the main client and configuration objects.
 """
 
-from modules.road.ors.structures import ORSConfig, ORSError, RateLimited, NoRoute
+from modules.road.ors.structures import ORSConfig, ORSError, RateLimited, NoRoute, GeocodeNotFound
 from modules.road.ors.api import ORSClient
 
 __all__ = [
@@ -16,5 +16,6 @@ __all__ = [
     "ORSConfig",
     "ORSError",
     "RateLimited",
-    "NoRoute"
+    "NoRoute",
+    "GeocodeNotFound",
 ]

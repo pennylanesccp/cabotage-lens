@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from modules.core.secrets import get_secret, load_local_secrets
 
@@ -33,6 +34,14 @@ class StreamlitSecretsTests(unittest.TestCase):
             value = get_secret("CARBON_WRITE_LOG_FILE", True, path=secrets_path, include_runtime=False)
 
         self.assertFalse(value)
+
+    def test_get_secret_falls_back_to_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir, patch.dict("os.environ", {"LOCATIONIQ_PAT": "env-token"}, clear=False):
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+
+            value = get_secret("LOCATIONIQ_PAT", "fallback", path=secrets_path, include_runtime=False)
+
+        self.assertEqual(value, "env-token")
 
 
 if __name__ == "__main__":

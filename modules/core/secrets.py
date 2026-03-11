@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,10 @@ def _normalize_secret_value(value: Any) -> Any:
     return value
 
 
+def _environment_secret_value(key: str) -> Any:
+    return os.environ.get(str(key).strip(), _MISSING)
+
+
 def get_secret(
     key: str,
     default: Any = None,
@@ -69,7 +74,7 @@ def get_secret(
     path: Path | None = None,
     include_runtime: bool = True,
 ) -> Any:
-    """Return a Streamlit secret from runtime state or local secrets.toml."""
+    """Return a secret from Streamlit runtime, local secrets.toml, or the environment."""
     if include_runtime:
         runtime_value = _normalize_secret_value(_runtime_secret_value(key))
         if runtime_value is not _MISSING:
@@ -78,5 +83,9 @@ def get_secret(
     local_value = _normalize_secret_value(load_local_secrets(path).get(key, _MISSING))
     if local_value is not _MISSING:
         return local_value
+
+    env_value = _normalize_secret_value(_environment_secret_value(key))
+    if env_value is not _MISSING:
+        return env_value
 
     return default

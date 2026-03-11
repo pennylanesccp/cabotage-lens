@@ -8,11 +8,10 @@ import streamlit as st
 from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_key, ascii_place_text
-from modules.core.secrets import get_secret
 from modules.infra.database_manager import db_session, find_place_point, list_origin_names, list_place_names
 from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import get_logger
-from modules.road.router import ORSClient, ORSConfig
+from modules.road.router import ORSClient
 
 from app.main.sidebar.styles import apply_sidebar_styles
 from app.main.utils.formatters import clean_place_label
@@ -103,11 +102,10 @@ def _resolve_custom_location_label(value: str) -> tuple[str | None, str | None]:
     if cached_label is not None:
         return cached_label, None
 
-    api_key = str(get_secret("ORS_API_KEY", "")).strip()
-    if not api_key:
-        return None, "ORS_API_KEY is not configured in Streamlit secrets."
+    ors = ORSClient()
+    if not ors.has_geocoding_provider():
+        return None, "No geocoding provider is configured. Set ORS_API_KEY or LOCATIONIQ_PAT."
 
-    ors = ORSClient(ORSConfig(api_key=api_key))
     point = resolve_point_null_safe(query, ors, _log)
     if not point:
         return None, "Address resolution failed."

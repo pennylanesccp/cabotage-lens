@@ -18,7 +18,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
 # Path Bootstrap (for CLI usage)
 if __name__ == "__main__":
@@ -149,13 +149,14 @@ def get_or_create_leg(
                         cache_lookup = "coords"
                 if row and row.get("distance_km") is not None:
                     _log.info(
-                        "Road cache hit: %s -> %s lookup=%s requested_profile=%s used_profile=%s distance_km=%.3f",
+                        "Road cache hit: %s -> %s lookup=%s requested_profile=%s used_profile=%s distance_km=%.3f provider=%s",
                         origin_label,
                         destiny_label,
                         cache_lookup,
                         requested_profile,
                         row.get("profile_used") or requested_profile,
                         float(row["distance_km"]),
+                        row.get("source") or "ors",
                     )
                     return {
                         "origin_name": row["origin"],
@@ -166,6 +167,7 @@ def get_or_create_leg(
                         "profile_used": row.get("profile_used") or requested_profile,
                         "cached": True,
                         "source": "cache",
+                        "provider": row.get("source") or "ors",
                     }
     except Exception as exc:
         _log.warning(
@@ -185,9 +187,9 @@ def get_or_create_leg(
     )
     
     try:
-        prof_used, dist_km = _calculate_route(ors, origin, destiny, requested_profile, fallback_to_car)
+        prof_used, dist_km, route_source = _calculate_route(ors, origin, destiny, requested_profile, fallback_to_car)
     except RateLimited:
-        _log.critical("ORS Rate Limit Reached during leg calculation.")
+        _log.critical("Road provider rate limit reached during leg calculation.")
         raise
 
     # Determine is_hgv flag
@@ -209,16 +211,18 @@ def get_or_create_leg(
                     distance_km=dist_km,
                     profile_requested=requested_profile,
                     profile_used=prof_used,
+                    source=route_source or "ors",
                     is_hgv=is_hgv,
                     table_name=table_name,
                 )
             _log.info(
-                "Road distance cached: %s -> %s requested_profile=%s used_profile=%s distance_km=%.3f",
+                "Road distance cached: %s -> %s requested_profile=%s used_profile=%s distance_km=%.3f provider=%s",
                 origin_label,
                 destiny_label,
                 requested_profile,
                 prof_used,
                 float(dist_km),
+                route_source or "ors",
             )
         except Exception as exc:
             _log.error(
@@ -244,7 +248,8 @@ def get_or_create_leg(
         "profile_requested": requested_profile,
         "profile_used": prof_used,
         "cached": False,
-        "source": "api",
+        "source": route_source or "ors",
+        "provider": route_source or "ors",
     }
 
 
@@ -258,8 +263,8 @@ def _calculate_route(
     , destiny: Any
     , primary_profile: str
     , fallback: bool
-) -> Tuple[Optional[str], Optional[float]]:
-    """Try primary profile, fallback if needed. Returns (profile, km)."""
+) -> Tuple[Optional[str], Optional[float], Optional[str]]:
+    """Try primary profile, fallback if needed. Returns (profile, km, provider)."""
     profiles = [primary_profile]
     if fallback and primary_profile != "driving-car":
         profiles.append("driving-car")
@@ -271,16 +276,17 @@ def _calculate_route(
             res = ors.route_road(origin, destiny, profile=prof)
             m = res.get("distance_m")
             km = m / 1000.0 if m is not None else None
-            return prof, km
+            used_profile = str(res.get("profile_used") or prof).strip() or prof
+            route_source = str(res.get("source") or res.get("provider") or "ors").strip().lower() or "ors"
+            return used_profile, km, route_source
+        except RateLimited:
+            raise
         except (NoRoute, Exception) as e:
             _log.debug(f"Route failed for {prof}: {e}")
             last_exc = e
-            # If quota exceeded, bubble up immediately
-            if "quota" in str(e).lower(): 
-                raise RateLimited(str(e)) from e
 
     _log.warning(f"All profiles failed for leg. Last error: {last_exc}")
-    return (profiles[-1] if profiles else None), None
+    return (profiles[-1] if profiles else None), None, None
 
 
 # ────────────────────────────────────────────────────────────────────────────────

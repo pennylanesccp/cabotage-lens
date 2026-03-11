@@ -797,16 +797,18 @@ From lowest to highest precedence:
 
 ### Required Streamlit Secrets
 
-At minimum, you must provide the **OpenRouteService (ORS) API key** in Streamlit secrets, used by the road routing client:
+For best results, provide the **OpenRouteService (ORS) API key** in Streamlit secrets, used by the primary road routing client:
 
 * **Routing API key**  
   * A single Streamlit secret holds your ORS key: `ORS_API_KEY`.
-  * If this secret is missing, any code path that touches the routing API will fail fast with a clear error message.
+  * `LOCATIONIQ_PAT` is optional and enables automatic fallback geocoding/directions when ORS times out, is rate-limited, or returns no usable result.
+  * Environment variables are also accepted as a fallback when a secret is not set.
 
 Example (`.streamlit/secrets.toml`):
 
 ```toml
 ORS_API_KEY = "your-real-openrouteservice-key"
+LOCATIONIQ_PAT = "your-locationiq-private-token"
 ```
 
 ### Optional Streamlit Secrets
@@ -842,7 +844,7 @@ Exact secret names and defaults are documented in the config and client modules.
 
 * **Do not commit secrets**
 
-  * API keys and other secrets are supplied via Streamlit secrets only.
+  * API keys and other secrets are normally supplied via Streamlit secrets, with environment variables accepted as a local fallback.
   * `.gitignore` should prevent local secret files (for example, `.streamlit/secrets.toml`) from being committed.
 
 * **Local setup**

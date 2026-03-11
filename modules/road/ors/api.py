@@ -1,88 +1,62 @@
-﻿# modules/road/ors/api.py
+# modules/road/ors/api.py
 # -*- coding: utf-8 -*-
 
 """
-ORS Client API.
-===============
+Road provider facade.
+=====================
 
-High-level interface for OpenRouteService.
-Provides semantic methods for:
-- Geocoding (Forward/Reverse/Structured)
-- Routing (Directions)
-- Matrix (Distance Tables) - *Placeholder for future implementation*
+This module keeps the public `ORSClient` API stable for the rest of the
+application while centralizing provider failover:
+
+- primary provider: OpenRouteService
+- fallback provider: LocationIQ
+
+The rest of the app continues to call `ORSClient.geocode_*()` and
+`ORSClient.route_road()` and receives normalized results regardless of which
+provider actually answered.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple, TypeVar, Union
 
-# Path Bootstrap for direct execution
 if __name__ == "__main__":
     import sys
     from pathlib import Path
+
     ROOT = Path(__file__).resolve().parents[3]
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
 
 from modules.infra.log_manager import get_logger
-from modules.road.ors.structures import ORSConfig, GeocodeNotFound, NoRoute
+from modules.road.locationiq import LocationIQClient
 from modules.road.ors.http import ORSHttpClient
+from modules.road.ors.structures import (
+    GeocodeNotFound,
+    NoRoute,
+    ORSConfig,
+    ORSError,
+    RateLimited,
+)
+from modules.road.provider_base import BaseRoadProvider
 
 _log = get_logger(__name__)
+_T = TypeVar("_T")
 
 
-class ORSClient:
-    """
-    The main entry point for the application to use OpenRouteService.
-    Wraps the generic HTTP client with domain-specific logic.
-    """
+class _ProviderProtocol(Protocol):
+    name: str
 
-    def __init__(self, config: Optional[ORSConfig] = None) -> None:
-        self.cfg = config or ORSConfig()
-        self._http = ORSHttpClient(self.cfg)
-
-    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Geocoding Methods
-    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    def is_enabled(self) -> bool:
+        ...
 
     def geocode_text(
-        self, 
-        text: str, 
-        size: int = 1, 
-        country: Optional[str] = None
+        self,
+        text: str,
+        size: int = 1,
+        country: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Perform free-text geocoding (Pelias /geocode/search).
-
-        Parameters
-        ----------
-        text : str
-            The address or place name to search for.
-        size : int
-            Max number of results to return.
-        country : str, optional
-            ISO alpha-2 country code (e.g., 'BR') to bias results.
-
-        Returns
-        -------
-        List[Dict]
-            A list of GeoJSON feature dictionaries.
-        """
-        params = {
-            "text": text,
-            "size": size,
-            "boundary.country": country or self.cfg.default_country
-        }
-        
-        _log.debug(f"Geocoding text: '{text}' (size={size})")
-        data = self._http.request("GET", "/geocode/search", params=params)
-        features = data.get("features", [])
-        
-        if not features:
-            _log.warning(f"Geocode returned 0 results for: '{text}'")
-            raise GeocodeNotFound(f"No results found for '{text}'")
-            
-        return features # type: ignore
+        ...
 
     def geocode_structured(
         self,
@@ -91,179 +65,377 @@ class ORSClient:
         region: Optional[str] = None,
         postalcode: Optional[str] = None,
         country: Optional[str] = None,
-        size: int = 1
+        size: int = 1,
     ) -> List[Dict[str, Any]]:
-        """
-        Perform structured geocoding. Better for specific address components.
-        """
+        ...
+
+    def resolve_lat_lon(self, query: str) -> Tuple[float, float, str]:
+        ...
+
+    def route_road(
+        self,
+        origin: Union[str, Dict[str, Any]],
+        destiny: Union[str, Dict[str, Any]],
+        profile: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        ...
+
+
+class OpenRouteServiceProvider(BaseRoadProvider):
+    """Primary ORS-backed provider implementation."""
+
+    name = "ors"
+
+    def __init__(self, config: Optional[ORSConfig] = None) -> None:
+        self.cfg = config or ORSConfig()
+        self._http = ORSHttpClient(self.cfg)
+
+    def is_enabled(self) -> bool:
+        return bool(self.cfg.api_key)
+
+    def geocode_text(
+        self,
+        text: str,
+        size: int = 1,
+        country: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        params = {
+            "text": text,
+            "size": size,
+            "boundary.country": country or self.cfg.default_country,
+        }
+        data = self._http.request("GET", "/geocode/search", params=params)
+        return self._extract_features(data, query=text)
+
+    def geocode_structured(
+        self,
+        address: Optional[str] = None,
+        locality: Optional[str] = None,
+        region: Optional[str] = None,
+        postalcode: Optional[str] = None,
+        country: Optional[str] = None,
+        size: int = 1,
+    ) -> List[Dict[str, Any]]:
         params = {
             "address": address,
             "locality": locality,
             "region": region,
             "postalcode": postalcode,
             "country": country or self.cfg.default_country,
-            "size": size
+            "size": size,
         }
-        # Clean None values
-        params = {k: v for k, v in params.items() if v is not None}
-        
-        _log.debug(f"Geocoding structured: {params}")
+        params = {key: value for key, value in params.items() if value is not None}
         data = self._http.request("GET", "/geocode/search/structured", params=params)
-        features = data.get("features", [])
-        
-        if not features:
-            raise GeocodeNotFound(f"No structured results for {params}")
-            
-        return features # type: ignore
-
-    def resolve_lat_lon(self, query: str) -> Tuple[float, float, str]:
-        """
-        Convenience helper: Get (lat, lon, label) for a single query string.
-        Returns the top match.
-        """
-        features = self.geocode_text(query, size=1)
-        top = features[0]
-        
-        props = top.get("properties", {})
-        geom = top.get("geometry", {})
-        coords = geom.get("coordinates", [0.0, 0.0]) # [lon, lat]
-        
-        # Return lat, lon, label
-        return coords[1], coords[0], props.get("label", query)
-
-    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Routing Methods
-    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        return self._extract_features(data, query=str(params))
 
     def route_road(
         self,
         origin: Union[str, Dict[str, Any]],
         destiny: Union[str, Dict[str, Any]],
-        profile: Optional[str] = None
+        profile: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Get directions between two points (Origin -> Destiny).
-        
-        Inputs can be:
-        - Strings: "Sao Paulo" (will be geocoded)
-        - Dicts: {"lat": -23.5, "lon": -46.6} (used directly)
-        
-        Returns
-        -------
-        Dict containing:
-            - distance_m (float)
-            - duration_s (float)
-            - geometry (encoded polyline, if requested)
-        """
         prof = profile or self.cfg.default_profile
-        
-        # 1. Resolve Inputs to Coordinates [lon, lat]
         c_start = self._resolve_input(origin)
         c_end = self._resolve_input(destiny)
-        
-        _log.info(f"Routing ({prof}): {c_start} -> {c_end}")
-        
-        # 2. Build Payload
+
         payload = {
-            "coordinates": [c_start, c_end], # ORS expects [[lon, lat], [lon, lat]]
+            "coordinates": [c_start, c_end],
             "units": "m",
-            "preference": "fastest"
+            "preference": "fastest",
         }
-        
-        # 3. Execute
+
         try:
             data = self._http.request("POST", f"/v2/directions/{prof}", json_body=payload)
-        except Exception as e:
-            # Catch generic HTTP errors and check for 404/400 which mean "No Route"
-            err_msg = str(e).lower()
-            if "404" in err_msg or "400" in err_msg:
-                _log.warning(f"ORS failed to find route: {err_msg}")
-                raise NoRoute(f"No route found between {c_start} and {c_end}") from e
+        except RateLimited:
+            raise
+        except Exception as exc:
+            err_msg = str(exc).lower()
+            if "404" in err_msg or "400" in err_msg or "no route" in err_msg:
+                raise NoRoute(f"No route found between {c_start} and {c_end}") from exc
             raise
 
-        # 4. Parse Response
+        if not isinstance(data, dict):
+            raise ORSError("ORS directions returned an invalid payload.")
+
         routes = data.get("routes", [])
-        if not routes:
-            raise NoRoute("API returned success but 'routes' list is empty.")
-            
-        summary = routes[0].get("summary", {})
-        
+        if not isinstance(routes, list) or not routes:
+            raise NoRoute("ORS returned success but the routes list was empty.")
+
+        summary = routes[0].get("summary", {}) if isinstance(routes[0], dict) else {}
+        distance_m = summary.get("distance")
+        duration_s = summary.get("duration")
+        if distance_m is None:
+            raise NoRoute("ORS route response did not contain a usable distance.")
+
         return {
-            "distance_m": summary.get("distance"),
-            "duration_s": summary.get("duration"),
+            "distance_m": float(distance_m),
+            "duration_s": (None if duration_s is None else float(duration_s)),
             "profile_used": prof,
-            # Pass back metadata if needed
+            "provider": self.name,
+            "source": self.name,
             "origin_coords": c_start,
-            "destiny_coords": c_end
+            "destiny_coords": c_end,
         }
 
-    def _resolve_input(self, point: Union[str, Dict[str, Any]]) -> List[float]:
-        """
-        Helper: Convert diverse inputs into [lon, lat] list.
-        """
-        # A) Dictionary with explicit coords (e.g., from Ports module)
-        if isinstance(point, dict):
-            # Support various keys: lat/lon, latitude/longitude
-            lat = point.get("lat") or point.get("latitude")
-            lon = point.get("lon") or point.get("longitude")
-            
-            if lat is not None and lon is not None:
-                return [float(lon), float(lat)]
-            
-            # If dict lacks coords, maybe it has a 'label' or 'input' to geocode?
-            query = point.get("label") or point.get("input")
-            if query:
-                _log.debug(f"Input dict missing coords, geocoding label: '{query}'")
-                lat_g, lon_g, _ = self.resolve_lat_lon(str(query))
-                return [lon_g, lat_g]
-        
-        # B) String Input -> Geocode it
-        if isinstance(point, str):
-            # Is it "lat,lon"?
-            if "," in point:
-                try:
-                    parts = point.split(",")
-                    # Try parsing as explicit coords first
-                    lat_f = float(parts[0].strip())
-                    lon_f = float(parts[1].strip())
-                    return [lon_f, lat_f]
-                except ValueError:
-                    pass # Not numbers, treat as address
-            
-            # Treat as address
-            lat_g, lon_g, _ = self.resolve_lat_lon(point)
-            return [lon_g, lat_g]
+    def _extract_features(self, payload: Any, *, query: str) -> List[Dict[str, Any]]:
+        if not isinstance(payload, dict):
+            raise ORSError(f"ORS geocode returned an invalid payload for '{query}'.")
 
-        raise ValueError(f"Could not resolve point input: {point}")
+        features = payload.get("features", [])
+        if not isinstance(features, list):
+            raise ORSError(f"ORS geocode returned a malformed feature list for '{query}'.")
+        if not features:
+            raise GeocodeNotFound(f"No results found for '{query}'")
+        normalized: list[Dict[str, Any]] = []
+        for feature in features:
+            if not isinstance(feature, dict):
+                continue
+            copied = dict(feature)
+            props = dict(copied.get("properties") or {})
+            props.setdefault("provider", self.name)
+            copied["properties"] = props
+            copied.setdefault("provider", self.name)
+            normalized.append(copied)
+        if not normalized:
+            raise GeocodeNotFound(f"No results found for '{query}'")
+        return normalized
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-# Smoke Test
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+class ORSClient:
+    """
+    Backward-compatible road client facade.
+
+    All existing call sites keep using `ORSClient`, but the implementation now
+    attempts ORS first and automatically falls back to LocationIQ when ORS
+    fails, is unavailable, or returns no usable result.
+    """
+
+    def __init__(
+        self,
+        config: Optional[ORSConfig] = None,
+        *,
+        primary_provider: Optional[_ProviderProtocol] = None,
+        fallback_provider: Optional[_ProviderProtocol] = None,
+    ) -> None:
+        self.cfg = config or ORSConfig()
+        self._primary = primary_provider or OpenRouteServiceProvider(self.cfg)
+        self._fallback = fallback_provider if fallback_provider is not None else LocationIQClient()
+
+    def has_geocoding_provider(self) -> bool:
+        return self._primary.is_enabled() or self._fallback.is_enabled()
+
+    def has_routing_provider(self) -> bool:
+        return self.has_geocoding_provider()
+
+    def available_providers(self) -> tuple[str, ...]:
+        names: list[str] = []
+        if self._primary.is_enabled():
+            names.append(self._primary.name)
+        if self._fallback.is_enabled():
+            names.append(self._fallback.name)
+        return tuple(names)
+
+    def geocode_text(
+        self,
+        text: str,
+        size: int = 1,
+        country: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        return self._call_with_fallback(
+            operation="geocode_text",
+            query=text,
+            primary_call=lambda: self._primary.geocode_text(text, size=size, country=country),
+            fallback_call=lambda: self._fallback.geocode_text(text, size=size, country=country),
+        )
+
+    def geocode_structured(
+        self,
+        address: Optional[str] = None,
+        locality: Optional[str] = None,
+        region: Optional[str] = None,
+        postalcode: Optional[str] = None,
+        country: Optional[str] = None,
+        size: int = 1,
+    ) -> List[Dict[str, Any]]:
+        query_parts = [address, locality, region, postalcode, country]
+        query = ", ".join(str(part).strip() for part in query_parts if str(part or "").strip()) or "<structured>"
+        return self._call_with_fallback(
+            operation="geocode_structured",
+            query=query,
+            primary_call=lambda: self._primary.geocode_structured(
+                address=address,
+                locality=locality,
+                region=region,
+                postalcode=postalcode,
+                country=country,
+                size=size,
+            ),
+            fallback_call=lambda: self._fallback.geocode_structured(
+                address=address,
+                locality=locality,
+                region=region,
+                postalcode=postalcode,
+                country=country,
+                size=size,
+            ),
+        )
+
+    def resolve_lat_lon(self, query: str) -> Tuple[float, float, str]:
+        features = self.geocode_text(query, size=1)
+        top = features[0]
+        props = top.get("properties", {})
+        geom = top.get("geometry", {})
+        coords = geom.get("coordinates", [0.0, 0.0])
+        return float(coords[1]), float(coords[0]), str(props.get("label") or query)
+
+    def route_road(
+        self,
+        origin: Union[str, Dict[str, Any]],
+        destiny: Union[str, Dict[str, Any]],
+        profile: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        query = f"{origin!r} -> {destiny!r}"
+        return self._call_with_fallback(
+            operation="route_road",
+            query=query,
+            primary_call=lambda: self._primary.route_road(origin, destiny, profile=profile),
+            fallback_call=lambda: self._fallback.route_road(origin, destiny, profile=profile),
+        )
+
+    def _call_with_fallback(
+        self,
+        *,
+        operation: str,
+        query: str,
+        primary_call: Callable[[], _T],
+        fallback_call: Callable[[], _T],
+    ) -> _T:
+        primary_enabled = self._primary.is_enabled()
+        fallback_enabled = self._fallback.is_enabled()
+        if not primary_enabled and not fallback_enabled:
+            raise ORSError(
+                f"No provider is configured for {operation}. Set ORS_API_KEY or LOCATIONIQ_PAT."
+            )
+
+        primary_exc: Exception | None = None
+        fallback_exc: Exception | None = None
+
+        if primary_enabled:
+            try:
+                _log.info(
+                    "Provider attempt operation=%s provider=%s query=%s",
+                    operation,
+                    self._primary.name,
+                    query,
+                )
+                result = primary_call()
+                _log.info(
+                    "Provider success operation=%s provider=%s query=%s",
+                    operation,
+                    self._primary.name,
+                    query,
+                )
+                return result
+            except Exception as exc:
+                primary_exc = exc
+                _log.warning(
+                    "Provider fallback triggered operation=%s provider=%s query=%s reason=%s",
+                    operation,
+                    self._primary.name,
+                    query,
+                    self._format_exception(exc),
+                )
+        else:
+            primary_exc = ORSError("ORS_API_KEY is not configured.")
+            _log.warning(
+                "Primary provider unavailable operation=%s provider=%s query=%s reason=%s",
+                operation,
+                self._primary.name,
+                query,
+                self._format_exception(primary_exc),
+            )
+
+        if fallback_enabled:
+            try:
+                _log.info(
+                    "Provider attempt operation=%s provider=%s query=%s",
+                    operation,
+                    self._fallback.name,
+                    query,
+                )
+                result = fallback_call()
+                _log.info(
+                    "Provider success operation=%s provider=%s query=%s fallback_from=%s",
+                    operation,
+                    self._fallback.name,
+                    query,
+                    self._primary.name,
+                )
+                return result
+            except Exception as exc:
+                fallback_exc = exc
+                _log.error(
+                    "Provider fallback failed operation=%s provider=%s query=%s reason=%s",
+                    operation,
+                    self._fallback.name,
+                    query,
+                    self._format_exception(exc),
+                )
+        else:
+            _log.warning(
+                "Fallback provider unavailable operation=%s provider=%s query=%s reason=LOCATIONIQ_PAT is not configured",
+                operation,
+                self._fallback.name,
+                query,
+            )
+
+        if primary_exc and fallback_exc:
+            raise self._merge_failures(operation, primary_exc, fallback_exc)
+        if primary_exc:
+            raise primary_exc
+        raise ORSError(f"{operation} failed without a usable provider result.")
+
+    def _merge_failures(
+        self,
+        operation: str,
+        primary_exc: Exception,
+        fallback_exc: Exception,
+    ) -> Exception:
+        message = (
+            f"{operation} failed for ORS and LocationIQ: "
+            f"ors={self._format_exception(primary_exc)}; "
+            f"locationiq={self._format_exception(fallback_exc)}"
+        )
+        if isinstance(primary_exc, RateLimited) or isinstance(fallback_exc, RateLimited):
+            return RateLimited(message)
+        if isinstance(primary_exc, GeocodeNotFound) and isinstance(fallback_exc, GeocodeNotFound):
+            return GeocodeNotFound(message)
+        if isinstance(primary_exc, NoRoute) and isinstance(fallback_exc, NoRoute):
+            return NoRoute(message)
+        return ORSError(message)
+
+    def _format_exception(self, exc: Exception) -> str:
+        text = str(exc).strip()
+        return text or exc.__class__.__name__
+
+
 if __name__ == "__main__":
     from modules.infra.log_manager import init_logging
+
     init_logging(level="INFO")
 
-    print("--- ORS API Smoke Test ---")
+    print("--- Road Provider Smoke Test ---")
     try:
-        # Needs valid ORS_API_KEY in Streamlit secrets
-        ors = ORSClient()
-        
-        print("\n1. Testing Geocode (SP)...")
-        lat, lon, lbl = ors.resolve_lat_lon("SÃ£o Paulo, Brasil")
-        print(f"âœ… Found: {lbl} ({lat:.4f}, {lon:.4f})")
-        
-        print("\n2. Testing Routing (SP -> Santos)...")
-        # Use the explicit method with [lon, lat] logic inside
-        # SP (-23.55, -46.63), Santos (-23.96, -46.33)
+        client = ORSClient()
+        lat, lon, lbl = client.resolve_lat_lon("Sao Paulo, Brasil")
+        print(f"Found: {lbl} ({lat:.4f}, {lon:.4f})")
+
         sp_dict = {"lat": -23.55, "lon": -46.63}
         santos_dict = {"lat": -23.96, "lon": -46.33}
-        
-        res = ors.route_road(sp_dict, santos_dict)
-        dist_km = (res['distance_m'] or 0) / 1000.0
-        print(f"âœ… Route found: {dist_km:.2f} km")
-        
-    except Exception as e:
-        print(f"âš ï¸ Test skipped/failed (check API key): {e}")
-        
-    print("\n--- Done ---")
+        res = client.route_road(sp_dict, santos_dict)
+        dist_km = (res["distance_m"] or 0) / 1000.0
+        print(f"Route found: {dist_km:.2f} km via {res.get('source')}")
+    except Exception as exc:
+        print(f"Smoke test skipped/failed (check provider keys): {exc}")
+
+    print("--- Done ---")

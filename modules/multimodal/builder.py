@@ -78,7 +78,7 @@ class PathGeometry(TypedDict):
 
 
 @lru_cache(maxsize=4)
-def _cached_ors_client(api_key: str) -> ORSClient:
+def _cached_ors_client(api_key: str, locationiq_pat: str) -> ORSClient:
     return ORSClient(ORSConfig(api_key=api_key or None))
 
 
@@ -106,7 +106,10 @@ def load_routing_assets(
     p_json = _resolve_path(ports_json_path, _DEFAULT_PORTS_JSON)
     s_json = _resolve_path(sea_matrix_path, _DEFAULT_SEA_MATRIX_JSON)
 
-    ors = _cached_ors_client(str(get_secret("ORS_API_KEY", "")))
+    ors = _cached_ors_client(
+        str(get_secret("ORS_API_KEY", "")),
+        str(get_secret("LOCATIONIQ_PAT", "")),
+    )
     ports = _cached_ports(str(p_json))
     sea_matrix = _cached_sea_matrix(str(s_json))
     return ors, ports, sea_matrix, db_path

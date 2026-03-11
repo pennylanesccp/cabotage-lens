@@ -51,6 +51,34 @@ class SidebarFiltersTests(unittest.TestCase):
         self.assertIsNone(error)
         resolve_mock.assert_not_called()
 
+    def test_custom_location_resolution_uses_any_available_geocoder(self) -> None:
+        fake_client = type("FakeClient", (), {"has_geocoding_provider": lambda self: True})()
+        fake_point = type(
+            "FakePoint",
+            (),
+            {"label": "Avenida Professor Luciano Gualberto, Sao Paulo"},
+        )()
+
+        with patch(
+            "app.main.sidebar.filters.db_session",
+            return_value=contextlib.nullcontext(object()),
+        ), patch(
+            "app.main.sidebar.filters.find_place_point",
+            return_value=None,
+        ), patch(
+            "app.main.sidebar.filters.ORSClient",
+            return_value=fake_client,
+        ), patch(
+            "app.main.sidebar.filters.resolve_point_null_safe",
+            return_value=fake_point,
+        ):
+            from app.main.sidebar.filters import _resolve_custom_location_label
+
+            label, error = _resolve_custom_location_label("Avenida Professor Luciano Gualberto, Sao Paulo")
+
+        self.assertEqual(label, "Avenida Professor Luciano Gualberto, Sao Paulo")
+        self.assertIsNone(error)
+
 
 if __name__ == "__main__":
     unittest.main()

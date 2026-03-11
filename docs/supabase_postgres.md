@@ -16,9 +16,10 @@ Set these in `.streamlit/secrets.toml` for local runs or in Streamlit Community 
 CARBON_DB_BACKEND = "postgres"
 SUPABASE_DB_URL = "postgresql://postgres.your-project-ref:your-supabase-password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 ORS_API_KEY = "your-openrouteservice-key"
+LOCATIONIQ_PAT = "your-locationiq-private-token"
 ```
 
-CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatically. `.env` is no longer read.
+CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatically. Environment variables are also accepted as a fallback when a secret is not set.
 
 Prefer `SUPABASE_DB_URL`, especially on IPv4-only networks. Supabase's direct `db.<project-ref>.supabase.co` hostname can resolve only to IPv6 in some environments. If you do not want to use a single DSN secret, the runtime also accepts the component-based `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_NAME`, `SUPABASE_DB_USER`, `SUPABASE_DB_PASSWORD`, and `SUPABASE_DB_SSLMODE` secrets.
 
