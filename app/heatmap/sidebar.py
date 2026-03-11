@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import streamlit as st
 
@@ -39,6 +39,27 @@ def render_sidebar(
             )
         with st.expander("Advanced", expanded=False):
             _render_advanced(class_options=class_options, port_ops_scenarios=port_ops_scenarios)
+
+
+def render_run_actions(*, found_count: int, missing_count: int) -> Tuple[bool, bool]:
+    run_missing_label = "Run batch" if found_count <= 0 else "Run missing"
+    run_missing_disabled = found_count > 0 and missing_count <= 0
+
+    with st.sidebar:
+        st.markdown("##### Batch")
+        run_missing_clicked = st.button(
+            run_missing_label,
+            type="primary",
+            use_container_width=True,
+            disabled=run_missing_disabled,
+            key="heatmap_run_missing_button",
+        )
+        rerun_clicked = st.button(
+            "Rerun all",
+            use_container_width=True,
+            key="heatmap_rerun_all_button",
+        )
+    return run_missing_clicked, rerun_clicked
 
 
 def _render_origin_field(field_name: str) -> None:

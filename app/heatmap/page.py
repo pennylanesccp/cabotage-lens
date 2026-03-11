@@ -24,7 +24,7 @@ from app.heatmap.service import (
     rerun_heatmap,
     run_heatmap,
 )
-from app.heatmap.sidebar import render_sidebar
+from app.heatmap.sidebar import render_run_actions, render_sidebar
 from app.heatmap.types import HeatmapDataset, HeatmapScenario
 from app.main.sidebar.filters import location_is_loading
 from app.main.styles import inject_css
@@ -271,18 +271,10 @@ def render_page() -> None:
         "This page never overwrites the canonical routes cache. It only writes to the bulk comparison tables used by the heatmap."
     )
 
-    if status.found_count <= 0:
-        run_missing_label = "Run batch"
-    else:
-        run_missing_label = "Run missing"
-
-    button_cols = st.columns(2)
-    run_missing_clicked = button_cols[0].button(
-        run_missing_label,
-        type="primary",
-        disabled=(status.found_count > 0 and status.missing_count <= 0),
+    run_missing_clicked, rerun_clicked = render_run_actions(
+        found_count=status.found_count,
+        missing_count=status.missing_count,
     )
-    rerun_clicked = button_cols[1].button("Rerun all")
 
     if run_missing_clicked:
         _log.info(
@@ -347,4 +339,4 @@ def render_page() -> None:
         return
 
     if status.found_count > 0:
-        st.info("Stored comparison rows were found. Run missing, rerun all, or adjust the sidebar scenario.")
+        st.info("Stored comparison rows were found. Use the sidebar to run missing, rerun all, or adjust the scenario.")
