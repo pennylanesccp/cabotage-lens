@@ -114,6 +114,12 @@ _OPTIONAL_COLUMNS = (
     ("port_origin_name", "port_origin_name TEXT"),
     ("port_destiny_name", "port_destiny_name TEXT"),
     ("emissions_savings_pct", "emissions_savings_pct REAL"),
+    ("is_approximation", "is_approximation INTEGER NOT NULL DEFAULT 0"),
+    ("route_source", "route_source TEXT"),
+    ("approximation_reference_destiny", "approximation_reference_destiny TEXT"),
+    ("approximation_reference_distance_km", "approximation_reference_distance_km REAL"),
+    ("approximation_delta_straight_line_km", "approximation_delta_straight_line_km REAL"),
+    ("approximation_notes", "approximation_notes TEXT"),
 )
 
 
@@ -207,6 +213,12 @@ def upsert_result(
     road_direct_profile_used: Optional[str] = None,
     first_mile_profile_used: Optional[str] = None,
     last_mile_profile_used: Optional[str] = None,
+    is_approximation: bool = False,
+    route_source: Optional[str] = None,
+    approximation_reference_destiny: Optional[str] = None,
+    approximation_reference_distance_km: Optional[float] = None,
+    approximation_delta_straight_line_km: Optional[float] = None,
+    approximation_notes: Optional[str] = None,
     road_distance_km: Optional[float] = None,
     road_fuel_liters: Optional[float] = None,
     road_fuel_kg: Optional[float] = None,
@@ -290,6 +302,12 @@ def upsert_result(
         , road_direct_profile_used
         , first_mile_profile_used
         , last_mile_profile_used
+        , is_approximation
+        , route_source
+        , approximation_reference_destiny
+        , approximation_reference_distance_km
+        , approximation_delta_straight_line_km
+        , approximation_notes
         , road_distance_km
         , road_fuel_liters
         , road_fuel_kg
@@ -314,7 +332,7 @@ def upsert_result(
         , diesel_price_source
         , bunker_price_r_per_t
     ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
     ON CONFLICT(scenario_key) DO UPDATE SET
           run_id                    = excluded.run_id
@@ -357,6 +375,12 @@ def upsert_result(
         , road_direct_profile_used  = excluded.road_direct_profile_used
         , first_mile_profile_used   = excluded.first_mile_profile_used
         , last_mile_profile_used    = excluded.last_mile_profile_used
+        , is_approximation          = excluded.is_approximation
+        , route_source              = excluded.route_source
+        , approximation_reference_destiny = excluded.approximation_reference_destiny
+        , approximation_reference_distance_km = excluded.approximation_reference_distance_km
+        , approximation_delta_straight_line_km = excluded.approximation_delta_straight_line_km
+        , approximation_notes       = excluded.approximation_notes
         , road_distance_km          = excluded.road_distance_km
         , road_fuel_liters          = excluded.road_fuel_liters
         , road_fuel_kg              = excluded.road_fuel_kg
@@ -425,6 +449,12 @@ def upsert_result(
         road_direct_profile_used,
         first_mile_profile_used,
         last_mile_profile_used,
+        bool_to_int(is_approximation),
+        route_source,
+        approximation_reference_destiny,
+        to_float(approximation_reference_distance_km),
+        to_float(approximation_delta_straight_line_km),
+        approximation_notes,
         to_float(road_distance_km),
         to_float(road_fuel_liters),
         to_float(road_fuel_kg),

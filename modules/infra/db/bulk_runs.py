@@ -18,6 +18,7 @@ from modules.infra.db.core import (
     mark_schema_ready,
     safe_table_name,
     schema_is_ready,
+    table_columns,
     to_float,
 )
 from modules.infra.log_manager import get_logger
@@ -109,6 +110,15 @@ _RUN_RESULTS_INDEX_SQL = (
     "CREATE INDEX IF NOT EXISTS idx_{table}_coords ON {table} (run_id, destiny_lat, destiny_lon);",
 )
 
+_RUN_RESULTS_OPTIONAL_COLUMNS = (
+    ("is_approximation", "is_approximation INTEGER NOT NULL DEFAULT 0"),
+    ("route_source", "route_source TEXT"),
+    ("approximation_reference_destiny", "approximation_reference_destiny TEXT"),
+    ("approximation_reference_distance_km", "approximation_reference_distance_km REAL"),
+    ("approximation_delta_straight_line_km", "approximation_delta_straight_line_km REAL"),
+    ("approximation_notes", "approximation_notes TEXT"),
+)
+
 
 @dataclass(frozen=True)
 class BulkRunSelector:
@@ -195,6 +205,12 @@ class BulkRunResultRecord:
     emissions_savings_pct: Optional[float]
     road_distance_km: Optional[float]
     sea_km: Optional[float]
+    is_approximation: bool
+    route_source: Optional[str]
+    approximation_reference_destiny: Optional[str]
+    approximation_reference_distance_km: Optional[float]
+    approximation_delta_straight_line_km: Optional[float]
+    approximation_notes: Optional[str]
     insertion_timestamp: Any
     updated_timestamp: Any
 
@@ -211,6 +227,12 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _ensure_column(conn: DBConnection, table_name: str, column_name: str, ddl: str) -> None:
+    if column_name in table_columns(conn, table_name):
+        return
+    conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {ddl}")
 
 
 def _nullable_clause(column: str, value: Any, *, params: list[Any], clauses: list[str], numeric: bool = False) -> None:
@@ -337,8 +359,14 @@ def _row_to_run_result_record(row: Sequence[Any]) -> BulkRunResultRecord:
         emissions_savings_pct=to_float(row[26]),
         road_distance_km=to_float(row[27]),
         sea_km=to_float(row[28]),
-        insertion_timestamp=row[29],
-        updated_timestamp=row[30],
+        is_approximation=bool(int_to_bool(row[29])),
+        route_source=_normalize_text(row[30]),
+        approximation_reference_destiny=_normalize_text(row[31]),
+        approximation_reference_distance_km=to_float(row[32]),
+        approximation_delta_straight_line_km=to_float(row[33]),
+        approximation_notes=_normalize_text(row[34]),
+        insertion_timestamp=row[35],
+        updated_timestamp=row[36],
     )
 
 
@@ -358,6 +386,8 @@ def ensure_run_results_table(conn: DBConnection, table_name: str = DEFAULT_RUN_R
     if schema_is_ready(conn, "bulk_run_results", table):
         return
     conn.execute(_RUN_RESULTS_DDL_SQL.format(table=table))
+    for column_name, ddl in _RUN_RESULTS_OPTIONAL_COLUMNS:
+        _ensure_column(conn, table, column_name, ddl)
     for sql in _RUN_RESULTS_INDEX_SQL:
         conn.execute(sql.format(table=table))
     mark_schema_ready(conn, "bulk_run_results", table)
@@ -628,6 +658,12 @@ def insert_run_result(
     emissions_savings_pct: Optional[float],
     road_distance_km: Optional[float],
     sea_km: Optional[float],
+    is_approximation: bool = False,
+    route_source: Optional[str] = None,
+    approximation_reference_destiny: Optional[str] = None,
+    approximation_reference_distance_km: Optional[float] = None,
+    approximation_delta_straight_line_km: Optional[float] = None,
+    approximation_notes: Optional[str] = None,
     table_name: str = DEFAULT_RUN_RESULTS_TABLE,
 ) -> None:
     table = safe_table_name(table_name)
@@ -664,7 +700,13 @@ def insert_run_result(
             , emissions_savings_pct
             , road_distance_km
             , sea_km
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            , is_approximation
+            , route_source
+            , approximation_reference_destiny
+            , approximation_reference_distance_km
+            , approximation_delta_straight_line_km
+            , approximation_notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(run_id, scenario_key) DO UPDATE SET
               origin_key = excluded.origin_key
             , origin_name = excluded.origin_name
@@ -693,6 +735,12 @@ def insert_run_result(
             , emissions_savings_pct = excluded.emissions_savings_pct
             , road_distance_km = excluded.road_distance_km
             , sea_km = excluded.sea_km
+            , is_approximation = excluded.is_approximation
+            , route_source = excluded.route_source
+            , approximation_reference_destiny = excluded.approximation_reference_destiny
+            , approximation_reference_distance_km = excluded.approximation_reference_distance_km
+            , approximation_delta_straight_line_km = excluded.approximation_delta_straight_line_km
+            , approximation_notes = excluded.approximation_notes
             , updated_timestamp = {current_timestamp_sql()}
         """,
         (
@@ -725,6 +773,12 @@ def insert_run_result(
             to_float(emissions_savings_pct),
             to_float(road_distance_km),
             to_float(sea_km),
+            bool_to_int(is_approximation),
+            route_source,
+            approximation_reference_destiny,
+            to_float(approximation_reference_distance_km),
+            to_float(approximation_delta_straight_line_km),
+            approximation_notes,
         ),
     )
 
@@ -907,6 +961,12 @@ def list_run_results(
             , emissions_savings_pct
             , road_distance_km
             , sea_km
+            , is_approximation
+            , route_source
+            , approximation_reference_destiny
+            , approximation_reference_distance_km
+            , approximation_delta_straight_line_km
+            , approximation_notes
             , insertion_timestamp
             , updated_timestamp
         FROM {table}

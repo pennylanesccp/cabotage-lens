@@ -10,6 +10,7 @@ from modules.infra.db.bulk_runs import (
     list_run_results,
     start_run,
 )
+from modules.infra.db.bulk_results import upsert_result as upsert_bulk_result
 from modules.infra.db.core import db_session
 
 
@@ -76,6 +77,12 @@ class BulkRunPersistenceTests(unittest.TestCase):
                 emissions_savings_pct=42.2222,
                 road_distance_km=3900.0,
                 sea_km=3400.0,
+                is_approximation=True,
+                route_source="nearest_exact_delta_straight_line",
+                approximation_reference_destiny="Belem, PA",
+                approximation_reference_distance_km=3650.0,
+                approximation_delta_straight_line_km=250.0,
+                approximation_notes="Approximate direct-road distance from the nearest exact destination in the same bulk run.",
             )
             finish_run(
                 conn,
@@ -95,6 +102,11 @@ class BulkRunPersistenceTests(unittest.TestCase):
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0].destiny_name, "Manaus, AM")
             self.assertAlmostEqual(rows[0].cost_delta_r or 0.0, 4000.0)
+            self.assertTrue(rows[0].is_approximation)
+            self.assertEqual(rows[0].route_source, "nearest_exact_delta_straight_line")
+            self.assertEqual(rows[0].approximation_reference_destiny, "Belem, PA")
+            self.assertAlmostEqual(rows[0].approximation_reference_distance_km or 0.0, 3650.0)
+            self.assertAlmostEqual(rows[0].approximation_delta_straight_line_km or 0.0, 250.0)
 
             origins = list_available_origins(conn, destination_set_id=selector.destination_set_id)
             self.assertEqual(origins, ["Pelotas, RS"])
@@ -142,6 +154,57 @@ class BulkRunPersistenceTests(unittest.TestCase):
             origins = list_available_origins(conn, destination_set_id="city_dests_over50k.txt")
 
             self.assertEqual(origins, ["Aracaju, SE", "santos, SP"])
+
+    def test_bulk_results_persists_approximation_metadata(self) -> None:
+        with db_session(":memory:", backend="sqlite") as conn:
+            upsert_bulk_result(
+                conn,
+                scenario_key="scenario-approx",
+                run_id="run-123",
+                destination_set_id="city_dests_over50k.txt",
+                origin_key="pelotas, rs",
+                origin_name="Pelotas, RS",
+                destiny_key="manaus, am",
+                destiny_name="Manaus, AM",
+                input_origin="Pelotas, RS",
+                input_destiny="Manaus, AM",
+                cargo_t=30.0,
+                truck_key="semi_27t",
+                ors_profile="driving-hgv",
+                status="ok",
+                is_approximation=True,
+                route_source="nearest_exact_delta_straight_line",
+                approximation_reference_destiny="Belem, PA",
+                approximation_reference_distance_km=3650.0,
+                approximation_delta_straight_line_km=250.0,
+                approximation_notes="Approximate direct-road distance from the nearest exact destination in the same bulk run.",
+                road_distance_km=3900.0,
+                road_fuel_cost_r=15000.0,
+                road_co2e_kg=9000.0,
+                total_fuel_cost_r=11000.0,
+                total_co2e_kg=5200.0,
+            )
+
+            row = conn.execute(
+                """
+                SELECT
+                      is_approximation
+                    , route_source
+                    , approximation_reference_destiny
+                    , approximation_reference_distance_km
+                    , approximation_delta_straight_line_km
+                FROM bulk_evaluation_results
+                WHERE scenario_key = ?
+                """,
+                ("scenario-approx",),
+            ).fetchone()
+
+            self.assertIsNotNone(row)
+            self.assertEqual(row[0], 1)
+            self.assertEqual(row[1], "nearest_exact_delta_straight_line")
+            self.assertEqual(row[2], "Belem, PA")
+            self.assertAlmostEqual(float(row[3]), 3650.0)
+            self.assertAlmostEqual(float(row[4]), 250.0)
 
 
 if __name__ == "__main__":

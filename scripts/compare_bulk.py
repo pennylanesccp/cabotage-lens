@@ -63,6 +63,30 @@ def main() -> int:
     parser.add_argument("--profile", default="driving-hgv", help="Routing profile")
     parser.add_argument("--overwrite", action="store_true", help="Force rerouting of road-distance cache")
     parser.add_argument(
+        "--shuffle-destinations",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Shuffle deduplicated destinations before the exact-routing pass",
+    )
+    parser.add_argument(
+        "--shuffle-seed",
+        type=int,
+        default=None,
+        help="Optional deterministic seed for destination shuffling",
+    )
+    parser.add_argument(
+        "--approximation-fallback",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Approximate direct-road distance in bulk results when exact road routing is unavailable",
+    )
+    parser.add_argument(
+        "--disable-approximation-fallback",
+        dest="approximation_fallback",
+        action="store_false",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "--vessel-class",
         default=DEFAULT_VESSEL_CLASS,
         choices=list(CONTAINER_VESSEL_CLASSES),
@@ -173,16 +197,26 @@ def main() -> int:
         full_call_mode=bool(args.full_call_mode),
         port_ops_scenario=str(args.port_ops_scenario),
         destination_set_id=str(args.destination_set_id or args.dests_file.name),
+        shuffle_destinations=bool(args.shuffle_destinations),
+        shuffle_seed=args.shuffle_seed,
+        approximation_fallback=bool(args.approximation_fallback),
     )
 
     _write_summary_csv(outcome["summary_rows"], args.output_csv)
     _log.info("Summary CSV written to: %s", args.output_csv)
     _log.info(
-        "Bulk CLI finished. success=%d fail=%d duration_s=%.2f run_id=%s",
+        (
+            "Bulk CLI finished. success=%d fail=%d exact_success=%d approximated_success=%d "
+            "unresolved_failures=%d duration_s=%.2f run_id=%s shuffle_seed=%s"
+        ),
         int(outcome["success_count"]),
         int(outcome["fail_count"]),
+        int(outcome.get("exact_success_count") or 0),
+        int(outcome.get("approximated_success_count") or 0),
+        int(outcome.get("unresolved_fail_count") or 0),
         float(outcome["duration_s"]),
         outcome.get("run_id"),
+        outcome.get("shuffle_seed_used"),
     )
     return 0
 
