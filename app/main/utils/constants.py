@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 PAGE_TITLE = "EcoFreight Brazil"
 PAGE_ICON = ":earth_americas:"
 PAGE_LAYOUT = "wide"
+DEFAULT_ORIGIN = "Avenida Professor Luciano Gualberto, Sao Paulo"
 
 MAP_STYLES: dict[str, str] = {
     "Voyager": "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
@@ -20,7 +21,7 @@ MAP_STYLES: dict[str, str] = {
 }
 
 DEFAULTS: Dict[str, Any] = {
-    "origin": "Pelotas, RS",
+    "origin": DEFAULT_ORIGIN,
     "destiny": "Manaus, AM",
     "cargo_t": 30.0,
     "cargo_teu_input": 0.0,

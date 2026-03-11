@@ -35,7 +35,7 @@ _HEATMAP_ORIGIN_FIELD = "heatmap_origin"
 
 
 def _init_page_state() -> None:
-    st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, "")
+    st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, str(DEFAULTS["origin"]))
     st.session_state.setdefault("heatmap_cargo", 30.0)
     st.session_state.setdefault("heatmap_metric", HEATMAP_DEFAULT_METRIC)
     st.session_state.setdefault("heatmap_dataset", None)
