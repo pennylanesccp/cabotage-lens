@@ -1,28 +1,41 @@
 from __future__ import annotations
 
-from typing import Sequence
+import math
+from dataclasses import dataclass
 
-from app.main.map.routing.geometry_utils import (
-    EPS,
-    latlon_delta_km,
-    offset_latlon_km,
-    segment_perpendicular_unit,
-)
-from app.main.map.routing.marine_leg_interpolation import interpolate_leg_intermediate_points
-from app.main.map.routing.marine_point_correction import PointCorrectionResult, correct_point_to_water_result
-from app.main.map.routing.water_validation import build_leg_reference_path, is_water_point
+from app.main.map.routing.geometry_utils import EPS, latlon_delta_km, offset_latlon_km, segment_perpendicular_unit
+from app.main.map.routing.water_validation import build_leg_reference_path, distance_to_water_km, is_water_point
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
 
-# Keep this strict: the water validator uses a reference maritime corridor, so
-# a broad tolerance lets inland points slip through as "water" without any fix.
-COASTAL_WATER_HIT_TOLERANCE_KM = 0.15
-COASTAL_STEP_KM = 0.1
-COASTAL_MAX_SEARCH_KM = 20.0
-COASTAL_MAX_ITERATIONS = 200
-COASTAL_EXTRA_OFFSHORE_MARGIN_KM = 0.15
-COASTAL_SHOULDER_BORROW_KM = 0.4
+MARITIME_ARC_SAGITTA_KM = 60.0
+MARITIME_ARC_SIDE_TEST_KM = MARITIME_ARC_SAGITTA_KM
+# Sea-side selection still relies on the repo's curated maritime reference path.
+MARITIME_ARC_WATER_TOLERANCE_KM = 8.0
+MIN_INTERMEDIATE_ARC_POINTS = 50
+MAX_INTERMEDIATE_ARC_POINTS = 160
+
+
+@dataclass(frozen=True)
+class ArcSideChoice:
+    side: str
+    unit_east: float
+    unit_north: float
+    test_point_latlon: tuple[float, float]
+    is_water: bool
+    distance_to_water_km: float
+
+
+@dataclass(frozen=True)
+class CircularArcGeometry:
+    intermediate_points: list[tuple[float, float]]
+    radius_km: float
+    chord_length_km: float
+    arc_length_km: float
+    center_latlon: tuple[float, float]
+    center_offset_km: float
+    sample_count: int
 
 
 def build_coastal_leg_points(
@@ -36,12 +49,11 @@ def build_coastal_leg_points(
     style: str = "Coastal lane (default)",
     curvature: float = 0.25,
 ) -> list[tuple[float, float]]:
-    base_points = interpolate_leg_intermediate_points(
-        leg_start_latlon,
-        leg_end_latlon,
-        n_points=n_points,
-    )
-    if not base_points:
+    _ = (smooth_window, style, curvature)
+
+    midpoint_latlon = _midpoint_latlon(leg_start_latlon, leg_end_latlon)
+    chord_length_km = _chord_length_km(leg_start_latlon, leg_end_latlon)
+    if chord_length_km <= EPS:
         return []
 
     reference_path = build_leg_reference_path(
@@ -50,390 +62,199 @@ def build_coastal_leg_points(
         origin_latlon=leg_start_latlon,
         dest_latlon=leg_end_latlon,
     )
-    unit_east, unit_north = segment_perpendicular_unit(leg_start_latlon, leg_end_latlon)
-    correction_results = [
-        correct_point_to_water_result(
-            point_latlon=point_latlon,
-            leg_start_latlon=leg_start_latlon,
-            leg_end_latlon=leg_end_latlon,
-            reference_path=reference_path,
-            tolerance_km=COASTAL_WATER_HIT_TOLERANCE_KM,
-            step_km=COASTAL_STEP_KM,
-            max_search_km=COASTAL_MAX_SEARCH_KM,
-            max_iterations=COASTAL_MAX_ITERATIONS,
-        )
-        for point_latlon in base_points
-    ]
-    raw_corrected_points = [result.corrected_point_latlon for result in correction_results]
-    raw_offsets_km = [
-        _signed_lateral_offset_km(
-            base_point,
-            corrected_point,
-            unit_east=unit_east,
-            unit_north=unit_north,
-        )
-        for base_point, corrected_point in zip(base_points, raw_corrected_points)
-    ]
-
-    smoothed_offsets_km = _smooth_lateral_offsets(
-        raw_offsets_km,
-        smooth_window=smooth_window,
-        style=style,
-        curvature=curvature,
-    )
-    final_offsets_km = _resolve_nearshore_offsets(
-        base_points=base_points,
-        raw_offsets_km=raw_offsets_km,
-        smoothed_offsets_km=smoothed_offsets_km,
-        unit_east=unit_east,
-        unit_north=unit_north,
+    sample_count = _resolve_intermediate_point_count(chord_length_km=chord_length_km, requested_n_points=n_points)
+    if sample_count <= 0:
+        return []
+    side_choice, alternate_choice = _choose_sea_facing_side(
+        midpoint_latlon=midpoint_latlon,
+        leg_start_latlon=leg_start_latlon,
+        leg_end_latlon=leg_end_latlon,
         reference_path=reference_path,
     )
-    final_points = [
-        _point_at_offset(
-            base_point,
-            offset_km=offset_km,
-            unit_east=unit_east,
-            unit_north=unit_north,
-        )
-        for base_point, offset_km in zip(base_points, final_offsets_km)
-    ]
-    _log_coastal_leg_summary(
-        origin_port_name=origin_port_name,
-        dest_port_name=dest_port_name,
-        correction_results=correction_results,
-        final_offsets_km=final_offsets_km,
+    arc_geometry = _build_circular_arc_geometry(
+        leg_start_latlon=leg_start_latlon,
+        leg_end_latlon=leg_end_latlon,
+        midpoint_latlon=midpoint_latlon,
+        side_choice=side_choice,
+        sample_count=sample_count,
     )
-    return final_points
-
-
-def _signed_lateral_offset_km(
-    base_point: tuple[float, float],
-    corrected_point: tuple[float, float],
-    *,
-    unit_east: float,
-    unit_north: float,
-) -> float:
-    east_km, north_km = latlon_delta_km(base_point, corrected_point)
-    return (east_km * unit_east) + (north_km * unit_north)
-
-
-def _smooth_lateral_offsets(
-    offsets_km: Sequence[float],
-    *,
-    smooth_window: int,
-    style: str,
-    curvature: float,
-) -> list[float]:
-    if len(offsets_km) < 3:
-        return [float(offset_km) for offset_km in offsets_km]
-
-    window = max(int(smooth_window), 5)
-    if window % 2 == 0:
-        window += 1
-
-    window += 2
-    if str(style) == "Arc (pretty)":
-        window += 2
-
-    max_window = len(offsets_km) if len(offsets_km) % 2 == 1 else max(len(offsets_km) - 1, 1)
-    window = max(3, min(window, max_window))
-
-    blend = min(max(0.55 + (float(curvature) * 0.35), 0.55), 0.82)
-    smoothed = [float(offset_km) for offset_km in offsets_km]
-
-    passes = 3 if len(offsets_km) >= 5 else 1
-    if str(style) == "Arc (pretty)":
-        passes += 1
-
-    for _ in range(passes):
-        averaged = _moving_average(smoothed, window)
-        smoothed = [
-            ((1.0 - blend) * original) + (blend * average)
-            for original, average in zip(smoothed, averaged)
-        ]
-
-    return smoothed
-
-
-def _moving_average(values: Sequence[float], window: int) -> list[float]:
-    if len(values) < 3:
-        return [float(value) for value in values]
-
-    half = window // 2
-    averaged: list[float] = []
-    for idx in range(len(values)):
-        start = max(0, idx - half)
-        end = min(len(values), idx + half + 1)
-        segment = values[start:end]
-        averaged.append(sum(segment) / len(segment))
-    return averaged
-
-
-def _resolve_nearshore_offsets(
-    *,
-    base_points: Sequence[tuple[float, float]],
-    raw_offsets_km: Sequence[float],
-    smoothed_offsets_km: Sequence[float],
-    unit_east: float,
-    unit_north: float,
-    reference_path: Sequence[tuple[float, float]],
-) -> list[float]:
-    final_offsets_km: list[float] = []
-    for idx, base_point in enumerate(base_points):
-        raw_offset = float(raw_offsets_km[idx])
-        max_allowed_abs = _max_allowed_offset_abs(raw_offsets_km, idx)
-        target_offset = _normalize_target_offset(
-            smoothed_offset_km=smoothed_offsets_km[idx],
-            raw_offsets_km=raw_offsets_km,
-            idx=idx,
-            max_allowed_abs=max_allowed_abs,
-        )
-        final_offsets_km.append(
-            _resolve_valid_offset(
-                base_point=base_point,
-                target_offset_km=target_offset,
-                raw_offset_km=raw_offset,
-                max_allowed_abs=max_allowed_abs,
-                unit_east=unit_east,
-                unit_north=unit_north,
-                reference_path=reference_path,
-            )
-        )
-    return final_offsets_km
-
-
-def _normalize_target_offset(
-    *,
-    smoothed_offset_km: float,
-    raw_offsets_km: Sequence[float],
-    idx: int,
-    max_allowed_abs: float,
-) -> float:
-    local_sign = _offset_sign(_local_average(raw_offsets_km, idx, radius=2))
-    raw_sign = _offset_sign(raw_offsets_km[idx])
-    smooth_sign = _offset_sign(smoothed_offset_km)
-
-    if local_sign != 0 and smooth_sign != 0 and local_sign != smooth_sign:
-        sign = local_sign
-    else:
-        sign = smooth_sign or local_sign or raw_sign
-
-    return float(sign) * min(abs(float(smoothed_offset_km)), max_allowed_abs)
-
-
-def _resolve_valid_offset(
-    *,
-    base_point: tuple[float, float],
-    target_offset_km: float,
-    raw_offset_km: float,
-    max_allowed_abs: float,
-    unit_east: float,
-    unit_north: float,
-    reference_path: Sequence[tuple[float, float]],
-) -> float:
-    raw_sign = _offset_sign(raw_offset_km)
-    raw_abs = abs(float(raw_offset_km))
-
-    if _is_valid_offset(
-        base_point,
-        target_offset_km=target_offset_km,
-        unit_east=unit_east,
-        unit_north=unit_north,
-        reference_path=reference_path,
-    ):
-        return target_offset_km
-
-    if raw_abs > EPS and raw_sign == _offset_sign(target_offset_km) and abs(float(target_offset_km)) < raw_abs:
-        return _binary_search_valid_offset(
-            base_point=base_point,
-            invalid_offset_km=target_offset_km,
-            valid_offset_km=raw_offset_km,
-            unit_east=unit_east,
-            unit_north=unit_north,
-            reference_path=reference_path,
-        )
-
-    if raw_abs > EPS:
-        return raw_offset_km
-
-    if _is_valid_offset(
-        base_point,
-        target_offset_km=0.0,
-        unit_east=unit_east,
-        unit_north=unit_north,
-        reference_path=reference_path,
-    ):
-        return 0.0
-
-    preferred_sign = _offset_sign(target_offset_km) or 1
-    return _search_first_valid_offset(
-        base_point=base_point,
-        preferred_sign=preferred_sign,
-        max_allowed_abs=max_allowed_abs,
-        unit_east=unit_east,
-        unit_north=unit_north,
-        reference_path=reference_path,
-    )
-
-
-def _binary_search_valid_offset(
-    *,
-    base_point: tuple[float, float],
-    invalid_offset_km: float,
-    valid_offset_km: float,
-    unit_east: float,
-    unit_north: float,
-    reference_path: Sequence[tuple[float, float]],
-) -> float:
-    sign = _offset_sign(valid_offset_km) or 1
-    low = min(abs(float(invalid_offset_km)), abs(float(valid_offset_km)))
-    high = max(abs(float(invalid_offset_km)), abs(float(valid_offset_km)))
-
-    for _ in range(12):
-        mid = (low + high) / 2.0
-        candidate_offset = float(sign) * mid
-        if _is_valid_offset(
-            base_point,
-            target_offset_km=candidate_offset,
-            unit_east=unit_east,
-            unit_north=unit_north,
-            reference_path=reference_path,
-        ):
-            high = mid
-        else:
-            low = mid
-
-    return float(sign) * high
-
-
-def _search_first_valid_offset(
-    *,
-    base_point: tuple[float, float],
-    preferred_sign: int,
-    max_allowed_abs: float,
-    unit_east: float,
-    unit_north: float,
-    reference_path: Sequence[tuple[float, float]],
-) -> float:
-    if max_allowed_abs <= EPS:
-        return 0.0
-
-    max_steps = max(int(round(max_allowed_abs / COASTAL_STEP_KM)), 1)
-    for step_idx in range(1, max_steps + 1):
-        offset_abs = step_idx * COASTAL_STEP_KM
-        signed_offsets = (
-            float(preferred_sign) * offset_abs,
-            float(-preferred_sign) * offset_abs,
-        )
-        for candidate_offset in signed_offsets:
-            if _is_valid_offset(
-                base_point,
-                target_offset_km=candidate_offset,
-                unit_east=unit_east,
-                unit_north=unit_north,
-                reference_path=reference_path,
-            ):
-                return candidate_offset
-    return 0.0
-
-
-def _is_valid_offset(
-    base_point: tuple[float, float],
-    *,
-    target_offset_km: float,
-    unit_east: float,
-    unit_north: float,
-    reference_path: Sequence[tuple[float, float]],
-) -> bool:
-    candidate_point = _point_at_offset(
-        base_point,
-        offset_km=target_offset_km,
-        unit_east=unit_east,
-        unit_north=unit_north,
-    )
-    return is_water_point(candidate_point, reference_path, tolerance_km=COASTAL_WATER_HIT_TOLERANCE_KM)
-
-
-def _point_at_offset(
-    base_point: tuple[float, float],
-    *,
-    offset_km: float,
-    unit_east: float,
-    unit_north: float,
-) -> tuple[float, float]:
-    return offset_latlon_km(
-        base_point[0],
-        base_point[1],
-        east_km=(unit_east * float(offset_km)),
-        north_km=(unit_north * float(offset_km)),
-    )
-
-
-def _max_allowed_offset_abs(raw_offsets_km: Sequence[float], idx: int) -> float:
-    raw_abs = abs(float(raw_offsets_km[idx]))
-    neighbor_abs = max(
-        abs(float(raw_offsets_km[pos]))
-        for pos in range(max(0, idx - 2), min(len(raw_offsets_km), idx + 3))
-    )
-    if raw_abs <= 0.05:
-        return min(neighbor_abs * 0.35, COASTAL_SHOULDER_BORROW_KM)
-    return max(raw_abs, min(raw_abs + COASTAL_EXTRA_OFFSHORE_MARGIN_KM, neighbor_abs))
-
-
-def _local_average(values: Sequence[float], idx: int, *, radius: int) -> float:
-    start = max(0, idx - radius)
-    end = min(len(values), idx + radius + 1)
-    segment = values[start:end]
-    if not segment:
-        return 0.0
-    return sum(float(value) for value in segment) / len(segment)
-
-
-def _offset_sign(value: float) -> int:
-    if value > EPS:
-        return 1
-    if value < -EPS:
-        return -1
-    return 0
-
-
-def _log_coastal_leg_summary(
-    *,
-    origin_port_name: str,
-    dest_port_name: str,
-    correction_results: Sequence[PointCorrectionResult],
-    final_offsets_km: Sequence[float],
-) -> None:
-    if not correction_results:
-        return
-
-    moved_points = 0
-    unresolved_points = 0
-    max_correction_distance_km = 0.0
-    max_abs_final_offset_km = 0.0
-
-    for result in correction_results:
-        correction_distance_km = float(result.correction_distance_km or 0.0)
-        if correction_distance_km > EPS:
-            moved_points += 1
-        if not result.reached_water:
-            unresolved_points += 1
-        max_correction_distance_km = max(max_correction_distance_km, correction_distance_km)
-
-    if final_offsets_km:
-        max_abs_final_offset_km = max(abs(float(offset_km)) for offset_km in final_offsets_km)
-
     _log.debug(
         (
-            "Coastal maritime leg summary %s -> %s base_points=%d moved=%d unresolved=%d "
-            "max_correction_km=%.3f max_final_offset_km=%.3f"
+            "Coastal maritime arc %s -> %s side=%s chosen_water=%s chosen_distance_km=%.3f "
+            "alternate_distance_km=%.3f chord_km=%.3f radius_km=%.3f arc_km=%.3f samples=%d"
         ),
         origin_port_name,
         dest_port_name,
-        len(correction_results),
-        moved_points,
-        unresolved_points,
-        max_correction_distance_km,
-        max_abs_final_offset_km,
+        side_choice.side,
+        side_choice.is_water,
+        side_choice.distance_to_water_km,
+        alternate_choice.distance_to_water_km,
+        arc_geometry.chord_length_km,
+        arc_geometry.radius_km,
+        arc_geometry.arc_length_km,
+        arc_geometry.sample_count,
     )
+    return arc_geometry.intermediate_points
+
+
+def _choose_sea_facing_side(
+    *,
+    midpoint_latlon: tuple[float, float],
+    leg_start_latlon: tuple[float, float],
+    leg_end_latlon: tuple[float, float],
+    reference_path: list[tuple[float, float]],
+) -> tuple[ArcSideChoice, ArcSideChoice]:
+    left_unit_east, left_unit_north = segment_perpendicular_unit(leg_start_latlon, leg_end_latlon)
+    candidates = [
+        _build_side_choice(
+            side="left",
+            midpoint_latlon=midpoint_latlon,
+            unit_east=left_unit_east,
+            unit_north=left_unit_north,
+            reference_path=reference_path,
+        ),
+        _build_side_choice(
+            side="right",
+            midpoint_latlon=midpoint_latlon,
+            unit_east=-left_unit_east,
+            unit_north=-left_unit_north,
+            reference_path=reference_path,
+        ),
+    ]
+    ranked = sorted(
+        candidates,
+        key=lambda choice: (
+            0 if choice.is_water else 1,
+            choice.distance_to_water_km,
+            0 if choice.side == "left" else 1,
+        ),
+    )
+    return ranked[0], ranked[1]
+
+
+def _build_side_choice(
+    *,
+    side: str,
+    midpoint_latlon: tuple[float, float],
+    unit_east: float,
+    unit_north: float,
+    reference_path: list[tuple[float, float]],
+) -> ArcSideChoice:
+    test_point_latlon = offset_latlon_km(
+        midpoint_latlon[0],
+        midpoint_latlon[1],
+        east_km=(unit_east * MARITIME_ARC_SIDE_TEST_KM),
+        north_km=(unit_north * MARITIME_ARC_SIDE_TEST_KM),
+    )
+    distance_km = distance_to_water_km(test_point_latlon, reference_path)
+    return ArcSideChoice(
+        side=side,
+        unit_east=unit_east,
+        unit_north=unit_north,
+        test_point_latlon=test_point_latlon,
+        is_water=is_water_point(
+            test_point_latlon,
+            reference_path,
+            tolerance_km=MARITIME_ARC_WATER_TOLERANCE_KM,
+        ),
+        distance_to_water_km=distance_km,
+    )
+
+
+def _build_circular_arc_geometry(
+    *,
+    leg_start_latlon: tuple[float, float],
+    leg_end_latlon: tuple[float, float],
+    midpoint_latlon: tuple[float, float],
+    side_choice: ArcSideChoice,
+    sample_count: int,
+) -> CircularArcGeometry:
+    start_x_km, start_y_km = latlon_delta_km(midpoint_latlon, leg_start_latlon)
+    end_x_km, end_y_km = latlon_delta_km(midpoint_latlon, leg_end_latlon)
+    chord_length_km = math.hypot(end_x_km - start_x_km, end_y_km - start_y_km)
+    sagitta_km = MARITIME_ARC_SAGITTA_KM
+    radius_km = ((chord_length_km * chord_length_km) / (8.0 * sagitta_km)) + (sagitta_km / 2.0)
+
+    center_offset_km = sagitta_km - radius_km
+    center_x_km = side_choice.unit_east * center_offset_km
+    center_y_km = side_choice.unit_north * center_offset_km
+    bulge_x_km = side_choice.unit_east * sagitta_km
+    bulge_y_km = side_choice.unit_north * sagitta_km
+
+    start_angle = math.atan2(start_y_km - center_y_km, start_x_km - center_x_km)
+    end_angle = math.atan2(end_y_km - center_y_km, end_x_km - center_x_km)
+    bulge_angle = math.atan2(bulge_y_km - center_y_km, bulge_x_km - center_x_km)
+
+    ccw_sweep = _angle_delta_ccw(start_angle, end_angle)
+    ccw_to_bulge = _angle_delta_ccw(start_angle, bulge_angle)
+    if ccw_to_bulge <= ccw_sweep:
+        sweep_angle = ccw_sweep
+    else:
+        sweep_angle = -_angle_delta_ccw(end_angle, start_angle)
+
+    arc_length_km = abs(sweep_angle) * radius_km
+    center_latlon = offset_latlon_km(
+        midpoint_latlon[0],
+        midpoint_latlon[1],
+        east_km=center_x_km,
+        north_km=center_y_km,
+    )
+
+    points: list[tuple[float, float]] = []
+    total_points = sample_count + 2
+    for idx in range(1, total_points - 1):
+        fraction = idx / (total_points - 1)
+        angle = start_angle + (sweep_angle * fraction)
+        x_km = center_x_km + (radius_km * math.cos(angle))
+        y_km = center_y_km + (radius_km * math.sin(angle))
+        points.append(
+            offset_latlon_km(
+                midpoint_latlon[0],
+                midpoint_latlon[1],
+                east_km=x_km,
+                north_km=y_km,
+            )
+        )
+
+    return CircularArcGeometry(
+        intermediate_points=points,
+        radius_km=radius_km,
+        chord_length_km=chord_length_km,
+        arc_length_km=arc_length_km,
+        center_latlon=center_latlon,
+        center_offset_km=center_offset_km,
+        sample_count=sample_count,
+    )
+
+
+def _resolve_intermediate_point_count(*, chord_length_km: float, requested_n_points: int) -> int:
+    requested = int(requested_n_points)
+    if requested <= 0:
+        return 0
+    adaptive = max(int(math.ceil(chord_length_km / 12.0)), MIN_INTERMEDIATE_ARC_POINTS)
+    return min(max(requested, adaptive), MAX_INTERMEDIATE_ARC_POINTS)
+
+
+def _midpoint_latlon(
+    start_latlon: tuple[float, float],
+    end_latlon: tuple[float, float],
+) -> tuple[float, float]:
+    return (
+        (float(start_latlon[0]) + float(end_latlon[0])) / 2.0,
+        (float(start_latlon[1]) + float(end_latlon[1])) / 2.0,
+    )
+
+
+def _chord_length_km(
+    start_latlon: tuple[float, float],
+    end_latlon: tuple[float, float],
+) -> float:
+    east_km, north_km = latlon_delta_km(start_latlon, end_latlon)
+    return math.hypot(east_km, north_km)
+
+
+def _angle_delta_ccw(start_angle: float, end_angle: float) -> float:
+    delta = math.fmod(end_angle - start_angle, 2.0 * math.pi)
+    if delta < 0.0:
+        delta += 2.0 * math.pi
+    return delta
