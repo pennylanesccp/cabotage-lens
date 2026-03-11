@@ -42,6 +42,7 @@ class BulkApproximationTests(unittest.TestCase):
         }
 
     def _fake_evaluate_and_flatten(self, geo: dict, *, origin_name: str, destiny_name: str, evaluation_kwargs: dict):
+        self.assertIn("prepared_context", evaluation_kwargs)
         road_distance_km = float(geo["road_direct"]["distance_km"] or 0.0)
         res = {
             "comparison": {"savings_pct": 12.5},
@@ -75,6 +76,7 @@ class BulkApproximationTests(unittest.TestCase):
 
     def _run_bulk(self, *, destinations: list[str], points_by_input: dict[str, dict], geos_by_label: dict[str, dict]):
         persisted: list[dict] = []
+        prepared_context = object()
 
         def fake_resolve_point(value, _ors, **_kwargs):
             return copy.deepcopy(points_by_input.get(str(value)))
@@ -93,6 +95,7 @@ class BulkApproximationTests(unittest.TestCase):
         )
         build_geometry_mock = MagicMock(side_effect=fake_build_geometry)
         finish_run_mock = MagicMock()
+        prepare_context_mock = MagicMock(return_value=prepared_context)
 
         with patch("modules.multimodal.bulk.load_routing_assets", return_value=("ors", [], "sea", ":memory:")), patch(
             "modules.multimodal.bulk.resolve_point_for_geometry",
@@ -106,6 +109,9 @@ class BulkApproximationTests(unittest.TestCase):
         ), patch(
             "modules.multimodal.bulk._evaluate_and_flatten",
             side_effect=self._fake_evaluate_and_flatten,
+        ), patch(
+            "modules.multimodal.bulk.prepare_evaluation_context",
+            prepare_context_mock,
         ), patch(
             "modules.multimodal.bulk.db_session",
             side_effect=lambda *args, **kwargs: contextlib.nullcontext(object()),
@@ -141,7 +147,7 @@ class BulkApproximationTests(unittest.TestCase):
                 shuffle_destinations=False,
             )
 
-        return outcome, persisted, build_geometry_mock, get_leg_mock, finish_run_mock
+        return outcome, persisted, build_geometry_mock, get_leg_mock, finish_run_mock, prepare_context_mock
 
     def test_shuffle_destinations_is_deterministic_with_seed(self) -> None:
         values = ["A", "B", "C", "D"]
@@ -207,7 +213,7 @@ class BulkApproximationTests(unittest.TestCase):
     def test_exact_route_success_keeps_row_exact(self) -> None:
         origin = self._point("Origin, SP", 0.0, 0.0)
         exact = self._point("Exact City", 0.0, 1.0)
-        outcome, persisted, _build_geometry_mock, _get_leg_mock, finish_run_mock = self._run_bulk(
+        outcome, persisted, _build_geometry_mock, _get_leg_mock, finish_run_mock, prepare_context_mock = self._run_bulk(
             destinations=["Exact City"],
             points_by_input={
                 "Origin, SP": origin,
@@ -224,6 +230,7 @@ class BulkApproximationTests(unittest.TestCase):
         self.assertEqual(len(persisted), 1)
         self.assertFalse(persisted[0]["is_approximation"])
         self.assertEqual(persisted[0]["route_source"], "ors_exact")
+        prepare_context_mock.assert_called_once()
         finish_run_mock.assert_called_once()
 
     def test_failed_direct_route_uses_nearest_exact_reference_and_approximations_do_not_chain(self) -> None:
@@ -231,7 +238,7 @@ class BulkApproximationTests(unittest.TestCase):
         exact = self._point("Exact City", 0.0, 1.0)
         fail_a = self._point("Fail A", 0.0, 1.2)
         fail_b = self._point("Fail B", 0.0, 1.4)
-        outcome, persisted, build_geometry_mock, get_leg_mock, _finish_run_mock = self._run_bulk(
+        outcome, persisted, build_geometry_mock, get_leg_mock, _finish_run_mock, prepare_context_mock = self._run_bulk(
             destinations=["Exact City", "Fail A", "Fail B"],
             points_by_input={
                 "Origin, SP": origin,
@@ -255,11 +262,12 @@ class BulkApproximationTests(unittest.TestCase):
         self.assertEqual({row["route_source"] for row in approx_rows}, {"nearest_exact_delta_straight_line"})
         self.assertEqual(build_geometry_mock.call_count, 3)
         self.assertEqual(get_leg_mock.call_count, 1)
+        prepare_context_mock.assert_called_once()
 
     def test_failed_direct_route_without_exact_reference_stays_unresolved(self) -> None:
         origin = self._point("Origin, SP", 0.0, 0.0)
         missing = self._point("No Route City", 0.0, 2.0)
-        outcome, persisted, _build_geometry_mock, _get_leg_mock, _finish_run_mock = self._run_bulk(
+        outcome, persisted, _build_geometry_mock, _get_leg_mock, _finish_run_mock, prepare_context_mock = self._run_bulk(
             destinations=["No Route City"],
             points_by_input={
                 "Origin, SP": origin,
@@ -276,6 +284,7 @@ class BulkApproximationTests(unittest.TestCase):
         self.assertEqual(len(persisted), 1)
         self.assertEqual(persisted[0]["status"], "no_road_route")
         self.assertIn("no exact successful road routes", persisted[0]["error_message"])
+        prepare_context_mock.assert_called_once()
 
 
 if __name__ == "__main__":

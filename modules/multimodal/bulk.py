@@ -26,7 +26,7 @@ from modules.multimodal.builder import (
     load_routing_assets,
     resolve_point_for_geometry,
 )
-from modules.multimodal.evaluator import evaluate_path
+from modules.multimodal.evaluator import evaluate_path, prepare_evaluation_context
 from modules.multimodal.persistence import flatten_evaluation_for_db
 from modules.multimodal.scenario_keys import build_bulk_scenario_key, normalize_bulk_place_input
 from modules.ports.ports_nearest import find_nearest_port, haversine_km
@@ -746,6 +746,26 @@ def run_bulk_evaluation(
         "full_call_mode": full_call_mode,
         "port_ops_scenario": port_ops_scenario,
     }
+    evaluation_kwargs["prepared_context"] = prepare_evaluation_context(
+        truck_key=truck_key,
+        vessel_class=vessel_class,
+        include_hoteling=include_hoteling,
+        hoteling_hours_per_call=hoteling_hours_per_call,
+        port_calls=port_calls,
+        include_port_ops=include_port_ops,
+        port_ops_scenario=port_ops_scenario,
+    )
+    _log.info(
+        (
+            "Bulk evaluation context ready: origin=%s truck=%s vessel_class=%s "
+            "hoteling=%s port_ops=%s"
+        ),
+        origin_pt["label"],
+        truck_key,
+        vessel_class,
+        include_hoteling,
+        include_port_ops,
+    )
 
     with db_session(resolved_db_path) as conn:
         run_id = start_bulk_run(

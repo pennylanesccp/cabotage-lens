@@ -1,7 +1,8 @@
 param(
     [int]$Port = 8501,
     [switch]$Headless,
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    [switch]$ForceInstall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +27,11 @@ if (-not (Test-Path $AppPath)) {
 
 $VenvPython = Join-Path $RepoRoot 'venv\Scripts\python.exe'
 $VenvStreamlit = Join-Path $RepoRoot 'venv\Scripts\streamlit.exe'
+$EditableInstallMarker = Join-Path $RepoRoot 'venv\.carbon-footprint-editable.stamp'
+$EditableInstallInputs = @(
+    (Join-Path $RepoRoot 'pyproject.toml'),
+    (Join-Path $RepoRoot 'README.pypi.md')
+)
 
 if (-not (Test-Path $VenvPython)) {
     throw "Virtual environment not found at '$VenvPython'. Create it first: python -m venv venv"
@@ -53,8 +59,24 @@ Write-Host "Port: $Port"
 
 Push-Location $RepoRoot
 try {
-    Write-Host "Installing project in editable mode..."
-    & $VenvPython -m pip install -e .
+    $NeedsEditableInstall = $ForceInstall -or (-not (Test-Path $EditableInstallMarker))
+    if (-not $NeedsEditableInstall) {
+        $MarkerTime = (Get-Item $EditableInstallMarker).LastWriteTimeUtc
+        foreach ($InputPath in $EditableInstallInputs) {
+            if ((Test-Path $InputPath) -and ((Get-Item $InputPath).LastWriteTimeUtc -gt $MarkerTime)) {
+                $NeedsEditableInstall = $true
+                break
+            }
+        }
+    }
+
+    if ($NeedsEditableInstall) {
+        Write-Host "Installing project in editable mode..."
+        & $VenvPython -m pip install -e .
+        Set-Content -Path $EditableInstallMarker -Value (Get-Date -Format o) -Encoding ascii
+    } else {
+        Write-Host "Skipping editable install (metadata unchanged). Use -ForceInstall to reinstall."
+    }
 
     if (Test-Path $VenvStreamlit) {
         & $VenvStreamlit @streamlitArgs

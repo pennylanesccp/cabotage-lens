@@ -10,6 +10,7 @@ Main entry point:
 from __future__ import annotations
 
 import unicodedata
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -54,6 +55,16 @@ _STATE_TO_UF = {
     "SERGIPE": "SE",
     "TOCANTINS": "TO",
 }
+
+
+@dataclass(frozen=True)
+class DieselPriceLookup:
+    """Prepared UF->price lookup reusable across many evaluations in one run."""
+
+    source_csv: str
+    default_price_r_per_l: float
+    uf_to_price: Dict[str, float]
+    row_count: int
 
 
 def _strip_accents(value: str) -> str:
@@ -196,23 +207,43 @@ def avg_price_for_ufs(
     return float(avg), ctx
 
 
-def get_average_price(
-    uf_o: str,
-    uf_d: str,
+def build_price_lookup(
     *,
     default_price_r_per_l: float = 6.0,
     csv_path: str | Path | None = None,
+) -> DieselPriceLookup:
+    """Load the diesel table once and prepare a reusable UF lookup map."""
+    source_csv = str(Path(csv_path).resolve()) if csv_path is not None else str(DEFAULT_DIESEL_PRICES_CSV.resolve())
+    table = load_latest_diesel_price(csv_path=csv_path)
+    uf_to_price: Dict[str, float] = {}
+    if not table.empty:
+        uf_to_price = {
+            str(k): float(v)
+            for k, v in zip(table["UF"].tolist(), table["price_brl_l"].tolist())
+            if isinstance(k, str) and k
+        }
+
+    return DieselPriceLookup(
+        source_csv=source_csv,
+        default_price_r_per_l=float(default_price_r_per_l),
+        uf_to_price=uf_to_price,
+        row_count=len(uf_to_price),
+    )
+
+
+def get_average_price_from_lookup(
+    uf_o: str,
+    uf_d: str,
+    lookup: DieselPriceLookup,
 ) -> Dict[str, Any]:
-    """UF-based adapter used by road fuel services and evaluators."""
+    """Resolve diesel price metadata from a prepared lookup without reloading the CSV."""
     uf_o_norm = normalize_uf(uf_o)
     uf_d_norm = normalize_uf(uf_d)
 
-    table = load_latest_diesel_price(csv_path=csv_path)
-
-    if table.empty or not uf_o_norm or not uf_d_norm:
-        price = float(default_price_r_per_l)
+    if not lookup.uf_to_price or not uf_o_norm or not uf_d_norm:
+        price = float(lookup.default_price_r_per_l)
         reason_parts: list[str] = []
-        if table.empty:
+        if not lookup.uf_to_price:
             reason_parts.append("empty_or_missing_table")
         if not uf_o_norm:
             reason_parts.append("missing_uf_origin")
@@ -221,7 +252,7 @@ def get_average_price(
         reason = ",".join(reason_parts) or "unknown"
 
         _log.warning(
-            "get_average_price: fallback to default. uf_o=%r uf_d=%r default=%.4f reason=%s",
+            "get_average_price_from_lookup: fallback to default. uf_o=%r uf_d=%r default=%.4f reason=%s",
             uf_o_norm,
             uf_d_norm,
             price,
@@ -233,26 +264,59 @@ def get_average_price(
             "uf_origin": uf_o_norm or None,
             "uf_destiny": uf_d_norm or None,
             "fallback_used": True,
-            "csv_path": str(csv_path or DEFAULT_DIESEL_PRICES_CSV),
+            "csv_path": lookup.source_csv,
             "fallback_reason": reason,
         }
 
-    avg_price, ctx = avg_price_for_ufs(
-        uf_o_norm,
-        uf_d_norm,
-        table,
-        source_csv=csv_path or DEFAULT_DIESEL_PRICES_CSV,
-    )
+    p_o = lookup.uf_to_price.get(uf_o_norm)
+    p_d = lookup.uf_to_price.get(uf_d_norm)
 
-    meta: Dict[str, Any] = dict(ctx)
-    meta["price_r_per_l"] = float(avg_price)
-    meta["source"] = "latest_diesel_prices_csv"
+    fallback_used = False
+    if p_o is None and p_d is not None:
+        p_o, fallback_used = p_d, True
+    if p_d is None and p_o is not None:
+        p_d, fallback_used = p_o, True
+
+    if p_o is None and p_d is None:
+        avg = float(lookup.default_price_r_per_l)
+        fallback_used = True
+        source = "default_price_param"
+    else:
+        avg = (float(p_o) + float(p_d)) / 2.0
+        source = "latest_diesel_prices_csv"
+
+    return {
+        "price_r_per_l": float(avg),
+        "source": source,
+        "uf_origin": uf_o_norm or None,
+        "uf_destiny": uf_d_norm or None,
+        "price_origin": None if p_o is None else float(p_o),
+        "price_destiny": None if p_d is None else float(p_d),
+        "source_csv": lookup.source_csv,
+        "csv_path": lookup.source_csv,
+        "fallback_used": bool(fallback_used),
+    }
+
+
+def get_average_price(
+    uf_o: str,
+    uf_d: str,
+    *,
+    default_price_r_per_l: float = 6.0,
+    csv_path: str | Path | None = None,
+) -> Dict[str, Any]:
+    """UF-based adapter used by road fuel services and evaluators."""
+    lookup = build_price_lookup(
+        default_price_r_per_l=default_price_r_per_l,
+        csv_path=csv_path,
+    )
+    meta = get_average_price_from_lookup(uf_o, uf_d, lookup)
 
     _log.debug(
         "get_average_price: uf_o=%s uf_d=%s avg_price=%.4f R$/L",
-        uf_o_norm,
-        uf_d_norm,
-        avg_price,
+        meta.get("uf_origin"),
+        meta.get("uf_destiny"),
+        float(meta.get("price_r_per_l") or 0.0),
     )
     return meta
 

@@ -209,6 +209,7 @@ def estimate_port_ops(
     stat_key: str = "median",
     diesel_price_per_l: float | None = None,
     params_path: Path | None = None,
+    selection: PortOpsScenarioSelection | None = None,
 ) -> dict[str, Any]:
     """
     Estimate port operations fuel/energy/emissions using a moves-based method.
@@ -216,7 +217,7 @@ def estimate_port_ops(
     `port_moves_per_call` is interpreted as quay-side container moves per call.
     Equipment-specific movement multipliers convert this into RTG/TT/STS moves.
     """
-    selection = resolve_port_ops_scenario(scenario=scenario, params_path=params_path)
+    selection = selection or resolve_port_ops_scenario(scenario=scenario, params_path=params_path)
 
     calls = max(int(port_calls), 0)
 

@@ -12,6 +12,7 @@ Consumes path geometry and produces cost/emissions comparison between:
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -23,7 +24,13 @@ if __name__ == "__main__":
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
 
-from modules.costs.diesel_prices import get_average_price, normalize_uf
+from modules.costs.diesel_prices import (
+    DieselPriceLookup,
+    build_price_lookup,
+    get_average_price,
+    get_average_price_from_lookup,
+    normalize_uf,
+)
 from modules.costs.ship_fuel_prices import get_bunker_price
 from modules.fuel.emissions import get_ef_kg_per_kg
 from modules.fuel.road_fuel_model import estimate_leg_liters
@@ -31,12 +38,15 @@ from modules.fuel.truck_specs import get_truck_spec
 from modules.infra.log_manager import get_logger
 from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
+    VesselClassEfficiency,
     resolve_vessel_class_efficiency,
 )
-from modules.multimodal.hoteling import resolve_hoteling_rate
+from modules.multimodal.hoteling import HotelingRateSelection, resolve_hoteling_rate
 from modules.multimodal.port_ops import (
     DEFAULT_PORT_OPS_SCENARIO,
+    PortOpsScenarioSelection,
     estimate_port_ops,
+    resolve_port_ops_scenario,
 )
 
 _log = get_logger(__name__)
@@ -47,6 +57,19 @@ _BUNKER_EF_KG_CO2E_PER_KG = float(get_ef_kg_per_kg(_MARINE_FUEL_TYPE))
 _NM_TO_KM = 1.852
 _KG_PER_TONNE = 1000.0
 _DEFAULT_TEU_LOAD_FACTOR = 0.80
+
+
+@dataclass(frozen=True)
+class PreparedEvaluationContext:
+    """Scenario-wide evaluator inputs prepared once and reused across many paths."""
+
+    truck_spec: Dict[str, Any]
+    diesel_lookup: DieselPriceLookup | None
+    diesel_price_override: float | None
+    bunker_price_ton: float
+    vessel_eff: VesselClassEfficiency
+    hoteling_sel: HotelingRateSelection | None
+    port_ops_selection: PortOpsScenarioSelection | None
 
 
 def _resolve_uf_from_point(point: Dict[str, Any]) -> str:
@@ -197,6 +220,79 @@ def compute_cargo_allocation_share(
     return float(share_used), debug
 
 
+def prepare_evaluation_context(
+    *,
+    truck_key: str = "semi_27t",
+    diesel_price: Optional[float] = None,
+    diesel_default_price_r_per_l: float = 6.0,
+    diesel_csv_path: Optional[Path] = None,
+    vessel_class: str = DEFAULT_VESSEL_CLASS,
+    vessel_efficiency_path: Optional[Path] = None,
+    include_hoteling: bool = True,
+    hoteling_hours_per_call: float = 14.0,
+    port_calls: int = 2,
+    hoteling_rate_path: Optional[Path] = None,
+    include_port_ops: bool = True,
+    port_ops_scenario: str = DEFAULT_PORT_OPS_SCENARIO,
+    port_ops_params_path: Optional[Path] = None,
+    bunker_price_brl_mt: float = 3500.0,
+) -> PreparedEvaluationContext:
+    """Prepare scenario-wide evaluator inputs once for reuse across many destinations."""
+    hoteling_hours_total = max(float(hoteling_hours_per_call), 0.0) * max(int(port_calls), 0)
+
+    vessel_eff = resolve_vessel_class_efficiency(
+        vessel_class=vessel_class,
+        efficiency_json_path=vessel_efficiency_path,
+    )
+
+    hoteling_sel = None
+    if bool(include_hoteling) and hoteling_hours_total > 0:
+        hoteling_sel = resolve_hoteling_rate(
+            vessel_class=vessel_eff.vessel_class,
+            hoteling_rate_path=hoteling_rate_path,
+        )
+
+    port_ops_selection = None
+    if bool(include_port_ops) and max(int(port_calls), 0) > 0:
+        port_ops_selection = resolve_port_ops_scenario(
+            scenario=port_ops_scenario,
+            params_path=port_ops_params_path,
+        )
+
+    diesel_lookup = None
+    diesel_price_override = None if diesel_price is None else float(diesel_price)
+    if diesel_price_override is None:
+        diesel_lookup = build_price_lookup(
+            default_price_r_per_l=diesel_default_price_r_per_l,
+            csv_path=diesel_csv_path,
+        )
+
+    context = PreparedEvaluationContext(
+        truck_spec=get_truck_spec(truck_key),
+        diesel_lookup=diesel_lookup,
+        diesel_price_override=diesel_price_override,
+        bunker_price_ton=float(get_bunker_price(default_price_brl_mt=bunker_price_brl_mt)),
+        vessel_eff=vessel_eff,
+        hoteling_sel=hoteling_sel,
+        port_ops_selection=port_ops_selection,
+    )
+
+    _log.info(
+        (
+            "Prepared evaluation context: truck=%s vessel_class=%s diesel_mode=%s "
+            "diesel_rows=%d bunker_price=R$ %.2f/mt hoteling=%s port_ops=%s"
+        ),
+        truck_key,
+        vessel_eff.vessel_class,
+        ("explicit_override" if diesel_price_override is not None else "lookup"),
+        (0 if diesel_lookup is None else diesel_lookup.row_count),
+        context.bunker_price_ton,
+        bool(hoteling_sel is not None),
+        bool(port_ops_selection is not None),
+    )
+    return context
+
+
 def evaluate_path(
     path_data: Dict[str, Any],
     cargo_t: float,
@@ -218,6 +314,9 @@ def evaluate_path(
     port_ops_scenario: str = DEFAULT_PORT_OPS_SCENARIO,
     port_ops_params_path: Optional[Path] = None,
     port_ops_stat_key: str = "median",
+    prepared_context: PreparedEvaluationContext | None = None,
+    diesel_default_price_r_per_l: float = 6.0,
+    diesel_csv_path: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Assess costs and emissions for a path geometry payload."""
     if not path_data or path_data.get("status") != "ok":
@@ -231,38 +330,67 @@ def evaluate_path(
     hoteling_hours_total = hoteling_hours_per_call * float(port_calls) if include_hoteling else 0.0
 
     try:
-        vessel_eff = resolve_vessel_class_efficiency(
+        context = prepared_context or prepare_evaluation_context(
+            truck_key=truck_key,
+            diesel_price=diesel_price,
+            diesel_default_price_r_per_l=diesel_default_price_r_per_l,
+            diesel_csv_path=diesel_csv_path,
             vessel_class=vessel_class,
-            efficiency_json_path=vessel_efficiency_path,
+            vessel_efficiency_path=vessel_efficiency_path,
+            include_hoteling=include_hoteling,
+            hoteling_hours_per_call=hoteling_hours_per_call,
+            port_calls=port_calls,
+            hoteling_rate_path=hoteling_rate_path,
+            include_port_ops=include_port_ops,
+            port_ops_scenario=port_ops_scenario,
+            port_ops_params_path=port_ops_params_path,
         )
     except Exception as exc:
-        _log.error("Failed to resolve vessel class efficiency: %s", exc)
+        _log.error("Failed to prepare evaluation context: %s", exc)
         return {}
 
-    hoteling_sel = None
-    if include_hoteling and hoteling_hours_total > 0:
-        try:
-            # Keep hoteling class aligned with resolved sea-class fallback.
-            hoteling_sel = resolve_hoteling_rate(
-                vessel_class=vessel_eff.vessel_class,
-                hoteling_rate_path=hoteling_rate_path,
-            )
-        except Exception as exc:
-            _log.error("Failed to resolve hoteling-rate artifact: %s", exc)
-            return {}
-
     cargo_t = float(cargo_t)
-    truck_spec = get_truck_spec(truck_key)
+    truck_spec = context.truck_spec
+    vessel_eff = context.vessel_eff
+    hoteling_sel = context.hoteling_sel
 
     origin_uf = _resolve_uf_from_point(path_data.get("origin", {}))
     destiny_uf = _resolve_uf_from_point(path_data.get("destiny", {}))
 
-    diesel_meta = get_average_price(origin_uf, destiny_uf)
     if diesel_price is not None:
+        diesel_meta = {
+            "price_r_per_l": float(diesel_price),
+            "source": "explicit_override",
+            "uf_origin": origin_uf or None,
+            "uf_destiny": destiny_uf or None,
+            "fallback_used": False,
+            "csv_path": None,
+        }
         price_l = float(diesel_price)
         diesel_source = "explicit_override"
+    elif context.diesel_price_override is not None:
+        diesel_meta = {
+            "price_r_per_l": float(context.diesel_price_override),
+            "source": "explicit_override",
+            "uf_origin": origin_uf or None,
+            "uf_destiny": destiny_uf or None,
+            "fallback_used": False,
+            "csv_path": None,
+        }
+        price_l = float(context.diesel_price_override)
+        diesel_source = "explicit_override"
+    elif context.diesel_lookup is not None:
+        diesel_meta = get_average_price_from_lookup(origin_uf, destiny_uf, context.diesel_lookup)
+        price_l = float(diesel_meta.get("price_r_per_l", diesel_default_price_r_per_l))
+        diesel_source = str(diesel_meta.get("source", "latest_diesel_prices_csv"))
     else:
-        price_l = float(diesel_meta.get("price_r_per_l", 6.0))
+        diesel_meta = get_average_price(
+            origin_uf,
+            destiny_uf,
+            default_price_r_per_l=diesel_default_price_r_per_l,
+            csv_path=diesel_csv_path,
+        )
+        price_l = float(diesel_meta.get("price_r_per_l", diesel_default_price_r_per_l))
         diesel_source = str(diesel_meta.get("source", "latest_diesel_prices_csv"))
 
     _log.debug(
@@ -317,7 +445,7 @@ def evaluate_path(
 
     sea_dist_km = float(path_data.get("sea_leg", {}).get("distance_km") or 0.0)
     sea_dist_nm = sea_dist_km / _NM_TO_KM if sea_dist_km > 0 else 0.0
-    bunker_price_ton = float(get_bunker_price(default_price_brl_mt=3500.0))
+    bunker_price_ton = float(context.bunker_price_ton)
 
     cargo_share, allocation_debug = compute_cargo_allocation_share(
         inputs={
@@ -391,6 +519,7 @@ def evaluate_path(
                 stat_key=port_ops_stat_key,
                 diesel_price_per_l=price_l,
                 params_path=port_ops_params_path,
+                selection=context.port_ops_selection,
             )
             totals = port_ops_payload.get("totals", {}) if isinstance(port_ops_payload, dict) else {}
             port_ops_fuel_kg = float(totals.get("fuel_kg") or 0.0)
