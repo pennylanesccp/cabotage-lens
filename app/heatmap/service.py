@@ -162,10 +162,24 @@ def _canonical_origin_name(origin_name: str) -> str:
     return resolved or candidate
 
 
-def _build_selector(scenario: HeatmapScenario) -> BulkRunSelector:
-    canonical_origin_name = _canonical_origin_name(scenario.origin_name)
+def _origin_key_candidates(scenario: HeatmapScenario) -> List[str]:
+    raw_origin_name = normalize_bulk_place_input(scenario.origin_name)
+    keys: List[str] = []
+
+    raw_origin_key = ascii_place_key(raw_origin_name)
+    if raw_origin_key:
+        keys.append(raw_origin_key)
+
+    canonical_origin_key = ascii_place_key(_canonical_origin_name(scenario.origin_name))
+    if canonical_origin_key and canonical_origin_key not in keys:
+        keys.append(canonical_origin_key)
+
+    return keys
+
+
+def _build_selector_for_origin_key(scenario: HeatmapScenario, origin_key: str) -> BulkRunSelector:
     return BulkRunSelector(
-        origin_key=ascii_place_key(canonical_origin_name),
+        origin_key=origin_key,
         cargo_t=float(scenario.cargo_t),
         truck_key=str(scenario.truck_key),
         ors_profile=str(scenario.ors_profile),
@@ -183,6 +197,51 @@ def _build_selector(scenario: HeatmapScenario) -> BulkRunSelector:
         port_ops_scenario=str(scenario.port_ops_scenario),
         destination_set_id=HEATMAP_DESTINATION_SET_ID,
     )
+
+
+def _selector_sort_timestamp(value: Any) -> str:
+    return "" if value is None else str(value)
+
+
+def _select_active_selector(
+    conn: Any,
+    scenario: HeatmapScenario,
+) -> tuple[BulkRunSelector, Any, Any]:
+    candidates: List[tuple[int, BulkRunSelector, Any, Any]] = []
+    origin_keys = _origin_key_candidates(scenario)
+
+    for index, origin_key in enumerate(origin_keys):
+        selector = _build_selector_for_origin_key(scenario, origin_key)
+        summary = summarize_bulk_results(conn, selector=selector)
+        latest_completed = get_latest_completed_run(conn, selector=selector)
+        candidates.append((index, selector, summary, latest_completed))
+
+    if not candidates:
+        selector = _build_selector_for_origin_key(scenario, origin_key="")
+        summary = summarize_bulk_results(conn, selector=selector)
+        latest_completed = get_latest_completed_run(conn, selector=selector)
+        return selector, summary, latest_completed
+
+    best_index, best_selector, best_summary, best_latest_completed = max(
+        candidates,
+        key=lambda item: (
+            int(getattr(item[2], "row_count", 0) or 0),
+            1 if item[3] is not None else 0,
+            _selector_sort_timestamp(
+                None if item[3] is None else (item[3].completed_timestamp or item[3].updated_timestamp)
+            ),
+            -item[0],
+        ),
+    )
+
+    if best_index > 0:
+        _log.info(
+            "Heatmap selector fallback origin=%s chosen_origin_key=%s candidate_count=%d",
+            scenario.origin_name,
+            best_selector.origin_key,
+            len(candidates),
+        )
+    return best_selector, best_summary, best_latest_completed
 
 
 def list_origin_options() -> List[str]:
@@ -241,7 +300,6 @@ def list_cargo_options(origin_name: str) -> List[float]:
 
 def get_heatmap_status(scenario: HeatmapScenario) -> HeatmapRunInfo:
     _require_postgres()
-    selector = _build_selector(scenario)
     _log.info(
         "Querying heatmap comparison status origin=%s cargo_t=%.3f destination_set=%s",
         scenario.origin_name,
@@ -249,8 +307,7 @@ def get_heatmap_status(scenario: HeatmapScenario) -> HeatmapRunInfo:
         HEATMAP_DESTINATION_SET_ID,
     )
     with db_session(backend="postgres") as conn:
-        summary = summarize_bulk_results(conn, selector=selector)
-        latest_completed = get_latest_completed_run(conn, selector=selector)
+        _, summary, latest_completed = _select_active_selector(conn, scenario)
 
     status = _to_run_info(
         scenario,
@@ -287,10 +344,16 @@ def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
 
 
 def _existing_destination_inputs(scenario: HeatmapScenario) -> set[str]:
-    selector = _build_selector(scenario)
     with db_session(backend="postgres") as conn:
-        keys = list_bulk_result_input_destiny_keys(conn, selector=selector, only_success=None)
-    return {str(key).casefold() for key in keys if str(key).strip()}
+        keys: set[str] = set()
+        for origin_key in _origin_key_candidates(scenario):
+            selector = _build_selector_for_origin_key(scenario, origin_key)
+            keys.update(
+                str(key).casefold()
+                for key in list_bulk_result_input_destiny_keys(conn, selector=selector, only_success=None)
+                if str(key).strip()
+            )
+    return keys
 
 
 def pending_destinations(scenario: HeatmapScenario) -> List[str]:
@@ -315,9 +378,9 @@ def load_current_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
     if status.found_count <= 0:
         return None
 
-    selector = _build_selector(scenario)
     _log.info("Loading heatmap comparison rows origin=%s cargo_t=%.3f", scenario.origin_name, scenario.cargo_t)
     with db_session(backend="postgres") as conn:
+        selector, _, _ = _select_active_selector(conn, scenario)
         rows = list_bulk_results(conn, selector=selector, only_success=True)
 
     points: List[HeatmapPoint] = []
