@@ -28,23 +28,68 @@ class LegArcOverride:
 # - Keys must use the normalized port identifiers returned by `normalize_port_identifier`.
 # - `side` refers to the visible arc-bulge side relative to the directed leg A -> B.
 #
-# Example dictionary with the supported override shapes:
-# EXAMPLE_LEG_ARC_OVERRIDES = {
-#     ("porto-de-santos", "porto-de-sao-sebastiao"): {
-#         "central_angle_deg": 48.0,
-#         "side": "right",
-#     },
-#     ("porto-de-salvador", "porto-de-aratu"): {
-#         "central_angle_deg": 55.0,
-#     },
-#     ("porto-de-vila-do-conde", "porto-de-santarem"): {
-#         "side": "left",
-#     },
-#     ("porto-de-santarem", "porto-de-manaus"): {
-#         "central_angle_deg": 42.0,
-#         "side": "left",
-#     },
-# }
+# Copy-ready template with all adjacent master-route leg possibilities.
+# Paste the entries you want into LEG_ARC_OVERRIDES and then:
+# - keep `central_angle_deg` at 60.0 or change it per leg
+# - optionally add `"side": "left"` or `"side": "right"`
+MASTER_ROUTE_DIRECTIONAL_LEG_OVERRIDE_TEMPLATE: dict[tuple[str, str], dict[str, object]] = {
+    # South -> North
+    ("porto-do-rio-grande", "porto-de-imbituba"): {"central_angle_deg": 60.0},
+    ("porto-de-imbituba", "porto-de-itajai"): {"central_angle_deg": 60.0},
+    ("porto-de-itajai", "porto-de-navegantes"): {"central_angle_deg": 60.0},
+    ("porto-de-navegantes", "porto-de-sao-francisco-do-sul"): {"central_angle_deg": 60.0},
+    ("porto-de-sao-francisco-do-sul", "porto-de-itapoa"): {"central_angle_deg": 60.0},
+    ("porto-de-itapoa", "porto-de-paranagua"): {"central_angle_deg": 60.0},
+    ("porto-de-paranagua", "porto-de-santos"): {"central_angle_deg": 60.0},
+    ("porto-de-santos", "porto-de-sao-sebastiao"): {"central_angle_deg": 60.0},
+    ("porto-de-sao-sebastiao", "porto-de-angra-dos-reis"): {"central_angle_deg": 60.0},
+    ("porto-de-angra-dos-reis", "porto-de-itaguai"): {"central_angle_deg": 60.0},
+    ("porto-de-itaguai", "porto-do-rio-de-janeiro"): {"central_angle_deg": 60.0},
+    ("porto-do-rio-de-janeiro", "porto-de-vitoria"): {"central_angle_deg": 60.0},
+    ("porto-de-vitoria", "porto-de-salvador"): {"central_angle_deg": 60.0},
+    ("porto-de-salvador", "porto-de-aratu"): {"central_angle_deg": 60.0},
+    ("porto-de-aratu", "porto-de-maceio"): {"central_angle_deg": 60.0},
+    ("porto-de-maceio", "porto-de-suape"): {"central_angle_deg": 60.0},
+    ("porto-de-suape", "porto-do-recife"): {"central_angle_deg": 60.0},
+    ("porto-do-recife", "porto-de-cabedelo"): {"central_angle_deg": 60.0},
+    ("porto-de-cabedelo", "porto-de-natal"): {"central_angle_deg": 60.0},
+    ("porto-de-natal", "porto-de-fortaleza"): {"central_angle_deg": 60.0},
+    ("porto-de-fortaleza", "porto-do-pecem"): {"central_angle_deg": 60.0},
+    ("porto-do-pecem", "porto-do-itaqui"): {"central_angle_deg": 60.0},
+    ("porto-do-itaqui", "porto-de-belem"): {"central_angle_deg": 60.0},
+    ("porto-de-belem", "porto-de-vila-do-conde"): {"central_angle_deg": 60.0},
+    ("porto-de-vila-do-conde", "porto-de-santana"): {"central_angle_deg": 60.0},
+    ("porto-de-santana", "porto-de-santarem"): {"central_angle_deg": 60.0},
+    ("porto-de-santarem", "porto-de-manaus"): {"central_angle_deg": 60.0},
+    # North -> South
+    ("porto-de-manaus", "porto-de-santarem"): {"central_angle_deg": 60.0},
+    ("porto-de-santarem", "porto-de-santana"): {"central_angle_deg": 60.0},
+    ("porto-de-santana", "porto-de-vila-do-conde"): {"central_angle_deg": 60.0},
+    ("porto-de-vila-do-conde", "porto-de-belem"): {"central_angle_deg": 60.0},
+    ("porto-de-belem", "porto-do-itaqui"): {"central_angle_deg": 60.0},
+    ("porto-do-itaqui", "porto-do-pecem"): {"central_angle_deg": 60.0},
+    ("porto-do-pecem", "porto-de-fortaleza"): {"central_angle_deg": 60.0},
+    ("porto-de-fortaleza", "porto-de-natal"): {"central_angle_deg": 60.0},
+    ("porto-de-natal", "porto-de-cabedelo"): {"central_angle_deg": 60.0},
+    ("porto-de-cabedelo", "porto-do-recife"): {"central_angle_deg": 60.0},
+    ("porto-do-recife", "porto-de-suape"): {"central_angle_deg": 60.0},
+    ("porto-de-suape", "porto-de-maceio"): {"central_angle_deg": 60.0},
+    ("porto-de-maceio", "porto-de-aratu"): {"central_angle_deg": 60.0},
+    ("porto-de-aratu", "porto-de-salvador"): {"central_angle_deg": 60.0},
+    ("porto-de-salvador", "porto-de-vitoria"): {"central_angle_deg": 60.0},
+    ("porto-de-vitoria", "porto-do-rio-de-janeiro"): {"central_angle_deg": 60.0},
+    ("porto-do-rio-de-janeiro", "porto-de-itaguai"): {"central_angle_deg": 60.0},
+    ("porto-de-itaguai", "porto-de-angra-dos-reis"): {"central_angle_deg": 60.0},
+    ("porto-de-angra-dos-reis", "porto-de-sao-sebastiao"): {"central_angle_deg": 60.0},
+    ("porto-de-sao-sebastiao", "porto-de-santos"): {"central_angle_deg": 60.0},
+    ("porto-de-santos", "porto-de-paranagua"): {"central_angle_deg": 60.0},
+    ("porto-de-paranagua", "porto-de-itapoa"): {"central_angle_deg": 60.0},
+    ("porto-de-itapoa", "porto-de-sao-francisco-do-sul"): {"central_angle_deg": 60.0},
+    ("porto-de-sao-francisco-do-sul", "porto-de-navegantes"): {"central_angle_deg": 60.0},
+    ("porto-de-navegantes", "porto-de-itajai"): {"central_angle_deg": 60.0},
+    ("porto-de-itajai", "porto-de-imbituba"): {"central_angle_deg": 60.0},
+    ("porto-de-imbituba", "porto-do-rio-grande"): {"central_angle_deg": 60.0},
+}
 LEG_ARC_OVERRIDES: dict[tuple[str, str], dict[str, object]] = {
     # Example:
     # ("porto-de-santos", "porto-de-sao-sebastiao"): {
