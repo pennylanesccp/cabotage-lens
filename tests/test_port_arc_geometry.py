@@ -5,7 +5,10 @@ from app.main.map.routing.marine_master_route import load_master_route_ports
 from app.main.map.routing.water_validation import build_leg_reference_path
 from modules.plot.maritime_arc_geometry import (
     CENTRAL_ANGLE_RADIANS,
+    RouteArcPort,
     build_port_to_port_arc,
+    build_route_arc_path,
+    build_route_arcs_from_port_sequence,
     compute_candidate_arc_centers,
     sample_circular_arc,
 )
@@ -81,6 +84,41 @@ class PortArcGeometryTests(unittest.TestCase):
 
         self.assertGreater(geometry.midpoint_latlon[1], max(origin[1], dest[1]))
         self.assertAlmostEqual(geometry.central_angle_radians, CENTRAL_ANGLE_RADIANS, places=9)
+
+    def test_route_arc_chain_keeps_intermediate_ports(self) -> None:
+        ports = [
+            RouteArcPort(name="Port A", latlon=(0.0, 0.0)),
+            RouteArcPort(name="Port B", latlon=(0.0, 2.0)),
+            RouteArcPort(name="Port C", latlon=(0.0, 4.0)),
+        ]
+
+        route_arcs = build_route_arcs_from_port_sequence(
+            ports,
+            reference_path_builder=lambda start_port, end_port: (
+                start_port.latlon,
+                (0.8, (start_port.latlon[1] + end_port.latlon[1]) / 2.0),
+                end_port.latlon,
+            ),
+            n_points_per_leg=21,
+        )
+        route_path = build_route_arc_path(
+            ports,
+            reference_path_builder=lambda start_port, end_port: (
+                start_port.latlon,
+                (0.8, (start_port.latlon[1] + end_port.latlon[1]) / 2.0),
+                end_port.latlon,
+            ),
+            n_points_per_leg=21,
+        )
+
+        self.assertEqual(len(route_arcs), 2)
+        self.assertEqual(route_arcs[0].port_a_latlon, ports[0].latlon)
+        self.assertEqual(route_arcs[0].port_b_latlon, ports[1].latlon)
+        self.assertEqual(route_arcs[1].port_a_latlon, ports[1].latlon)
+        self.assertEqual(route_arcs[1].port_b_latlon, ports[2].latlon)
+        self.assertEqual(route_path[0], ports[0].latlon)
+        self.assertEqual(route_path[-1], ports[2].latlon)
+        self.assertEqual(sum(1 for point in route_path if point == ports[1].latlon), 1)
 
     @staticmethod
     def _distance(a_xy: tuple[float, float], b_xy: tuple[float, float]) -> float:

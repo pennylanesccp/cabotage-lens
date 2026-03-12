@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -118,6 +119,12 @@ class CircularArcGeometry:
 
 
 @dataclass(frozen=True)
+class RouteArcPort:
+    name: str
+    latlon: tuple[float, float]
+
+
+@dataclass(frozen=True)
 class _ArcCandidateScore:
     center_xy: tuple[float, float]
     center_latlon: tuple[float, float]
@@ -127,6 +134,9 @@ class _ArcCandidateScore:
     midpoint_reference_distance_km: float
     mean_reference_distance_km: float
     nearest_clutter_distance_km: float
+
+
+LegReferencePathBuilder = Callable[[RouteArcPort, RouteArcPort], Sequence[tuple[float, float]]]
 
 
 def compute_candidate_arc_centers(
@@ -234,6 +244,25 @@ def choose_maritime_side_center(
     return chosen.center_latlon
 
 
+def choose_arc_center_for_leg(
+    port_a: RouteArcPort | tuple[float, float],
+    port_b: RouteArcPort | tuple[float, float],
+    *,
+    reference_path_latlon: Sequence[tuple[float, float]] = (),
+    clutter_points_latlon: Sequence[tuple[float, float]] = (),
+    n_points: int = DEFAULT_ARC_POINTS,
+) -> tuple[float, float]:
+    port_a_latlon = _coerce_route_arc_port(port_a).latlon
+    port_b_latlon = _coerce_route_arc_port(port_b).latlon
+    return choose_maritime_side_center(
+        port_a_latlon,
+        port_b_latlon,
+        reference_path_latlon=reference_path_latlon,
+        clutter_points_latlon=clutter_points_latlon,
+        n_points=n_points,
+    )
+
+
 def sample_circular_arc(
     port_a_latlon: tuple[float, float],
     port_b_latlon: tuple[float, float],
@@ -256,6 +285,23 @@ def sample_circular_arc(
         points[0] = (float(port_a_latlon[0]), float(port_a_latlon[1]))
         points[-1] = (float(port_b_latlon[0]), float(port_b_latlon[1]))
     return tuple(points)
+
+
+def sample_leg_arc(
+    port_a: RouteArcPort | tuple[float, float],
+    port_b: RouteArcPort | tuple[float, float],
+    center_latlon: tuple[float, float],
+    *,
+    n_points: int = DEFAULT_ARC_POINTS,
+) -> tuple[tuple[float, float], ...]:
+    port_a_latlon = _coerce_route_arc_port(port_a).latlon
+    port_b_latlon = _coerce_route_arc_port(port_b).latlon
+    return sample_circular_arc(
+        port_a_latlon,
+        port_b_latlon,
+        center_latlon,
+        n_points=n_points,
+    )
 
 
 def build_port_to_port_arc(
@@ -329,6 +375,85 @@ def build_port_to_port_arc(
             reference_path_xy,
         ),
     )
+
+
+def build_arc_for_leg(
+    port_a: RouteArcPort | tuple[float, float],
+    port_b: RouteArcPort | tuple[float, float],
+    *,
+    reference_path_latlon: Sequence[tuple[float, float]] = (),
+    clutter_points_latlon: Sequence[tuple[float, float]] = (),
+    n_points: int = DEFAULT_ARC_POINTS,
+) -> CircularArcGeometry:
+    port_a_latlon = _coerce_route_arc_port(port_a).latlon
+    port_b_latlon = _coerce_route_arc_port(port_b).latlon
+    return build_port_to_port_arc(
+        port_a_latlon,
+        port_b_latlon,
+        reference_path_latlon=reference_path_latlon,
+        clutter_points_latlon=clutter_points_latlon,
+        n_points=n_points,
+    )
+
+
+def build_route_arcs_from_port_sequence(
+    port_sequence: Sequence[RouteArcPort | tuple[float, float]],
+    *,
+    reference_path_builder: LegReferencePathBuilder | None = None,
+    clutter_points_latlon: Sequence[tuple[float, float]] = (),
+    n_points_per_leg: int = DEFAULT_ARC_POINTS,
+) -> tuple[CircularArcGeometry, ...]:
+    ports = [_coerce_route_arc_port(port, default_name=f"Port {index}") for index, port in enumerate(port_sequence)]
+    if len(ports) < 2:
+        return ()
+
+    arcs: list[CircularArcGeometry] = []
+    for index in range(1, len(ports)):
+        port_a = ports[index - 1]
+        port_b = ports[index]
+        reference_path = (
+            tuple(reference_path_builder(port_a, port_b))
+            if reference_path_builder is not None
+            else ()
+        )
+        arcs.append(
+            build_arc_for_leg(
+                port_a,
+                port_b,
+                reference_path_latlon=reference_path,
+                clutter_points_latlon=clutter_points_latlon,
+                n_points=n_points_per_leg,
+            )
+        )
+    return tuple(arcs)
+
+
+def build_route_arc_path(
+    port_sequence: Sequence[RouteArcPort | tuple[float, float]],
+    *,
+    reference_path_builder: LegReferencePathBuilder | None = None,
+    clutter_points_latlon: Sequence[tuple[float, float]] = (),
+    n_points_per_leg: int = DEFAULT_ARC_POINTS,
+) -> tuple[tuple[float, float], ...]:
+    ports = [_coerce_route_arc_port(port, default_name=f"Port {index}") for index, port in enumerate(port_sequence)]
+    if not ports:
+        return ()
+    if len(ports) == 1:
+        return (ports[0].latlon,)
+
+    route_path_latlon: list[tuple[float, float]] = []
+    route_arcs = build_route_arcs_from_port_sequence(
+        ports,
+        reference_path_builder=reference_path_builder,
+        clutter_points_latlon=clutter_points_latlon,
+        n_points_per_leg=n_points_per_leg,
+    )
+    for index, leg_arc in enumerate(route_arcs):
+        leg_points = list(leg_arc.arc_points_latlon)
+        if index > 0:
+            leg_points = leg_points[1:]
+        route_path_latlon.extend(leg_points)
+    return tuple(route_path_latlon)
 
 
 def _score_candidate_center(
@@ -535,6 +660,19 @@ def _dedupe_latlon(points_latlon: Sequence[tuple[float, float]]) -> list[tuple[f
             continue
         deduped.append(latlon)
     return deduped
+
+
+def _coerce_route_arc_port(
+    port: RouteArcPort | tuple[float, float],
+    *,
+    default_name: str = "Port",
+) -> RouteArcPort:
+    if isinstance(port, RouteArcPort):
+        return RouteArcPort(name=str(port.name), latlon=(float(port.latlon[0]), float(port.latlon[1])))
+    return RouteArcPort(
+        name=default_name,
+        latlon=(float(port[0]), float(port[1])),
+    )
 
 
 def _normalize_sweep(angle_radians: float) -> float:
