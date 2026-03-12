@@ -22,6 +22,7 @@ def build_marine_route_polyline(
     smooth_window: int = 7,
     style: str = "Coastal lane (default)",
     curvature: float = 0.25,
+    debug_leg_key: tuple[str, str] | None = None,
 ) -> list[list[float]]:
     del smooth_window, style, curvature
 
@@ -37,6 +38,7 @@ def build_marine_route_polyline(
             RouteArcPort(
                 name=str(route_port.name),
                 latlon=(float(route_port.latlon[0]), float(route_port.latlon[1])),
+                key=getattr(route_port, "key", None),
             )
             for route_port in route_ports
         ],
@@ -48,5 +50,6 @@ def build_marine_route_polyline(
         ),
         clutter_points_latlon=_peer_port_latlons(),
         n_points_per_leg=max(int(n_points), 2),
+        debug_leg_key=debug_leg_key,
     )
     return [[float(lon), float(lat)] for lat, lon in route_path_latlon]

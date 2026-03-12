@@ -45,7 +45,7 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.checkbox("Show direct road", key="map_show_direct")
     st.checkbox("Show ports", key="map_show_ports")
     st.checkbox("Show labels", key="map_show_labels")
-    st.caption("Sea leg visualization uses one 60-degree circular arc for each consecutive port-to-port leg.")
+    st.caption("Sea leg visualization defaults to one 60-degree circular arc per consecutive port-to-port leg, with per-leg tuning for problematic legs.")
     st.slider("Sea arc points per leg", min_value=60, max_value=400, step=10, key="map_sea_n_points", disabled=not bool(st.session_state.map_show_sea))
     st.slider("Pitch", min_value=0, max_value=60, key="map_pitch")
     st.slider("Bearing", min_value=-180, max_value=180, key="map_bearing")

@@ -13,6 +13,7 @@ def build_marine_route_path(
     smooth_window: int = 7,
     style: str = "Coastal lane (default)",
     curvature: float = 0.25,
+    debug_leg_key: tuple[str, str] | None = None,
 ) -> list[list[float]]:
     return build_marine_route_polyline(
         origin_port_name=origin_port_name,
@@ -23,4 +24,5 @@ def build_marine_route_path(
         smooth_window=smooth_window,
         style=style,
         curvature=curvature,
+        debug_leg_key=debug_leg_key,
     )
