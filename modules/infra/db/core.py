@@ -277,7 +277,11 @@ def connect(db_path: Path | str | None = DEFAULT_DB_PATH, *, backend: Optional[s
                 "(or provide SUPABASE_DB_HOST explicitly for pooler connections)."
             )
         _log.debug("Connecting to Postgres: %s", settings.display_target)
-        raw = psycopg.connect(str(settings.postgres_dsn), connect_timeout=10)
+        raw = psycopg.connect(
+            str(settings.postgres_dsn),
+            connect_timeout=10,
+            prepare_threshold=None,
+        )
         return DBConnection(raw, backend="postgres", target=settings.display_target)
 
     path = Path(settings.sqlite_path)
