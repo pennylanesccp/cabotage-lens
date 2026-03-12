@@ -32,6 +32,8 @@ CENTRAL_ANGLE_RADIANS = math.radians(DEFAULT_CENTRAL_ANGLE_DEGREES)
 EPS = 1e-9
 DEFAULT_ARC_POINTS = 100
 MIN_SIDE_DISTANCE_KM = 1.0
+AUTO_SIDE_BIAS_THRESHOLD_KM = 25.0
+DEFAULT_AUTO_ARC_SIDE = "right"
 
 
 @dataclass(frozen=True)
@@ -166,6 +168,7 @@ class LegArcCandidateDebug:
     center_latlon: tuple[float, float]
     center_side: str
     arc_side: str
+    default_side_penalty: int
     midpoint_latlon: tuple[float, float]
     side_match_penalty: int
     midpoint_context_distance_km: float
@@ -205,6 +208,7 @@ class _ArcCandidateScore:
     midpoint_latlon: tuple[float, float]
     center_side: str
     arc_side: str
+    default_side_penalty: int
     side_match_penalty: int
     midpoint_context_distance_km: float
     mean_context_distance_km: float
@@ -850,6 +854,7 @@ def _resolve_leg_arc_geometry(
                 center_latlon=candidate.center_latlon,
                 center_side=candidate.center_side,
                 arc_side=candidate.arc_side,
+                default_side_penalty=candidate.default_side_penalty,
                 midpoint_latlon=candidate.midpoint_latlon,
                 side_match_penalty=candidate.side_match_penalty,
                 midpoint_context_distance_km=candidate.midpoint_context_distance_km,
@@ -891,9 +896,10 @@ def _score_candidate_center(
         midpoint_xy,
     )
     side_match_penalty = 0
-    if abs(context_side_bias_km) >= MIN_SIDE_DISTANCE_KM:
+    if abs(context_side_bias_km) >= AUTO_SIDE_BIAS_THRESHOLD_KM:
         if context_side_bias_km * midpoint_side_distance_km < 0.0:
             side_match_penalty = 1
+    default_side_penalty = 0 if _side_name(midpoint_side_distance_km) == DEFAULT_AUTO_ARC_SIDE else 1
 
     return _ArcCandidateScore(
         center_xy=center_xy,
@@ -905,6 +911,7 @@ def _score_candidate_center(
             _signed_line_distance(construction.port_a_xy, construction.port_b_xy, center_xy),
         ),
         arc_side=_side_name(midpoint_side_distance_km),
+        default_side_penalty=default_side_penalty,
         side_match_penalty=side_match_penalty,
         midpoint_context_distance_km=midpoint_context_distance_km,
         mean_context_distance_km=mean_context_distance_km,
@@ -912,9 +919,10 @@ def _score_candidate_center(
     )
 
 
-def _candidate_sort_key(score: _ArcCandidateScore) -> tuple[float, float, float, float]:
+def _candidate_sort_key(score: _ArcCandidateScore) -> tuple[float, float, float, float, float]:
     return (
         float(score.side_match_penalty),
+        float(score.default_side_penalty),
         float(score.midpoint_context_distance_km),
         float(score.mean_context_distance_km),
         -float(score.nearest_clutter_distance_km),
@@ -1207,6 +1215,7 @@ def _log_leg_arc_debug_payload(payload: LegArcDebugPayload) -> None:
             {
                 "center_side": candidate.center_side,
                 "arc_side": candidate.arc_side,
+                "default_side_penalty": candidate.default_side_penalty,
                 "center": candidate.center_latlon,
                 "midpoint": candidate.midpoint_latlon,
                 "side_penalty": candidate.side_match_penalty,

@@ -159,6 +159,19 @@ class PortArcGeometryTests(unittest.TestCase):
         self.assertEqual(geometry.side_source, "manual")
         self.assertLess(geometry.midpoint_latlon[0], 0.0)
 
+    def test_ambiguous_auto_selection_defaults_to_right(self) -> None:
+        geometry = build_port_to_port_arc(
+            (0.0, 0.0),
+            (0.0, 2.0),
+            reference_path_latlon=[(0.0, 0.0), (0.0, 2.0)],
+            clutter_points_latlon=(),
+            n_points=41,
+        )
+
+        self.assertEqual(geometry.side, "right")
+        self.assertEqual(geometry.side_source, "auto")
+        self.assertLess(geometry.midpoint_latlon[0], 0.0)
+
     def test_reverse_traversal_reuses_same_physical_arc_override(self) -> None:
         with patch.dict(
             LEG_ARC_OVERRIDES,
@@ -242,6 +255,7 @@ class PortArcGeometryTests(unittest.TestCase):
         self.assertEqual(payload.override_key, ("port-a", "port-b"))
         self.assertFalse(payload.override_reverse_traversal)
         self.assertEqual(payload.side_source, "manual")
+        self.assertTrue(all(candidate.default_side_penalty in (0, 1) for candidate in payload.candidates))
         self.assertEqual(len(payload.candidates), 2)
 
     def test_route_debug_payload_filter_returns_only_requested_leg(self) -> None:

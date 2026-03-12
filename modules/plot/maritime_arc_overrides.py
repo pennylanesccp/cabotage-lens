@@ -84,11 +84,15 @@ LEG_ARC_OVERRIDES: dict[tuple[str, str], dict[str, object]] = {
     # Sao Sebastiao -> Santos. The side is interpreted relative to the tuple
     # order written here, then flipped automatically for reverse traversal.
     ("porto-de-itaguai", "porto-do-rio-de-janeiro"): {
-        "central_angle_deg": 30.0,
+        "central_angle_deg": 120.0,
         "side": "right",
     },
     ("porto-do-rio-de-janeiro", "porto-de-vitoria"): {
-        "central_angle_deg": 30.0,
+        "central_angle_deg": 120.0,
+        "side": "right",
+    },
+    ("porto-de-santos", "porto-de-sao-sebastiao"): {
+        "central_angle_deg": 120.0,
         "side": "right",
     },
 }
