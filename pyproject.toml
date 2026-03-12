@@ -1,3 +1,4 @@
+# pip install -e .
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -6,7 +7,6 @@ build-backend = "setuptools.build_meta"
 name = "carbon-footprint"
 version = "1.5.3.3"
 description = "Multimodal freight assessment of logistics cost and carbon footprint."
-readme = "README.pypi.md"
 requires-python = ">=3.10"
 dependencies = [
     "requests",
