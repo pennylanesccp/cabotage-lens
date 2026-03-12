@@ -57,8 +57,8 @@ MASTER_ROUTE_LEG_OVERRIDE_TEMPLATE: dict[tuple[str, str], dict[str, object]] = {
     ("porto-de-santos", "porto-de-sao-sebastiao"): {"central_angle_deg": 60.0},
     ("porto-de-sao-sebastiao", "porto-de-angra-dos-reis"): {"central_angle_deg": 60.0},
     ("porto-de-angra-dos-reis", "porto-de-itaguai"): {"central_angle_deg": 60.0},
-    ("porto-de-itaguai", "porto-do-rio-de-janeiro"): {"central_angle_deg": 60.0},
-    ("porto-do-rio-de-janeiro", "porto-de-vitoria"): {"central_angle_deg": 60.0},
+    ("porto-de-itaguai", "porto-do-rio-de-janeiro"): {"central_angle_deg": 30.0},
+    ("porto-do-rio-de-janeiro", "porto-de-vitoria"): {"central_angle_deg": 30.0},
     ("porto-de-vitoria", "porto-de-salvador"): {"central_angle_deg": 60.0},
     ("porto-de-salvador", "porto-de-aratu"): {"central_angle_deg": 60.0},
     ("porto-de-aratu", "porto-de-maceio"): {"central_angle_deg": 60.0},
@@ -83,10 +83,14 @@ LEG_ARC_OVERRIDES: dict[tuple[str, str], dict[str, object]] = {
     # This single entry is reused for both Santos -> Sao Sebastiao and
     # Sao Sebastiao -> Santos. The side is interpreted relative to the tuple
     # order written here, then flipped automatically for reverse traversal.
-    # ("porto-de-santos", "porto-de-sao-sebastiao"): {
-    #     "central_angle_deg": 48.0,
-    #     "side": "right",
-    # },
+    ("porto-de-itaguai", "porto-do-rio-de-janeiro"): {
+        "central_angle_deg": 30.0,
+        "side": "right",
+    },
+    ("porto-do-rio-de-janeiro", "porto-de-vitoria"): {
+        "central_angle_deg": 30.0,
+        "side": "right",
+    },
 }
 
 
