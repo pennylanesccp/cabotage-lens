@@ -1,8 +1,15 @@
 from __future__ import annotations
 
-from app.main.map.routing.marine_coastal_route import build_coastal_leg_points
-from app.main.map.routing.marine_master_route import is_river_leg, resolve_master_route_slice
-from app.main.map.routing.marine_river_route import build_river_leg_points
+from functools import lru_cache
+
+from app.main.map.routing.water_validation import build_leg_reference_path
+from app.main.map.routing.marine_master_route import load_master_route_ports
+from modules.plot.maritime_arc_geometry import build_port_to_port_arc
+
+
+@lru_cache(maxsize=1)
+def _peer_port_latlons() -> tuple[tuple[float, float], ...]:
+    return tuple((float(port.latlon[0]), float(port.latlon[1])) for port in load_master_route_ports())
 
 
 def build_marine_route_polyline(
@@ -16,47 +23,19 @@ def build_marine_route_polyline(
     style: str = "Coastal lane (default)",
     curvature: float = 0.25,
 ) -> list[list[float]]:
-    route_ports = resolve_master_route_slice(
+    del smooth_window, style, curvature
+
+    reference_path_latlon = build_leg_reference_path(
         origin_port_name=origin_port_name,
         dest_port_name=dest_port_name,
         origin_latlon=origin_latlon,
         dest_latlon=dest_latlon,
     )
-
-    if len(route_ports) < 2:
-        return [[float(origin_latlon[1]), float(origin_latlon[0])], [float(dest_latlon[1]), float(dest_latlon[0])]]
-
-    path_latlon: list[tuple[float, float]] = [route_ports[0].latlon]
-    intermediate_points_per_leg = max(int(n_points), 100)
-
-    for idx in range(1, len(route_ports)):
-        leg_start = route_ports[idx - 1]
-        leg_end = route_ports[idx]
-
-        if is_river_leg(leg_start.key, leg_end.key):
-            leg_points = build_river_leg_points(
-                origin_port_name=leg_start.name,
-                dest_port_name=leg_end.name,
-                leg_start_latlon=leg_start.latlon,
-                leg_end_latlon=leg_end.latlon,
-                n_points=intermediate_points_per_leg,
-                smooth_window=smooth_window,
-                style=style,
-                curvature=curvature,
-            )
-        else:
-            leg_points = build_coastal_leg_points(
-                origin_port_name=leg_start.name,
-                dest_port_name=leg_end.name,
-                leg_start_latlon=leg_start.latlon,
-                leg_end_latlon=leg_end.latlon,
-                n_points=intermediate_points_per_leg,
-                smooth_window=smooth_window,
-                style=style,
-                curvature=curvature,
-            )
-
-        path_latlon.extend(leg_points)
-        path_latlon.append(leg_end.latlon)
-
-    return [[float(lon), float(lat)] for lat, lon in path_latlon]
+    geometry = build_port_to_port_arc(
+        port_a_latlon=origin_latlon,
+        port_b_latlon=dest_latlon,
+        reference_path_latlon=reference_path_latlon,
+        clutter_points_latlon=_peer_port_latlons(),
+        n_points=max(int(n_points), 2),
+    )
+    return [[float(lon), float(lat)] for lat, lon in geometry.arc_points_latlon]

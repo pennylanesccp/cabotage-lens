@@ -1,93 +1,90 @@
 import math
 import unittest
 
-from modules.plot.port_arc_geometry import (
-    ARC_VISIBLE_ANGLE_RAD,
-    compute_adaptive_arc_radius,
-    generate_port_arc_geometry,
-    get_local_corridor_context,
-    infer_water_direction_from_polygon,
+from app.main.map.routing.marine_master_route import load_master_route_ports
+from app.main.map.routing.water_validation import build_leg_reference_path
+from modules.plot.maritime_arc_geometry import (
+    CENTRAL_ANGLE_RADIANS,
+    build_port_to_port_arc,
+    compute_candidate_arc_centers,
+    sample_circular_arc,
 )
 
 
 class PortArcGeometryTests(unittest.TestCase):
-    def test_visible_angle_is_fixed_ten_percent(self) -> None:
-        geometry = generate_port_arc_geometry(
-            port_name="Port A",
-            port_latlon=(0.0, 0.0),
-            corridor_latlon=[(0.0, 1.0), (0.0, 2.0), (0.0, 3.0)],
-            peer_port_latlons=[(0.0, 0.0), (0.0, 5.0), (3.0, 0.0)],
-        )
+    def test_candidate_centers_form_sixty_degree_isosceles_triangle(self) -> None:
+        construction = compute_candidate_arc_centers((0.0, 0.0), (0.0, 1.0))
 
-        self.assertAlmostEqual(geometry.visible_angle_rad, ARC_VISIBLE_ANGLE_RAD, places=9)
-        self.assertAlmostEqual(math.degrees(geometry.visible_angle_rad), 36.0, places=6)
+        self.assertGreater(construction.radius_km, 0.0)
+        self.assertAlmostEqual(construction.radius_km, self._distance(construction.port_a_xy, construction.port_b_xy), places=6)
 
-    def test_radius_is_adaptive_not_fixed(self) -> None:
-        corridor = [(0.0, 1.0), (0.0, 2.0), (0.0, 3.0)]
-        near_geometry = generate_port_arc_geometry(
-            port_name="Port A",
-            port_latlon=(0.0, 0.0),
-            corridor_latlon=corridor,
-            peer_port_latlons=[(0.0, 0.0), (0.0, 0.8), (4.0, 4.0)],
-        )
-        far_geometry = generate_port_arc_geometry(
-            port_name="Port A",
-            port_latlon=(0.0, 0.0),
-            corridor_latlon=corridor,
-            peer_port_latlons=[(0.0, 0.0), (0.0, 6.0), (4.0, 4.0)],
-        )
+        for center_xy in (construction.center_a_xy, construction.center_b_xy):
+            radius_a = self._distance(center_xy, construction.port_a_xy)
+            radius_b = self._distance(center_xy, construction.port_b_xy)
+            self.assertAlmostEqual(radius_a, construction.radius_km, places=6)
+            self.assertAlmostEqual(radius_b, construction.radius_km, places=6)
 
-        self.assertLess(near_geometry.radius_km, far_geometry.radius_km)
-        self.assertNotAlmostEqual(near_geometry.radius_km, 60.0, delta=0.5)
-        self.assertNotAlmostEqual(far_geometry.radius_km, 60.0, delta=0.5)
+            vec_a = (
+                construction.port_a_xy[0] - center_xy[0],
+                construction.port_a_xy[1] - center_xy[1],
+            )
+            vec_b = (
+                construction.port_b_xy[0] - center_xy[0],
+                construction.port_b_xy[1] - center_xy[1],
+            )
+            dot = (vec_a[0] * vec_b[0]) + (vec_a[1] * vec_b[1])
+            angle = math.acos(dot / (radius_a * radius_b))
+            self.assertAlmostEqual(angle, CENTRAL_ANGLE_RADIANS, places=6)
 
-    def test_midpoint_bulges_toward_corridor_side(self) -> None:
-        geometry = generate_port_arc_geometry(
-            port_name="Port A",
-            port_latlon=(0.0, 0.0),
-            corridor_latlon=[(0.0, 1.0), (0.0, 2.0), (0.0, 3.0)],
-            peer_port_latlons=[(0.0, 0.0), (0.0, 3.0), (3.0, 0.0)],
-        )
-
-        self.assertLess(geometry.midpoint_distance_to_corridor_km, geometry.port_distance_to_corridor_km)
-
-    def test_river_corridor_is_supported(self) -> None:
-        geometry = generate_port_arc_geometry(
-            port_name="Porto de Manaus",
-            port_latlon=(-3.1567, -60.0079),
-            corridor_latlon=[
-                (-3.1500, -59.3500),
-                (-2.7500, -57.5000),
-                (-2.0500, -54.7000),
-            ],
-            peer_port_latlons=[
-                (-3.1567, -60.0079),
-                (-2.4220, -54.7190),
-                (0.0540, -51.1740),
-            ],
-        )
-
-        self.assertGreater(len(geometry.route_ordered_arc_points_latlon), 4)
-        self.assertLess(geometry.midpoint_distance_to_corridor_km, geometry.port_distance_to_corridor_km)
-
-    def test_polygon_backend_placeholder_is_explicit(self) -> None:
-        with self.assertRaises(NotImplementedError):
-            infer_water_direction_from_polygon(None)
-
-    def test_adaptive_radius_uses_local_corridor_spacing(self) -> None:
-        context = get_local_corridor_context(
+    def test_sampled_arc_preserves_requested_endpoints(self) -> None:
+        construction = compute_candidate_arc_centers((0.0, 0.0), (0.0, 1.0))
+        points = sample_circular_arc(
             (0.0, 0.0),
-            [(0.0, 1.0), (0.0, 1.5), (0.0, 2.0)],
-        )
-        radius_km, target_arc_km, _, local_spacing_km = compute_adaptive_arc_radius(
-            (0.0, 0.0),
-            [(0.0, 0.0), (0.0, 20.0)],
-            context,
+            (0.0, 1.0),
+            construction.center_a_latlon,
+            n_points=17,
         )
 
-        self.assertGreater(local_spacing_km, 0.0)
-        self.assertGreater(target_arc_km, 0.0)
-        self.assertGreater(radius_km, 0.0)
+        self.assertEqual(len(points), 17)
+        self.assertEqual(points[0], (0.0, 0.0))
+        self.assertEqual(points[-1], (0.0, 1.0))
+
+    def test_reference_path_controls_arc_bulge_side(self) -> None:
+        geometry = build_port_to_port_arc(
+            (0.0, 0.0),
+            (0.0, 2.0),
+            reference_path_latlon=[(0.0, 0.0), (0.8, 1.0), (0.0, 2.0)],
+            n_points=41,
+        )
+
+        self.assertEqual(len(geometry.arc_points_latlon), 41)
+        self.assertAlmostEqual(geometry.central_angle_radians, CENTRAL_ANGLE_RADIANS, places=9)
+        self.assertGreater(geometry.midpoint_latlon[0], 0.0)
+
+    def test_santos_to_sao_sebastiao_bends_offshore(self) -> None:
+        ports = {port.name: port.latlon for port in load_master_route_ports()}
+        origin = ports["Porto de Santos"]
+        dest = ports["Porto de Sao Sebastiao"]
+        reference_path = build_leg_reference_path(
+            origin_port_name="Porto de Santos",
+            dest_port_name="Porto de Sao Sebastiao",
+            origin_latlon=origin,
+            dest_latlon=dest,
+        )
+        geometry = build_port_to_port_arc(
+            origin,
+            dest,
+            reference_path_latlon=reference_path,
+            clutter_points_latlon=tuple(ports.values()),
+            n_points=61,
+        )
+
+        self.assertGreater(geometry.midpoint_latlon[1], max(origin[1], dest[1]))
+        self.assertAlmostEqual(geometry.central_angle_radians, CENTRAL_ANGLE_RADIANS, places=9)
+
+    @staticmethod
+    def _distance(a_xy: tuple[float, float], b_xy: tuple[float, float]) -> float:
+        return math.hypot(a_xy[0] - b_xy[0], a_xy[1] - b_xy[1])
 
 
 if __name__ == "__main__":
