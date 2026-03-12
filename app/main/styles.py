@@ -40,45 +40,64 @@ BASE_CSS = """
         color: #cbd5e1;
         font-size: 0.96rem;
     }
-    .summary-groups {
+    .summary-panels {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.9rem;
         margin: 0.55rem 0 0.9rem 0;
     }
-    .summary-card {
+    .summary-panel {
         border: 1px solid rgba(148, 163, 184, 0.24);
-        border-radius: 18px;
+        border-radius: 22px;
         background:
             linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(9, 14, 26, 0.92)),
             #0f172a;
-        padding: 0.95rem 1rem 1rem 1rem;
+        padding: 0.95rem 1.1rem 1.05rem 1.1rem;
         box-shadow: 0 18px 38px rgba(2, 6, 23, 0.22);
     }
-    .summary-card[data-accent="multimodal"] {
+    .summary-panel[data-accent="multimodal"] {
         border-color: rgba(45, 212, 191, 0.34);
         box-shadow: inset 0 1px 0 rgba(94, 234, 212, 0.1), 0 18px 38px rgba(2, 6, 23, 0.22);
     }
-    .summary-card[data-accent="road"] {
+    .summary-panel[data-accent="road"] {
         border-color: rgba(251, 191, 36, 0.28);
         box-shadow: inset 0 1px 0 rgba(252, 211, 77, 0.08), 0 18px 38px rgba(2, 6, 23, 0.22);
     }
-    .summary-card__eyebrow {
-        margin: 0 0 0.18rem 0;
-        color: #94a3b8;
-        font-size: 0.7rem;
-        letter-spacing: 0.12em;
+    .summary-panel__header {
+        margin-bottom: 0.8rem;
+    }
+    .summary-panel__eyebrow {
+        margin: 0;
+        color: #e2e8f0;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
         text-transform: uppercase;
     }
-    .summary-card h3 {
-        margin: 0 0 0.85rem 0;
-        color: #f8fafc;
-        font-size: 1rem;
-        line-height: 1.2;
+    .summary-panel__metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 0;
     }
-    .summary-card__value {
+    .summary-panel__metric {
+        min-width: 0;
+        padding: 0.15rem 0.95rem;
+        text-align: center;
+    }
+    .summary-panel__metric + .summary-panel__metric {
+        border-left: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .summary-panel__label {
+        margin: 0 0 0.38rem 0;
+        color: #94a3b8;
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .summary-panel__value {
         color: #f8fafc;
-        font-size: 1.22rem;
+        font-size: 1.16rem;
         font-weight: 700;
         line-height: 1.15;
         margin: 0;
@@ -131,12 +150,19 @@ BASE_CSS = """
         color: #f8fafc;
     }
     @media (max-width: 1100px) {
-        .summary-groups {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        .summary-panel__metrics {
+            grid-template-columns: 1fr;
+        }
+        .summary-panel__metric {
+            padding: 0.75rem 0.2rem;
+        }
+        .summary-panel__metric + .summary-panel__metric {
+            border-left: 0;
+            border-top: 1px solid rgba(148, 163, 184, 0.18);
         }
     }
     @media (max-width: 720px) {
-        .summary-groups {
+        .summary-panels {
             grid-template-columns: 1fr;
         }
     }
