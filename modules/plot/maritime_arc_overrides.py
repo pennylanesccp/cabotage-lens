@@ -27,6 +27,24 @@ class LegArcOverride:
 # - Keys are directional: (A, B) is different from (B, A).
 # - Keys must use the normalized port identifiers returned by `normalize_port_identifier`.
 # - `side` refers to the visible arc-bulge side relative to the directed leg A -> B.
+#
+# Example dictionary with the supported override shapes:
+# EXAMPLE_LEG_ARC_OVERRIDES = {
+#     ("porto-de-santos", "porto-de-sao-sebastiao"): {
+#         "central_angle_deg": 48.0,
+#         "side": "right",
+#     },
+#     ("porto-de-salvador", "porto-de-aratu"): {
+#         "central_angle_deg": 55.0,
+#     },
+#     ("porto-de-vila-do-conde", "porto-de-santarem"): {
+#         "side": "left",
+#     },
+#     ("porto-de-santarem", "porto-de-manaus"): {
+#         "central_angle_deg": 42.0,
+#         "side": "left",
+#     },
+# }
 LEG_ARC_OVERRIDES: dict[tuple[str, str], dict[str, object]] = {
     # Example:
     # ("porto-de-santos", "porto-de-sao-sebastiao"): {
