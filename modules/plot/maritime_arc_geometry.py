@@ -15,10 +15,12 @@ from dataclasses import dataclass
 from modules.infra.log_manager import get_logger
 from modules.plot.maritime_arc_overrides import (
     DEFAULT_LEG_CENTRAL_ANGLE_DEG,
-    get_leg_arc_override,
+    flip_arc_side,
     normalize_arc_side,
+    normalize_directional_leg_key,
     normalize_leg_key,
     normalize_port_identifier,
+    resolve_leg_arc_override,
 )
 
 _log = get_logger(__name__)
@@ -153,6 +155,9 @@ class LegArcConfig:
     leg_key: tuple[str, str]
     central_angle_deg: float
     side_override: str | None
+    configured_side_override: str | None
+    override_key: tuple[str, str] | None
+    override_reverse_traversal: bool
     angle_source: str
 
 
@@ -178,6 +183,9 @@ class LegArcDebugPayload:
     central_angle_deg: float
     angle_source: str
     side_override: str | None
+    configured_side_override: str | None
+    override_key: tuple[str, str] | None
+    override_reverse_traversal: bool
     side_source: str
     chosen_arc_side: str | None
     chosen_center_side: str | None
@@ -270,7 +278,16 @@ def get_leg_arc_config(
     port_a_obj = _coerce_route_arc_port(port_a)
     port_b_obj = _coerce_route_arc_port(port_b)
     leg_key = (_route_arc_port_key(port_a_obj), _route_arc_port_key(port_b_obj))
-    override = get_leg_arc_override(leg_key[0], leg_key[1])
+    resolved_override = resolve_leg_arc_override(leg_key[0], leg_key[1])
+    override = None if resolved_override is None else resolved_override.override
+    configured_side_override = None if override is None else override.side
+    applied_side_override = configured_side_override
+    if (
+        configured_side_override is not None
+        and resolved_override is not None
+        and resolved_override.reverse_traversal
+    ):
+        applied_side_override = flip_arc_side(configured_side_override)
     return LegArcConfig(
         leg_key=leg_key,
         central_angle_deg=(
@@ -278,7 +295,12 @@ def get_leg_arc_config(
             if override is None or override.central_angle_deg is None
             else _normalize_central_angle_deg(override.central_angle_deg)
         ),
-        side_override=None if override is None else override.side,
+        side_override=applied_side_override,
+        configured_side_override=configured_side_override,
+        override_key=(None if resolved_override is None else resolved_override.stored_key),
+        override_reverse_traversal=(
+            False if resolved_override is None else resolved_override.reverse_traversal
+        ),
         angle_source=("default" if override is None or override.central_angle_deg is None else "override"),
     )
 
@@ -302,9 +324,12 @@ def choose_maritime_side_center(
         clutter_points_latlon=clutter_points_latlon,
         n_points=n_points,
         config=LegArcConfig(
-            leg_key=normalize_leg_key("Port A", "Port B"),
+            leg_key=normalize_directional_leg_key("Port A", "Port B"),
             central_angle_deg=central_angle_deg,
             side_override=normalize_arc_side(side_override),
+            configured_side_override=normalize_arc_side(side_override),
+            override_key=None,
+            override_reverse_traversal=False,
             angle_source="manual" if central_angle_deg != DEFAULT_CENTRAL_ANGLE_DEGREES else "default",
         ),
     )
@@ -464,6 +489,9 @@ def build_port_to_port_arc(
             ),
             central_angle_deg=central_angle_deg,
             side_override=normalize_arc_side(side_override),
+            configured_side_override=normalize_arc_side(side_override),
+            override_key=None,
+            override_reverse_traversal=False,
             angle_source="manual" if central_angle_deg != DEFAULT_CENTRAL_ANGLE_DEGREES else "default",
         ),
     )
@@ -581,7 +609,10 @@ def build_route_arcs_from_port_sequence(
             n_points=n_points_per_leg,
             config=get_leg_arc_config(port_a, port_b),
         )
-        if debug_key is not None and payload.leg_key == debug_key:
+        if (
+            debug_key is not None
+            and normalize_leg_key(payload.leg_key[0], payload.leg_key[1]) == debug_key
+        ):
             _log_leg_arc_debug_payload(payload)
         arcs.append(geometry)
     return tuple(arcs)
@@ -642,7 +673,7 @@ def build_route_arc_debug_payloads(
     n_points_per_leg: int = DEFAULT_ARC_POINTS,
     debug_leg_key: tuple[str, str] | None = None,
 ) -> tuple[LegArcDebugPayload, ...]:
-    """Return debug payloads for all route legs, or one directional leg if filtered."""
+    """Return debug payloads for all route legs, or one physical leg if filtered."""
     ports = [_coerce_route_arc_port(port, default_name=f"Port {index}") for index, port in enumerate(port_sequence)]
     if len(ports) < 2:
         return ()
@@ -669,7 +700,10 @@ def build_route_arc_debug_payloads(
             n_points=n_points_per_leg,
             config=get_leg_arc_config(port_a, port_b),
         )
-        if debug_key is None or payload.leg_key == debug_key:
+        if (
+            debug_key is None
+            or normalize_leg_key(payload.leg_key[0], payload.leg_key[1]) == debug_key
+        ):
             payloads.append(payload)
     return tuple(payloads)
 
@@ -718,6 +752,9 @@ def _resolve_leg_arc_geometry(
             central_angle_deg=config.central_angle_deg,
             angle_source=config.angle_source,
             side_override=config.side_override,
+            configured_side_override=config.configured_side_override,
+            override_key=config.override_key,
+            override_reverse_traversal=config.override_reverse_traversal,
             side_source=("manual" if config.side_override is not None else "auto"),
             chosen_arc_side=None,
             chosen_center_side=None,
@@ -798,6 +835,9 @@ def _resolve_leg_arc_geometry(
         central_angle_deg=construction.central_angle_degrees,
         angle_source=config.angle_source,
         side_override=config.side_override,
+        configured_side_override=config.configured_side_override,
+        override_key=config.override_key,
+        override_reverse_traversal=config.override_reverse_traversal,
         side_source=side_source,
         chosen_arc_side=chosen.arc_side,
         chosen_center_side=chosen.center_side,
@@ -1147,7 +1187,8 @@ def _clamp(value: float, lower: float, upper: float) -> float:
 def _log_leg_arc_debug_payload(payload: LegArcDebugPayload) -> None:
     _log.info(
         (
-            "Maritime arc debug leg=%s->%s angle_deg=%.2f angle_source=%s side_override=%s side_source=%s "
+            "Maritime arc debug leg=%s->%s angle_deg=%.2f angle_source=%s side_override=%s "
+            "configured_side_override=%s override_key=%s override_reverse_traversal=%s side_source=%s "
             "chosen_arc_side=%s chosen_center_side=%s chosen_center=%s candidates=%s"
         ),
         payload.leg_key[0],
@@ -1155,6 +1196,9 @@ def _log_leg_arc_debug_payload(payload: LegArcDebugPayload) -> None:
         payload.central_angle_deg,
         payload.angle_source,
         payload.side_override,
+        payload.configured_side_override,
+        payload.override_key,
+        payload.override_reverse_traversal,
         payload.side_source,
         payload.chosen_arc_side,
         payload.chosen_center_side,

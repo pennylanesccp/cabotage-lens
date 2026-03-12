@@ -159,6 +159,51 @@ class PortArcGeometryTests(unittest.TestCase):
         self.assertEqual(geometry.side_source, "manual")
         self.assertLess(geometry.midpoint_latlon[0], 0.0)
 
+    def test_reverse_traversal_reuses_same_physical_arc_override(self) -> None:
+        with patch.dict(
+            LEG_ARC_OVERRIDES,
+            {("port-a", "port-b"): {"central_angle_deg": 48.0, "side": "right"}},
+            clear=True,
+        ):
+            forward = build_arc_for_leg(
+                RouteArcPort(name="Port A", key="port-a", latlon=(0.0, 0.0)),
+                RouteArcPort(name="Port B", key="port-b", latlon=(0.0, 2.0)),
+                reference_path_latlon=[(0.0, 0.0), (0.8, 1.0), (0.0, 2.0)],
+                n_points=41,
+            )
+            reverse = build_arc_for_leg(
+                RouteArcPort(name="Port B", key="port-b", latlon=(0.0, 2.0)),
+                RouteArcPort(name="Port A", key="port-a", latlon=(0.0, 0.0)),
+                reference_path_latlon=[(0.0, 2.0), (0.8, 1.0), (0.0, 0.0)],
+                n_points=41,
+            )
+
+        self.assertAlmostEqual(forward.central_angle_degrees, 48.0, places=9)
+        self.assertAlmostEqual(reverse.central_angle_degrees, 48.0, places=9)
+        self.assertEqual(forward.side_source, "manual")
+        self.assertEqual(reverse.side_source, "manual")
+        self.assertEqual(forward.side, "right")
+        self.assertEqual(reverse.side, "left")
+        self.assertLess(forward.midpoint_latlon[0], 0.0)
+        self.assertLess(reverse.midpoint_latlon[0], 0.0)
+
+    def test_duplicate_reverse_entries_for_same_leg_raise(self) -> None:
+        with patch.dict(
+            LEG_ARC_OVERRIDES,
+            {
+                ("port-a", "port-b"): {"side": "right"},
+                ("port-b", "port-a"): {"side": "left"},
+            },
+            clear=True,
+        ):
+            with self.assertRaises(ValueError):
+                build_arc_for_leg(
+                    RouteArcPort(name="Port A", key="port-a", latlon=(0.0, 0.0)),
+                    RouteArcPort(name="Port B", key="port-b", latlon=(0.0, 2.0)),
+                    reference_path_latlon=[(0.0, 0.0), (0.8, 1.0), (0.0, 2.0)],
+                    n_points=41,
+                )
+
     def test_neighbor_context_can_guide_auto_side_selection(self) -> None:
         ports = [
             RouteArcPort(name="Port A", key="port-a", latlon=(0.0, 0.0)),
@@ -193,6 +238,9 @@ class PortArcGeometryTests(unittest.TestCase):
         self.assertAlmostEqual(payload.central_angle_deg, 55.0, places=9)
         self.assertEqual(payload.angle_source, "override")
         self.assertEqual(payload.side_override, "left")
+        self.assertEqual(payload.configured_side_override, "left")
+        self.assertEqual(payload.override_key, ("port-a", "port-b"))
+        self.assertFalse(payload.override_reverse_traversal)
         self.assertEqual(payload.side_source, "manual")
         self.assertEqual(len(payload.candidates), 2)
 
@@ -212,6 +260,27 @@ class PortArcGeometryTests(unittest.TestCase):
             ),
             n_points_per_leg=21,
             debug_leg_key=("port-b", "port-c"),
+        )
+
+        self.assertEqual(len(payloads), 1)
+        self.assertEqual(payloads[0].leg_key, ("port-b", "port-c"))
+
+    def test_route_debug_payload_filter_accepts_reverse_leg_key(self) -> None:
+        ports = [
+            RouteArcPort(name="Port A", key="port-a", latlon=(0.0, 0.0)),
+            RouteArcPort(name="Port B", key="port-b", latlon=(0.0, 2.0)),
+            RouteArcPort(name="Port C", key="port-c", latlon=(0.0, 4.0)),
+        ]
+
+        payloads = build_route_arc_debug_payloads(
+            ports,
+            reference_path_builder=lambda start_port, end_port: (
+                start_port.latlon,
+                (0.8, (start_port.latlon[1] + end_port.latlon[1]) / 2.0),
+                end_port.latlon,
+            ),
+            n_points_per_leg=21,
+            debug_leg_key=("port-c", "port-b"),
         )
 
         self.assertEqual(len(payloads), 1)
