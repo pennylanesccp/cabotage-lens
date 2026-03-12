@@ -81,6 +81,8 @@ class BulkApproximationTests(unittest.TestCase):
         def fake_resolve_point(value, _ors, **_kwargs):
             return copy.deepcopy(points_by_input.get(str(value)))
 
+        resolve_point_mock = MagicMock(side_effect=fake_resolve_point)
+
         def fake_build_geometry(origin_pt, destiny_pt, **_kwargs):
             return copy.deepcopy(geos_by_label[destiny_pt["label"]])
 
@@ -97,33 +99,86 @@ class BulkApproximationTests(unittest.TestCase):
         finish_run_mock = MagicMock()
         prepare_context_mock = MagicMock(return_value=prepared_context)
 
-        with patch("modules.multimodal.bulk.load_routing_assets", return_value=("ors", [], "sea", ":memory:")), patch(
-            "modules.multimodal.bulk.resolve_point_for_geometry",
-            side_effect=fake_resolve_point,
-        ), patch("modules.multimodal.bulk.find_nearest_port", return_value={"name": "Porto Teste", "lat": 1.0, "lon": 1.0}), patch(
-            "modules.multimodal.bulk.get_or_create_leg",
-            get_leg_mock,
+        class FakeCoordinator:
+            def __init__(self, *_args, **_kwargs):
+                pass
+
+            def prime(self, _conn, _specs):
+                return None
+
+            def resolve(self, spec):
+                if spec.leg_name == "first_mile":
+                    return get_leg_mock()
+                return {
+                    "distance_km": 25.0,
+                    "source": "api",
+                    "profile_requested": "driving-hgv",
+                    "profile_used": "driving-hgv",
+                    "cached": False,
+                }
+
+            def drain_pending_rows(self):
+                return []
+
+        class FakePersistenceBuffer:
+            def __init__(self, *_args, **_kwargs):
+                pass
+
+            def add(self, bulk_row, run_row):
+                merged = dict(bulk_row)
+                merged.update(run_row)
+                persisted.append(merged)
+
+            def flush(self):
+                return None
+
+        class FakeConn:
+            def commit(self):
+                return None
+
+        with patch("modules.multimodal.bulk_pipeline.load_routing_assets", return_value=("ors", [], "sea", ":memory:")), patch(
+            "modules.multimodal.bulk_pipeline._resolve_point_without_db",
+            resolve_point_mock,
         ), patch(
-            "modules.multimodal.bulk.build_path_geometry_from_resolved",
+            "modules.multimodal.bulk_pipeline.NearestPortMemo.resolve",
+            return_value={"name": "Porto Teste", "lat": 1.0, "lon": 1.0},
+        ), patch(
+            "modules.multimodal.bulk_pipeline.RouteRequestCoordinator",
+            FakeCoordinator,
+        ), patch(
+            "modules.multimodal.bulk_pipeline.build_path_geometry_from_resolved",
             build_geometry_mock,
         ), patch(
-            "modules.multimodal.bulk._evaluate_and_flatten",
+            "modules.multimodal.bulk_pipeline._evaluate_and_flatten",
             side_effect=self._fake_evaluate_and_flatten,
         ), patch(
-            "modules.multimodal.bulk.prepare_evaluation_context",
+            "modules.multimodal.bulk_pipeline.prepare_evaluation_context",
             prepare_context_mock,
         ), patch(
-            "modules.multimodal.bulk.db_session",
-            side_effect=lambda *args, **kwargs: contextlib.nullcontext(object()),
+            "modules.multimodal.bulk_pipeline.db_session",
+            side_effect=lambda *args, **kwargs: contextlib.nullcontext(FakeConn()),
         ), patch(
-            "modules.multimodal.bulk.start_bulk_run",
+            "modules.multimodal.bulk_pipeline.find_place_point",
+            return_value=None,
+        ), patch(
+            "modules.multimodal.bulk_pipeline.list_cached_place_points",
+            return_value={},
+        ), patch(
+            "modules.multimodal.bulk_pipeline.list_route_place_points",
+            return_value={},
+        ), patch(
+            "modules.multimodal.bulk_pipeline.upsert_place_points",
+        ), patch(
+            "modules.multimodal.bulk_pipeline.upsert_runs",
+        ), patch(
+            "modules.multimodal.bulk_pipeline.start_bulk_run",
             return_value="run-1",
         ), patch(
-            "modules.multimodal.bulk.finish_bulk_run",
+            "modules.multimodal.bulk_pipeline.finish_bulk_run",
             finish_run_mock,
         ), patch(
-            "modules.multimodal.bulk._safe_persist_bulk_outcome",
-            side_effect=lambda destiny_input, **kwargs: persisted.append({"destiny_input": destiny_input, **kwargs}),
+            "modules.multimodal.bulk_pipeline.BulkPersistenceBuffer",
+            FakePersistenceBuffer,
         ):
             outcome = bulk.run_bulk_evaluation(
                 origin="Origin, SP",
@@ -147,7 +202,7 @@ class BulkApproximationTests(unittest.TestCase):
                 shuffle_destinations=False,
             )
 
-        return outcome, persisted, build_geometry_mock, get_leg_mock, finish_run_mock, prepare_context_mock
+        return outcome, persisted, build_geometry_mock, get_leg_mock, finish_run_mock, prepare_context_mock, resolve_point_mock
 
     def test_shuffle_destinations_is_deterministic_with_seed(self) -> None:
         values = ["A", "B", "C", "D"]
@@ -213,7 +268,7 @@ class BulkApproximationTests(unittest.TestCase):
     def test_exact_route_success_keeps_row_exact(self) -> None:
         origin = self._point("Origin, SP", 0.0, 0.0)
         exact = self._point("Exact City", 0.0, 1.0)
-        outcome, persisted, _build_geometry_mock, _get_leg_mock, finish_run_mock, prepare_context_mock = self._run_bulk(
+        outcome, persisted, _build_geometry_mock, _get_leg_mock, finish_run_mock, prepare_context_mock, _resolve_point_mock = self._run_bulk(
             destinations=["Exact City"],
             points_by_input={
                 "Origin, SP": origin,
@@ -238,7 +293,7 @@ class BulkApproximationTests(unittest.TestCase):
         exact = self._point("Exact City", 0.0, 1.0)
         fail_a = self._point("Fail A", 0.0, 1.2)
         fail_b = self._point("Fail B", 0.0, 1.4)
-        outcome, persisted, build_geometry_mock, get_leg_mock, _finish_run_mock, prepare_context_mock = self._run_bulk(
+        outcome, persisted, build_geometry_mock, get_leg_mock, _finish_run_mock, prepare_context_mock, _resolve_point_mock = self._run_bulk(
             destinations=["Exact City", "Fail A", "Fail B"],
             points_by_input={
                 "Origin, SP": origin,
@@ -267,7 +322,7 @@ class BulkApproximationTests(unittest.TestCase):
     def test_failed_direct_route_without_exact_reference_stays_unresolved(self) -> None:
         origin = self._point("Origin, SP", 0.0, 0.0)
         missing = self._point("No Route City", 0.0, 2.0)
-        outcome, persisted, _build_geometry_mock, _get_leg_mock, _finish_run_mock, prepare_context_mock = self._run_bulk(
+        outcome, persisted, _build_geometry_mock, _get_leg_mock, _finish_run_mock, prepare_context_mock, _resolve_point_mock = self._run_bulk(
             destinations=["No Route City"],
             points_by_input={
                 "Origin, SP": origin,
@@ -285,6 +340,27 @@ class BulkApproximationTests(unittest.TestCase):
         self.assertEqual(persisted[0]["status"], "no_road_route")
         self.assertIn("no exact successful road routes", persisted[0]["error_message"])
         prepare_context_mock.assert_called_once()
+
+    def test_origin_and_duplicate_destinations_resolve_once_per_unique_input(self) -> None:
+        origin = self._point("Origin, SP", 0.0, 0.0)
+        manaus = self._point("Manaus, AM", 0.0, 1.0)
+        outcome, _persisted, build_geometry_mock, _get_leg_mock, _finish_run_mock, _prepare_context_mock, resolve_point_mock = self._run_bulk(
+            destinations=["Manaus, AM", "manaus, am", "Manaus, AM"],
+            points_by_input={
+                "Origin, SP": origin,
+                "Manaus, AM": manaus,
+                "manaus, am": manaus,
+            },
+            geos_by_label={
+                "Manaus, AM": self._geo(origin, manaus, road_distance_km=420.0),
+            },
+        )
+
+        self.assertEqual(outcome["success_count"], 1)
+        self.assertEqual(build_geometry_mock.call_count, 1)
+        self.assertEqual(resolve_point_mock.call_count, 2)
+        self.assertEqual(resolve_point_mock.call_args_list[0].args[0], "Origin, SP")
+        self.assertEqual(str(resolve_point_mock.call_args_list[1].args[0]), "Manaus, AM")
 
 
 if __name__ == "__main__":

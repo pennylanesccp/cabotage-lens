@@ -18,6 +18,8 @@ provider actually answered.
 
 from __future__ import annotations
 
+import threading
+import time
 from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple, TypeVar, Union
 
 if __name__ == "__main__":
@@ -220,6 +222,8 @@ class ORSClient:
         self.cfg = config or ORSConfig()
         self._primary = primary_provider or OpenRouteServiceProvider(self.cfg)
         self._fallback = fallback_provider if fallback_provider is not None else LocationIQClient()
+        self._metrics_lock = threading.Lock()
+        self._provider_metrics: dict[str, dict[str, dict[str, float]]] = {}
 
     def has_geocoding_provider(self) -> bool:
         return self._primary.is_enabled() or self._fallback.is_enabled()
@@ -302,6 +306,20 @@ class ORSClient:
             fallback_call=lambda: self._fallback.route_road(origin, destiny, profile=profile),
         )
 
+    def metrics_snapshot(self) -> Dict[str, Dict[str, Dict[str, float]]]:
+        with self._metrics_lock:
+            return {
+                provider: {
+                    operation: dict(stats)
+                    for operation, stats in operations.items()
+                }
+                for provider, operations in self._provider_metrics.items()
+            }
+
+    def reset_metrics(self) -> None:
+        with self._metrics_lock:
+            self._provider_metrics.clear()
+
     def _call_with_fallback(
         self,
         *,
@@ -322,6 +340,8 @@ class ORSClient:
 
         if primary_enabled:
             try:
+                t0 = time.perf_counter()
+                self._record_metric(self._primary.name, operation, "attempts", 1.0)
                 _log.info(
                     "Provider attempt operation=%s provider=%s query=%s",
                     operation,
@@ -329,6 +349,8 @@ class ORSClient:
                     query,
                 )
                 result = primary_call()
+                duration_s = time.perf_counter() - t0
+                self._record_metric(self._primary.name, operation, "successes", 1.0, duration_s=duration_s)
                 _log.info(
                     "Provider success operation=%s provider=%s query=%s",
                     operation,
@@ -337,6 +359,8 @@ class ORSClient:
                 )
                 return result
             except Exception as exc:
+                duration_s = time.perf_counter() - t0
+                self._record_metric(self._primary.name, operation, "failures", 1.0, duration_s=duration_s)
                 primary_exc = exc
                 _log.warning(
                     "Provider fallback triggered operation=%s provider=%s query=%s reason=%s",
@@ -357,6 +381,8 @@ class ORSClient:
 
         if fallback_enabled:
             try:
+                t0 = time.perf_counter()
+                self._record_metric(self._fallback.name, operation, "attempts", 1.0)
                 _log.info(
                     "Provider attempt operation=%s provider=%s query=%s",
                     operation,
@@ -364,6 +390,8 @@ class ORSClient:
                     query,
                 )
                 result = fallback_call()
+                duration_s = time.perf_counter() - t0
+                self._record_metric(self._fallback.name, operation, "successes", 1.0, duration_s=duration_s)
                 _log.info(
                     "Provider success operation=%s provider=%s query=%s fallback_from=%s",
                     operation,
@@ -373,6 +401,8 @@ class ORSClient:
                 )
                 return result
             except Exception as exc:
+                duration_s = time.perf_counter() - t0
+                self._record_metric(self._fallback.name, operation, "failures", 1.0, duration_s=duration_s)
                 fallback_exc = exc
                 _log.error(
                     "Provider fallback failed operation=%s provider=%s query=%s reason=%s",
@@ -417,6 +447,29 @@ class ORSClient:
     def _format_exception(self, exc: Exception) -> str:
         text = str(exc).strip()
         return text or exc.__class__.__name__
+
+    def _record_metric(
+        self,
+        provider: str,
+        operation: str,
+        field: str,
+        value: float,
+        *,
+        duration_s: float = 0.0,
+    ) -> None:
+        with self._metrics_lock:
+            provider_metrics = self._provider_metrics.setdefault(provider, {})
+            operation_metrics = provider_metrics.setdefault(
+                operation,
+                {
+                    "attempts": 0.0,
+                    "successes": 0.0,
+                    "failures": 0.0,
+                    "duration_s": 0.0,
+                },
+            )
+            operation_metrics[field] = float(operation_metrics.get(field, 0.0) + value)
+            operation_metrics["duration_s"] = float(operation_metrics.get("duration_s", 0.0) + duration_s)
 
 
 if __name__ == "__main__":

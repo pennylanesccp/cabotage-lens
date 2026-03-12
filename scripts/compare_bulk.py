@@ -87,6 +87,24 @@ def main() -> int:
         help=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "--geocode-workers",
+        type=int,
+        default=4,
+        help="Maximum concurrent destination geocoding workers",
+    )
+    parser.add_argument(
+        "--route-workers",
+        type=int,
+        default=8,
+        help="Maximum concurrent geometry/routing workers",
+    )
+    parser.add_argument(
+        "--persist-batch-size",
+        type=int,
+        default=64,
+        help="Bulk result rows to buffer before flushing batched DB writes",
+    )
+    parser.add_argument(
         "--vessel-class",
         default=DEFAULT_VESSEL_CLASS,
         choices=list(CONTAINER_VESSEL_CLASSES),
@@ -200,6 +218,9 @@ def main() -> int:
         shuffle_destinations=bool(args.shuffle_destinations),
         shuffle_seed=args.shuffle_seed,
         approximation_fallback=bool(args.approximation_fallback),
+        max_geocode_workers=max(int(args.geocode_workers), 1),
+        max_route_workers=max(int(args.route_workers), 1),
+        persist_batch_size=max(int(args.persist_batch_size), 1),
     )
 
     _write_summary_csv(outcome["summary_rows"], args.output_csv)
@@ -217,6 +238,26 @@ def main() -> int:
         float(outcome["duration_s"]),
         outcome.get("run_id"),
         outcome.get("shuffle_seed_used"),
+    )
+    perf = outcome.get("performance") or {}
+    timings = perf.get("timings_s") or {}
+    counts = perf.get("counts") or {}
+    _log.info(
+        (
+            "Bulk performance: bootstrap=%.2fs geocode=%.2fs geometry=%.2fs exact=%.2fs approx=%.2fs "
+            "db_read=%.2fs db_write=%.2fs direct_hit=%.0f direct_miss=%.0f last_hit=%.0f last_miss=%.0f"
+        ),
+        float(timings.get("bootstrap_s") or 0.0),
+        float(timings.get("destination_geocode_s") or 0.0),
+        float(timings.get("geometry_acquisition_s") or 0.0),
+        float(timings.get("exact_pass_s") or 0.0),
+        float(timings.get("approximation_pass_s") or 0.0),
+        float(timings.get("db_read_s") or 0.0),
+        float(timings.get("db_write_s") or 0.0),
+        float(counts.get("road_direct_cache_hits") or 0.0),
+        float(counts.get("road_direct_cache_misses") or 0.0),
+        float(counts.get("last_mile_cache_hits") or 0.0),
+        float(counts.get("last_mile_cache_misses") or 0.0),
     )
     return 0
 

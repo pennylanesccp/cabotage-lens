@@ -10,6 +10,7 @@ from modules.infra.database_manager import (
     db_session,
     find_place_point,
     get_latest_completed_run,
+    list_bulk_result_input_destiny_keys,
     list_bulk_results,
     list_bulk_run_cargo_values,
     list_bulk_run_origins,
@@ -288,12 +289,8 @@ def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
 def _existing_destination_inputs(scenario: HeatmapScenario) -> set[str]:
     selector = _build_selector(scenario)
     with db_session(backend="postgres") as conn:
-        rows = list_bulk_results(conn, selector=selector, only_success=None)
-    return {
-        normalize_bulk_place_input(row.input_destiny).casefold()
-        for row in rows
-        if str(row.input_destiny).strip()
-    }
+        keys = list_bulk_result_input_destiny_keys(conn, selector=selector, only_success=None)
+    return {str(key).casefold() for key in keys if str(key).strip()}
 
 
 def pending_destinations(scenario: HeatmapScenario) -> List[str]:

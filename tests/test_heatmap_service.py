@@ -247,21 +247,19 @@ class HeatmapServiceTests(unittest.TestCase):
 
     def test_pending_destinations_skips_existing_comparison_rows(self) -> None:
         scenario = self._scenario()
-        rows = [
-            SimpleNamespace(input_destiny="Manaus, AM"),
-            SimpleNamespace(input_destiny="Belem, PA"),
-        ]
-
         with patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
-            "app.heatmap.service.list_bulk_results",
-            return_value=rows,
+            "app.heatmap.service.list_bulk_result_input_destiny_keys",
+            return_value=["manaus, am", "belem, pa"],
         ), patch(
             "app.heatmap.service._heatmap_destinations",
             return_value=("Manaus, AM", "Belem, PA", "Rio Branco, AC"),
-        ):
+        ), patch(
+            "app.heatmap.service.list_bulk_results",
+        ) as list_results_mock:
             pending = pending_destinations(scenario)
 
         self.assertEqual(pending, ["Rio Branco, AC"])
+        list_results_mock.assert_not_called()
 
     def test_run_heatmap_missing_only_processes_only_unfound_destinations(self) -> None:
         scenario = self._scenario()

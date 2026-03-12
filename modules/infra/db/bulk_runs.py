@@ -783,6 +783,139 @@ def insert_run_result(
     )
 
 
+def insert_run_results(
+    conn: DBConnection,
+    *,
+    rows: Iterable[dict[str, Any]],
+    table_name: str = DEFAULT_RUN_RESULTS_TABLE,
+) -> int:
+    table = safe_table_name(table_name)
+    ensure_run_results_table(conn, table)
+
+    params_list: list[tuple[Any, ...]] = []
+    for row in rows:
+        params_list.append(
+            (
+                row["run_id"],
+                row["scenario_key"],
+                row["origin_key"],
+                row["origin_name"],
+                to_float(row.get("origin_lat")),
+                to_float(row.get("origin_lon")),
+                row.get("origin_uf"),
+                row["destiny_key"],
+                row["destiny_name"],
+                to_float(row.get("destiny_lat")),
+                to_float(row.get("destiny_lon")),
+                row.get("destiny_uf"),
+                row["input_origin"],
+                row["input_destiny"],
+                row["destination_set_id"],
+                row.get("port_origin_name"),
+                row.get("port_destiny_name"),
+                row["status"],
+                row.get("error_message"),
+                to_float(row.get("road_cost_r")),
+                to_float(row.get("multimodal_cost_r")),
+                to_float(row.get("cost_delta_r")),
+                to_float(row.get("cost_savings_pct")),
+                to_float(row.get("road_emissions_kg")),
+                to_float(row.get("multimodal_emissions_kg")),
+                to_float(row.get("emissions_delta_kg")),
+                to_float(row.get("emissions_savings_pct")),
+                to_float(row.get("road_distance_km")),
+                to_float(row.get("sea_km")),
+                bool_to_int(bool(row.get("is_approximation"))),
+                row.get("route_source"),
+                row.get("approximation_reference_destiny"),
+                to_float(row.get("approximation_reference_distance_km")),
+                to_float(row.get("approximation_delta_straight_line_km")),
+                row.get("approximation_notes"),
+            )
+        )
+
+    if not params_list:
+        return 0
+
+    conn.executemany(
+        f"""
+        INSERT INTO {table} (
+              run_id
+            , scenario_key
+            , origin_key
+            , origin_name
+            , origin_lat
+            , origin_lon
+            , origin_uf
+            , destiny_key
+            , destiny_name
+            , destiny_lat
+            , destiny_lon
+            , destiny_uf
+            , input_origin
+            , input_destiny
+            , destination_set_id
+            , port_origin_name
+            , port_destiny_name
+            , status
+            , error_message
+            , road_cost_r
+            , multimodal_cost_r
+            , cost_delta_r
+            , cost_savings_pct
+            , road_emissions_kg
+            , multimodal_emissions_kg
+            , emissions_delta_kg
+            , emissions_savings_pct
+            , road_distance_km
+            , sea_km
+            , is_approximation
+            , route_source
+            , approximation_reference_destiny
+            , approximation_reference_distance_km
+            , approximation_delta_straight_line_km
+            , approximation_notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(run_id, scenario_key) DO UPDATE SET
+              origin_key = excluded.origin_key
+            , origin_name = excluded.origin_name
+            , origin_lat = excluded.origin_lat
+            , origin_lon = excluded.origin_lon
+            , origin_uf = excluded.origin_uf
+            , destiny_key = excluded.destiny_key
+            , destiny_name = excluded.destiny_name
+            , destiny_lat = excluded.destiny_lat
+            , destiny_lon = excluded.destiny_lon
+            , destiny_uf = excluded.destiny_uf
+            , input_origin = excluded.input_origin
+            , input_destiny = excluded.input_destiny
+            , destination_set_id = excluded.destination_set_id
+            , port_origin_name = excluded.port_origin_name
+            , port_destiny_name = excluded.port_destiny_name
+            , status = excluded.status
+            , error_message = excluded.error_message
+            , road_cost_r = excluded.road_cost_r
+            , multimodal_cost_r = excluded.multimodal_cost_r
+            , cost_delta_r = excluded.cost_delta_r
+            , cost_savings_pct = excluded.cost_savings_pct
+            , road_emissions_kg = excluded.road_emissions_kg
+            , multimodal_emissions_kg = excluded.multimodal_emissions_kg
+            , emissions_delta_kg = excluded.emissions_delta_kg
+            , emissions_savings_pct = excluded.emissions_savings_pct
+            , road_distance_km = excluded.road_distance_km
+            , sea_km = excluded.sea_km
+            , is_approximation = excluded.is_approximation
+            , route_source = excluded.route_source
+            , approximation_reference_destiny = excluded.approximation_reference_destiny
+            , approximation_reference_distance_km = excluded.approximation_reference_distance_km
+            , approximation_delta_straight_line_km = excluded.approximation_delta_straight_line_km
+            , approximation_notes = excluded.approximation_notes
+            , updated_timestamp = {current_timestamp_sql()}
+        """,
+        params_list,
+    )
+    return len(params_list)
+
 
 def get_latest_completed_run(
     conn: DBConnection,

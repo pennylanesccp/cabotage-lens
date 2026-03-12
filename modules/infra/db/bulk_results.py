@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS {table} (
     , destiny_uf                TEXT
     , input_origin              TEXT      NOT NULL
     , input_destiny             TEXT      NOT NULL
+    , input_destiny_key         TEXT
     , cargo_t                   REAL      NOT NULL
     , truck_key                 TEXT      NOT NULL
     , ors_profile               TEXT      NOT NULL
@@ -102,6 +103,8 @@ _IDX_SQL = (
     "CREATE INDEX IF NOT EXISTS idx_{table}_status ON {table} (status);",
     "CREATE INDEX IF NOT EXISTS idx_{table}_run_id ON {table} (run_id);",
     "CREATE INDEX IF NOT EXISTS idx_{table}_origin_cargo_status ON {table} (origin_key, cargo_t, status);",
+    "CREATE INDEX IF NOT EXISTS idx_{table}_selector_pending ON {table} (destination_set_id, origin_key, cargo_t, truck_key, ors_profile, input_destiny_key);",
+    "CREATE INDEX IF NOT EXISTS idx_{table}_selector_updated ON {table} (destination_set_id, origin_key, cargo_t, truck_key, ors_profile, updated_timestamp DESC);",
 )
 
 _OPTIONAL_COLUMNS = (
@@ -112,6 +115,7 @@ _OPTIONAL_COLUMNS = (
     ("origin_lon", "origin_lon REAL"),
     ("origin_uf", "origin_uf TEXT"),
     ("destiny_key", "destiny_key TEXT"),
+    ("input_destiny_key", "input_destiny_key TEXT"),
     ("destiny_lat", "destiny_lat REAL"),
     ("destiny_lon", "destiny_lon REAL"),
     ("destiny_uf", "destiny_uf TEXT"),
@@ -136,6 +140,7 @@ class BulkResultRecord:
     origin_name: str
     destiny_name: str
     input_destiny: str
+    input_destiny_key: Optional[str]
     cargo_t: float
     truck_key: str
     ors_profile: str
@@ -263,40 +268,41 @@ def _row_to_result_record(row: Sequence[Any]) -> BulkResultRecord:
         origin_name=str(row[4]),
         destiny_name=str(row[5]),
         input_destiny=str(row[6]),
-        cargo_t=float(row[7]),
-        truck_key=str(row[8]),
-        ors_profile=str(row[9]),
-        vessel_class=_normalize_text(row[10]),
-        include_hoteling=bool(int_to_bool(row[11])),
-        hoteling_hours_per_call=to_float(row[12]),
-        port_calls=_safe_int(row[13], default=0) if row[13] is not None else None,
-        include_port_ops=bool(int_to_bool(row[14])),
-        port_moves_per_call=to_float(row[15]),
-        cargo_teu=to_float(row[16]),
-        t_per_teu_default=to_float(row[17]),
-        allocation_mode=_normalize_text(row[18]),
-        allocation_load_factor=to_float(row[19]),
-        full_call_mode=bool(int_to_bool(row[20])),
-        port_ops_scenario=_normalize_text(row[21]),
-        status=str(row[22]),
-        error_message=_normalize_text(row[23]),
-        destiny_lat=to_float(row[24]),
-        destiny_lon=to_float(row[25]),
-        destiny_uf=_normalize_text(row[26]),
-        port_destiny_name=_normalize_text(row[27]),
-        road_fuel_cost_r=to_float(row[28]),
-        total_fuel_cost_r=to_float(row[29]),
-        delta_cost_r=to_float(row[30]),
-        savings_pct=to_float(row[31]),
-        road_co2e_kg=to_float(row[32]),
-        total_co2e_kg=to_float(row[33]),
-        delta_co2e_kg=to_float(row[34]),
-        emissions_savings_pct=to_float(row[35]),
-        road_distance_km=to_float(row[36]),
-        sea_km=to_float(row[37]),
-        is_approximation=bool(int_to_bool(row[38])),
-        route_source=_normalize_text(row[39]),
-        updated_timestamp=row[40],
+        input_destiny_key=_normalize_text(row[7]),
+        cargo_t=float(row[8]),
+        truck_key=str(row[9]),
+        ors_profile=str(row[10]),
+        vessel_class=_normalize_text(row[11]),
+        include_hoteling=bool(int_to_bool(row[12])),
+        hoteling_hours_per_call=to_float(row[13]),
+        port_calls=_safe_int(row[14], default=0) if row[14] is not None else None,
+        include_port_ops=bool(int_to_bool(row[15])),
+        port_moves_per_call=to_float(row[16]),
+        cargo_teu=to_float(row[17]),
+        t_per_teu_default=to_float(row[18]),
+        allocation_mode=_normalize_text(row[19]),
+        allocation_load_factor=to_float(row[20]),
+        full_call_mode=bool(int_to_bool(row[21])),
+        port_ops_scenario=_normalize_text(row[22]),
+        status=str(row[23]),
+        error_message=_normalize_text(row[24]),
+        destiny_lat=to_float(row[25]),
+        destiny_lon=to_float(row[26]),
+        destiny_uf=_normalize_text(row[27]),
+        port_destiny_name=_normalize_text(row[28]),
+        road_fuel_cost_r=to_float(row[29]),
+        total_fuel_cost_r=to_float(row[30]),
+        delta_cost_r=to_float(row[31]),
+        savings_pct=to_float(row[32]),
+        road_co2e_kg=to_float(row[33]),
+        total_co2e_kg=to_float(row[34]),
+        delta_co2e_kg=to_float(row[35]),
+        emissions_savings_pct=to_float(row[36]),
+        road_distance_km=to_float(row[37]),
+        sea_km=to_float(row[38]),
+        is_approximation=bool(int_to_bool(row[39])),
+        route_source=_normalize_text(row[40]),
+        updated_timestamp=row[41],
     )
 
 
@@ -310,13 +316,14 @@ def _ensure_column(conn: DBConnection, table_name: str, column_name: str, ddl: s
 def _backfill_place_keys(conn: DBConnection, table_name: str) -> None:
     rows = conn.execute(
         f"""
-        SELECT DISTINCT origin_name, destiny_name
+        SELECT DISTINCT origin_name, destiny_name, input_destiny
         FROM {table_name}
         WHERE TRIM(COALESCE(origin_name, '')) <> ''
           AND TRIM(COALESCE(destiny_name, '')) <> ''
           AND (
                 TRIM(COALESCE(origin_key, '')) = ''
              OR TRIM(COALESCE(destiny_key, '')) = ''
+             OR TRIM(COALESCE(input_destiny_key, '')) = ''
           )
         """
     ).fetchall()
@@ -326,8 +333,10 @@ def _backfill_place_keys(conn: DBConnection, table_name: str) -> None:
         (
             ascii_place_key(row[0]),
             ascii_place_key(row[1]),
+            ascii_place_key(row[2]),
             row[0],
             row[1],
+            row[2],
         )
         for row in rows
     ]
@@ -336,8 +345,10 @@ def _backfill_place_keys(conn: DBConnection, table_name: str) -> None:
         UPDATE {table_name}
            SET origin_key = ?
              , destiny_key = ?
+             , input_destiny_key = ?
          WHERE origin_name = ?
            AND destiny_name = ?
+           AND input_destiny = ?
         """,
         updates,
     )
@@ -430,6 +441,7 @@ def list_results(
             , origin_name
             , destiny_name
             , input_destiny
+            , input_destiny_key
             , cargo_t
             , truck_key
             , ors_profile
@@ -473,6 +485,265 @@ def list_results(
     return [_row_to_result_record(row) for row in rows]
 
 
+def list_input_destiny_keys(
+    conn: DBConnection,
+    *,
+    selector: BulkRunSelector,
+    only_success: Optional[bool] = None,
+    table_name: str = DEFAULT_TABLE,
+) -> List[str]:
+    table = safe_table_name(table_name)
+    ensure_results_table(conn, table)
+    clauses, params = _selector_clauses(selector)
+    clauses.append("TRIM(COALESCE(input_destiny_key, '')) <> ''")
+    if only_success is True:
+        clauses.append("status = ?")
+        params.append("ok")
+    elif only_success is False:
+        clauses.append("status <> ?")
+        params.append("ok")
+    where = " AND ".join(clauses) if clauses else "1=1"
+    rows = conn.execute(
+        f"""
+        SELECT DISTINCT input_destiny_key
+        FROM {table}
+        WHERE {where}
+        ORDER BY input_destiny_key ASC
+        """,
+        params,
+    ).fetchall()
+    return [str(row[0]) for row in rows if row and row[0] not in (None, "")]
+
+
+def _upsert_result_sql(table: str) -> str:
+    return f"""
+    INSERT INTO {table} (
+          scenario_key
+        , run_id
+        , destination_set_id
+        , origin_key
+        , origin_name
+        , origin_lat
+        , origin_lon
+        , origin_uf
+        , destiny_key
+        , destiny_name
+        , destiny_lat
+        , destiny_lon
+        , destiny_uf
+        , input_origin
+        , input_destiny
+        , input_destiny_key
+        , cargo_t
+        , truck_key
+        , ors_profile
+        , vessel_class
+        , include_hoteling
+        , hoteling_hours_per_call
+        , port_calls
+        , include_port_ops
+        , port_moves_per_call
+        , cargo_teu
+        , t_per_teu_default
+        , allocation_mode
+        , allocation_load_factor
+        , full_call_mode
+        , port_ops_scenario
+        , port_origin_name
+        , port_destiny_name
+        , status
+        , error_message
+        , geometry_status
+        , road_direct_source
+        , first_mile_source
+        , last_mile_source
+        , road_direct_profile_used
+        , first_mile_profile_used
+        , last_mile_profile_used
+        , is_approximation
+        , route_source
+        , approximation_reference_destiny
+        , approximation_reference_distance_km
+        , approximation_delta_straight_line_km
+        , approximation_notes
+        , road_distance_km
+        , road_fuel_liters
+        , road_fuel_kg
+        , road_fuel_cost_r
+        , road_co2e_kg
+        , mm_road_fuel_liters
+        , mm_road_fuel_kg
+        , mm_road_fuel_cost_r
+        , mm_road_co2e_kg
+        , sea_km
+        , sea_fuel_kg
+        , sea_fuel_cost_r
+        , sea_co2e_kg
+        , total_fuel_kg
+        , total_fuel_cost_r
+        , total_co2e_kg
+        , delta_cost_r
+        , delta_co2e_kg
+        , savings_pct
+        , emissions_savings_pct
+        , diesel_price_r_per_l
+        , diesel_price_source
+        , bunker_price_r_per_t
+    ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    ON CONFLICT(scenario_key) DO UPDATE SET
+          run_id                    = excluded.run_id
+        , destination_set_id        = excluded.destination_set_id
+        , origin_key                = excluded.origin_key
+        , origin_name               = excluded.origin_name
+        , origin_lat                = excluded.origin_lat
+        , origin_lon                = excluded.origin_lon
+        , origin_uf                 = excluded.origin_uf
+        , destiny_key               = excluded.destiny_key
+        , destiny_name              = excluded.destiny_name
+        , destiny_lat               = excluded.destiny_lat
+        , destiny_lon               = excluded.destiny_lon
+        , destiny_uf                = excluded.destiny_uf
+        , input_origin              = excluded.input_origin
+        , input_destiny             = excluded.input_destiny
+        , input_destiny_key         = excluded.input_destiny_key
+        , cargo_t                   = excluded.cargo_t
+        , truck_key                 = excluded.truck_key
+        , ors_profile               = excluded.ors_profile
+        , vessel_class              = excluded.vessel_class
+        , include_hoteling          = excluded.include_hoteling
+        , hoteling_hours_per_call   = excluded.hoteling_hours_per_call
+        , port_calls                = excluded.port_calls
+        , include_port_ops          = excluded.include_port_ops
+        , port_moves_per_call       = excluded.port_moves_per_call
+        , cargo_teu                 = excluded.cargo_teu
+        , t_per_teu_default         = excluded.t_per_teu_default
+        , allocation_mode           = excluded.allocation_mode
+        , allocation_load_factor    = excluded.allocation_load_factor
+        , full_call_mode            = excluded.full_call_mode
+        , port_ops_scenario         = excluded.port_ops_scenario
+        , port_origin_name          = excluded.port_origin_name
+        , port_destiny_name         = excluded.port_destiny_name
+        , status                    = excluded.status
+        , error_message             = excluded.error_message
+        , geometry_status           = excluded.geometry_status
+        , road_direct_source        = excluded.road_direct_source
+        , first_mile_source         = excluded.first_mile_source
+        , last_mile_source          = excluded.last_mile_source
+        , road_direct_profile_used  = excluded.road_direct_profile_used
+        , first_mile_profile_used   = excluded.first_mile_profile_used
+        , last_mile_profile_used    = excluded.last_mile_profile_used
+        , is_approximation          = excluded.is_approximation
+        , route_source              = excluded.route_source
+        , approximation_reference_destiny = excluded.approximation_reference_destiny
+        , approximation_reference_distance_km = excluded.approximation_reference_distance_km
+        , approximation_delta_straight_line_km = excluded.approximation_delta_straight_line_km
+        , approximation_notes       = excluded.approximation_notes
+        , road_distance_km          = excluded.road_distance_km
+        , road_fuel_liters          = excluded.road_fuel_liters
+        , road_fuel_kg              = excluded.road_fuel_kg
+        , road_fuel_cost_r          = excluded.road_fuel_cost_r
+        , road_co2e_kg              = excluded.road_co2e_kg
+        , mm_road_fuel_liters       = excluded.mm_road_fuel_liters
+        , mm_road_fuel_kg           = excluded.mm_road_fuel_kg
+        , mm_road_fuel_cost_r       = excluded.mm_road_fuel_cost_r
+        , mm_road_co2e_kg           = excluded.mm_road_co2e_kg
+        , sea_km                    = excluded.sea_km
+        , sea_fuel_kg               = excluded.sea_fuel_kg
+        , sea_fuel_cost_r           = excluded.sea_fuel_cost_r
+        , sea_co2e_kg               = excluded.sea_co2e_kg
+        , total_fuel_kg             = excluded.total_fuel_kg
+        , total_fuel_cost_r         = excluded.total_fuel_cost_r
+        , total_co2e_kg             = excluded.total_co2e_kg
+        , delta_cost_r              = excluded.delta_cost_r
+        , delta_co2e_kg             = excluded.delta_co2e_kg
+        , savings_pct               = excluded.savings_pct
+        , emissions_savings_pct     = excluded.emissions_savings_pct
+        , diesel_price_r_per_l      = excluded.diesel_price_r_per_l
+        , diesel_price_source       = excluded.diesel_price_source
+        , bunker_price_r_per_t      = excluded.bunker_price_r_per_t
+        , updated_timestamp         = {current_timestamp_sql()}
+    """
+
+
+def _upsert_result_params(values: Dict[str, Any]) -> tuple[Any, ...]:
+    input_destiny = values["input_destiny"]
+    return (
+        values["scenario_key"],
+        values.get("run_id"),
+        values.get("destination_set_id"),
+        values.get("origin_key"),
+        values["origin_name"],
+        to_float(values.get("origin_lat")),
+        to_float(values.get("origin_lon")),
+        values.get("origin_uf"),
+        values.get("destiny_key"),
+        values["destiny_name"],
+        to_float(values.get("destiny_lat")),
+        to_float(values.get("destiny_lon")),
+        values.get("destiny_uf"),
+        values["input_origin"],
+        input_destiny,
+        (values.get("input_destiny_key") or ascii_place_key(input_destiny)),
+        to_float(values["cargo_t"]),
+        values["truck_key"],
+        values["ors_profile"],
+        values.get("vessel_class"),
+        bool_to_int(values.get("include_hoteling", True)),
+        to_float(values.get("hoteling_hours_per_call")),
+        values.get("port_calls"),
+        bool_to_int(values.get("include_port_ops", True)),
+        to_float(values.get("port_moves_per_call")),
+        to_float(values.get("cargo_teu")),
+        to_float(values.get("t_per_teu_default")),
+        values.get("allocation_mode"),
+        to_float(values.get("allocation_load_factor")),
+        bool_to_int(values.get("full_call_mode", False)),
+        values.get("port_ops_scenario"),
+        values.get("port_origin_name"),
+        values.get("port_destiny_name"),
+        values.get("status", "ok"),
+        values.get("error_message"),
+        values.get("geometry_status"),
+        values.get("road_direct_source"),
+        values.get("first_mile_source"),
+        values.get("last_mile_source"),
+        values.get("road_direct_profile_used"),
+        values.get("first_mile_profile_used"),
+        values.get("last_mile_profile_used"),
+        bool_to_int(values.get("is_approximation", False)),
+        values.get("route_source"),
+        values.get("approximation_reference_destiny"),
+        to_float(values.get("approximation_reference_distance_km")),
+        to_float(values.get("approximation_delta_straight_line_km")),
+        values.get("approximation_notes"),
+        to_float(values.get("road_distance_km")),
+        to_float(values.get("road_fuel_liters")),
+        to_float(values.get("road_fuel_kg")),
+        to_float(values.get("road_fuel_cost_r")),
+        to_float(values.get("road_co2e_kg")),
+        to_float(values.get("mm_road_fuel_liters")),
+        to_float(values.get("mm_road_fuel_kg")),
+        to_float(values.get("mm_road_fuel_cost_r")),
+        to_float(values.get("mm_road_co2e_kg")),
+        to_float(values.get("sea_km")),
+        to_float(values.get("sea_fuel_kg")),
+        to_float(values.get("sea_fuel_cost_r")),
+        to_float(values.get("sea_co2e_kg")),
+        to_float(values.get("total_fuel_kg")),
+        to_float(values.get("total_fuel_cost_r")),
+        to_float(values.get("total_co2e_kg")),
+        to_float(values.get("delta_cost_r")),
+        to_float(values.get("delta_co2e_kg")),
+        to_float(values.get("savings_pct")),
+        to_float(values.get("emissions_savings_pct")),
+        to_float(values.get("diesel_price_r_per_l")),
+        values.get("diesel_price_source"),
+        to_float(values.get("bunker_price_r_per_t")),
+    )
+
+
 def upsert_result(
     conn: DBConnection,
     *,
@@ -481,6 +752,7 @@ def upsert_result(
     destiny_name: str,
     input_origin: str,
     input_destiny: str,
+    input_destiny_key: Optional[str] = None,
     cargo_t: float,
     truck_key: str,
     ors_profile: str,
@@ -550,225 +822,96 @@ def upsert_result(
 ) -> None:
     table = safe_table_name(table_name)
     ensure_results_table(conn, table)
-
-    sql = f"""
-    INSERT INTO {table} (
-          scenario_key
-        , run_id
-        , destination_set_id
-        , origin_key
-        , origin_name
-        , origin_lat
-        , origin_lon
-        , origin_uf
-        , destiny_key
-        , destiny_name
-        , destiny_lat
-        , destiny_lon
-        , destiny_uf
-        , input_origin
-        , input_destiny
-        , cargo_t
-        , truck_key
-        , ors_profile
-        , vessel_class
-        , include_hoteling
-        , hoteling_hours_per_call
-        , port_calls
-        , include_port_ops
-        , port_moves_per_call
-        , cargo_teu
-        , t_per_teu_default
-        , allocation_mode
-        , allocation_load_factor
-        , full_call_mode
-        , port_ops_scenario
-        , port_origin_name
-        , port_destiny_name
-        , status
-        , error_message
-        , geometry_status
-        , road_direct_source
-        , first_mile_source
-        , last_mile_source
-        , road_direct_profile_used
-        , first_mile_profile_used
-        , last_mile_profile_used
-        , is_approximation
-        , route_source
-        , approximation_reference_destiny
-        , approximation_reference_distance_km
-        , approximation_delta_straight_line_km
-        , approximation_notes
-        , road_distance_km
-        , road_fuel_liters
-        , road_fuel_kg
-        , road_fuel_cost_r
-        , road_co2e_kg
-        , mm_road_fuel_liters
-        , mm_road_fuel_kg
-        , mm_road_fuel_cost_r
-        , mm_road_co2e_kg
-        , sea_km
-        , sea_fuel_kg
-        , sea_fuel_cost_r
-        , sea_co2e_kg
-        , total_fuel_kg
-        , total_fuel_cost_r
-        , total_co2e_kg
-        , delta_cost_r
-        , delta_co2e_kg
-        , savings_pct
-        , emissions_savings_pct
-        , diesel_price_r_per_l
-        , diesel_price_source
-        , bunker_price_r_per_t
-    ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    conn.execute(
+        _upsert_result_sql(table),
+        _upsert_result_params(
+            {
+                "scenario_key": scenario_key,
+                "run_id": run_id,
+                "destination_set_id": destination_set_id,
+                "origin_key": origin_key,
+                "origin_name": origin_name,
+                "origin_lat": origin_lat,
+                "origin_lon": origin_lon,
+                "origin_uf": origin_uf,
+                "destiny_key": destiny_key,
+                "destiny_name": destiny_name,
+                "destiny_lat": destiny_lat,
+                "destiny_lon": destiny_lon,
+                "destiny_uf": destiny_uf,
+                "input_origin": input_origin,
+                "input_destiny": input_destiny,
+                "input_destiny_key": input_destiny_key,
+                "cargo_t": cargo_t,
+                "truck_key": truck_key,
+                "ors_profile": ors_profile,
+                "vessel_class": vessel_class,
+                "include_hoteling": include_hoteling,
+                "hoteling_hours_per_call": hoteling_hours_per_call,
+                "port_calls": port_calls,
+                "include_port_ops": include_port_ops,
+                "port_moves_per_call": port_moves_per_call,
+                "cargo_teu": cargo_teu,
+                "t_per_teu_default": t_per_teu_default,
+                "allocation_mode": allocation_mode,
+                "allocation_load_factor": allocation_load_factor,
+                "full_call_mode": full_call_mode,
+                "port_ops_scenario": port_ops_scenario,
+                "port_origin_name": port_origin_name,
+                "port_destiny_name": port_destiny_name,
+                "status": status,
+                "error_message": error_message,
+                "geometry_status": geometry_status,
+                "road_direct_source": road_direct_source,
+                "first_mile_source": first_mile_source,
+                "last_mile_source": last_mile_source,
+                "road_direct_profile_used": road_direct_profile_used,
+                "first_mile_profile_used": first_mile_profile_used,
+                "last_mile_profile_used": last_mile_profile_used,
+                "is_approximation": is_approximation,
+                "route_source": route_source,
+                "approximation_reference_destiny": approximation_reference_destiny,
+                "approximation_reference_distance_km": approximation_reference_distance_km,
+                "approximation_delta_straight_line_km": approximation_delta_straight_line_km,
+                "approximation_notes": approximation_notes,
+                "road_distance_km": road_distance_km,
+                "road_fuel_liters": road_fuel_liters,
+                "road_fuel_kg": road_fuel_kg,
+                "road_fuel_cost_r": road_fuel_cost_r,
+                "road_co2e_kg": road_co2e_kg,
+                "mm_road_fuel_liters": mm_road_fuel_liters,
+                "mm_road_fuel_kg": mm_road_fuel_kg,
+                "mm_road_fuel_cost_r": mm_road_fuel_cost_r,
+                "mm_road_co2e_kg": mm_road_co2e_kg,
+                "sea_km": sea_km,
+                "sea_fuel_kg": sea_fuel_kg,
+                "sea_fuel_cost_r": sea_fuel_cost_r,
+                "sea_co2e_kg": sea_co2e_kg,
+                "total_fuel_kg": total_fuel_kg,
+                "total_fuel_cost_r": total_fuel_cost_r,
+                "total_co2e_kg": total_co2e_kg,
+                "delta_cost_r": delta_cost_r,
+                "delta_co2e_kg": delta_co2e_kg,
+                "savings_pct": savings_pct,
+                "emissions_savings_pct": emissions_savings_pct,
+                "diesel_price_r_per_l": diesel_price_r_per_l,
+                "diesel_price_source": diesel_price_source,
+                "bunker_price_r_per_t": bunker_price_r_per_t,
+            }
+        ),
     )
-    ON CONFLICT(scenario_key) DO UPDATE SET
-          run_id                    = excluded.run_id
-        , destination_set_id        = excluded.destination_set_id
-        , origin_key                = excluded.origin_key
-        , origin_name               = excluded.origin_name
-        , origin_lat                = excluded.origin_lat
-        , origin_lon                = excluded.origin_lon
-        , origin_uf                 = excluded.origin_uf
-        , destiny_key               = excluded.destiny_key
-        , destiny_name              = excluded.destiny_name
-        , destiny_lat               = excluded.destiny_lat
-        , destiny_lon               = excluded.destiny_lon
-        , destiny_uf                = excluded.destiny_uf
-        , input_origin              = excluded.input_origin
-        , input_destiny             = excluded.input_destiny
-        , cargo_t                   = excluded.cargo_t
-        , truck_key                 = excluded.truck_key
-        , ors_profile               = excluded.ors_profile
-        , vessel_class              = excluded.vessel_class
-        , include_hoteling          = excluded.include_hoteling
-        , hoteling_hours_per_call   = excluded.hoteling_hours_per_call
-        , port_calls                = excluded.port_calls
-        , include_port_ops          = excluded.include_port_ops
-        , port_moves_per_call       = excluded.port_moves_per_call
-        , cargo_teu                 = excluded.cargo_teu
-        , t_per_teu_default         = excluded.t_per_teu_default
-        , allocation_mode           = excluded.allocation_mode
-        , allocation_load_factor    = excluded.allocation_load_factor
-        , full_call_mode            = excluded.full_call_mode
-        , port_ops_scenario         = excluded.port_ops_scenario
-        , port_origin_name          = excluded.port_origin_name
-        , port_destiny_name         = excluded.port_destiny_name
-        , status                    = excluded.status
-        , error_message             = excluded.error_message
-        , geometry_status           = excluded.geometry_status
-        , road_direct_source        = excluded.road_direct_source
-        , first_mile_source         = excluded.first_mile_source
-        , last_mile_source          = excluded.last_mile_source
-        , road_direct_profile_used  = excluded.road_direct_profile_used
-        , first_mile_profile_used   = excluded.first_mile_profile_used
-        , last_mile_profile_used    = excluded.last_mile_profile_used
-        , is_approximation          = excluded.is_approximation
-        , route_source              = excluded.route_source
-        , approximation_reference_destiny = excluded.approximation_reference_destiny
-        , approximation_reference_distance_km = excluded.approximation_reference_distance_km
-        , approximation_delta_straight_line_km = excluded.approximation_delta_straight_line_km
-        , approximation_notes       = excluded.approximation_notes
-        , road_distance_km          = excluded.road_distance_km
-        , road_fuel_liters          = excluded.road_fuel_liters
-        , road_fuel_kg              = excluded.road_fuel_kg
-        , road_fuel_cost_r          = excluded.road_fuel_cost_r
-        , road_co2e_kg              = excluded.road_co2e_kg
-        , mm_road_fuel_liters       = excluded.mm_road_fuel_liters
-        , mm_road_fuel_kg           = excluded.mm_road_fuel_kg
-        , mm_road_fuel_cost_r       = excluded.mm_road_fuel_cost_r
-        , mm_road_co2e_kg           = excluded.mm_road_co2e_kg
-        , sea_km                    = excluded.sea_km
-        , sea_fuel_kg               = excluded.sea_fuel_kg
-        , sea_fuel_cost_r           = excluded.sea_fuel_cost_r
-        , sea_co2e_kg               = excluded.sea_co2e_kg
-        , total_fuel_kg             = excluded.total_fuel_kg
-        , total_fuel_cost_r         = excluded.total_fuel_cost_r
-        , total_co2e_kg             = excluded.total_co2e_kg
-        , delta_cost_r              = excluded.delta_cost_r
-        , delta_co2e_kg             = excluded.delta_co2e_kg
-        , savings_pct               = excluded.savings_pct
-        , emissions_savings_pct     = excluded.emissions_savings_pct
-        , diesel_price_r_per_l      = excluded.diesel_price_r_per_l
-        , diesel_price_source       = excluded.diesel_price_source
-        , bunker_price_r_per_t      = excluded.bunker_price_r_per_t
-        , updated_timestamp         = {current_timestamp_sql()}
-    """
 
-    params = (
-        scenario_key,
-        run_id,
-        destination_set_id,
-        origin_key,
-        origin_name,
-        to_float(origin_lat),
-        to_float(origin_lon),
-        origin_uf,
-        destiny_key,
-        destiny_name,
-        to_float(destiny_lat),
-        to_float(destiny_lon),
-        destiny_uf,
-        input_origin,
-        input_destiny,
-        to_float(cargo_t),
-        truck_key,
-        ors_profile,
-        vessel_class,
-        bool_to_int(include_hoteling),
-        to_float(hoteling_hours_per_call),
-        port_calls,
-        bool_to_int(include_port_ops),
-        to_float(port_moves_per_call),
-        to_float(cargo_teu),
-        to_float(t_per_teu_default),
-        allocation_mode,
-        to_float(allocation_load_factor),
-        bool_to_int(full_call_mode),
-        port_ops_scenario,
-        port_origin_name,
-        port_destiny_name,
-        status,
-        error_message,
-        geometry_status,
-        road_direct_source,
-        first_mile_source,
-        last_mile_source,
-        road_direct_profile_used,
-        first_mile_profile_used,
-        last_mile_profile_used,
-        bool_to_int(is_approximation),
-        route_source,
-        approximation_reference_destiny,
-        to_float(approximation_reference_distance_km),
-        to_float(approximation_delta_straight_line_km),
-        approximation_notes,
-        to_float(road_distance_km),
-        to_float(road_fuel_liters),
-        to_float(road_fuel_kg),
-        to_float(road_fuel_cost_r),
-        to_float(road_co2e_kg),
-        to_float(mm_road_fuel_liters),
-        to_float(mm_road_fuel_kg),
-        to_float(mm_road_fuel_cost_r),
-        to_float(mm_road_co2e_kg),
-        to_float(sea_km),
-        to_float(sea_fuel_kg),
-        to_float(sea_fuel_cost_r),
-        to_float(sea_co2e_kg),
-        to_float(total_fuel_kg),
-        to_float(total_fuel_cost_r),
-        to_float(total_co2e_kg),
-        to_float(delta_cost_r),
-        to_float(delta_co2e_kg),
-        to_float(savings_pct),
-        to_float(emissions_savings_pct),
-        to_float(diesel_price_r_per_l),
-        diesel_price_source,
-        to_float(bunker_price_r_per_t),
-    )
-    conn.execute(sql, params)
+
+def upsert_results(
+    conn: DBConnection,
+    *,
+    rows: Iterable[Dict[str, Any]],
+    table_name: str = DEFAULT_TABLE,
+) -> int:
+    table = safe_table_name(table_name)
+    ensure_results_table(conn, table)
+    params_list = [_upsert_result_params(row) for row in rows]
+    if not params_list:
+        return 0
+    conn.executemany(_upsert_result_sql(table), params_list)
+    return len(params_list)

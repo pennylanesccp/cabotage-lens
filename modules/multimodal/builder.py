@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Optional, TypedDict, cast
+from typing import Any, Callable, Dict, MutableMapping, Optional, TypedDict, cast
 
 if __name__ == "__main__":
     import sys
@@ -164,21 +164,31 @@ def resolve_point_for_geometry(
     ors: ORSClient,
     *,
     db_path: Optional[Path | str] = None,
+    point_cache: Optional[MutableMapping[str, Point]] = None,
 ) -> Optional[Point]:
     """Resolve one origin/destination input into the normalized geometry shape."""
+    cache_key = ascii_place_text((value or {}).get("label")) if isinstance(value, dict) else ascii_place_text(value)
+    if point_cache is not None and cache_key and cache_key in point_cache:
+        return dict(point_cache[cache_key])
+
     cached_point = _cached_point_for_geometry(value, db_path=db_path)
     if cached_point is not None:
+        if point_cache is not None and cache_key:
+            point_cache[cache_key] = dict(cached_point)
         return cached_point
 
     point = resolve_point_null_safe(value, ors, _log)
     if not point:
         return None
-    return {
+    resolved_point = {
         "label": ascii_place_text(point.label),
         "lat": point.lat,
         "lon": point.lon,
         "uf": point.uf,
     }
+    if point_cache is not None and cache_key:
+        point_cache[cache_key] = dict(resolved_point)
+    return resolved_point
 
 
 def build_port_node(port_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -207,40 +217,43 @@ def build_path_geometry_from_resolved(
     overwrite_road: bool = False,
     db_path: Optional[Path | str] = None,
     port_origin: Optional[Dict[str, Any]] = None,
+    port_destiny: Optional[Dict[str, Any]] = None,
     first_mile_leg: Optional[Dict[str, Any]] = None,
+    route_resolver: Optional[Callable[[Dict[str, Any], Dict[str, Any], str], Dict[str, Any]]] = None,
 ) -> Optional[PathGeometry]:
     """Build geometry from already resolved endpoints and shared routing assets."""
 
     po_data = port_origin or find_nearest_port(origin_pt["lat"], origin_pt["lon"], ports)
-    pd_data = find_nearest_port(destiny_pt["lat"], destiny_pt["lon"], ports)
+    pd_data = port_destiny or find_nearest_port(destiny_pt["lat"], destiny_pt["lon"], ports)
     _log.info("Ports selected: %s (origin) -> %s (destiny)", po_data["name"], pd_data["name"])
 
     po_node = build_port_node(po_data)
     pd_node = build_port_node(pd_data)
+    resolve_leg = route_resolver or (
+        lambda start, end, _leg_name: get_or_create_leg(
+            ors,
+            start,
+            end,
+            profile=ors_profile,
+            overwrite=overwrite_road,
+            db_path=db_path,
+        )
+    )
 
-    leg_direct = get_or_create_leg(
-        ors,
+    leg_direct = resolve_leg(
         origin_pt,
         destiny_pt,
-        profile=ors_profile,
-        overwrite=overwrite_road,
-        db_path=db_path,
+        "road_direct",
     )
-    leg_first = first_mile_leg or get_or_create_leg(
-        ors,
+    leg_first = first_mile_leg or resolve_leg(
         origin_pt,
         po_node,
-        profile=ors_profile,
-        overwrite=overwrite_road,
-        db_path=db_path,
+        "first_mile",
     )
-    leg_last = get_or_create_leg(
-        ors,
+    leg_last = resolve_leg(
         pd_node,
         destiny_pt,
-        profile=ors_profile,
-        overwrite=overwrite_road,
-        db_path=db_path,
+        "last_mile",
     )
 
     sea_dist, sea_src = sea_matrix.km_with_source(
