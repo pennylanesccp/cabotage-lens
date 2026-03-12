@@ -75,7 +75,7 @@ def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     runtime_defaults: dict[str, Any] = dict(defaults or DEFAULTS)
     runtime_defaults["db_path_str"] = str(resolve_runtime_db_path())
     runtime_defaults["log_level"] = validated_log_level(
-        secret_value("CARBON_LOG_LEVEL", runtime_defaults.get("log_level", "INFO")),
+        runtime_defaults.get("log_level", "INFO"),
         default=str(runtime_defaults.get("log_level", "INFO")),
     )
     runtime_defaults["write_log_file"] = bool_from_any(

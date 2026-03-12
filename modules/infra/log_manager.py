@@ -16,8 +16,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, List, Optional
 
-from modules.core.secrets import get_secret
-
 _DEFAULT_LOG_DIR = Path("logs")
 _current_log_file: Optional[Path] = None
 
@@ -82,10 +80,6 @@ def init_logging(
         force_clean = bool(force)
     if write_output is not None:
         write_to_file = bool(write_output)
-
-    secret_level = get_secret("CARBON_LOG_LEVEL")
-    if secret_level:
-        level = str(secret_level).upper()
 
     numeric_level = getattr(logging, str(level).upper(), logging.INFO)
     root_logger = logging.getLogger()

@@ -58,8 +58,8 @@ def _require_postgres() -> None:
     settings = load_database_settings()
     if not settings.is_postgres or not settings.postgres_dsn:
         raise HeatmapConfigurationError(
-            "Heatmap storage requires Supabase Postgres. Configure SUPABASE_DB_URL "
-            "or the component-based SUPABASE_DB_* Streamlit secrets first."
+            "Heatmap storage requires Supabase Postgres. Configure SUPABASE_PROJECT_REF, "
+            "SUPABASE_DB_PASSWORD, and SUPABASE_DB_PORT first."
         )
 
 

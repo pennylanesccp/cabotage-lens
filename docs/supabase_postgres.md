@@ -13,15 +13,28 @@ The repository now uses Supabase Postgres as the primary persistence backend for
 Set these in `.streamlit/secrets.toml` for local runs or in Streamlit Community Cloud secrets:
 
 ```toml
-CARBON_DB_BACKEND = "postgres"
-SUPABASE_DB_URL = "postgresql://postgres.your-project-ref:your-supabase-password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 ORS_API_KEY = "your-openrouteservice-key"
 LOCATIONIQ_PAT = "your-locationiq-private-token"
+SUPABASE_PROJECT_REF = "your-project-ref"
+SUPABASE_DB_PASSWORD = "your-supabase-password"
+SUPABASE_DB_PORT = 5432
 ```
 
 CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatically. Environment variables are also accepted as a fallback when a secret is not set.
 
-Prefer `SUPABASE_DB_URL`, especially on IPv4-only networks. Supabase's direct `db.<project-ref>.supabase.co` hostname can resolve only to IPv6 in some environments. If you do not want to use a single DSN secret, the runtime also accepts the component-based `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_NAME`, `SUPABASE_DB_USER`, `SUPABASE_DB_PASSWORD`, and `SUPABASE_DB_SSLMODE` secrets.
+The runtime builds the Postgres DSN from the component secrets, so passwords do not need manual URL-encoding. By default it derives the direct host as `db.<project-ref>.supabase.co`, uses database `postgres`, user `postgres`, and `sslmode=require`.
+
+Optional overrides:
+
+```toml
+# Needed only when you want to override the derived direct host, for example a pooler host.
+# SUPABASE_DB_HOST = "aws-0-us-east-1.pooler.supabase.com"
+# SUPABASE_DB_USER = "postgres.your-project-ref"
+# SUPABASE_DB_NAME = "postgres"
+# SUPABASE_DB_SSLMODE = "require"
+```
+
+If you set `SUPABASE_DB_PORT = 6543`, also set `SUPABASE_DB_HOST` explicitly because the pooler hostname cannot be derived from the project ref alone.
 
 SQLite is no longer part of the shipped app and CLI pipeline. The only remaining SQLite usage is in one-off maintenance tools under `legacy/sqlite/`.
 

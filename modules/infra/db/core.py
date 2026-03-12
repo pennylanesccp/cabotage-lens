@@ -273,8 +273,8 @@ def connect(db_path: Path | str | None = DEFAULT_DB_PATH, *, backend: Optional[s
         if not settings.postgres_dsn:
             raise RuntimeError(
                 "Supabase Postgres is required for the main runtime. "
-                "Set SUPABASE_DB_URL or the SUPABASE_DB_HOST/SUPABASE_DB_NAME/"
-                "SUPABASE_DB_USER/SUPABASE_DB_PASSWORD secrets."
+                "Set SUPABASE_PROJECT_REF, SUPABASE_DB_PASSWORD, and SUPABASE_DB_PORT "
+                "(or provide SUPABASE_DB_HOST explicitly for pooler connections)."
             )
         _log.debug("Connecting to Postgres: %s", settings.display_target)
         raw = psycopg.connect(str(settings.postgres_dsn), connect_timeout=10)
