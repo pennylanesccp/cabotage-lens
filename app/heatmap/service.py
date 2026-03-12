@@ -8,6 +8,7 @@ from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.infra.database_manager import (
     BulkRunSelector,
     db_session,
+    find_place_point,
     get_latest_completed_run,
     list_bulk_results,
     list_bulk_run_cargo_values,
@@ -141,9 +142,29 @@ def default_cargo_options() -> List[float]:
     return [float(DEFAULTS["cargo_t"])]
 
 
+@lru_cache(maxsize=256)
+def _canonical_origin_name(origin_name: str) -> str:
+    candidate = normalize_bulk_place_input(origin_name)
+    if not candidate:
+        return ""
+
+    try:
+        with db_session(backend="postgres") as conn:
+            cached_point = find_place_point(conn, place=candidate)
+    except Exception as exc:
+        _log.debug("Heatmap origin canonicalization skipped for %s: %s", candidate, exc)
+        return candidate
+
+    resolved = ascii_place_text((cached_point or {}).get("label") or candidate)
+    if resolved != candidate:
+        _log.info("Canonicalized heatmap origin selector %s -> %s", candidate, resolved)
+    return resolved or candidate
+
+
 def _build_selector(scenario: HeatmapScenario) -> BulkRunSelector:
+    canonical_origin_name = _canonical_origin_name(scenario.origin_name)
     return BulkRunSelector(
-        origin_key=ascii_place_key(scenario.origin_name),
+        origin_key=ascii_place_key(canonical_origin_name),
         cargo_t=float(scenario.cargo_t),
         truck_key=str(scenario.truck_key),
         ors_profile=str(scenario.ors_profile),
@@ -398,7 +419,7 @@ def run_heatmap(
         len(destinations_to_process),
         False,
     )
-    run_bulk_evaluation(
+    bulk_summary = run_bulk_evaluation(
         origin=scenario.origin_name,
         dest_list=destinations_to_process,
         cargo_t=float(scenario.cargo_t),
@@ -420,8 +441,38 @@ def run_heatmap(
         destination_set_id=HEATMAP_DESTINATION_SET_ID,
         progress_callback=progress_callback,
     )
+    _log.info(
+        (
+            "Heatmap %s bulk summary origin=%s cargo_t=%.3f success=%d fail=%d "
+            "exact_success=%d approximated_success=%d run_id=%s"
+        ),
+        mode_label,
+        scenario.origin_name,
+        scenario.cargo_t,
+        int(bulk_summary.get("success_count") or 0),
+        int(bulk_summary.get("fail_count") or 0),
+        int(bulk_summary.get("exact_success_count") or 0),
+        int(bulk_summary.get("approximated_success_count") or 0),
+        bulk_summary.get("run_id") or "<none>",
+    )
     dataset = load_current_dataset(scenario)
     if dataset is None:
+        post_status = get_heatmap_status(scenario)
+        _log.error(
+            (
+                "Heatmap %s finished without readable comparison rows origin=%s cargo_t=%.3f "
+                "bulk_success=%d bulk_fail=%d post_found=%d post_success=%d post_fail=%d post_run_id=%s"
+            ),
+            mode_label,
+            scenario.origin_name,
+            scenario.cargo_t,
+            int(bulk_summary.get("success_count") or 0),
+            int(bulk_summary.get("fail_count") or 0),
+            post_status.found_count,
+            post_status.success_count,
+            post_status.fail_count,
+            post_status.run_id or "<none>",
+        )
         raise HeatmapDataError(
             f"The heatmap {mode_label} finished but no comparison rows were found for {HEATMAP_DESTINATION_LABEL}."
         )

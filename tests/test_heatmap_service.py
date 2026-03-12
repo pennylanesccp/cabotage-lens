@@ -3,6 +3,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from modules.addressing.text import ascii_place_key
+import app.heatmap.service as heatmap_service
 from app.heatmap.service import (
     HeatmapDataError,
     get_heatmap_status,
@@ -15,6 +17,9 @@ from app.heatmap.types import HeatmapScenario
 
 
 class HeatmapServiceTests(unittest.TestCase):
+    def setUp(self) -> None:
+        heatmap_service._canonical_origin_name.cache_clear()
+
     def _scenario(self) -> HeatmapScenario:
         return HeatmapScenario(
             origin_name="Pelotas, RS",
@@ -85,6 +90,37 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(status.missing_count, 208)
         self.assertEqual(status.updated_timestamp, "2026-03-11 09:30:00")
         self.assertEqual(status.completed_timestamp, "2026-03-10 18:00:00")
+
+    def test_get_heatmap_status_canonicalizes_origin_with_routes_table_label(self) -> None:
+        scenario = self._scenario()
+        summary = SimpleNamespace(
+            row_count=1,
+            success_count=1,
+            fail_count=0,
+            latest_updated_timestamp="2026-03-11 12:00:00",
+            latest_run_id="run-999",
+        )
+
+        with patch("app.heatmap.service._require_postgres"), patch(
+            "app.heatmap.service._heatmap_destinations",
+            return_value=("City 1",),
+        ), patch(
+            "app.heatmap.service.db_session",
+            return_value=contextlib.nullcontext(object()),
+        ), patch(
+            "app.heatmap.service.find_place_point",
+            return_value={"label": "Pelotas, Rio Grande do Sul"},
+        ), patch(
+            "app.heatmap.service.summarize_bulk_results",
+            return_value=summary,
+        ) as summarize_mock, patch(
+            "app.heatmap.service.get_latest_completed_run",
+            return_value=None,
+        ):
+            get_heatmap_status(scenario)
+
+        selector = summarize_mock.call_args.kwargs["selector"]
+        self.assertEqual(selector.origin_key, ascii_place_key("Pelotas, Rio Grande do Sul"))
 
     def test_load_current_dataset_builds_map_points_from_comparison_rows(self) -> None:
         scenario = self._scenario()

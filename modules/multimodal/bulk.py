@@ -245,7 +245,7 @@ def _build_failure_summary_row(
 
 def _build_run_selector(
     *,
-    origin_name: str,
+    origin_input: str,
     cargo_t: float,
     truck_key: str,
     profile: str,
@@ -264,7 +264,7 @@ def _build_run_selector(
     destination_set_id: str,
 ) -> BulkRunSelector:
     return BulkRunSelector(
-        origin_key=ascii_place_key(origin_name),
+        origin_key=ascii_place_key(normalize_bulk_place_input(origin_input)),
         cargo_t=float(cargo_t),
         truck_key=str(truck_key),
         ors_profile=str(profile),
@@ -493,7 +493,7 @@ def _persist_bulk_outcome(
             scenario_key=scenario_key,
             run_id=run_id,
             destination_set_id=destination_set_id,
-            origin_key=ascii_place_key(origin_name),
+            origin_key=ascii_place_key(normalize_bulk_place_input(input_origin)),
             origin_name=origin_name,
             origin_lat=origin_point.get("lat"),
             origin_lon=origin_point.get("lon"),
@@ -572,7 +572,7 @@ def _persist_bulk_outcome(
             table_name=run_results_table,
             run_id=run_id,
             scenario_key=scenario_key,
-            origin_key=ascii_place_key(origin_name),
+            origin_key=ascii_place_key(normalize_bulk_place_input(input_origin)),
             origin_name=origin_name,
             origin_lat=origin_point.get("lat"),
             origin_lon=origin_point.get("lon"),
@@ -711,7 +711,7 @@ def run_bulk_evaluation(
     _require_distance(first_mile_leg, "first_mile")
 
     run_selector = _build_run_selector(
-        origin_name=origin_pt["label"],
+        origin_input=origin_input_norm,
         cargo_t=cargo_t,
         truck_key=truck_key,
         profile=profile,
