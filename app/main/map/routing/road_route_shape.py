@@ -47,7 +47,7 @@ def _stable_direction(origin: tuple[float, float], destiny: tuple[float, float])
     return -1 if digest[0] % 2 else 1
 
 
-def _shape_control_points(origin: tuple[float, float], destiny: tuple[float, float]) -> list[tuple[float, float]]:
+def _shape_control_points_wave(origin: tuple[float, float], destiny: tuple[float, float]) -> list[tuple[float, float]]:
     start_lat, start_lon = origin
     end_lat, end_lon = destiny
     ref_lat = (start_lat + end_lat) / 2.0
@@ -78,6 +78,44 @@ def _shape_control_points(origin: tuple[float, float], destiny: tuple[float, flo
     return controls
 
 
+def _shape_control_points_parabola(
+    origin: tuple[float, float],
+    destiny: tuple[float, float],
+) -> list[tuple[float, float]]:
+    start_lat, start_lon = origin
+    end_lat, end_lon = destiny
+    ref_lat = (start_lat + end_lat) / 2.0
+
+    x0, y0 = _project(start_lat, start_lon, ref_lat)
+    x1, y1 = _project(end_lat, end_lon, ref_lat)
+    dx = x1 - x0
+    dy = y1 - y0
+    seg_len = math.hypot(dx, dy)
+    if seg_len <= EPS:
+        return [origin, destiny]
+
+    sign = _stable_direction(origin, destiny)
+    perp_x = (-dy / seg_len) * sign
+    perp_y = (dx / seg_len) * sign
+
+    amplitude = max(0.03, min(seg_len * 0.18, 1.45))
+    fractions = (0.22, 0.50, 0.78)
+    offsets = (0.55, 1.00, 0.55)
+
+    controls: list[tuple[float, float]] = [origin]
+    for fraction, offset in zip(fractions, offsets, strict=True):
+        base_x = x0 + (dx * fraction)
+        base_y = y0 + (dy * fraction)
+        lat, lon = _unproject(
+            base_x + (perp_x * amplitude * offset),
+            base_y + (perp_y * amplitude * offset),
+            ref_lat,
+        )
+        controls.append((lat, lon))
+    controls.append(destiny)
+    return controls
+
+
 def build_shaped_road_path(
     origin_latlon: tuple[float, float],
     dest_latlon: tuple[float, float],
@@ -85,10 +123,21 @@ def build_shaped_road_path(
     preferred_path: Sequence[Sequence[float]] | None = None,
     n_points: int = 48,
     smooth_window: int = 5,
+    style: str = "wave",
+    preserve_preferred_path: bool = True,
 ) -> list[list[float]]:
-    if preferred_path and len(preferred_path) >= 3 and _path_deviation(preferred_path) > 0.01:
+    if (
+        preserve_preferred_path
+        and preferred_path
+        and len(preferred_path) >= 3
+        and _path_deviation(preferred_path) > 0.01
+    ):
         return [[float(point[0]), float(point[1])] for point in preferred_path]
 
-    control_points = dedupe_latlon_path(_shape_control_points(origin_latlon, dest_latlon))
+    style_key = str(style or "wave").strip().lower()
+    if style_key == "parabola":
+        control_points = dedupe_latlon_path(_shape_control_points_parabola(origin_latlon, dest_latlon))
+    else:
+        control_points = dedupe_latlon_path(_shape_control_points_wave(origin_latlon, dest_latlon))
     dense = densify_latlon_path(control_points, n_points=max(int(n_points), 16))
     return smooth_lonlat_path(dense, smooth_window=smooth_window)

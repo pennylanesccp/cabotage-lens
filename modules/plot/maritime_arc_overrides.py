@@ -111,6 +111,10 @@ LEG_ARC_OVERRIDES: dict[tuple[str, str], dict[str, object]] = {
         "central_angle_deg": 120.0,
         "side": "right",
     },
+    ("porto-de-vila-do-conde", "porto-de-santana"): {
+        "central_angle_deg": 120.0,
+        "side": "right",
+    },
 }
 
 

@@ -31,7 +31,13 @@ def build_route_rows(
     first_candidate = extract_leg_path(dict(geo.get("first_mile", {})), origin, po_coords)
     last_candidate = extract_leg_path(dict(geo.get("last_mile", {})), pd_coords, destiny)
 
-    direct_path = build_shaped_road_path(origin, destiny, preferred_path=direct_candidate)
+    direct_path = build_shaped_road_path(
+        origin,
+        destiny,
+        preferred_path=direct_candidate,
+        style="parabola",
+        preserve_preferred_path=False,
+    )
     first_path = build_shaped_road_path(origin, po_coords, preferred_path=first_candidate, n_points=28, smooth_window=3)
     last_path = build_shaped_road_path(pd_coords, destiny, preferred_path=last_candidate, n_points=28, smooth_window=3)
 
