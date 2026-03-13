@@ -25,8 +25,9 @@ def load_local_secrets(path: Path | None = None) -> dict[str, Any]:
     if not target.exists():
         return {}
 
-    with target.open("rb") as handle:
-        data = tomllib.load(handle)
+    # Accept UTF-8 BOM files because Windows editors commonly save TOML this way.
+    text = target.read_text(encoding="utf-8-sig")
+    data = tomllib.loads(text)
 
     if not isinstance(data, dict):
         return {}
@@ -74,15 +75,15 @@ def get_secret(
     path: Path | None = None,
     include_runtime: bool = True,
 ) -> Any:
-    """Return a secret from Streamlit runtime, local secrets.toml, or the environment."""
+    """Return a secret from local secrets.toml, Streamlit runtime, or the environment."""
+    local_value = _normalize_secret_value(load_local_secrets(path).get(key, _MISSING))
+    if local_value is not _MISSING:
+        return local_value
+
     if include_runtime:
         runtime_value = _normalize_secret_value(_runtime_secret_value(key))
         if runtime_value is not _MISSING:
             return runtime_value
-
-    local_value = _normalize_secret_value(load_local_secrets(path).get(key, _MISSING))
-    if local_value is not _MISSING:
-        return local_value
 
     env_value = _normalize_secret_value(_environment_secret_value(key))
     if env_value is not _MISSING:

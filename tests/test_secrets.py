@@ -17,6 +17,15 @@ class StreamlitSecretsTests(unittest.TestCase):
         self.assertEqual(loaded["ORS_API_KEY"], "abc123")
         self.assertFalse(loaded["CARBON_WRITE_LOG_FILE"])
 
+    def test_load_local_secrets_reads_utf8_bom_toml(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            secrets_path.write_text('ORS_API_KEY = "abc123"\n', encoding="utf-8-sig")
+
+            loaded = load_local_secrets(secrets_path)
+
+        self.assertEqual(loaded["ORS_API_KEY"], "abc123")
+
     def test_get_secret_returns_default_for_blank_value(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             secrets_path = Path(tmp_dir) / "secrets.toml"
