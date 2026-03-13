@@ -57,8 +57,16 @@ Set these in `.streamlit/secrets.toml` or environment variables:
 
 ```toml
 ORS_API_KEY = "your-openrouteservice-key"
-SUPABASE_DB_URL = "postgresql://postgres:your-password@db.your-project-ref.supabase.co:5432/postgres?sslmode=require"
+SUPABASE_PROJECT_REF = "your-project-ref"
+SUPABASE_DB_HOST = "aws-0-your-region.pooler.supabase.com"
+SUPABASE_DB_PORT = 6543
+SUPABASE_DB_NAME = "postgres"
+SUPABASE_DB_USER = "postgres.your-project-ref"
+SUPABASE_DB_PASSWORD = "your-db-password"
+SUPABASE_DB_SSLMODE = "require"
 ```
+
+`SUPABASE_DB_URL` is still accepted as an explicit override, but local development can now use the split `SUPABASE_DB_*` fields directly.
 
 Optional geocoding fallback:
 
