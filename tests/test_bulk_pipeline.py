@@ -83,6 +83,57 @@ class BulkPipelineCoordinatorTests(unittest.TestCase):
         self.assertEqual(leg["distance_km"], 456.0)
         calculate_route_mock.assert_not_called()
 
+    def test_route_cache_prime_reuses_coord_cached_leg_with_six_decimal_keys(self) -> None:
+        spec = RouteRequestSpec(
+            leg_name="road_direct",
+            origin={"label": "Origin", "lat": -31.0000004, "lon": -52.0000004},
+            destiny={"label": "Destiny", "lat": -3.0000004, "lon": -60.0000004},
+            profile="driving-hgv",
+        )
+        coordinator = RouteRequestCoordinator(
+            object(),
+            profile="driving-hgv",
+            overwrite=False,
+            perf=BulkPerformanceTracker(),
+        )
+        origin_key = bulk.coord_lookup_key(spec.origin["lat"], spec.origin["lon"])
+        destiny_key = bulk.coord_lookup_key(spec.destiny["lat"], spec.destiny["lon"])
+        self.assertIsNotNone(origin_key)
+        self.assertIsNotNone(destiny_key)
+        assert origin_key is not None
+        assert destiny_key is not None
+        cached_row = {
+            ("driving-hgv", f"{origin_key[0]},{origin_key[1]}", f"{destiny_key[0]},{destiny_key[1]}"): {
+                "origin": "Origin",
+                "destiny": "Destiny",
+                "distance_km": 654.0,
+                "is_hgv": True,
+                "origin_lat": -31.0,
+                "origin_lon": -52.0,
+                "destiny_lat": -3.0,
+                "destiny_lon": -60.0,
+                "profile_requested": "driving-hgv",
+                "profile_used": "driving-hgv",
+                "source": "ors",
+            }
+        }
+
+        with patch(
+            "modules.multimodal.bulk.list_runs_by_label_keys",
+            return_value={},
+        ), patch(
+            "modules.multimodal.bulk.list_runs_by_coord_keys",
+            return_value=cached_row,
+        ):
+            coordinator.prime(object(), [spec])
+
+        with patch("modules.multimodal.bulk._calculate_route") as calculate_route_mock:
+            leg = coordinator.resolve(spec)
+
+        self.assertTrue(leg["cached"])
+        self.assertEqual(leg["distance_km"], 654.0)
+        calculate_route_mock.assert_not_called()
+
 
 class BulkPipelineExecutionTests(unittest.TestCase):
     def test_run_bulk_evaluation_delegates_to_pipeline(self) -> None:

@@ -122,26 +122,6 @@ def run_bulk_evaluation_pipeline(
         ors.reset_metrics()
 
     origin_input_norm = normalize_bulk_place_input(origin)
-    run_selector = _build_run_selector(
-        origin_input=origin_input_norm,
-        cargo_t=cargo_t,
-        truck_key=truck_key,
-        profile=profile,
-        vessel_class=vessel_class,
-        include_hoteling=include_hoteling,
-        hoteling_hours_per_call=hoteling_hours_per_call,
-        port_calls=port_calls,
-        include_port_ops=include_port_ops,
-        port_moves_per_call=port_moves_per_call,
-        cargo_teu=cargo_teu,
-        t_per_teu_default=t_per_teu_default,
-        allocation_mode=allocation_mode,
-        allocation_load_factor=allocation_load_factor,
-        full_call_mode=full_call_mode,
-        port_ops_scenario=port_ops_scenario,
-        destination_set_id=destination_set_id,
-    )
-
     _log.info(
         (
             "Starting staged bulk evaluation: origin=%r destinations=%d destination_set=%s "
@@ -243,6 +223,31 @@ def run_bulk_evaluation_pipeline(
                 _require_distance(first_mile_leg, "first_mile")
                 _flush_route_rows(conn, route_coordinator.drain_pending_rows())
                 _flush_point_rows(conn, point_rows_to_persist)
+                origin_cached_point = find_place_point(conn, place=origin_input_norm)
+                if origin_cached_point and origin_cached_point.get("location_id") is not None:
+                    origin_pt["location_id"] = int(origin_cached_point["location_id"])
+                origin_location_id = origin_pt.get("location_id")
+                if origin_location_id is None:
+                    raise RuntimeError(f"Failed to canonicalize bulk origin: {origin}")
+                run_selector = _build_run_selector(
+                    origin_location_id=int(origin_location_id),
+                    cargo_t=cargo_t,
+                    truck_key=truck_key,
+                    profile=profile,
+                    vessel_class=vessel_class,
+                    include_hoteling=include_hoteling,
+                    hoteling_hours_per_call=hoteling_hours_per_call,
+                    port_calls=port_calls,
+                    include_port_ops=include_port_ops,
+                    port_moves_per_call=port_moves_per_call,
+                    cargo_teu=cargo_teu,
+                    t_per_teu_default=t_per_teu_default,
+                    allocation_mode=allocation_mode,
+                    allocation_load_factor=allocation_load_factor,
+                    full_call_mode=full_call_mode,
+                    port_ops_scenario=port_ops_scenario,
+                    destination_set_id=destination_set_id,
+                )
 
                 evaluation_kwargs = {
                     "cargo_t": cargo_t,
@@ -278,6 +283,7 @@ def run_bulk_evaluation_pipeline(
                         origin_name=origin_pt["label"],
                         input_origin=origin_input_norm,
                         destination_count=len(shuffled_destinations),
+                        origin_location_id=int(origin_location_id),
                         table_name=runs_table,
                     )
                     conn.commit()
@@ -529,6 +535,8 @@ def run_bulk_evaluation_pipeline(
                                 scenario_key=item.scenario_key,
                                 input_origin=item.scenario_payload["input_origin"],
                                 input_destiny=item.scenario_payload["input_destiny"],
+                                origin_location_id=origin_pt.get("location_id"),
+                                destination_location_id=(None if item.point is None else item.point.get("location_id")),
                                 origin_name=origin_pt["label"],
                                 destiny_name=item.destiny_name or item.destiny_input,
                                 truck_key=truck_key,
@@ -592,12 +600,14 @@ def run_bulk_evaluation_pipeline(
                         bulk_row, run_row = _build_bulk_outcome_rows(
                             run_id=str(run_id),
                             destination_set_id=destination_set_id,
-                            scenario_key=item.scenario_key,
-                            input_origin=item.scenario_payload["input_origin"],
-                            input_destiny=item.scenario_payload["input_destiny"],
-                            origin_name=origin_pt["label"],
-                            destiny_name=item.destiny_name,
-                            truck_key=truck_key,
+                                scenario_key=item.scenario_key,
+                                input_origin=item.scenario_payload["input_origin"],
+                                input_destiny=item.scenario_payload["input_destiny"],
+                                origin_location_id=origin_pt.get("location_id"),
+                                destination_location_id=(None if item.point is None else item.point.get("location_id")),
+                                origin_name=origin_pt["label"],
+                                destiny_name=item.destiny_name,
+                                truck_key=truck_key,
                             ors_profile=profile,
                             cargo_t=cargo_t,
                             vessel_class=vessel_class,
@@ -647,12 +657,14 @@ def run_bulk_evaluation_pipeline(
                         bulk_row, run_row = _build_bulk_outcome_rows(
                             run_id=str(run_id),
                             destination_set_id=destination_set_id,
-                            scenario_key=item.scenario_key,
-                            input_origin=item.scenario_payload["input_origin"],
-                            input_destiny=item.scenario_payload["input_destiny"],
-                            origin_name=origin_pt["label"],
-                            destiny_name=item.destiny_name or item.destiny_input,
-                            truck_key=truck_key,
+                                scenario_key=item.scenario_key,
+                                input_origin=item.scenario_payload["input_origin"],
+                                input_destiny=item.scenario_payload["input_destiny"],
+                                origin_location_id=origin_pt.get("location_id"),
+                                destination_location_id=(None if item.point is None else item.point.get("location_id")),
+                                origin_name=origin_pt["label"],
+                                destiny_name=item.destiny_name or item.destiny_input,
+                                truck_key=truck_key,
                             ors_profile=profile,
                             cargo_t=cargo_t,
                             vessel_class=vessel_class,
@@ -742,6 +754,8 @@ def run_bulk_evaluation_pipeline(
                             scenario_key=pending.scenario_key,
                             input_origin=pending.scenario_payload["input_origin"],
                             input_destiny=pending.scenario_payload["input_destiny"],
+                            origin_location_id=origin_pt.get("location_id"),
+                            destination_location_id=pending.geo.get("destiny", {}).get("location_id"),
                             origin_name=origin_pt["label"],
                             destiny_name=pending.destiny_name,
                             truck_key=truck_key,
@@ -795,6 +809,8 @@ def run_bulk_evaluation_pipeline(
                             scenario_key=pending.scenario_key,
                             input_origin=pending.scenario_payload["input_origin"],
                             input_destiny=pending.scenario_payload["input_destiny"],
+                            origin_location_id=origin_pt.get("location_id"),
+                            destination_location_id=pending.geo.get("destiny", {}).get("location_id"),
                             origin_name=origin_pt["label"],
                             destiny_name=pending.destiny_name,
                             truck_key=truck_key,

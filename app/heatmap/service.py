@@ -4,7 +4,7 @@ from dataclasses import asdict
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
-from modules.addressing.text import ascii_place_key, ascii_place_text
+from modules.addressing.text import ascii_place_text
 from modules.infra.database_manager import (
     BulkRunSelector,
     db_session,
@@ -105,9 +105,9 @@ def _to_run_info(
 def _to_point(record: Any) -> Optional[HeatmapPoint]:
     if record.destiny_lat is None or record.destiny_lon is None:
         return None
-    if record.road_fuel_cost_r is None or record.total_fuel_cost_r is None:
+    if record.road_cost_r is None or record.multimodal_cost_r is None:
         return None
-    if record.road_co2e_kg is None or record.total_co2e_kg is None:
+    if record.road_emissions_kg is None or record.multimodal_emissions_kg is None:
         return None
     return HeatmapPoint(
         destiny_name=record.destiny_name,
@@ -115,13 +115,13 @@ def _to_point(record: Any) -> Optional[HeatmapPoint]:
         destiny_lon=float(record.destiny_lon),
         destiny_uf=record.destiny_uf,
         port_destiny_name=record.port_destiny_name,
-        road_cost_r=float(record.road_fuel_cost_r),
-        multimodal_cost_r=float(record.total_fuel_cost_r),
-        cost_delta_r=float(record.delta_cost_r or 0.0),
-        cost_savings_pct=record.savings_pct,
-        road_emissions_kg=float(record.road_co2e_kg),
-        multimodal_emissions_kg=float(record.total_co2e_kg),
-        emissions_delta_kg=float(record.delta_co2e_kg or 0.0),
+        road_cost_r=float(record.road_cost_r),
+        multimodal_cost_r=float(record.multimodal_cost_r),
+        cost_delta_r=float(record.cost_delta_r or 0.0),
+        cost_savings_pct=record.cost_savings_pct,
+        road_emissions_kg=float(record.road_emissions_kg),
+        multimodal_emissions_kg=float(record.multimodal_emissions_kg),
+        emissions_delta_kg=float(record.emissions_delta_kg or 0.0),
         emissions_savings_pct=record.emissions_savings_pct,
         road_distance_km=record.road_distance_km,
         sea_km=record.sea_km,
@@ -132,9 +132,9 @@ def _to_point(record: Any) -> Optional[HeatmapPoint]:
 def _point_rejection_reason(record: Any) -> Optional[str]:
     if record.destiny_lat is None or record.destiny_lon is None:
         return "missing_coordinates"
-    if record.road_fuel_cost_r is None or record.total_fuel_cost_r is None:
+    if record.road_cost_r is None or record.multimodal_cost_r is None:
         return "missing_costs"
-    if record.road_co2e_kg is None or record.total_co2e_kg is None:
+    if record.road_emissions_kg is None or record.multimodal_emissions_kg is None:
         return "missing_emissions"
     return None
 
@@ -162,24 +162,27 @@ def _canonical_origin_name(origin_name: str) -> str:
     return resolved or candidate
 
 
-def _origin_key_candidates(scenario: HeatmapScenario) -> List[str]:
-    raw_origin_name = normalize_bulk_place_input(scenario.origin_name)
-    keys: List[str] = []
+def _origin_location_id(origin_name: str) -> Optional[int]:
+    candidate = _canonical_origin_name(origin_name)
+    if not candidate:
+        return None
+    try:
+        with db_session() as conn:
+            cached_point = find_place_point(conn, place=candidate)
+    except Exception as exc:
+        _log.debug("Heatmap origin location lookup skipped for %s: %s", candidate, exc)
+        return None
+    if not cached_point or cached_point.get("location_id") is None:
+        return None
+    return int(cached_point["location_id"])
 
-    raw_origin_key = ascii_place_key(raw_origin_name)
-    if raw_origin_key:
-        keys.append(raw_origin_key)
 
-    canonical_origin_key = ascii_place_key(_canonical_origin_name(scenario.origin_name))
-    if canonical_origin_key and canonical_origin_key not in keys:
-        keys.append(canonical_origin_key)
-
-    return keys
-
-
-def _build_selector_for_origin_key(scenario: HeatmapScenario, origin_key: str) -> BulkRunSelector:
+def _build_selector_for_origin_location(
+    scenario: HeatmapScenario,
+    origin_location_id: Optional[int],
+) -> BulkRunSelector:
     return BulkRunSelector(
-        origin_key=origin_key,
+        origin_location_id=origin_location_id,
         cargo_t=float(scenario.cargo_t),
         truck_key=str(scenario.truck_key),
         ors_profile=str(scenario.ors_profile),
@@ -199,49 +202,14 @@ def _build_selector_for_origin_key(scenario: HeatmapScenario, origin_key: str) -
     )
 
 
-def _selector_sort_timestamp(value: Any) -> str:
-    return "" if value is None else str(value)
-
-
 def _select_active_selector(
     conn: Any,
     scenario: HeatmapScenario,
 ) -> tuple[BulkRunSelector, Any, Any]:
-    candidates: List[tuple[int, BulkRunSelector, Any, Any]] = []
-    origin_keys = _origin_key_candidates(scenario)
-
-    for index, origin_key in enumerate(origin_keys):
-        selector = _build_selector_for_origin_key(scenario, origin_key)
-        summary = summarize_bulk_results(conn, selector=selector)
-        latest_completed = get_latest_completed_run(conn, selector=selector)
-        candidates.append((index, selector, summary, latest_completed))
-
-    if not candidates:
-        selector = _build_selector_for_origin_key(scenario, origin_key="")
-        summary = summarize_bulk_results(conn, selector=selector)
-        latest_completed = get_latest_completed_run(conn, selector=selector)
-        return selector, summary, latest_completed
-
-    best_index, best_selector, best_summary, best_latest_completed = max(
-        candidates,
-        key=lambda item: (
-            int(getattr(item[2], "row_count", 0) or 0),
-            1 if item[3] is not None else 0,
-            _selector_sort_timestamp(
-                None if item[3] is None else (item[3].completed_timestamp or item[3].updated_timestamp)
-            ),
-            -item[0],
-        ),
-    )
-
-    if best_index > 0:
-        _log.info(
-            "Heatmap selector fallback origin=%s chosen_origin_key=%s candidate_count=%d",
-            scenario.origin_name,
-            best_selector.origin_key,
-            len(candidates),
-        )
-    return best_selector, best_summary, best_latest_completed
+    selector = _build_selector_for_origin_location(scenario, _origin_location_id(scenario.origin_name))
+    summary = summarize_bulk_results(conn, selector=selector)
+    latest_completed = get_latest_completed_run(conn, selector=selector)
+    return selector, summary, latest_completed
 
 
 def list_origin_options() -> List[str]:
@@ -278,10 +246,13 @@ def list_cargo_options(origin_name: str) -> List[float]:
         origin_name,
         HEATMAP_DESTINATION_SET_ID,
     )
+    origin_location_id = _origin_location_id(origin_name)
+    if origin_location_id is None:
+        return default_values
     with db_session() as conn:
         stored = list_bulk_run_cargo_values(
             conn,
-            origin_key=ascii_place_key(origin_name),
+            origin_location_id=int(origin_location_id),
             destination_set_id=HEATMAP_DESTINATION_SET_ID,
             limit=100,
         )
@@ -345,15 +316,12 @@ def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
 
 def _existing_destination_inputs(scenario: HeatmapScenario) -> set[str]:
     with db_session() as conn:
-        keys: set[str] = set()
-        for origin_key in _origin_key_candidates(scenario):
-            selector = _build_selector_for_origin_key(scenario, origin_key)
-            keys.update(
-                str(key).casefold()
-                for key in list_bulk_result_input_destiny_keys(conn, selector=selector, only_success=None)
-                if str(key).strip()
-            )
-    return keys
+        selector = _build_selector_for_origin_location(scenario, _origin_location_id(scenario.origin_name))
+        return {
+            str(key).casefold()
+            for key in list_bulk_result_input_destiny_keys(conn, selector=selector, only_success=None)
+            if str(key).strip()
+        }
 
 
 def pending_destinations(scenario: HeatmapScenario) -> List[str]:

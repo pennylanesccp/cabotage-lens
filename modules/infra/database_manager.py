@@ -119,7 +119,7 @@ __all__ = [
 
 
 def find_place_point(conn, *, place: str, table_name: str = DEFAULT_PLACE_POINTS_TABLE):
-    """Resolve a cached place point from the dedicated cache before falling back to routed legs."""
+    """Resolve a cached place point from the canonical location-alias cache."""
     cached = find_cached_place_point(conn, place=place, table_name=table_name)
     if cached is not None:
         return cached

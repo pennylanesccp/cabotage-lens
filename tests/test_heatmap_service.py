@@ -3,7 +3,6 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from modules.addressing.text import ascii_place_key
 import app.heatmap.service as heatmap_service
 from app.heatmap.service import (
     HeatmapDataError,
@@ -52,7 +51,7 @@ class HeatmapServiceTests(unittest.TestCase):
 
         self.assertEqual(origins, ["Sao Paulo, SP", "Curitiba, PR"])
 
-    def test_get_heatmap_status_uses_comparison_table_counts(self) -> None:
+    def test_get_heatmap_status_queries_selector_with_origin_location_id(self) -> None:
         scenario = self._scenario()
         summary = SimpleNamespace(
             row_count=400,
@@ -75,9 +74,12 @@ class HeatmapServiceTests(unittest.TestCase):
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
         ), patch(
+            "app.heatmap.service._origin_location_id",
+            return_value=17,
+        ), patch(
             "app.heatmap.service.summarize_bulk_results",
             return_value=summary,
-        ), patch(
+        ) as summarize_mock, patch(
             "app.heatmap.service.get_latest_completed_run",
             return_value=latest_completed,
         ):
@@ -88,94 +90,9 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(status.success_count, 380)
         self.assertEqual(status.fail_count, 20)
         self.assertEqual(status.missing_count, 208)
-        self.assertEqual(status.updated_timestamp, "2026-03-11 09:30:00")
-        self.assertEqual(status.completed_timestamp, "2026-03-10 18:00:00")
+        self.assertEqual(summarize_mock.call_args.kwargs["selector"].origin_location_id, 17)
 
-    def test_get_heatmap_status_uses_raw_origin_key_when_it_has_rows(self) -> None:
-        scenario = self._scenario()
-        raw_origin_key = ascii_place_key("Pelotas, RS")
-        canonical_origin_key = ascii_place_key("Pelotas, Rio Grande do Sul")
-
-        with patch("app.heatmap.service._require_postgres"), patch(
-            "app.heatmap.service._heatmap_destinations",
-            return_value=("City 1",),
-        ), patch(
-            "app.heatmap.service.db_session",
-            return_value=contextlib.nullcontext(object()),
-        ), patch(
-            "app.heatmap.service.find_place_point",
-            return_value={"label": "Pelotas, Rio Grande do Sul"},
-        ), patch(
-            "app.heatmap.service.summarize_bulk_results",
-            side_effect=lambda _conn, *, selector: (
-                SimpleNamespace(
-                    row_count=1,
-                    success_count=1,
-                    fail_count=0,
-                    latest_updated_timestamp="2026-03-11 12:00:00",
-                    latest_run_id="run-raw",
-                )
-                if selector.origin_key == raw_origin_key
-                else SimpleNamespace(
-                    row_count=0,
-                    success_count=0,
-                    fail_count=0,
-                    latest_updated_timestamp=None,
-                    latest_run_id=None,
-                )
-            ),
-        ) as summarize_mock, patch(
-            "app.heatmap.service.get_latest_completed_run",
-            return_value=None,
-        ):
-            status = get_heatmap_status(scenario)
-
-        self.assertEqual(status.run_id, "run-raw")
-        queried_keys = [call.kwargs["selector"].origin_key for call in summarize_mock.call_args_list]
-        self.assertEqual(queried_keys, [raw_origin_key, canonical_origin_key])
-
-    def test_get_heatmap_status_falls_back_to_canonical_origin_key(self) -> None:
-        scenario = self._scenario()
-        canonical_origin_key = ascii_place_key("Pelotas, Rio Grande do Sul")
-
-        with patch("app.heatmap.service._require_postgres"), patch(
-            "app.heatmap.service._heatmap_destinations",
-            return_value=("City 1",),
-        ), patch(
-            "app.heatmap.service.db_session",
-            return_value=contextlib.nullcontext(object()),
-        ), patch(
-            "app.heatmap.service.find_place_point",
-            return_value={"label": "Pelotas, Rio Grande do Sul"},
-        ), patch(
-            "app.heatmap.service.summarize_bulk_results",
-            side_effect=lambda _conn, *, selector: (
-                SimpleNamespace(
-                    row_count=1,
-                    success_count=1,
-                    fail_count=0,
-                    latest_updated_timestamp="2026-03-11 12:00:00",
-                    latest_run_id="run-canonical",
-                )
-                if selector.origin_key == canonical_origin_key
-                else SimpleNamespace(
-                    row_count=0,
-                    success_count=0,
-                    fail_count=0,
-                    latest_updated_timestamp=None,
-                    latest_run_id=None,
-                )
-            ),
-        ) as summarize_mock, patch(
-            "app.heatmap.service.get_latest_completed_run",
-            return_value=None,
-        ):
-            status = get_heatmap_status(scenario)
-
-        self.assertEqual(status.run_id, "run-canonical")
-        self.assertEqual(summarize_mock.call_args_list[-1].kwargs["selector"].origin_key, canonical_origin_key)
-
-    def test_load_current_dataset_builds_map_points_from_comparison_rows(self) -> None:
+    def test_load_current_dataset_builds_map_points_from_normalized_rows(self) -> None:
         scenario = self._scenario()
         status = SimpleNamespace(
             run_id="run-123",
@@ -198,13 +115,13 @@ class HeatmapServiceTests(unittest.TestCase):
                 destiny_lon=-60.0217,
                 destiny_uf="AM",
                 port_destiny_name="Manaus",
-                road_fuel_cost_r=15000.0,
-                total_fuel_cost_r=11000.0,
-                delta_cost_r=4000.0,
-                savings_pct=26.6667,
-                road_co2e_kg=9000.0,
-                total_co2e_kg=5200.0,
-                delta_co2e_kg=3800.0,
+                road_cost_r=15000.0,
+                multimodal_cost_r=11000.0,
+                cost_delta_r=4000.0,
+                cost_savings_pct=26.6667,
+                road_emissions_kg=9000.0,
+                multimodal_emissions_kg=5200.0,
+                emissions_delta_kg=3800.0,
                 emissions_savings_pct=42.2222,
                 road_distance_km=3900.0,
                 sea_km=3400.0,
@@ -216,13 +133,13 @@ class HeatmapServiceTests(unittest.TestCase):
                 destiny_lon=-48.4902,
                 destiny_uf="PA",
                 port_destiny_name="Belem",
-                road_fuel_cost_r=9000.0,
-                total_fuel_cost_r=9500.0,
-                delta_cost_r=-500.0,
-                savings_pct=-5.5556,
-                road_co2e_kg=5100.0,
-                total_co2e_kg=4700.0,
-                delta_co2e_kg=400.0,
+                road_cost_r=9000.0,
+                multimodal_cost_r=9500.0,
+                cost_delta_r=-500.0,
+                cost_savings_pct=-5.5556,
+                road_emissions_kg=5100.0,
+                multimodal_emissions_kg=4700.0,
+                emissions_delta_kg=400.0,
                 emissions_savings_pct=7.8431,
                 road_distance_km=2700.0,
                 sea_km=2100.0,
@@ -235,6 +152,9 @@ class HeatmapServiceTests(unittest.TestCase):
         ), patch(
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
+        ), patch(
+            "app.heatmap.service._select_active_selector",
+            return_value=(object(), None, None),
         ), patch(
             "app.heatmap.service.list_bulk_results",
             return_value=rows,
@@ -272,13 +192,13 @@ class HeatmapServiceTests(unittest.TestCase):
                 destiny_lon=-60.0217,
                 destiny_uf="AM",
                 port_destiny_name="Manaus",
-                road_fuel_cost_r=15000.0,
-                total_fuel_cost_r=11000.0,
-                delta_cost_r=4000.0,
-                savings_pct=26.6667,
-                road_co2e_kg=9000.0,
-                total_co2e_kg=5200.0,
-                delta_co2e_kg=3800.0,
+                road_cost_r=15000.0,
+                multimodal_cost_r=11000.0,
+                cost_delta_r=4000.0,
+                cost_savings_pct=26.6667,
+                road_emissions_kg=9000.0,
+                multimodal_emissions_kg=5200.0,
+                emissions_delta_kg=3800.0,
                 emissions_savings_pct=42.2222,
                 road_distance_km=3900.0,
                 sea_km=3400.0,
@@ -292,46 +212,23 @@ class HeatmapServiceTests(unittest.TestCase):
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
         ), patch(
+            "app.heatmap.service._select_active_selector",
+            return_value=(object(), None, None),
+        ), patch(
             "app.heatmap.service.list_bulk_results",
             return_value=rows,
         ):
             with self.assertRaises(HeatmapDataError):
                 load_current_dataset(scenario)
 
-    def test_pending_destinations_skips_existing_comparison_rows(self) -> None:
+    def test_pending_destinations_skips_existing_rows_for_origin_location_id(self) -> None:
         scenario = self._scenario()
         with patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
+            "app.heatmap.service._origin_location_id",
+            return_value=17,
+        ), patch(
             "app.heatmap.service.list_bulk_result_input_destiny_keys",
             return_value=["manaus, am", "belem, pa"],
-        ), patch(
-            "app.heatmap.service._heatmap_destinations",
-            return_value=("Manaus, AM", "Belem, PA", "Rio Branco, AC"),
-        ), patch(
-            "app.heatmap.service.list_bulk_results",
-        ) as list_results_mock:
-            pending = pending_destinations(scenario)
-
-        self.assertEqual(pending, ["Rio Branco, AC"])
-        list_results_mock.assert_not_called()
-
-    def test_pending_destinations_unions_origin_key_alias_matches(self) -> None:
-        scenario = self._scenario()
-        raw_origin_key = ascii_place_key("Pelotas, RS")
-        canonical_origin_key = ascii_place_key("Pelotas, Rio Grande do Sul")
-
-        def _list_keys(_conn, *, selector, only_success):
-            if selector.origin_key == raw_origin_key:
-                return ["manaus, am"]
-            if selector.origin_key == canonical_origin_key:
-                return ["belem, pa"]
-            return []
-
-        with patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
-            "app.heatmap.service.find_place_point",
-            return_value={"label": "Pelotas, Rio Grande do Sul"},
-        ), patch(
-            "app.heatmap.service.list_bulk_result_input_destiny_keys",
-            side_effect=_list_keys,
         ), patch(
             "app.heatmap.service._heatmap_destinations",
             return_value=("Manaus, AM", "Belem, PA", "Rio Branco, AC"),

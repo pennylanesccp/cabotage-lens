@@ -147,7 +147,7 @@ def _cached_point_for_geometry(value: Any, *, db_path: Optional[Path | str] = No
         return None
 
     _log.info(
-        "Using cached coordinates for %s from routes table role=%s",
+        "Using cached coordinates for %s from the canonical location cache role=%s",
         query_text,
         cached_point.get("role") or "<unknown>",
     )

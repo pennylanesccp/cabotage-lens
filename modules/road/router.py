@@ -116,6 +116,10 @@ def get_or_create_leg(
                     conn,
                     origin=origin_label,
                     destiny=destiny_label,
+                    origin_lat=origin_lat,
+                    origin_lon=origin_lon,
+                    destiny_lat=destiny_lat,
+                    destiny_lon=destiny_lon,
                     profile_requested=requested_profile,
                     table_name=table_name,
                 )
@@ -127,15 +131,9 @@ def get_or_create_leg(
                     deleted,
                 )
             else:
+                row = None
                 cache_lookup = "label"
-                row = get_run(
-                    conn,
-                    origin=origin_label,
-                    destiny=destiny_label,
-                    profile_requested=requested_profile,
-                    table_name=table_name,
-                )
-                if not row and None not in (origin_lat, origin_lon, destiny_lat, destiny_lon):
+                if None not in (origin_lat, origin_lon, destiny_lat, destiny_lon):
                     row = get_run_by_coords(
                         conn,
                         origin_lat=float(origin_lat),
@@ -147,6 +145,14 @@ def get_or_create_leg(
                     )
                     if row:
                         cache_lookup = "coords"
+                if not row:
+                    row = get_run(
+                        conn,
+                        origin=origin_label,
+                        destiny=destiny_label,
+                        profile_requested=requested_profile,
+                        table_name=table_name,
+                    )
                 if row and row.get("distance_km") is not None:
                     _log.info(
                         "Road cache hit: %s -> %s lookup=%s requested_profile=%s used_profile=%s distance_km=%.3f provider=%s",

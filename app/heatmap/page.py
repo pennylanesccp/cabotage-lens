@@ -269,7 +269,7 @@ def render_page() -> None:
         )
 
     st.caption(
-        "This page never overwrites the canonical routes cache. It only writes to the bulk comparison tables used by the heatmap."
+        "This page never overwrites the canonical routes cache. It only writes to the normalized bulk run tables used by the heatmap."
     )
 
     run_missing_clicked, rerun_clicked = render_run_actions(

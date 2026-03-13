@@ -39,21 +39,25 @@ class RouteCacheResolutionTests(unittest.TestCase):
     def test_find_place_point_uses_latest_cached_origin_or_destiny_coordinates(self) -> None:
         conn = _FakeConnection(
             row=(
+                17,
+                "avenida professor luciano gualberto, sao paulo",
                 "Avenida Professor Luciano Gualberto, Sao Paulo",
                 -23.5599,
                 -46.7311,
-                "destiny",
+                "SP",
+                "ors",
+                "route_cache",
                 "2026-03-11 16:00:00",
                 "2026-03-11 16:00:00",
             )
         )
 
-        with patch("modules.infra.db.road_cache.ensure_main_table"):
+        with patch("modules.infra.db.locations.ensure_aliases_table"):
             point = find_place_point(conn, place="Avenida Professor Luciano Gualberto, Sao Paulo")
 
         self.assertIsNotNone(point)
         assert point is not None
-        self.assertEqual(point["role"], "destiny")
+        self.assertEqual(point["role"], "alias")
         self.assertAlmostEqual(float(point["lat"]), -23.5599)
         self.assertAlmostEqual(float(point["lon"]), -46.7311)
 

@@ -3,12 +3,7 @@ from collections import deque
 from unittest.mock import patch
 
 from modules.infra.db.bulk_results import BulkResultSummary, list_results, summarize_results, upsert_result as upsert_bulk_result
-from modules.infra.db.bulk_runs import (
-    BulkRunSelector,
-    finish_run,
-    insert_run_result,
-    start_run,
-)
+from modules.infra.db.bulk_runs import BulkRunSelector, finish_run, insert_run_result, start_run
 
 
 class _FakeCursor:
@@ -40,7 +35,7 @@ class _RecordingConnection:
 class BulkRunPersistenceTests(unittest.TestCase):
     def _selector(self) -> BulkRunSelector:
         return BulkRunSelector(
-            origin_key="pelotas, rs",
+            origin_location_id=17,
             cargo_t=30.0,
             truck_key="semi_27t",
             ors_profile="driving-hgv",
@@ -59,8 +54,8 @@ class BulkRunPersistenceTests(unittest.TestCase):
             destination_set_id="city_dests_over50k.txt",
         )
 
-    def test_start_run_and_finish_run_issue_postgres_writes(self) -> None:
-        conn = _RecordingConnection()
+    def test_start_run_and_finish_run_issue_normalized_bulk_run_writes(self) -> None:
+        conn = _RecordingConnection(row=("run-123",))
         selector = self._selector()
 
         with patch("modules.infra.db.bulk_runs.ensure_runs_table"), patch(
@@ -85,34 +80,38 @@ class BulkRunPersistenceTests(unittest.TestCase):
 
         self.assertEqual(run_id, "run-123")
         self.assertEqual(len(conn.statements), 2)
-        self.assertIn("INSERT INTO bulk_evaluation_runs", conn.statements[0][0])
-        self.assertIn("UPDATE bulk_evaluation_runs", conn.statements[1][0])
+        self.assertIn("INSERT INTO bulk_runs", conn.statements[0][0])
+        self.assertIn("UPDATE bulk_runs", conn.statements[1][0])
 
-    def test_insert_run_result_persists_approximation_metadata(self) -> None:
+    def test_insert_run_result_persists_normalized_refs_and_metrics(self) -> None:
         conn = _RecordingConnection()
 
-        with patch("modules.infra.db.bulk_runs.ensure_run_results_table"):
+        with patch("modules.infra.db.bulk_runs.ensure_run_results_table"), patch(
+            "modules.infra.db.bulk_runs._resolve_location_id",
+            side_effect=[201, 301, 401, 501],
+        ), patch(
+            "modules.infra.db.bulk_runs._run_origin_location_id",
+            return_value=17,
+        ), patch(
+            "modules.infra.db.bulk_runs._resolve_route_id",
+            side_effect=[901, 902, 903, 904],
+        ):
             insert_run_result(
                 conn,
                 run_id="run-123",
                 scenario_key="scenario-1",
-                origin_key="pelotas, rs",
-                origin_name="Pelotas, RS",
-                origin_lat=-31.77,
-                origin_lon=-52.34,
-                origin_uf="RS",
-                destiny_key="manaus, am",
+                input_destiny="Manaus, AM",
                 destiny_name="Manaus, AM",
                 destiny_lat=-3.119,
                 destiny_lon=-60.0217,
                 destiny_uf="AM",
-                input_origin="Pelotas, RS",
-                input_destiny="Manaus, AM",
-                destination_set_id="city_dests_over50k.txt",
                 port_origin_name="Rio Grande",
+                port_origin_lat=-32.035,
+                port_origin_lon=-52.098,
                 port_destiny_name="Manaus",
+                port_destiny_lat=-3.137,
+                port_destiny_lon=-60.020,
                 status="ok",
-                error_message=None,
                 road_cost_r=15000.0,
                 multimodal_cost_r=11000.0,
                 cost_delta_r=4000.0,
@@ -129,52 +128,56 @@ class BulkRunPersistenceTests(unittest.TestCase):
                 approximation_reference_distance_km=3650.0,
                 approximation_delta_straight_line_km=250.0,
                 approximation_notes="Approximate direct-road distance from the nearest exact destination in the same bulk run.",
+                ors_profile="driving-hgv",
             )
 
         statement, params = conn.statements[0]
-        self.assertIn("INSERT INTO bulk_evaluation_run_results", statement)
-        self.assertEqual(params[29], 1)
-        self.assertEqual(params[30], "nearest_exact_delta_straight_line")
-        self.assertEqual(params[31], "Belem, PA")
-        self.assertAlmostEqual(float(params[32]), 3650.0)
-        self.assertAlmostEqual(float(params[33]), 250.0)
+        self.assertIn("INSERT INTO bulk_run_items", statement)
+        self.assertEqual(params[3], 201)
+        self.assertEqual(params[4], 301)
+        self.assertEqual(params[5], 401)
+        self.assertEqual(params[6], 901)
+        self.assertEqual(params[7], 902)
+        self.assertEqual(params[8], 903)
+        self.assertEqual(params[22], "nearest_exact_delta_straight_line")
+        self.assertEqual(params[23], 904)
 
-    def test_bulk_results_summary_and_listing_map_postgres_rows(self) -> None:
+    def test_bulk_results_summary_and_listing_map_latest_normalized_rows(self) -> None:
         selector = self._selector()
-        conn = _RecordingConnection(
-            row=(2, 1, 1, "2026-03-11 09:30:00", "run-2"),
-        )
+        conn = _RecordingConnection(row=(2, 1, 1, "2026-03-11 09:30:00", "run-2"))
         conn.queue(
             rows=[
                 (
                     "scenario-1",
                     "run-2",
                     selector.destination_set_id,
-                    selector.origin_key,
+                    selector.origin_location_id,
                     "Pelotas, RS",
+                    "Pelotas, RS",
+                    201,
                     "Manaus, AM",
                     "Manaus, AM",
-                    "manaus, am",
                     selector.cargo_t,
                     selector.truck_key,
                     selector.ors_profile,
                     selector.vessel_class,
-                    1,
+                    True,
                     selector.hoteling_hours_per_call,
                     selector.port_calls,
-                    1,
+                    True,
                     None,
                     None,
                     selector.t_per_teu_default,
                     None,
                     selector.allocation_load_factor,
-                    0,
+                    False,
                     selector.port_ops_scenario,
                     "ok",
                     None,
                     -3.119,
                     -60.0217,
                     "AM",
+                    "Rio Grande",
                     "Manaus",
                     15000.0,
                     11000.0,
@@ -186,8 +189,12 @@ class BulkRunPersistenceTests(unittest.TestCase):
                     42.2222,
                     3900.0,
                     3400.0,
-                    1,
+                    True,
                     "nearest_exact_delta_straight_line",
+                    "Belem, PA",
+                    3650.0,
+                    250.0,
+                    "Approximate direct-road distance from the nearest exact destination in the same bulk run.",
                     "2026-03-11 09:30:00",
                 )
             ]
@@ -204,19 +211,19 @@ class BulkRunPersistenceTests(unittest.TestCase):
         self.assertEqual(rows[0].destiny_name, "Manaus, AM")
         self.assertTrue(rows[0].is_approximation)
         self.assertEqual(rows[0].route_source, "nearest_exact_delta_straight_line")
+        self.assertAlmostEqual(float(rows[0].road_cost_r or 0.0), 15000.0)
 
-    def test_upsert_bulk_result_writes_selector_and_route_metadata(self) -> None:
+    def test_upsert_bulk_result_uses_normalized_item_writer(self) -> None:
         conn = _RecordingConnection()
 
-        with patch("modules.infra.db.bulk_results.ensure_results_table"):
+        with patch("modules.infra.db.bulk_results.insert_run_result") as insert_mock:
             upsert_bulk_result(
                 conn,
-                scenario_key="scenario-approx",
                 run_id="run-123",
+                scenario_key="scenario-approx",
                 destination_set_id="city_dests_over50k.txt",
-                origin_key="pelotas, rs",
+                origin_location_id=17,
                 origin_name="Pelotas, RS",
-                destiny_key="manaus, am",
                 destiny_name="Manaus, AM",
                 input_origin="Pelotas, RS",
                 input_destiny="Manaus, AM",
@@ -231,17 +238,16 @@ class BulkRunPersistenceTests(unittest.TestCase):
                 approximation_delta_straight_line_km=250.0,
                 approximation_notes="Approximate direct-road distance from the nearest exact destination in the same bulk run.",
                 road_distance_km=3900.0,
-                road_fuel_cost_r=15000.0,
-                road_co2e_kg=9000.0,
-                total_fuel_cost_r=11000.0,
-                total_co2e_kg=5200.0,
+                road_cost_r=15000.0,
+                road_emissions_kg=9000.0,
+                multimodal_cost_r=11000.0,
+                multimodal_emissions_kg=5200.0,
             )
 
-        statement, params = conn.statements[0]
-        self.assertIn("INSERT INTO bulk_evaluation_results", statement)
-        self.assertEqual(params[42], 1)
-        self.assertEqual(params[43], "nearest_exact_delta_straight_line")
-        self.assertEqual(params[44], "Belem, PA")
+        insert_mock.assert_called_once()
+        self.assertEqual(insert_mock.call_args.kwargs["run_id"], "run-123")
+        self.assertEqual(insert_mock.call_args.kwargs["scenario_key"], "scenario-approx")
+        self.assertEqual(insert_mock.call_args.kwargs["input_destiny"], "Manaus, AM")
 
 
 if __name__ == "__main__":

@@ -1,84 +1,62 @@
 # -*- coding: utf-8 -*-
 
 """
-Road distance cache.
+Normalized road-route cache.
 
-This table is reusable infrastructure for resolved road legs. It is separate
-from analytical evaluation outputs and persists only in Supabase Postgres.
+The active cache stores only canonical location references plus the durable
+route attributes needed at runtime. Human-readable labels and coordinates live
+in `locations` / `location_aliases`.
 """
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-ROOT = Path(__file__).resolve().parents[3]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from modules.addressing.text import ascii_place_key
 from modules.infra.db.core import (
     DBConnection,
-    bool_to_int,
     current_timestamp_sql,
-    int_to_bool,
     mark_schema_ready,
     safe_table_name,
     schema_is_ready,
-    table_columns,
-    to_float,
 )
-from modules.infra.log_manager import get_logger
+from modules.infra.db.locations import (
+    DEFAULT_ALIASES_TABLE,
+    DEFAULT_LOCATIONS_TABLE,
+    coord_lookup_key,
+    ensure_tables as ensure_location_tables,
+    find_point,
+    get_location_by_coords,
+    get_or_create_location,
+    list_locations_by_coords,
+    list_points,
+    normalize_place_key,
+    upsert_alias_point,
+)
 
-_log = get_logger(__name__)
-
-DEFAULT_TABLE = "routes"
+DEFAULT_TABLE = "route_cache_entries"
 DEFAULT_PROFILE = "driving-hgv"
-_LEGACY_INDEX_NAME = "uq_{table}_key"
-_PROFILE_INDEX_NAME = "uq_{table}_requested_profile"
-_COORDS_INDEX_NAME = "idx_{table}_coords_requested_profile"
-_COORD_KEYS_INDEX_NAME = "idx_{table}_coord_keys_requested_profile"
-_COORD_PRECISION = 5
 
-_POSTGRES_DDL_SQL = """
+_DDL_SQL = """
 CREATE TABLE IF NOT EXISTS {table} (
       id                  BIGSERIAL PRIMARY KEY
-    , origin_key          TEXT      NOT NULL
-    , origin_name         TEXT      NOT NULL
-    , origin_lat          DOUBLE PRECISION
-    , origin_lon          DOUBLE PRECISION
-    , destiny_key         TEXT      NOT NULL
-    , destiny_name        TEXT      NOT NULL
-    , destiny_lat         DOUBLE PRECISION
-    , destiny_lon         DOUBLE PRECISION
-    , origin_coord_key    TEXT
-    , destiny_coord_key   TEXT
-    , profile_requested   TEXT      NOT NULL DEFAULT 'driving-hgv'
-    , profile_used        TEXT
-    , lookup_mode         TEXT      NOT NULL DEFAULT 'label'
-    , source              TEXT      NOT NULL DEFAULT 'ors'
+    , origin_location_id  BIGINT    NOT NULL REFERENCES {locations_table}(id) ON DELETE CASCADE
+    , destiny_location_id BIGINT    NOT NULL REFERENCES {locations_table}(id) ON DELETE CASCADE
+    , is_hgv              BOOLEAN   NOT NULL DEFAULT TRUE
+    , fallback_profile    TEXT
+    , provider            TEXT      NOT NULL DEFAULT 'ors'
     , distance_km         DOUBLE PRECISION
-    , is_hgv              INTEGER
+    , duration_s          DOUBLE PRECISION
     , insertion_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     , updated_timestamp   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 
-_UNIQUE_INDEX_SQL = """
-CREATE UNIQUE INDEX IF NOT EXISTS {index_name}
-    ON {table} (origin_key, destiny_key, profile_requested);
-"""
-
-_COORDS_INDEX_SQL = """
-CREATE INDEX IF NOT EXISTS {index_name}
-    ON {table} (profile_requested, origin_lat, origin_lon, destiny_lat, destiny_lon);
-"""
-
-_COORD_KEYS_INDEX_SQL = """
-CREATE INDEX IF NOT EXISTS {index_name}
-    ON {table} (profile_requested, origin_coord_key, destiny_coord_key);
-"""
+_INDEX_SQL = (
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_{table}_origin_destiny_mode ON {table} (origin_location_id, destiny_location_id, is_hgv);",
+    "CREATE INDEX IF NOT EXISTS idx_{table}_updated_timestamp ON {table} (updated_timestamp DESC);",
+    "CREATE INDEX IF NOT EXISTS idx_{table}_origin_location ON {table} (origin_location_id);",
+    "CREATE INDEX IF NOT EXISTS idx_{table}_destiny_location ON {table} (destiny_location_id);",
+)
 
 
 def normalize_profile(profile: Optional[str]) -> str:
@@ -90,20 +68,12 @@ def profile_is_hgv(profile: Optional[str]) -> bool:
     return normalize_profile(profile) == "driving-hgv"
 
 
-def _build_place_key(label: Any) -> str:
-    return ascii_place_key(label)
-
-
-def _coord_key(lat: Optional[float], lon: Optional[float]) -> Optional[str]:
-    lat_value = to_float(lat)
-    lon_value = to_float(lon)
-    if lat_value is None or lon_value is None:
-        return None
-    return f"{lat_value:.{_COORD_PRECISION}f},{lon_value:.{_COORD_PRECISION}f}"
-
-
 def build_label_lookup_key(origin: str, destiny: str, profile_requested: Optional[str]) -> tuple[str, str, str]:
-    return (_build_place_key(origin), _build_place_key(destiny), normalize_profile(profile_requested))
+    return (
+        normalize_place_key(origin),
+        normalize_place_key(destiny),
+        normalize_profile(profile_requested),
+    )
 
 
 def build_coord_lookup_key(
@@ -113,211 +83,155 @@ def build_coord_lookup_key(
     destiny_lon: Optional[float],
     profile_requested: Optional[str],
 ) -> Optional[tuple[str, str, str]]:
-    origin_coord_key = _coord_key(origin_lat, origin_lon)
-    destiny_coord_key = _coord_key(destiny_lat, destiny_lon)
-    if origin_coord_key is None or destiny_coord_key is None:
+    origin_key = coord_lookup_key(origin_lat, origin_lon)
+    destiny_key = coord_lookup_key(destiny_lat, destiny_lon)
+    if origin_key is None or destiny_key is None:
         return None
-    return (normalize_profile(profile_requested), origin_coord_key, destiny_coord_key)
-
-
-def _ensure_column(conn: DBConnection, table_name: str, column_name: str, ddl: str) -> None:
-    if column_name in table_columns(conn, table_name):
-        return
-    conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {ddl}")
-
-
-def _backfill_profile_columns(conn: DBConnection, table_name: str) -> None:
-    conn.execute(
-        f"""
-        UPDATE {table_name}
-           SET profile_requested = CASE
-                   WHEN TRIM(COALESCE(profile_requested, '')) <> '' THEN LOWER(TRIM(profile_requested))
-                   WHEN is_hgv = 1 THEN 'driving-hgv'
-                   WHEN is_hgv = 0 THEN 'driving-car'
-                   ELSE '{DEFAULT_PROFILE}'
-               END
-             , profile_used = CASE
-                   WHEN TRIM(COALESCE(profile_used, '')) <> '' THEN LOWER(TRIM(profile_used))
-                   WHEN is_hgv = 1 THEN 'driving-hgv'
-                   WHEN is_hgv = 0 THEN 'driving-car'
-                   ELSE profile_used
-               END
-             , lookup_mode = CASE
-                   WHEN TRIM(COALESCE(lookup_mode, '')) <> '' THEN lookup_mode
-                   ELSE 'label'
-               END
-             , source = CASE
-                   WHEN TRIM(COALESCE(source, '')) <> '' THEN source
-                   ELSE 'ors'
-               END
-             , updated_timestamp = COALESCE(updated_timestamp, insertion_timestamp, {current_timestamp_sql()})
-        """
+    return (
+        normalize_profile(profile_requested),
+        f"{origin_key[0]},{origin_key[1]}",
+        f"{destiny_key[0]},{destiny_key[1]}",
     )
 
 
-def _backfill_route_keys(conn: DBConnection, table_name: str) -> None:
-    rows = conn.execute(
-        f"""
-        SELECT DISTINCT
-              origin_name
-            , destiny_name
-            , profile_requested
-        FROM {table_name}
-        WHERE TRIM(COALESCE(origin_key, '')) = ''
-           OR TRIM(COALESCE(destiny_key, '')) = ''
-        """
-    ).fetchall()
-    if not rows:
-        return
-
-    updates = [
-        (
-            _build_place_key(row[0]),
-            _build_place_key(row[1]),
-            row[0],
-            row[1],
-            normalize_profile(row[2]),
-        )
-        for row in rows
-    ]
-    conn.executemany(
-        f"""
-        UPDATE {table_name}
-           SET origin_key = ?
-             , destiny_key = ?
-             , updated_timestamp = COALESCE(updated_timestamp, insertion_timestamp, {current_timestamp_sql()})
-         WHERE origin_name = ?
-           AND destiny_name = ?
-           AND profile_requested = ?
-        """,
-        updates,
-    )
+def _requested_is_hgv(profile_requested: Optional[str], explicit_is_hgv: Optional[bool]) -> bool:
+    if explicit_is_hgv is not None:
+        return bool(explicit_is_hgv)
+    return profile_is_hgv(profile_requested)
 
 
-def _backfill_coord_keys(conn: DBConnection, table_name: str) -> None:
-    rows = conn.execute(
-        f"""
-        SELECT DISTINCT
-              origin_name
-            , destiny_name
-            , profile_requested
-            , origin_lat
-            , origin_lon
-            , destiny_lat
-            , destiny_lon
-        FROM {table_name}
-        WHERE (
-                origin_lat IS NOT NULL
-            AND origin_lon IS NOT NULL
-            AND destiny_lat IS NOT NULL
-            AND destiny_lon IS NOT NULL
-        )
-          AND (
-                TRIM(COALESCE(origin_coord_key, '')) = ''
-             OR TRIM(COALESCE(destiny_coord_key, '')) = ''
-          )
-        """
-    ).fetchall()
-    if not rows:
-        return
-
-    updates = []
-    for row in rows:
-        origin_coord_key = _coord_key(row[3], row[4])
-        destiny_coord_key = _coord_key(row[5], row[6])
-        if origin_coord_key is None or destiny_coord_key is None:
-            continue
-        updates.append(
-            (
-                origin_coord_key,
-                destiny_coord_key,
-                row[0],
-                row[1],
-                normalize_profile(row[2]),
-            )
-        )
-    if not updates:
-        return
-
-    conn.executemany(
-        f"""
-        UPDATE {table_name}
-           SET origin_coord_key = ?
-             , destiny_coord_key = ?
-             , updated_timestamp = COALESCE(updated_timestamp, insertion_timestamp, {current_timestamp_sql()})
-         WHERE origin_name = ?
-           AND destiny_name = ?
-           AND profile_requested = ?
-        """,
-        updates,
-    )
-
-
-def _drop_legacy_indexes(conn: DBConnection, table_name: str) -> None:
-    conn.execute(f"DROP INDEX IF EXISTS {_LEGACY_INDEX_NAME.format(table=table_name)}")
-
-
-def ensure_main_table(conn: DBConnection, table_name: str = DEFAULT_TABLE) -> None:
-    """Create or migrate the road cache table in place."""
+def ensure_main_table(
+    conn: DBConnection,
+    table_name: str = DEFAULT_TABLE,
+    *,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+) -> None:
     table = safe_table_name(table_name)
-    if schema_is_ready(conn, "road_cache", table):
+    locations = safe_table_name(locations_table)
+    if schema_is_ready(conn, "route_cache_entries", table):
         return
-    conn.execute(_POSTGRES_DDL_SQL.format(table=table))
-    _ensure_column(conn, table, "origin_key", "origin_key TEXT")
-    _ensure_column(conn, table, "destiny_key", "destiny_key TEXT")
-    _ensure_column(conn, table, "origin_coord_key", "origin_coord_key TEXT")
-    _ensure_column(conn, table, "destiny_coord_key", "destiny_coord_key TEXT")
-    _ensure_column(conn, table, "profile_requested", "profile_requested TEXT")
-    _ensure_column(conn, table, "profile_used", "profile_used TEXT")
-    _ensure_column(conn, table, "lookup_mode", "lookup_mode TEXT")
-    _ensure_column(conn, table, "source", "source TEXT")
-    _ensure_column(conn, table, "updated_timestamp", "updated_timestamp TIMESTAMPTZ")
-    _backfill_profile_columns(conn, table)
-    _backfill_route_keys(conn, table)
-    _backfill_coord_keys(conn, table)
-    _drop_legacy_indexes(conn, table)
-    conn.execute(
-        _UNIQUE_INDEX_SQL.format(
-            table=table,
-            index_name=_PROFILE_INDEX_NAME.format(table=table),
-        )
-    )
-    conn.execute(
-        _COORDS_INDEX_SQL.format(
-            table=table,
-            index_name=_COORDS_INDEX_NAME.format(table=table),
-        )
-    )
-    conn.execute(
-        _COORD_KEYS_INDEX_SQL.format(
-            table=table,
-            index_name=_COORD_KEYS_INDEX_NAME.format(table=table),
-        )
-    )
-    mark_schema_ready(conn, "road_cache", table)
+    ensure_location_tables(conn, locations_table=locations, aliases_table=DEFAULT_ALIASES_TABLE)
+    conn.execute(_DDL_SQL.format(table=table, locations_table=locations))
+    for sql in _INDEX_SQL:
+        conn.execute(sql.format(table=table))
+    mark_schema_ready(conn, "route_cache_entries", table)
 
 
 def _row_to_dict(row: Sequence[Any]) -> Dict[str, Any]:
+    requested_profile = "driving-hgv" if bool(row[9]) else "driving-car"
+    used_profile = str(row[10]) if row[10] not in (None, "") else requested_profile
+    origin_label = str(row[3] or f"{float(row[4]):.6f}, {float(row[5]):.6f}")
+    destiny_label = str(row[6] or f"{float(row[7]):.6f}, {float(row[8]):.6f}")
     return {
-        "origin_key": row[0],
-        "origin": row[1],
-        "destiny_key": row[2],
-        "destiny": row[3],
-        "distance_km": to_float(row[4]),
-        "is_hgv": int_to_bool(row[5]),
-        "origin_lat": to_float(row[6]),
-        "origin_lon": to_float(row[7]),
-        "destiny_lat": to_float(row[8]),
-        "destiny_lon": to_float(row[9]),
-        "origin_coord_key": (None if row[10] in (None, "") else str(row[10])),
-        "destiny_coord_key": (None if row[11] in (None, "") else str(row[11])),
-        "profile_requested": str(row[12] or DEFAULT_PROFILE),
-        "profile_used": (None if row[13] in (None, "") else str(row[13])),
-        "lookup_mode": (None if row[14] in (None, "") else str(row[14])),
-        "source": (None if row[15] in (None, "") else str(row[15])),
-        "insertion_timestamp": row[16],
-        "updated_timestamp": row[17],
+        "id": int(row[0]),
+        "origin_location_id": int(row[1]),
+        "destiny_location_id": int(row[2]),
+        "origin": origin_label,
+        "origin_lat": float(row[4]),
+        "origin_lon": float(row[5]),
+        "destiny": destiny_label,
+        "destiny_lat": float(row[7]),
+        "destiny_lon": float(row[8]),
+        "is_hgv": bool(row[9]),
+        "profile_requested": requested_profile,
+        "profile_used": used_profile,
+        "fallback_profile": (None if row[10] in (None, "") else str(row[10])),
+        "source": str(row[11]),
+        "provider": str(row[11]),
+        "distance_km": (None if row[12] is None else float(row[12])),
+        "duration_s": (None if row[13] is None else float(row[13])),
+        "insertion_timestamp": row[14],
+        "updated_timestamp": row[15],
     }
+
+
+def _joined_select_sql(table: str, locations_table: str) -> str:
+    return f"""
+    SELECT
+          rc.id
+        , rc.origin_location_id
+        , rc.destiny_location_id
+        , o.label AS origin_label
+        , o.lat6 AS origin_lat
+        , o.lon6 AS origin_lon
+        , d.label AS destiny_label
+        , d.lat6 AS destiny_lat
+        , d.lon6 AS destiny_lon
+        , rc.is_hgv
+        , rc.fallback_profile
+        , rc.provider
+        , rc.distance_km
+        , rc.duration_s
+        , rc.insertion_timestamp
+        , rc.updated_timestamp
+    FROM {table} AS rc
+    INNER JOIN {locations_table} AS o
+            ON o.id = rc.origin_location_id
+    INNER JOIN {locations_table} AS d
+            ON d.id = rc.destiny_location_id
+    """
+
+
+def _get_route_by_location_ids(
+    conn: DBConnection,
+    *,
+    origin_location_id: int,
+    destiny_location_id: int,
+    is_hgv: bool,
+    table_name: str = DEFAULT_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+) -> Optional[Dict[str, Any]]:
+    table = safe_table_name(table_name)
+    locations = safe_table_name(locations_table)
+    ensure_main_table(conn, table, locations_table=locations)
+    row = conn.execute(
+        _joined_select_sql(table, locations)
+        + """
+        WHERE rc.origin_location_id = ?
+          AND rc.destiny_location_id = ?
+          AND rc.is_hgv = ?
+        LIMIT 1
+        """,
+        (int(origin_location_id), int(destiny_location_id), bool(is_hgv)),
+    ).fetchone()
+    if not row:
+        return None
+    return _row_to_dict(row)
+
+
+def _resolve_location_id_for_write(
+    conn: DBConnection,
+    *,
+    label: str,
+    lat: Optional[float],
+    lon: Optional[float],
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+) -> int:
+    if lat is not None and lon is not None:
+        point = upsert_alias_point(
+            conn,
+            place=label,
+            label=label,
+            lat=lat,
+            lon=lon,
+            source="route_cache",
+            aliases_table=aliases_table,
+            locations_table=locations_table,
+        )
+        if point is not None:
+            return int(point["location_id"])
+
+    cached = find_point(
+        conn,
+        place=label,
+        table_name=aliases_table,
+        locations_table=locations_table,
+    )
+    if cached is not None:
+        return int(cached["location_id"])
+
+    raise RuntimeError(f"Route cache requires coordinates or an existing alias for {label!r}.")
 
 
 def upsert_run(
@@ -330,70 +244,90 @@ def upsert_run(
     destiny_lat: Optional[float] = None,
     destiny_lon: Optional[float] = None,
     distance_km: Optional[float] = None,
+    duration_s: Optional[float] = None,
     profile_requested: Optional[str] = None,
     profile_used: Optional[str] = None,
-    lookup_mode: str = "label",
+    lookup_mode: str = "coords",
     source: str = "ors",
     is_hgv: Optional[bool] = None,
+    origin_location_id: Optional[int] = None,
+    destiny_location_id: Optional[int] = None,
+    insertion_timestamp: Any = None,
+    updated_timestamp: Any = None,
     table_name: str = DEFAULT_TABLE,
-) -> None:
-    """Insert or update one cached road leg."""
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+) -> Dict[str, Any]:
+    del lookup_mode  # compatibility shim; normalized cache no longer stores lookup mode
     table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
+    locations = safe_table_name(locations_table)
+    ensure_main_table(conn, table, locations_table=locations)
 
-    requested = normalize_profile(profile_requested)
-    used = normalize_profile(profile_used) if profile_used else None
-    final_is_hgv = is_hgv if is_hgv is not None else (profile_is_hgv(used) if used else None)
-    origin_key = _build_place_key(origin)
-    destiny_key = _build_place_key(destiny)
-    origin_coord_key = _coord_key(origin_lat, origin_lon)
-    destiny_coord_key = _coord_key(destiny_lat, destiny_lon)
+    requested_profile = normalize_profile(profile_requested)
+    requested_is_hgv = _requested_is_hgv(requested_profile, is_hgv)
+    normalized_source = str(source or "ors").strip().lower() or "ors"
+    used_profile = normalize_profile(profile_used) if profile_used else requested_profile
+    fallback_profile = None if used_profile == requested_profile else used_profile
 
-    sql = f"""
-    INSERT INTO {table} (
-          origin_key, origin_name, origin_lat, origin_lon
-        , destiny_key, destiny_name, destiny_lat, destiny_lon
-        , origin_coord_key, destiny_coord_key
-        , profile_requested, profile_used
-        , lookup_mode, source
-        , distance_km, is_hgv
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(origin_key, destiny_key, profile_requested) DO UPDATE SET
-          origin_name=excluded.origin_name
-        , origin_lat=excluded.origin_lat
-        , origin_lon=excluded.origin_lon
-        , destiny_name=excluded.destiny_name
-        , destiny_lat=excluded.destiny_lat
-        , destiny_lon=excluded.destiny_lon
-        , origin_coord_key=excluded.origin_coord_key
-        , destiny_coord_key=excluded.destiny_coord_key
-        , profile_used=excluded.profile_used
-        , lookup_mode=excluded.lookup_mode
-        , source=excluded.source
-        , distance_km=excluded.distance_km
-        , is_hgv=excluded.is_hgv
-        , updated_timestamp={current_timestamp_sql()}
-    """
-
-    params = (
-        origin_key,
-        origin,
-        to_float(origin_lat),
-        to_float(origin_lon),
-        destiny_key,
-        destiny,
-        to_float(destiny_lat),
-        to_float(destiny_lon),
-        origin_coord_key,
-        destiny_coord_key,
-        requested,
-        used,
-        str(lookup_mode or "label").strip().lower() or "label",
-        str(source or "ors").strip().lower() or "ors",
-        to_float(distance_km),
-        bool_to_int(final_is_hgv),
+    origin_location_id = origin_location_id or _resolve_location_id_for_write(
+        conn,
+        label=origin,
+        lat=origin_lat,
+        lon=origin_lon,
+        aliases_table=aliases_table,
+        locations_table=locations_table,
     )
-    conn.execute(sql, params)
+    destiny_location_id = destiny_location_id or _resolve_location_id_for_write(
+        conn,
+        label=destiny,
+        lat=destiny_lat,
+        lon=destiny_lon,
+        aliases_table=aliases_table,
+        locations_table=locations_table,
+    )
+
+    row = conn.execute(
+        f"""
+        INSERT INTO {table} (
+              origin_location_id
+            , destiny_location_id
+            , is_hgv
+            , fallback_profile
+            , provider
+            , distance_km
+            , duration_s
+            , insertion_timestamp
+            , updated_timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, {current_timestamp_sql()}), COALESCE(?, {current_timestamp_sql()}))
+        ON CONFLICT(origin_location_id, destiny_location_id, is_hgv) DO UPDATE SET
+              fallback_profile = excluded.fallback_profile
+            , provider = excluded.provider
+            , distance_km = excluded.distance_km
+            , duration_s = excluded.duration_s
+            , updated_timestamp = COALESCE(excluded.updated_timestamp, {current_timestamp_sql()})
+        RETURNING id
+        """,
+        (
+            int(origin_location_id),
+            int(destiny_location_id),
+            bool(requested_is_hgv),
+            fallback_profile,
+            normalized_source,
+            distance_km,
+            duration_s,
+            insertion_timestamp,
+            updated_timestamp,
+        ),
+    ).fetchone()
+    assert row is not None
+    return _get_route_by_location_ids(
+        conn,
+        origin_location_id=int(origin_location_id),
+        destiny_location_id=int(destiny_location_id),
+        is_hgv=bool(requested_is_hgv),
+        table_name=table,
+        locations_table=locations,
+    ) or {"id": int(row[0])}
 
 
 def upsert_runs(
@@ -401,77 +335,42 @@ def upsert_runs(
     *,
     rows: Iterable[Dict[str, Any]],
     table_name: str = DEFAULT_TABLE,
-) -> int:
-    table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-
-    sql = f"""
-    INSERT INTO {table} (
-          origin_key, origin_name, origin_lat, origin_lon
-        , destiny_key, destiny_name, destiny_lat, destiny_lon
-        , origin_coord_key, destiny_coord_key
-        , profile_requested, profile_used
-        , lookup_mode, source
-        , distance_km, is_hgv
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(origin_key, destiny_key, profile_requested) DO UPDATE SET
-          origin_name=excluded.origin_name
-        , origin_lat=excluded.origin_lat
-        , origin_lon=excluded.origin_lon
-        , destiny_name=excluded.destiny_name
-        , destiny_lat=excluded.destiny_lat
-        , destiny_lon=excluded.destiny_lon
-        , origin_coord_key=excluded.origin_coord_key
-        , destiny_coord_key=excluded.destiny_coord_key
-        , profile_used=excluded.profile_used
-        , lookup_mode=excluded.lookup_mode
-        , source=excluded.source
-        , distance_km=excluded.distance_km
-        , is_hgv=excluded.is_hgv
-        , updated_timestamp={current_timestamp_sql()}
-    """
-
-    params_list: list[tuple[Any, ...]] = []
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+    return_rows: bool = False,
+) -> int | List[Dict[str, Any]]:
+    persisted: list[Dict[str, Any]] = []
     for row in rows:
         origin = str(row.get("origin") or "").strip()
         destiny = str(row.get("destiny") or "").strip()
         if not origin or not destiny:
             continue
-        profile_requested = normalize_profile(row.get("profile_requested"))
-        profile_used = normalize_profile(row.get("profile_used")) if row.get("profile_used") else None
-        final_is_hgv = row.get("is_hgv")
-        if final_is_hgv is None and profile_used:
-            final_is_hgv = profile_is_hgv(profile_used)
-        origin_lat = to_float(row.get("origin_lat"))
-        origin_lon = to_float(row.get("origin_lon"))
-        destiny_lat = to_float(row.get("destiny_lat"))
-        destiny_lon = to_float(row.get("destiny_lon"))
-        params_list.append(
-            (
-                _build_place_key(origin),
-                origin,
-                origin_lat,
-                origin_lon,
-                _build_place_key(destiny),
-                destiny,
-                destiny_lat,
-                destiny_lon,
-                _coord_key(origin_lat, origin_lon),
-                _coord_key(destiny_lat, destiny_lon),
-                profile_requested,
-                profile_used,
-                str(row.get("lookup_mode") or "label").strip().lower() or "label",
-                str(row.get("source") or "ors").strip().lower() or "ors",
-                to_float(row.get("distance_km")),
-                bool_to_int(final_is_hgv),
-            )
+        persisted_row = upsert_run(
+            conn,
+            origin=origin,
+            destiny=destiny,
+            origin_lat=row.get("origin_lat"),
+            origin_lon=row.get("origin_lon"),
+            destiny_lat=row.get("destiny_lat"),
+            destiny_lon=row.get("destiny_lon"),
+            distance_km=row.get("distance_km"),
+            duration_s=row.get("duration_s"),
+            profile_requested=row.get("profile_requested"),
+            profile_used=row.get("profile_used"),
+            source=row.get("source") or "ors",
+            is_hgv=row.get("is_hgv"),
+            origin_location_id=row.get("origin_location_id"),
+            destiny_location_id=row.get("destiny_location_id"),
+            insertion_timestamp=row.get("insertion_timestamp"),
+            updated_timestamp=row.get("updated_timestamp"),
+            table_name=table_name,
+            aliases_table=aliases_table,
+            locations_table=locations_table,
         )
-
-    if not params_list:
-        return 0
-
-    conn.executemany(sql, params_list)
-    return len(params_list)
+        persisted.append(persisted_row)
+    if return_rows:
+        return persisted
+    return len(persisted)
 
 
 def get_run(
@@ -481,43 +380,21 @@ def get_run(
     destiny: str,
     profile_requested: Optional[str] = None,
     table_name: str = DEFAULT_TABLE,
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> Optional[Dict[str, Any]]:
-    """Fetch one exact cached leg for the requested routing profile."""
-    table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-    requested = normalize_profile(profile_requested)
-    row = conn.execute(
-        f"""
-        SELECT
-              origin_key
-            , origin_name
-            , destiny_key
-            , destiny_name
-            , distance_km
-            , is_hgv
-            , origin_lat
-            , origin_lon
-            , destiny_lat
-            , destiny_lon
-            , origin_coord_key
-            , destiny_coord_key
-            , profile_requested
-            , profile_used
-            , lookup_mode
-            , source
-            , insertion_timestamp
-            , updated_timestamp
-        FROM {table}
-        WHERE origin_key = ?
-          AND destiny_key = ?
-          AND profile_requested = ?
-        LIMIT 1
-        """,
-        (_build_place_key(origin), _build_place_key(destiny), requested),
-    ).fetchone()
-    if not row:
+    origin_point = find_point(conn, place=origin, table_name=aliases_table, locations_table=locations_table)
+    destiny_point = find_point(conn, place=destiny, table_name=aliases_table, locations_table=locations_table)
+    if origin_point is None or destiny_point is None:
         return None
-    return _row_to_dict(row)
+    return _get_route_by_location_ids(
+        conn,
+        origin_location_id=int(origin_point["location_id"]),
+        destiny_location_id=int(destiny_point["location_id"]),
+        is_hgv=profile_is_hgv(profile_requested),
+        table_name=table_name,
+        locations_table=locations_table,
+    )
 
 
 def get_run_by_coords(
@@ -529,101 +406,63 @@ def get_run_by_coords(
     destiny_lon: float,
     profile_requested: Optional[str] = None,
     table_name: str = DEFAULT_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
     tolerance_deg: float = 1e-5,
 ) -> Optional[Dict[str, Any]]:
-    """Fetch one cached leg by coordinates when labels are unstable."""
-    table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-    requested = normalize_profile(profile_requested)
-    coord_lookup_key = build_coord_lookup_key(
-        origin_lat,
-        origin_lon,
-        destiny_lat,
-        destiny_lon,
-        requested,
-    )
-    row = None
-    if coord_lookup_key is not None:
-        row = conn.execute(
-            f"""
-            SELECT
-                  origin_key
-                , origin_name
-                , destiny_key
-                , destiny_name
-                , distance_km
-                , is_hgv
-                , origin_lat
-                , origin_lon
-                , destiny_lat
-                , destiny_lon
-                , origin_coord_key
-                , destiny_coord_key
-                , profile_requested
-                , profile_used
-                , lookup_mode
-                , source
-                , insertion_timestamp
-                , updated_timestamp
-            FROM {table}
-            WHERE profile_requested = ?
-              AND origin_coord_key = ?
-              AND destiny_coord_key = ?
-            ORDER BY updated_timestamp DESC, insertion_timestamp DESC
-            LIMIT 1
-            """,
-            coord_lookup_key,
-        ).fetchone()
-    if row is None:
-        row = conn.execute(
-            f"""
-            SELECT
-                  origin_key
-                , origin_name
-                , destiny_key
-                , destiny_name
-                , distance_km
-                , is_hgv
-                , origin_lat
-                , origin_lon
-                , destiny_lat
-                , destiny_lon
-                , origin_coord_key
-                , destiny_coord_key
-                , profile_requested
-                , profile_used
-                , lookup_mode
-                , source
-                , insertion_timestamp
-                , updated_timestamp
-            FROM {table}
-            WHERE profile_requested = ?
-              AND origin_lat IS NOT NULL
-              AND origin_lon IS NOT NULL
-              AND destiny_lat IS NOT NULL
-              AND destiny_lon IS NOT NULL
-              AND ABS(origin_lat - ?) <= ?
-              AND ABS(origin_lon - ?) <= ?
-              AND ABS(destiny_lat - ?) <= ?
-              AND ABS(destiny_lon - ?) <= ?
-            ORDER BY updated_timestamp DESC, insertion_timestamp DESC
-            LIMIT 1
-            """,
-            (
-                requested,
-                float(origin_lat),
-                float(tolerance_deg),
-                float(origin_lon),
-                float(tolerance_deg),
-                float(destiny_lat),
-                float(tolerance_deg),
-                float(destiny_lon),
-                float(tolerance_deg),
-            ),
-        ).fetchone()
-    if not row:
+    del tolerance_deg
+    origin_location = get_location_by_coords(conn, lat=origin_lat, lon=origin_lon, table_name=locations_table)
+    destiny_location = get_location_by_coords(conn, lat=destiny_lat, lon=destiny_lon, table_name=locations_table)
+    if origin_location is None or destiny_location is None:
         return None
-    return _row_to_dict(row)
+    return _get_route_by_location_ids(
+        conn,
+        origin_location_id=int(origin_location["location_id"]),
+        destiny_location_id=int(destiny_location["location_id"]),
+        is_hgv=profile_is_hgv(profile_requested),
+        table_name=table_name,
+        locations_table=locations_table,
+    )
+
+
+def _list_routes_by_location_pairs(
+    conn: DBConnection,
+    *,
+    pairs: Iterable[tuple[int, int, bool]],
+    table_name: str = DEFAULT_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+) -> Dict[tuple[int, int, bool], Dict[str, Any]]:
+    table = safe_table_name(table_name)
+    locations = safe_table_name(locations_table)
+    ensure_main_table(conn, table, locations_table=locations)
+
+    normalized = [(int(o), int(d), bool(mode)) for o, d, mode in pairs]
+    if not normalized:
+        return {}
+
+    placeholders = ", ".join(["(?, ?, ?)"] * len(normalized))
+    params: list[Any] = []
+    for origin_location_id, destiny_location_id, is_hgv in normalized:
+        params.extend((origin_location_id, destiny_location_id, is_hgv))
+
+    rows = conn.execute(
+        f"""
+        WITH wanted(origin_location_id, destiny_location_id, is_hgv) AS (
+            VALUES {placeholders}
+        )
+        """
+        + _joined_select_sql(table, locations)
+        + """
+        INNER JOIN wanted AS w
+                ON w.origin_location_id = rc.origin_location_id
+               AND w.destiny_location_id = rc.destiny_location_id
+               AND w.is_hgv = rc.is_hgv
+        """,
+        params,
+    ).fetchall()
+    return {
+        (int(row[1]), int(row[2]), bool(row[9])): _row_to_dict(row)
+        for row in rows
+    }
 
 
 def list_runs_by_label_keys(
@@ -631,54 +470,47 @@ def list_runs_by_label_keys(
     *,
     keys: Iterable[Tuple[str, str, Optional[str]]],
     table_name: str = DEFAULT_TABLE,
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
-    table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
     prepared = [build_label_lookup_key(origin, destiny, profile_requested) for origin, destiny, profile_requested in keys]
     if not prepared:
         return {}
 
-    placeholders = ", ".join(["(?, ?, ?)"] * len(prepared))
-    flat_params: list[Any] = []
-    for row in prepared:
-        flat_params.extend(row)
+    place_keys: list[str] = []
+    for origin_key, destiny_key, _profile in prepared:
+        place_keys.append(origin_key)
+        place_keys.append(destiny_key)
+    points = list_points(conn, places=place_keys, table_name=aliases_table, locations_table=locations_table)
 
-    rows = conn.execute(
-        f"""
-        WITH wanted(origin_key, destiny_key, profile_requested) AS (
-            VALUES {placeholders}
+    pairs: list[tuple[int, int, bool]] = []
+    requested_keys: list[tuple[str, str, str]] = []
+    for origin_key, destiny_key, profile_requested in prepared:
+        origin_point = points.get(origin_key)
+        destiny_point = points.get(destiny_key)
+        if origin_point is None or destiny_point is None:
+            continue
+        requested_keys.append((origin_key, destiny_key, profile_requested))
+        pairs.append(
+            (
+                int(origin_point["location_id"]),
+                int(destiny_point["location_id"]),
+                profile_is_hgv(profile_requested),
+            )
         )
-        SELECT
-              r.origin_key
-            , r.origin_name
-            , r.destiny_key
-            , r.destiny_name
-            , r.distance_km
-            , r.is_hgv
-            , r.origin_lat
-            , r.origin_lon
-            , r.destiny_lat
-            , r.destiny_lon
-            , r.origin_coord_key
-            , r.destiny_coord_key
-            , r.profile_requested
-            , r.profile_used
-            , r.lookup_mode
-            , r.source
-            , r.insertion_timestamp
-            , r.updated_timestamp
-        FROM {table} AS r
-        INNER JOIN wanted AS w
-                ON w.origin_key = r.origin_key
-               AND w.destiny_key = r.destiny_key
-               AND w.profile_requested = r.profile_requested
-        """,
-        flat_params,
-    ).fetchall()
-    return {
-        (str(row[0]), str(row[2]), str(row[12] or DEFAULT_PROFILE)): _row_to_dict(row)
-        for row in rows
-    }
+
+    rows_by_pair = _list_routes_by_location_pairs(
+        conn,
+        pairs=pairs,
+        table_name=table_name,
+        locations_table=locations_table,
+    )
+    results: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+    for request_key, pair in zip(requested_keys, pairs):
+        row = rows_by_pair.get(pair)
+        if row is not None:
+            results[request_key] = row
+    return results
 
 
 def list_runs_by_coord_keys(
@@ -686,63 +518,55 @@ def list_runs_by_coord_keys(
     *,
     keys: Iterable[Tuple[float, float, float, float, Optional[str]]],
     table_name: str = DEFAULT_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> Dict[Tuple[str, str, str], Dict[str, Any]]:
-    table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-
-    prepared: list[tuple[str, str, str]] = []
-    for origin_lat, origin_lon, destiny_lat, destiny_lon, profile_requested in keys:
-        coord_key = build_coord_lookup_key(origin_lat, origin_lon, destiny_lat, destiny_lon, profile_requested)
-        if coord_key is not None:
-            prepared.append(coord_key)
+    prepared = list(keys)
     if not prepared:
         return {}
 
-    placeholders = ", ".join(["(?, ?, ?)"] * len(prepared))
-    flat_params: list[Any] = []
-    for row in prepared:
-        flat_params.extend(row)
+    coords_to_fetch: list[tuple[Any, Any]] = []
+    for origin_lat, origin_lon, destiny_lat, destiny_lon, _profile in prepared:
+        coords_to_fetch.append((origin_lat, origin_lon))
+        coords_to_fetch.append((destiny_lat, destiny_lon))
+    locations_by_coord = list_locations_by_coords(conn, coords=coords_to_fetch, table_name=locations_table)
 
-    rows = conn.execute(
-        f"""
-        WITH wanted(profile_requested, origin_coord_key, destiny_coord_key) AS (
-            VALUES {placeholders}
+    pairs: list[tuple[int, int, bool]] = []
+    request_keys: list[tuple[str, str, str]] = []
+    for origin_lat, origin_lon, destiny_lat, destiny_lon, profile_requested in prepared:
+        origin_coord_key = coord_lookup_key(origin_lat, origin_lon)
+        destiny_coord_key = coord_lookup_key(destiny_lat, destiny_lon)
+        if origin_coord_key is None or destiny_coord_key is None:
+            continue
+        origin_location = locations_by_coord.get(origin_coord_key)
+        destiny_location = locations_by_coord.get(destiny_coord_key)
+        if origin_location is None or destiny_location is None:
+            continue
+        request_key = (
+            normalize_profile(profile_requested),
+            f"{origin_coord_key[0]},{origin_coord_key[1]}",
+            f"{destiny_coord_key[0]},{destiny_coord_key[1]}",
         )
-        SELECT
-              r.origin_key
-            , r.origin_name
-            , r.destiny_key
-            , r.destiny_name
-            , r.distance_km
-            , r.is_hgv
-            , r.origin_lat
-            , r.origin_lon
-            , r.destiny_lat
-            , r.destiny_lon
-            , r.origin_coord_key
-            , r.destiny_coord_key
-            , r.profile_requested
-            , r.profile_used
-            , r.lookup_mode
-            , r.source
-            , r.insertion_timestamp
-            , r.updated_timestamp
-        FROM {table} AS r
-        INNER JOIN wanted AS w
-                ON w.profile_requested = r.profile_requested
-               AND w.origin_coord_key = r.origin_coord_key
-               AND w.destiny_coord_key = r.destiny_coord_key
-        """,
-        flat_params,
-    ).fetchall()
-    return {
-        (
-            str(row[12] or DEFAULT_PROFILE),
-            str(row[10] or ""),
-            str(row[11] or ""),
-        ): _row_to_dict(row)
-        for row in rows
-    }
+        request_keys.append(request_key)
+        pairs.append(
+            (
+                int(origin_location["location_id"]),
+                int(destiny_location["location_id"]),
+                profile_is_hgv(profile_requested),
+            )
+        )
+
+    rows_by_pair = _list_routes_by_location_pairs(
+        conn,
+        pairs=pairs,
+        table_name=table_name,
+        locations_table=locations_table,
+    )
+    results: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+    for request_key, pair in zip(request_keys, pairs):
+        row = rows_by_pair.get(pair)
+        if row is not None:
+            results[request_key] = row
+    return results
 
 
 def overwrite_keys(
@@ -750,21 +574,32 @@ def overwrite_keys(
     *,
     keys: Iterable[Tuple[str, str, Optional[str]]],
     table_name: str = DEFAULT_TABLE,
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> int:
-    """Delete specific requested-profile cache keys."""
     table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-    rows = [(_build_place_key(o), _build_place_key(d), normalize_profile(p)) for o, d, p in keys]
-    if not rows:
-        return 0
-    sql = f"""
-    DELETE FROM {table}
-    WHERE origin_key = ?
-      AND destiny_key = ?
-      AND profile_requested = ?
-    """
-    cur = conn.executemany(sql, rows)
-    return int(cur.rowcount or 0)
+    ensure_main_table(conn, table, locations_table=locations_table)
+    deleted = 0
+    for origin, destiny, profile_requested in keys:
+        origin_point = find_point(conn, place=origin, table_name=aliases_table, locations_table=locations_table)
+        destiny_point = find_point(conn, place=destiny, table_name=aliases_table, locations_table=locations_table)
+        if origin_point is None or destiny_point is None:
+            continue
+        cursor = conn.execute(
+            f"""
+            DELETE FROM {table}
+            WHERE origin_location_id = ?
+              AND destiny_location_id = ?
+              AND is_hgv = ?
+            """,
+            (
+                int(origin_point["location_id"]),
+                int(destiny_point["location_id"]),
+                profile_is_hgv(profile_requested),
+            ),
+        )
+        deleted += int(cursor.rowcount or 0)
+    return deleted
 
 
 def delete_key(
@@ -772,13 +607,55 @@ def delete_key(
     *,
     origin: str,
     destiny: str,
+    origin_lat: Optional[float] = None,
+    origin_lon: Optional[float] = None,
+    destiny_lat: Optional[float] = None,
+    destiny_lon: Optional[float] = None,
     profile_requested: Optional[str] = None,
     table_name: str = DEFAULT_TABLE,
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> int:
+    table = safe_table_name(table_name)
+    locations = safe_table_name(locations_table)
+    ensure_main_table(conn, table, locations_table=locations)
+
+    if None not in (origin_lat, origin_lon, destiny_lat, destiny_lon):
+        origin_location = get_location_by_coords(
+            conn,
+            lat=origin_lat,
+            lon=origin_lon,
+            table_name=locations,
+        )
+        destiny_location = get_location_by_coords(
+            conn,
+            lat=destiny_lat,
+            lon=destiny_lon,
+            table_name=locations,
+        )
+        if origin_location is not None and destiny_location is not None:
+            cursor = conn.execute(
+                f"""
+                DELETE FROM {table}
+                WHERE origin_location_id = ?
+                  AND destiny_location_id = ?
+                  AND is_hgv = ?
+                """,
+                (
+                    int(origin_location["location_id"]),
+                    int(destiny_location["location_id"]),
+                    profile_is_hgv(profile_requested),
+                ),
+            )
+            deleted = int(cursor.rowcount or 0)
+            if deleted:
+                return deleted
     return overwrite_keys(
         conn,
         keys=[(origin, destiny, profile_requested)],
         table_name=table_name,
+        aliases_table=aliases_table,
+        locations_table=locations_table,
     )
 
 
@@ -789,53 +666,43 @@ def list_runs(
     destiny: Optional[str] = None,
     profile_requested: Optional[str] = None,
     table_name: str = DEFAULT_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
     limit: int = 100,
 ) -> List[Dict[str, Any]]:
-    """List cached road legs with optional filters."""
     table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
+    locations = safe_table_name(locations_table)
+    ensure_main_table(conn, table, locations_table=locations)
 
-    clauses: List[str] = []
-    params: List[Any] = []
+    clauses: list[str] = []
+    params: list[Any] = []
 
     if origin:
-        clauses.append("origin_key = ?")
-        params.append(_build_place_key(origin))
+        point = find_point(conn, place=origin, table_name=aliases_table, locations_table=locations)
+        if point is None:
+            return []
+        clauses.append("rc.origin_location_id = ?")
+        params.append(int(point["location_id"]))
     if destiny:
-        clauses.append("destiny_key = ?")
-        params.append(_build_place_key(destiny))
-    if profile_requested:
-        clauses.append("profile_requested = ?")
-        params.append(normalize_profile(profile_requested))
+        point = find_point(conn, place=destiny, table_name=aliases_table, locations_table=locations)
+        if point is None:
+            return []
+        clauses.append("rc.destiny_location_id = ?")
+        params.append(int(point["location_id"]))
+    if profile_requested is not None:
+        clauses.append("rc.is_hgv = ?")
+        params.append(profile_is_hgv(profile_requested))
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-    sql = f"""
-    SELECT
-          origin_key
-        , origin_name
-        , destiny_key
-        , destiny_name
-        , distance_km
-        , is_hgv
-        , origin_lat
-        , origin_lon
-        , destiny_lat
-        , destiny_lon
-        , origin_coord_key
-        , destiny_coord_key
-        , profile_requested
-        , profile_used
-        , lookup_mode
-        , source
-        , insertion_timestamp
-        , updated_timestamp
-    FROM {table}
-    {where}
-    ORDER BY updated_timestamp DESC, insertion_timestamp DESC
-    LIMIT ?
-    """
-    params.append(int(limit))
-    rows = conn.execute(sql, params).fetchall()
+    rows = conn.execute(
+        _joined_select_sql(table, locations)
+        + f"""
+        {where}
+        ORDER BY rc.updated_timestamp DESC, rc.insertion_timestamp DESC
+        LIMIT ?
+        """,
+        params + [int(limit)],
+    ).fetchall()
     return [_row_to_dict(row) for row in rows]
 
 
@@ -843,24 +710,33 @@ def list_place_names(
     conn: DBConnection,
     *,
     table_name: str = DEFAULT_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
     limit: int = 10_000,
 ) -> List[str]:
-    """Return distinct cached origin/destination labels."""
     table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-
-    sql = f"""
-    SELECT name
-    FROM (
-        SELECT TRIM(origin_name) AS name FROM {table}
-        UNION
-        SELECT TRIM(destiny_name) AS name FROM {table}
-    )
-    WHERE name IS NOT NULL AND name <> ''
-    ORDER BY LOWER(name) ASC
-    LIMIT ?
-    """
-    rows = conn.execute(sql, (int(limit),)).fetchall()
+    locations = safe_table_name(locations_table)
+    ensure_main_table(conn, table, locations_table=locations)
+    rows = conn.execute(
+        f"""
+        SELECT label
+        FROM (
+            SELECT DISTINCT COALESCE(NULLIF(TRIM(o.label), ''), CONCAT(o.lat6::text, ', ', o.lon6::text)) AS label
+            FROM {table} AS rc
+            INNER JOIN {locations} AS o
+                    ON o.id = rc.origin_location_id
+            UNION
+            SELECT DISTINCT COALESCE(NULLIF(TRIM(d.label), ''), CONCAT(d.lat6::text, ', ', d.lon6::text)) AS label
+            FROM {table} AS rc
+            INNER JOIN {locations} AS d
+                    ON d.id = rc.destiny_location_id
+        ) AS labels
+        WHERE label IS NOT NULL
+          AND label <> ''
+        ORDER BY LOWER(label) ASC, label ASC
+        LIMIT ?
+        """,
+        (int(limit),),
+    ).fetchall()
     return [str(row[0]) for row in rows if row and row[0] is not None]
 
 
@@ -868,23 +744,24 @@ def list_origin_names(
     conn: DBConnection,
     *,
     table_name: str = DEFAULT_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
     limit: int = 10_000,
 ) -> List[str]:
-    """Return distinct cached origin labels only."""
     table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-
-    sql = f"""
-    SELECT origin_name
-    FROM (
-        SELECT DISTINCT TRIM(origin_name) AS origin_name
-        FROM {table}
-        WHERE TRIM(COALESCE(origin_name, '')) <> ''
-    ) AS distinct_origins
-    ORDER BY LOWER(origin_name) ASC, origin_name ASC
-    LIMIT ?
-    """
-    rows = conn.execute(sql, (int(limit),)).fetchall()
+    locations = safe_table_name(locations_table)
+    ensure_main_table(conn, table, locations_table=locations)
+    rows = conn.execute(
+        f"""
+        SELECT DISTINCT COALESCE(NULLIF(TRIM(o.label), ''), CONCAT(o.lat6::text, ', ', o.lon6::text)) AS label
+        FROM {table} AS rc
+        INNER JOIN {locations} AS o
+                ON o.id = rc.origin_location_id
+        WHERE COALESCE(NULLIF(TRIM(o.label), ''), CONCAT(o.lat6::text, ', ', o.lon6::text)) <> ''
+        ORDER BY LOWER(label) ASC, label ASC
+        LIMIT ?
+        """,
+        (int(limit),),
+    ).fetchall()
     return [str(row[0]) for row in rows if row and row[0] is not None]
 
 
@@ -892,151 +769,17 @@ def find_place_point(
     conn: DBConnection,
     *,
     place: str,
-    table_name: str = DEFAULT_TABLE,
+    table_name: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> Optional[Dict[str, Any]]:
-    """Look up the latest cached coordinates for a place label in the routes table."""
-    table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-    place_key = _build_place_key(place)
-    if not place_key:
-        return None
-
-    row = conn.execute(
-        f"""
-        SELECT
-              label
-            , lat
-            , lon
-            , role
-            , updated_timestamp
-            , insertion_timestamp
-        FROM (
-            SELECT
-                  origin_name AS label
-                , origin_lat AS lat
-                , origin_lon AS lon
-                , 'origin' AS role
-                , updated_timestamp
-                , insertion_timestamp
-            FROM {table}
-            WHERE origin_key = ?
-              AND origin_lat IS NOT NULL
-              AND origin_lon IS NOT NULL
-            UNION ALL
-            SELECT
-                  destiny_name AS label
-                , destiny_lat AS lat
-                , destiny_lon AS lon
-                , 'destiny' AS role
-                , updated_timestamp
-                , insertion_timestamp
-            FROM {table}
-            WHERE destiny_key = ?
-              AND destiny_lat IS NOT NULL
-              AND destiny_lon IS NOT NULL
-        ) AS points
-        ORDER BY CASE WHEN updated_timestamp IS NULL THEN 1 ELSE 0 END ASC
-               , updated_timestamp DESC
-               , CASE WHEN insertion_timestamp IS NULL THEN 1 ELSE 0 END ASC
-               , insertion_timestamp DESC
-               , label ASC
-        LIMIT 1
-        """,
-        (place_key, place_key),
-    ).fetchone()
-    if not row:
-        return None
-
-    return {
-        "label": str(row[0]),
-        "lat": to_float(row[1]),
-        "lon": to_float(row[2]),
-        "role": str(row[3]),
-        "updated_timestamp": row[4],
-        "insertion_timestamp": row[5],
-    }
+    return find_point(conn, place=place, table_name=table_name, locations_table=locations_table)
 
 
 def list_place_points(
     conn: DBConnection,
     *,
     places: Iterable[str],
-    table_name: str = DEFAULT_TABLE,
+    table_name: str = DEFAULT_ALIASES_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> Dict[str, Dict[str, Any]]:
-    table = safe_table_name(table_name)
-    ensure_main_table(conn, table)
-    keys: list[str] = []
-    for place in places:
-        place_key = _build_place_key(place)
-        if place_key:
-            keys.append(place_key)
-    if not keys:
-        return {}
-
-    placeholders = ", ".join(["(?)"] * len(keys))
-    rows = conn.execute(
-        f"""
-        WITH wanted(place_key) AS (
-            VALUES {placeholders}
-        ),
-        points AS (
-            SELECT
-                  origin_key AS place_key
-                , origin_name AS label
-                , origin_lat AS lat
-                , origin_lon AS lon
-                , 'origin' AS role
-                , updated_timestamp
-                , insertion_timestamp
-            FROM {table}
-            WHERE origin_lat IS NOT NULL
-              AND origin_lon IS NOT NULL
-            UNION ALL
-            SELECT
-                  destiny_key AS place_key
-                , destiny_name AS label
-                , destiny_lat AS lat
-                , destiny_lon AS lon
-                , 'destiny' AS role
-                , updated_timestamp
-                , insertion_timestamp
-            FROM {table}
-            WHERE destiny_lat IS NOT NULL
-              AND destiny_lon IS NOT NULL
-        )
-        SELECT
-              p.place_key
-            , p.label
-            , p.lat
-            , p.lon
-            , p.role
-            , p.updated_timestamp
-            , p.insertion_timestamp
-        FROM points AS p
-        INNER JOIN wanted AS w
-                ON w.place_key = p.place_key
-        ORDER BY p.place_key ASC
-               , CASE WHEN p.updated_timestamp IS NULL THEN 1 ELSE 0 END ASC
-               , p.updated_timestamp DESC
-               , CASE WHEN p.insertion_timestamp IS NULL THEN 1 ELSE 0 END ASC
-               , p.insertion_timestamp DESC
-               , p.label ASC
-        """,
-        keys,
-    ).fetchall()
-
-    results: Dict[str, Dict[str, Any]] = {}
-    for row in rows:
-        place_key = str(row[0])
-        if place_key in results:
-            continue
-        results[place_key] = {
-            "label": str(row[1]),
-            "lat": to_float(row[2]),
-            "lon": to_float(row[3]),
-            "role": str(row[4]),
-            "updated_timestamp": row[5],
-            "insertion_timestamp": row[6],
-        }
-    return results
-
+    return list_points(conn, places=places, table_name=table_name, locations_table=locations_table)

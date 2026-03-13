@@ -132,7 +132,7 @@ def _resolve_cached_location_label(value: str) -> str | None:
     cached_label = ascii_place_text(cached_point.get("label") or query)
     if cached_label:
         _log.info(
-            "Resolved %s input from routes table without ORS call role=%s",
+            "Resolved %s input from the canonical location cache without ORS call role=%s",
             query,
             cached_point.get("role") or "<unknown>",
         )

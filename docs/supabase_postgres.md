@@ -1,25 +1,55 @@
 # Supabase Architecture
 
-`carbon-footprint` now uses Supabase only:
+`carbon-footprint` uses Supabase Postgres as the durable transactional store and Supabase Storage for optional persisted log archives.
 
-- Supabase Postgres stores all durable business data.
-- Supabase Storage optionally stores archived log files.
-- Runtime logs still go to stdout and stderr first.
-
-## What lives where
+## Core schema
 
 Postgres tables:
 
-- `routes` for cached road-leg distances and coordinates
-- `place_points` for reusable geocoding results
-- `analysis_results` and compatible single-run result tables
-- `bulk_evaluation_results` for scenario result rows
-- `bulk_evaluation_runs` for bulk run metadata
-- `bulk_evaluation_run_results` for immutable per-run output rows
+- `locations`
+  Canonical location dictionary keyed by `(lat6, lon6)` using 6-decimal normalized coordinates.
+- `location_aliases`
+  Append-friendly alias map from normalized place text to a canonical `location_id`.
+- `route_cache_entries`
+  Lean road-route cache keyed by `(origin_location_id, destiny_location_id, is_hgv)`.
+- `bulk_runs`
+  One row per bulk execution header and selector configuration.
+- `bulk_run_items`
+  One row per destination result within a run, referencing canonical locations and cached routes.
+- `analysis_results`
+  Legacy single-comparison sink still used by `scripts/compare_single.py`.
 
-Supabase Storage objects:
+Compatibility / transition objects:
+
+- `bulk_run_items_enriched`
+  Read-friendly view joining run headers, canonical locations, and approximation-route metadata.
+- Legacy tables such as `routes`, `place_points`, `bulk_evaluation_results`, `bulk_evaluation_runs`, and `bulk_evaluation_run_results`
+  These remain only as migration inputs during the transition window. New runtime writes target the normalized tables above.
+
+## Storage layout rationale
+
+- Coordinates are stored once in `locations`, not repeated across route and bulk tables.
+- Human-entered or provider-returned labels live in `location_aliases` as optional lookup metadata.
+- Route cache rows reference locations instead of embedding duplicated origin/destination text and coordinates.
+- Bulk result rows reference locations and cached routes instead of duplicating origin/destination payload in every destination row.
+
+## What lives where
+
+Postgres:
+
+- canonical locations and aliases
+- road-route cache
+- bulk run headers
+- bulk destination results
+- single-run comparison rows where explicitly requested
+
+Supabase Storage:
 
 - optional compressed JSONL log archives under `logs/{environment}/{yyyy}/{mm}/{dd}/{run_id}.jsonl.gz`
+
+Runtime stdout/stderr:
+
+- operational logs captured by the hosting platform
 
 ## Required configuration
 
@@ -54,18 +84,15 @@ Apply:
 - `supabase/migrations/20260309_000001_carbon_footprint_core.sql`
 - `supabase/migrations/20260310_000002_bulk_heatmap_runs.sql`
 - `supabase/migrations/20260312_000003_bulk_pipeline_perf.sql`
+- `supabase/migrations/20260313_000004_normalized_location_route_bulk_schema.sql`
 
-The runtime also creates missing tables on first use, but the SQL migrations remain the preferred deployment path.
+For existing environments, run the one-time adapter after the additive migration:
+
+- `python calcs/migrate_normalized_cache_and_bulk.py --dry-run`
+- `python calcs/migrate_normalized_cache_and_bulk.py`
 
 ## Logging behavior
 
 - Default: human-readable logs to stdout/stderr only
 - Optional: the same run is archived to Supabase Storage as compressed JSONL
 - Archived entries include timestamp, level, logger/module, message, and any bound run/scenario correlation fields
-
-## Removed behavior
-
-- No embedded file-database backend
-- No local cache fallback outside Supabase Postgres
-- No persistent local database files
-- No retired local-database migration tooling in the repository

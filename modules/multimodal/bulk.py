@@ -34,6 +34,7 @@ from modules.infra.database_manager import (
     upsert_place_points,
     upsert_runs,
 )
+from modules.infra.db.locations import coord_lookup_key
 from modules.infra.log_manager import get_logger
 from modules.multimodal.builder import (
     build_path_geometry_from_resolved,
@@ -192,10 +193,15 @@ class NearestPortMemo:
 def _cache_leg_from_row(row: Dict[str, Any]) -> Dict[str, Any]:
     requested_profile = str(row.get("profile_requested") or "driving-hgv")
     return {
+        "id": row.get("id"),
+        "route_id": row.get("id"),
         "origin_name": row["origin"],
         "destiny_name": row["destiny"],
         "distance_km": row.get("distance_km"),
+        "duration_s": row.get("duration_s"),
         "is_hgv": row.get("is_hgv"),
+        "origin_location_id": row.get("origin_location_id"),
+        "destiny_location_id": row.get("destiny_location_id"),
         "profile_requested": requested_profile,
         "profile_used": row.get("profile_used") or requested_profile,
         "cached": True,
@@ -222,6 +228,21 @@ class RouteRequestCoordinator:
         self._pending_rows: list[Dict[str, Any]] = []
         self._inflight: dict[tuple[Any, ...], Future] = {}
         self._lock = threading.Lock()
+
+    @staticmethod
+    def _coord_cache_key(spec: RouteRequestSpec) -> Optional[tuple[str, str, str]]:
+        coord_key = spec.coord_lookup_key
+        if coord_key is None:
+            return None
+        origin_key = coord_lookup_key(coord_key[0], coord_key[1])
+        destiny_key = coord_lookup_key(coord_key[2], coord_key[3])
+        if origin_key is None or destiny_key is None:
+            return None
+        return (
+            str(coord_key[4]).strip().lower() or "driving-hgv",
+            f"{origin_key[0]},{origin_key[1]}",
+            f"{destiny_key[0]},{destiny_key[1]}",
+        )
 
     def prime(self, conn: Any, specs: Iterable[RouteRequestSpec]) -> None:
         if self._overwrite:
@@ -313,9 +334,9 @@ class RouteRequestCoordinator:
                         "profile_used": row["profile_used"],
                         "source": row["source"],
                     }
-                    coord_key = spec.coord_lookup_key
-                    if coord_key is not None:
-                        self._coord_cache[(coord_key[4], f"{coord_key[0]:.5f},{coord_key[1]:.5f}", f"{coord_key[2]:.5f},{coord_key[3]:.5f}")] = self._label_cache[spec.label_key]
+                    coord_cache_key = self._coord_cache_key(spec)
+                    if coord_cache_key is not None:
+                        self._coord_cache[coord_cache_key] = self._label_cache[spec.label_key]
                     self._pending_rows.append(row)
             future.set_result(leg)
             return leg
@@ -333,12 +354,12 @@ class RouteRequestCoordinator:
         return rows
 
     def _lookup(self, spec: RouteRequestSpec) -> Optional[Dict[str, Any]]:
-        row = self._label_cache.get(spec.label_key)
-        if row is None and spec.coord_lookup_key is not None:
-            coord_key = spec.coord_lookup_key
-            row = self._coord_cache.get(
-                (coord_key[4], f"{coord_key[0]:.5f},{coord_key[1]:.5f}", f"{coord_key[2]:.5f},{coord_key[3]:.5f}")
-            )
+        row = None
+        coord_cache_key = self._coord_cache_key(spec)
+        if coord_cache_key is not None:
+            row = self._coord_cache.get(coord_cache_key)
+        if row is None:
+            row = self._label_cache.get(spec.label_key)
         if row is None:
             return None
         return _cache_leg_from_row(row)
@@ -373,7 +394,8 @@ class BulkPersistenceBuffer:
             return
         self._perf.incr("db_write_ops")
         with self._perf.measure("db_write_s"):
-            upsert_bulk_results(self._conn, rows=self._bulk_rows, table_name=self._results_table)
+            if self._results_table != self._run_results_table:
+                upsert_bulk_results(self._conn, rows=self._bulk_rows, table_name=self._results_table)
             insert_bulk_run_results(self._conn, rows=self._run_rows, table_name=self._run_results_table)
             self._conn.commit()
         self._perf.incr("bulk_rows_persisted", len(self._bulk_rows))
@@ -557,7 +579,7 @@ def _build_failure_summary_row(
 
 def _build_run_selector(
     *,
-    origin_input: str,
+    origin_location_id: Optional[int],
     cargo_t: float,
     truck_key: str,
     profile: str,
@@ -576,7 +598,7 @@ def _build_run_selector(
     destination_set_id: str,
 ) -> BulkRunSelector:
     return BulkRunSelector(
-        origin_key=ascii_place_key(normalize_bulk_place_input(origin_input)),
+        origin_location_id=origin_location_id,
         cargo_t=float(cargo_t),
         truck_key=str(truck_key),
         ors_profile=str(profile),
@@ -624,12 +646,15 @@ def _point_coords(point: Optional[Dict[str, Any]]) -> Optional[tuple[float, floa
 
 
 def _point_from_cached_record(record: Dict[str, Any]) -> Dict[str, Any]:
-    return {
+    point = {
         "label": ascii_place_text(record.get("label")),
         "lat": float(record["lat"]),
         "lon": float(record["lon"]),
         "uf": record.get("uf"),
     }
+    if record.get("location_id") is not None:
+        point["location_id"] = int(record["location_id"])
+    return point
 
 
 def _resolve_point_without_db(value: Any, ors: ORSClient) -> Optional[Dict[str, Any]]:
@@ -830,6 +855,14 @@ def _build_bulk_outcome_rows(
     flat: Optional[Dict[str, Any]] = None,
     is_approximation: bool = False,
     route_source: Optional[str] = None,
+    origin_location_id: Optional[int] = None,
+    destination_location_id: Optional[int] = None,
+    port_origin_location_id: Optional[int] = None,
+    port_destiny_location_id: Optional[int] = None,
+    road_route_id: Optional[int] = None,
+    first_mile_route_id: Optional[int] = None,
+    last_mile_route_id: Optional[int] = None,
+    approximation_reference_route_id: Optional[int] = None,
     approximation_reference_destiny: Optional[str] = None,
     approximation_reference_distance_km: Optional[float] = None,
     approximation_delta_straight_line_km: Optional[float] = None,
@@ -861,12 +894,12 @@ def _build_bulk_outcome_rows(
         "run_id": run_id,
         "scenario_key": scenario_key,
         "destination_set_id": destination_set_id,
-        "origin_key": ascii_place_key(normalize_bulk_place_input(input_origin)),
+        "origin_location_id": origin_location_id,
         "origin_name": origin_name,
         "origin_lat": origin_point.get("lat"),
         "origin_lon": origin_point.get("lon"),
         "origin_uf": origin_point.get("uf"),
-        "destiny_key": ascii_place_key(destiny_name),
+        "destination_location_id": destination_location_id,
         "destiny_name": destiny_name,
         "destiny_lat": destiny_point.get("lat"),
         "destiny_lon": destiny_point.get("lon"),
@@ -889,12 +922,22 @@ def _build_bulk_outcome_rows(
         "allocation_load_factor": allocation_load_factor,
         "full_call_mode": full_call_mode,
         "port_ops_scenario": port_ops_scenario,
+        "port_origin_location_id": port_origin_location_id,
         "port_origin_name": (None if not isinstance(port_origin, dict) else port_origin.get("name")),
+        "port_origin_lat": (None if not isinstance(port_origin, dict) else port_origin.get("lat")),
+        "port_origin_lon": (None if not isinstance(port_origin, dict) else port_origin.get("lon")),
+        "port_destiny_location_id": port_destiny_location_id,
         "port_destiny_name": (None if not isinstance(port_destiny, dict) else port_destiny.get("name")),
+        "port_destiny_lat": (None if not isinstance(port_destiny, dict) else port_destiny.get("lat")),
+        "port_destiny_lon": (None if not isinstance(port_destiny, dict) else port_destiny.get("lon")),
         "status": status,
         "error_message": error_message,
         "is_approximation": is_approximation,
         "route_source": resolved_route_source,
+        "road_route_id": road_route_id,
+        "first_mile_route_id": first_mile_route_id,
+        "last_mile_route_id": last_mile_route_id,
+        "approximation_reference_route_id": approximation_reference_route_id,
         "approximation_reference_destiny": approximation_reference_destiny,
         "approximation_reference_distance_km": approximation_reference_distance_km,
         "approximation_delta_straight_line_km": approximation_delta_straight_line_km,
@@ -936,51 +979,46 @@ def _build_bulk_outcome_rows(
     }
 
     run_row = {
-        key: value
-        for key, value in shared.items()
-        if key
-        in {
-            "run_id",
-            "scenario_key",
-            "origin_key",
-            "origin_name",
-            "origin_lat",
-            "origin_lon",
-            "origin_uf",
-            "destiny_key",
-            "destiny_name",
-            "destiny_lat",
-            "destiny_lon",
-            "destiny_uf",
-            "input_origin",
-            "input_destiny",
-            "destination_set_id",
-            "port_origin_name",
-            "port_destiny_name",
-            "status",
-            "error_message",
-            "is_approximation",
-            "route_source",
-            "approximation_reference_destiny",
-            "approximation_reference_distance_km",
-            "approximation_delta_straight_line_km",
-            "approximation_notes",
-        }
+        "run_id": run_id,
+        "scenario_key": scenario_key,
+        "input_destiny": input_destiny,
+        "destination_location_id": destination_location_id,
+        "destiny_name": destiny_name,
+        "destiny_lat": destiny_point.get("lat"),
+        "destiny_lon": destiny_point.get("lon"),
+        "destiny_uf": destiny_point.get("uf"),
+        "port_origin_location_id": port_origin_location_id,
+        "port_origin_name": (None if not isinstance(port_origin, dict) else port_origin.get("name")),
+        "port_origin_lat": (None if not isinstance(port_origin, dict) else port_origin.get("lat")),
+        "port_origin_lon": (None if not isinstance(port_origin, dict) else port_origin.get("lon")),
+        "port_destiny_location_id": port_destiny_location_id,
+        "port_destiny_name": (None if not isinstance(port_destiny, dict) else port_destiny.get("name")),
+        "port_destiny_lat": (None if not isinstance(port_destiny, dict) else port_destiny.get("lat")),
+        "port_destiny_lon": (None if not isinstance(port_destiny, dict) else port_destiny.get("lon")),
+        "status": status,
+        "error_message": error_message,
+        "road_cost_r": road_cost_r,
+        "multimodal_cost_r": multimodal_cost_r,
+        "cost_delta_r": cost_delta_r,
+        "cost_savings_pct": (None if not isinstance(res, dict) else res.get("comparison", {}).get("savings_pct")),
+        "road_emissions_kg": road_emissions_kg,
+        "multimodal_emissions_kg": multimodal_emissions_kg,
+        "emissions_delta_kg": emissions_delta_kg,
+        "emissions_savings_pct": emissions_savings_pct,
+        "road_distance_km": flat.get("road_distance_km"),
+        "sea_km": flat.get("sea_km"),
+        "is_approximation": is_approximation,
+        "route_source": resolved_route_source,
+        "road_route_id": road_route_id,
+        "first_mile_route_id": first_mile_route_id,
+        "last_mile_route_id": last_mile_route_id,
+        "approximation_reference_route_id": approximation_reference_route_id,
+        "approximation_reference_destiny": approximation_reference_destiny,
+        "approximation_reference_distance_km": approximation_reference_distance_km,
+        "approximation_delta_straight_line_km": approximation_delta_straight_line_km,
+        "approximation_notes": approximation_notes,
+        "ors_profile": ors_profile,
     }
-    run_row.update(
-        {
-            "road_cost_r": road_cost_r,
-            "multimodal_cost_r": multimodal_cost_r,
-            "cost_delta_r": cost_delta_r,
-            "cost_savings_pct": (None if not isinstance(res, dict) else res.get("comparison", {}).get("savings_pct")),
-            "road_emissions_kg": road_emissions_kg,
-            "multimodal_emissions_kg": multimodal_emissions_kg,
-            "emissions_delta_kg": emissions_delta_kg,
-            "emissions_savings_pct": emissions_savings_pct,
-            "road_distance_km": flat.get("road_distance_km"),
-            "sea_km": flat.get("sea_km"),
-        }
-    )
     return bulk_row, run_row
 
 

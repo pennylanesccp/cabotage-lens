@@ -17,6 +17,41 @@ class _StaticRouteClient:
 
 
 class RoadRouterTests(unittest.TestCase):
+    def test_get_or_create_leg_prefers_coordinate_cache_lookup_when_coords_are_available(self) -> None:
+        fake_conn = object()
+        cached_row = {
+            "origin": "Origin A",
+            "destiny": "Destiny B",
+            "distance_km": 123.45,
+            "is_hgv": True,
+            "profile_requested": "driving-hgv",
+            "profile_used": "driving-hgv",
+            "source": "ors",
+        }
+
+        with patch(
+            "modules.road.router.db_session",
+            return_value=contextlib.nullcontext(fake_conn),
+        ), patch(
+            "modules.road.router.ensure_main_table",
+        ), patch(
+            "modules.road.router.get_run_by_coords",
+            return_value=cached_row,
+        ) as get_run_by_coords_mock, patch(
+            "modules.road.router.get_run",
+        ) as get_run_mock:
+            result = get_or_create_leg(
+                _StaticRouteClient(),
+                origin={"label": "Origin A", "lat": -23.5505204, "lon": -46.6333089},
+                destiny={"label": "Destiny B", "lat": -23.9608313, "lon": -46.3336192},
+                overwrite=False,
+            )
+
+        self.assertTrue(result["cached"])
+        self.assertEqual(result["distance_km"], 123.45)
+        get_run_by_coords_mock.assert_called_once()
+        get_run_mock.assert_not_called()
+
     def test_get_or_create_leg_persists_provider_source(self) -> None:
         fake_conn = object()
 
