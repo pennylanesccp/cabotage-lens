@@ -183,7 +183,7 @@ def render_page() -> None:
 
     attach_streamlit_logging(
         level=str(st.session_state.log_level),
-        write_to_file=bool(st.session_state.write_log_file),
+        archive_to_storage=bool(st.session_state.archive_logs),
     )
 
     cargo_options = [float(st.session_state.get("heatmap_cargo", 30.0))]

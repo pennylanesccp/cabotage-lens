@@ -131,10 +131,10 @@ def _render_advanced(*, class_options: Iterable[str], port_ops_scenarios: Iterab
     st.markdown("##### App")
     st.text_input(
         "Database target",
-        key="db_path_str",
+        key="db_target_str",
         help="Shows the active Supabase Postgres target configured through Streamlit secrets.",
         disabled=True,
     )
     st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], key="log_level")
-    st.checkbox("Write log file", key="write_log_file")
+    st.checkbox("Archive logs to Storage", key="archive_logs")
     st.slider("Debug log lines", min_value=50, max_value=1000, step=50, key="log_last_n")

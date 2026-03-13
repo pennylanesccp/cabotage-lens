@@ -353,7 +353,7 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    init_logging(level=args.log_level, force=True, write_output=False)
+    init_logging(level=args.log_level, force_clean=True, archive_to_storage=False)
 
     payload = get_average_price(
         uf_o=args.uf_origin,

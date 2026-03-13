@@ -4,8 +4,7 @@
 Road distance cache.
 
 This table is reusable infrastructure for resolved road legs. It is separate
-from analytical evaluation outputs and is now designed to work on both
-Supabase Postgres and legacy SQLite.
+from analytical evaluation outputs and persists only in Supabase Postgres.
 """
 
 from __future__ import annotations
@@ -63,29 +62,6 @@ CREATE TABLE IF NOT EXISTS {table} (
     , is_hgv              INTEGER
     , insertion_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     , updated_timestamp   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-"""
-
-_SQLITE_DDL_SQL = """
-CREATE TABLE IF NOT EXISTS {table} (
-      origin_key          TEXT
-    , origin_name         TEXT      NOT NULL
-    , origin_lat          REAL
-    , origin_lon          REAL
-    , destiny_key         TEXT
-    , destiny_name        TEXT      NOT NULL
-    , destiny_lat         REAL
-    , destiny_lon         REAL
-    , origin_coord_key    TEXT
-    , destiny_coord_key   TEXT
-    , profile_requested   TEXT      NOT NULL DEFAULT 'driving-hgv'
-    , profile_used        TEXT
-    , lookup_mode         TEXT      NOT NULL DEFAULT 'label'
-    , source              TEXT      NOT NULL DEFAULT 'ors'
-    , distance_km         REAL
-    , is_hgv              INTEGER
-    , insertion_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    , updated_timestamp   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -281,34 +257,12 @@ def _drop_legacy_indexes(conn: DBConnection, table_name: str) -> None:
     conn.execute(f"DROP INDEX IF EXISTS {_LEGACY_INDEX_NAME.format(table=table_name)}")
 
 
-def _dedupe_sqlite_rows(conn: DBConnection, table_name: str) -> None:
-    if conn.backend != "sqlite":
-        return
-    conn.execute(
-        f"""
-        DELETE FROM {table_name}
-         WHERE rowid NOT IN (
-             SELECT MAX(rowid)
-             FROM {table_name}
-             WHERE TRIM(COALESCE(origin_key, '')) <> ''
-               AND TRIM(COALESCE(destiny_key, '')) <> ''
-               AND TRIM(COALESCE(profile_requested, '')) <> ''
-             GROUP BY origin_key, destiny_key, profile_requested
-         )
-           AND TRIM(COALESCE(origin_key, '')) <> ''
-           AND TRIM(COALESCE(destiny_key, '')) <> ''
-           AND TRIM(COALESCE(profile_requested, '')) <> ''
-        """
-    )
-
-
 def ensure_main_table(conn: DBConnection, table_name: str = DEFAULT_TABLE) -> None:
     """Create or migrate the road cache table in place."""
     table = safe_table_name(table_name)
     if schema_is_ready(conn, "road_cache", table):
         return
-    ddl = _POSTGRES_DDL_SQL if conn.backend == "postgres" else _SQLITE_DDL_SQL
-    conn.execute(ddl.format(table=table))
+    conn.execute(_POSTGRES_DDL_SQL.format(table=table))
     _ensure_column(conn, table, "origin_key", "origin_key TEXT")
     _ensure_column(conn, table, "destiny_key", "destiny_key TEXT")
     _ensure_column(conn, table, "origin_coord_key", "origin_coord_key TEXT")
@@ -317,11 +271,10 @@ def ensure_main_table(conn: DBConnection, table_name: str = DEFAULT_TABLE) -> No
     _ensure_column(conn, table, "profile_used", "profile_used TEXT")
     _ensure_column(conn, table, "lookup_mode", "lookup_mode TEXT")
     _ensure_column(conn, table, "source", "source TEXT")
-    _ensure_column(conn, table, "updated_timestamp", "updated_timestamp TIMESTAMP")
+    _ensure_column(conn, table, "updated_timestamp", "updated_timestamp TIMESTAMPTZ")
     _backfill_profile_columns(conn, table)
     _backfill_route_keys(conn, table)
     _backfill_coord_keys(conn, table)
-    _dedupe_sqlite_rows(conn, table)
     _drop_legacy_indexes(conn, table)
     conn.execute(
         _UNIQUE_INDEX_SQL.format(
@@ -1087,30 +1040,3 @@ def list_place_points(
         }
     return results
 
-
-if __name__ == "__main__":
-    from modules.infra.db.core import db_session
-
-    print("--- Road Cache Smoke Test ---")
-
-    with db_session("smoke_test_routes.sqlite", backend="sqlite") as conn:
-        upsert_run(
-            conn,
-            origin="A",
-            destiny="B",
-            distance_km=100.0,
-            profile_requested="driving-hgv",
-            profile_used="driving-hgv",
-        )
-        row = get_run(conn, origin="A", destiny="B", profile_requested="driving-hgv")
-        print(f"Stored: {row}")
-        assert row is not None
-        assert row["distance_km"] == 100.0
-
-        delete_key(conn, origin="A", destiny="B", profile_requested="driving-hgv")
-        rows = list_runs(conn)
-        assert len(rows) == 0
-        print("Delete successful.")
-
-    Path("smoke_test_routes.sqlite").unlink(missing_ok=True)
-    print("--- Done ---")

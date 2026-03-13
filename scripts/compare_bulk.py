@@ -182,7 +182,7 @@ def main() -> int:
 
     args = parser.parse_args()
     init_logging(level=args.log_level)
-    _log.info("Database target: %s", connection_target_summary(backend="postgres"))
+    _log.info("Database target: %s", connection_target_summary())
 
     try:
         destinations = load_destinations(args.dests_file)

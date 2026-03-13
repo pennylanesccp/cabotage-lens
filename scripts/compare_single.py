@@ -182,8 +182,8 @@ def main() -> int:
     parser.add_argument("--log-level", default="INFO")
 
     args = parser.parse_args()
-    init_logging(level=args.log_level, write_to_file=False)
-    _log.info("Database target: %s", connection_target_summary(backend="postgres"))
+    init_logging(level=args.log_level)
+    _log.info("Database target: %s", connection_target_summary())
 
     from modules.multimodal import build_path_geometry, evaluate_path
 
@@ -228,7 +228,7 @@ def main() -> int:
     )
 
     try:
-        with db_session(backend="postgres") as conn:
+        with db_session() as conn:
             upsert_multimodal_result(conn, table_name=args.table, **flat_record)
             if not args.json:
                 _log.info("Saved result to table '%s'.", args.table)

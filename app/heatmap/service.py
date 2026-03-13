@@ -150,7 +150,7 @@ def _canonical_origin_name(origin_name: str) -> str:
         return ""
 
     try:
-        with db_session(backend="postgres") as conn:
+        with db_session() as conn:
             cached_point = find_place_point(conn, place=candidate)
     except Exception as exc:
         _log.debug("Heatmap origin canonicalization skipped for %s: %s", candidate, exc)
@@ -247,7 +247,7 @@ def _select_active_selector(
 def list_origin_options() -> List[str]:
     _require_postgres()
     _log.info("Loading heatmap origins destination_set=%s", HEATMAP_DESTINATION_SET_ID)
-    with db_session(backend="postgres") as conn:
+    with db_session() as conn:
         origins = list_bulk_run_origins(
             conn,
             destination_set_id=HEATMAP_DESTINATION_SET_ID,
@@ -278,7 +278,7 @@ def list_cargo_options(origin_name: str) -> List[float]:
         origin_name,
         HEATMAP_DESTINATION_SET_ID,
     )
-    with db_session(backend="postgres") as conn:
+    with db_session() as conn:
         stored = list_bulk_run_cargo_values(
             conn,
             origin_key=ascii_place_key(origin_name),
@@ -306,7 +306,7 @@ def get_heatmap_status(scenario: HeatmapScenario) -> HeatmapRunInfo:
         scenario.cargo_t,
         HEATMAP_DESTINATION_SET_ID,
     )
-    with db_session(backend="postgres") as conn:
+    with db_session() as conn:
         _, summary, latest_completed = _select_active_selector(conn, scenario)
 
     status = _to_run_info(
@@ -344,7 +344,7 @@ def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
 
 
 def _existing_destination_inputs(scenario: HeatmapScenario) -> set[str]:
-    with db_session(backend="postgres") as conn:
+    with db_session() as conn:
         keys: set[str] = set()
         for origin_key in _origin_key_candidates(scenario):
             selector = _build_selector_for_origin_key(scenario, origin_key)
@@ -379,7 +379,7 @@ def load_current_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
         return None
 
     _log.info("Loading heatmap comparison rows origin=%s cargo_t=%.3f", scenario.origin_name, scenario.cargo_t)
-    with db_session(backend="postgres") as conn:
+    with db_session() as conn:
         selector, _, _ = _select_active_selector(conn, scenario)
         rows = list_bulk_results(conn, selector=selector, only_success=True)
 

@@ -26,7 +26,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("logs/port_arc_debug.html"),
+        default=Path("data/processed/debug/port_arc_debug.html"),
         help="HTML output path for the debug map.",
     )
     parser.add_argument("--log-level", default="INFO")
@@ -81,7 +81,7 @@ def _point_row(name: str, latlon: tuple[float, float], color: list[int], radius:
 
 def main() -> None:
     args = _parse_args()
-    init_logging(level=str(args.log_level), force=True, write_output=False)
+    init_logging(level=str(args.log_level), force_clean=True)
 
     port_names = tuple(args.ports or DEFAULT_PORTS)
     lookup = _port_lookup()

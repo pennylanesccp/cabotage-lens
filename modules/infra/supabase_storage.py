@@ -1,0 +1,94 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Optional
+from urllib.parse import quote
+
+import requests
+
+from modules.core.secrets import get_secret
+
+
+def _clean_secret(name: str) -> Optional[str]:
+    value = get_secret(name)
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+@dataclass(frozen=True)
+class SupabaseStorageSettings:
+    base_url: str
+    api_key: str
+    logs_bucket: str
+
+
+def load_supabase_storage_settings() -> SupabaseStorageSettings:
+    base_url = _clean_secret("SUPABASE_URL")
+    api_key = _clean_secret("SUPABASE_SERVICE_ROLE_KEY") or _clean_secret("SUPABASE_KEY")
+    logs_bucket = _clean_secret("SUPABASE_STORAGE_LOGS_BUCKET")
+
+    if not base_url:
+        raise RuntimeError("Supabase Storage archival requires SUPABASE_URL.")
+    if not api_key:
+        raise RuntimeError("Supabase Storage archival requires SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY.")
+    if not logs_bucket:
+        raise RuntimeError("Supabase Storage archival requires SUPABASE_STORAGE_LOGS_BUCKET.")
+
+    return SupabaseStorageSettings(
+        base_url=base_url.rstrip("/"),
+        api_key=api_key,
+        logs_bucket=logs_bucket,
+    )
+
+
+def build_log_archive_object_path(
+    *,
+    environment: str,
+    run_id: str,
+    now: Optional[datetime] = None,
+    suffix: str = ".jsonl.gz",
+) -> str:
+    timestamp = now.astimezone(UTC) if now is not None else datetime.now(UTC)
+    env_segment = str(environment or "local").strip().lower() or "local"
+    safe_run_id = str(run_id or "").strip() or timestamp.strftime("%Y%m%d%H%M%S")
+    return (
+        f"logs/{env_segment}/"
+        f"{timestamp:%Y}/{timestamp:%m}/{timestamp:%d}/"
+        f"{safe_run_id}{suffix}"
+    )
+
+
+class SupabaseStorageClient:
+    def __init__(self, settings: Optional[SupabaseStorageSettings] = None) -> None:
+        self._settings = settings or load_supabase_storage_settings()
+
+    @property
+    def settings(self) -> SupabaseStorageSettings:
+        return self._settings
+
+    def upload_bytes(
+        self,
+        *,
+        object_path: str,
+        payload: bytes,
+        content_type: str,
+        upsert: bool = True,
+        timeout_s: float = 30.0,
+    ) -> None:
+        quoted_path = quote(str(object_path).lstrip("/"), safe="/")
+        url = f"{self._settings.base_url}/storage/v1/object/{self._settings.logs_bucket}/{quoted_path}"
+        response = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {self._settings.api_key}",
+                "apikey": self._settings.api_key,
+                "Content-Type": content_type,
+                "x-upsert": "true" if upsert else "false",
+            },
+            data=payload,
+            timeout=timeout_s,
+        )
+        response.raise_for_status()

@@ -2,81 +2,53 @@ import contextlib
 import unittest
 from unittest.mock import patch
 
-from modules.infra.db.core import db_session
-from modules.infra.db.road_cache import find_place_point, list_origin_names, upsert_run
+from modules.infra.db.road_cache import find_place_point, list_origin_names
 from modules.multimodal.builder import resolve_point_for_geometry
+
+
+class _FakeCursor:
+    def __init__(self, *, row=None, rows=None) -> None:
+        self._row = row
+        self._rows = rows or []
+
+    def fetchone(self):
+        return self._row
+
+    def fetchall(self):
+        return self._rows
+
+
+class _FakeConnection:
+    def __init__(self, *, row=None, rows=None) -> None:
+        self._row = row
+        self._rows = rows or []
+
+    def execute(self, _sql, _params=None):
+        return _FakeCursor(row=self._row, rows=self._rows)
 
 
 class RouteCacheResolutionTests(unittest.TestCase):
     def test_list_origin_names_returns_distinct_sorted_origins_only(self) -> None:
-        with db_session(":memory:", backend="sqlite") as conn:
-            upsert_run(
-                conn,
-                origin="Manaus, AM",
-                destiny="Belem, PA",
-                distance_km=10.0,
-                profile_requested="driving-hgv",
-            )
-            upsert_run(
-                conn,
-                origin="Aracaju, SE",
-                destiny="Manaus, AM",
-                distance_km=20.0,
-                profile_requested="driving-hgv",
-            )
-            upsert_run(
-                conn,
-                origin="Manaus, AM",
-                destiny="Curitiba, PR",
-                distance_km=30.0,
-                profile_requested="driving-hgv",
-            )
+        conn = _FakeConnection(rows=[("Aracaju, SE",), ("Manaus, AM",)])
 
+        with patch("modules.infra.db.road_cache.ensure_main_table"):
             origins = list_origin_names(conn)
 
         self.assertEqual(origins, ["Aracaju, SE", "Manaus, AM"])
 
     def test_find_place_point_uses_latest_cached_origin_or_destiny_coordinates(self) -> None:
-        with db_session(":memory:", backend="sqlite") as conn:
-            upsert_run(
-                conn,
-                origin="Avenida Professor Luciano Gualberto, Sao Paulo",
-                origin_lat=-23.5588,
-                origin_lon=-46.7303,
-                destiny="Manaus, AM",
-                destiny_lat=-3.1190,
-                destiny_lon=-60.0217,
-                distance_km=3900.0,
-                profile_requested="driving-hgv",
+        conn = _FakeConnection(
+            row=(
+                "Avenida Professor Luciano Gualberto, Sao Paulo",
+                -23.5599,
+                -46.7311,
+                "destiny",
+                "2026-03-11 16:00:00",
+                "2026-03-11 16:00:00",
             )
-            upsert_run(
-                conn,
-                origin="Rio de Janeiro, RJ",
-                origin_lat=-22.9068,
-                origin_lon=-43.1729,
-                destiny="Avenida Professor Luciano Gualberto, Sao Paulo",
-                destiny_lat=-23.5599,
-                destiny_lon=-46.7311,
-                distance_km=430.0,
-                profile_requested="driving-hgv",
-            )
-            conn.execute(
-                """
-                UPDATE routes
-                   SET updated_timestamp = '2026-03-11 16:00:00'
-                 WHERE destiny_name = ?
-                """,
-                ("Avenida Professor Luciano Gualberto, Sao Paulo",),
-            )
-            conn.execute(
-                """
-                UPDATE routes
-                   SET updated_timestamp = '2026-03-11 15:00:00'
-                 WHERE origin_name = ?
-                """,
-                ("Avenida Professor Luciano Gualberto, Sao Paulo",),
-            )
+        )
 
+        with patch("modules.infra.db.road_cache.ensure_main_table"):
             point = find_place_point(conn, place="Avenida Professor Luciano Gualberto, Sao Paulo")
 
         self.assertIsNotNone(point)
@@ -105,7 +77,6 @@ class RouteCacheResolutionTests(unittest.TestCase):
             point = resolve_point_for_geometry(
                 "Avenida Professor Luciano Gualberto, Sao Paulo",
                 ors=object(),
-                db_path=":memory:",
             )
 
         self.assertEqual(

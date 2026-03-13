@@ -1,88 +1,71 @@
-# Supabase Postgres Setup
+# Supabase Architecture
 
-The repository now uses Supabase Postgres as the primary persistence backend for:
+`carbon-footprint` now uses Supabase only:
 
-- Road-distance cache (`routes`)
-- Bulk evaluation outputs (`bulk_evaluation_results`)
-- Completed bulk batches (`bulk_evaluation_runs`)
-- Heatmap-ready batch rows (`bulk_evaluation_run_results`)
-- Single-run analytical result tables (`analysis_results` and other compatible legacy result tables)
+- Supabase Postgres stores all durable business data.
+- Supabase Storage optionally stores archived log files.
+- Runtime logs still go to stdout and stderr first.
 
-## Streamlit secrets
+## What lives where
 
-Set these in `.streamlit/secrets.toml` for local runs or in Streamlit Community Cloud secrets:
+Postgres tables:
+
+- `routes` for cached road-leg distances and coordinates
+- `place_points` for reusable geocoding results
+- `analysis_results` and compatible single-run result tables
+- `bulk_evaluation_results` for scenario result rows
+- `bulk_evaluation_runs` for bulk run metadata
+- `bulk_evaluation_run_results` for immutable per-run output rows
+
+Supabase Storage objects:
+
+- optional compressed JSONL log archives under `logs/{environment}/{yyyy}/{mm}/{dd}/{run_id}.jsonl.gz`
+
+## Required configuration
+
+Set these in `.streamlit/secrets.toml` or environment variables:
 
 ```toml
 ORS_API_KEY = "your-openrouteservice-key"
+SUPABASE_DB_URL = "postgresql://postgres:your-password@db.your-project-ref.supabase.co:5432/postgres?sslmode=require"
+```
+
+Optional geocoding fallback:
+
+```toml
 LOCATIONIQ_PAT = "your-locationiq-private-token"
-SUPABASE_PROJECT_REF = "your-project-ref"
-SUPABASE_DB_PASSWORD = "your-supabase-password"
-SUPABASE_DB_PORT = 5432
 ```
 
-CLI scripts and the Streamlit app both load `.streamlit/secrets.toml` automatically. Environment variables are also accepted as a fallback when a secret is not set.
-
-The runtime builds the Postgres DSN from the component secrets, so passwords do not need manual URL-encoding. By default it derives the direct host as `db.<project-ref>.supabase.co`, uses database `postgres`, user `postgres`, and `sslmode=require`.
-
-Optional overrides:
+Optional log archival:
 
 ```toml
-# Needed only when you want to override the derived direct host, for example a pooler host.
-# SUPABASE_DB_HOST = "aws-0-us-east-1.pooler.supabase.com"
-# SUPABASE_DB_USER = "postgres.your-project-ref"
-# SUPABASE_DB_NAME = "postgres"
-# SUPABASE_DB_SSLMODE = "require"
+SUPABASE_URL = "https://your-project-ref.supabase.co"
+SUPABASE_KEY = "your-anon-or-service-role-key"
+# SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
+SUPABASE_STORAGE_LOGS_BUCKET = "carbon-logs"
+LOG_LEVEL = "INFO"
+LOG_ARCHIVE_ENABLED = true
 ```
 
-If you set `SUPABASE_DB_PORT = 6543`, also set `SUPABASE_DB_HOST` explicitly because the pooler hostname cannot be derived from the project ref alone.
+## Migrations
 
-SQLite is no longer part of the shipped app and CLI pipeline. The only remaining SQLite usage is in one-off maintenance tools under `legacy/sqlite/`.
+Apply:
 
-Maintenance-only example:
+- `supabase/migrations/20260309_000001_carbon_footprint_core.sql`
+- `supabase/migrations/20260310_000002_bulk_heatmap_runs.sql`
+- `supabase/migrations/20260312_000003_bulk_pipeline_perf.sql`
 
-```toml
-CARBON_DB_PATH = "data/processed/database/carbon_footprint.sqlite"
-```
+The runtime also creates missing tables on first use, but the SQL migrations remain the preferred deployment path.
 
-`CARBON_DB_PATH` is only used by one-off SQLite maintenance tools.
+## Logging behavior
 
-## Schema bootstrap
+- Default: human-readable logs to stdout/stderr only
+- Optional: the same run is archived to Supabase Storage as compressed JSONL
+- Archived entries include timestamp, level, logger/module, message, and any bound run/scenario correlation fields
 
-Apply the SQL in:
+## Removed behavior
 
-`supabase/migrations/20260309_000001_carbon_footprint_core.sql`
-
-and then:
-
-`supabase/migrations/20260310_000002_bulk_heatmap_runs.sql`
-
-You can run it in the Supabase SQL editor or through your usual Postgres migration workflow.
-
-The application also creates missing tables on first use, but applying the SQL migration explicitly is the cleaner production path.
-
-## One-time data migration
-
-Inspect the source SQLite schema first:
-
-```powershell
-.\venv\Scripts\python.exe .\legacy\sqlite\migrate_sqlite_to_supabase.py --dry-run --log-level INFO
-```
-
-Run the migration:
-
-```powershell
-.\venv\Scripts\python.exe .\legacy\sqlite\migrate_sqlite_to_supabase.py --log-level INFO
-```
-
-Optional flags:
-
-- `--sqlite-path` points to a non-default SQLite file.
-- `--table` limits migration to one or more source tables.
-- `--no-include-analysis-tables` skips legacy single-run analytical tables.
-
-## Notes
-
-- The ORS client now keeps only an in-process response cache. The shipped runtime no longer writes a separate local SQLite HTTP cache file.
-- Route-cache lookups and writes now use the configured backend automatically.
-- Bulk reruns still recompute analytical outputs while reusing cached road distances when available.
-- The Streamlit heatmap page reads only completed Supabase batch runs and uses the immutable `bulk_evaluation_run_results` rows for map rendering.
+- No embedded file-database backend
+- No local cache fallback outside Supabase Postgres
+- No persistent local database files
+- No retired local-database migration tooling in the repository

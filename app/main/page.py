@@ -69,7 +69,7 @@ def main() -> None:
 
     attach_streamlit_logging(
         level=str(st.session_state.log_level),
-        write_to_file=bool(st.session_state.write_log_file),
+        archive_to_storage=bool(st.session_state.archive_logs),
     )
 
     payload = build_scenario_payload(st.session_state)
@@ -78,10 +78,10 @@ def main() -> None:
     if run_clicked:
         st.session_state.ui_logs = []
         with st.spinner("Running route analysis..."):
-            geo, results, err, resolved_db_path = run_analysis(payload=payload)
+            geo, results, err, resolved_db_target = run_analysis(payload=payload)
 
-        if resolved_db_path != str(st.session_state.db_path_str):
-            st.session_state.db_path_str = resolved_db_path
+        if resolved_db_target != str(st.session_state.db_target_str):
+            st.session_state.db_target_str = resolved_db_target
 
         if err:
             st.error(err)

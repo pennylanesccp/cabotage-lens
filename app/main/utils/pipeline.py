@@ -6,7 +6,7 @@ from typing import Any, Dict, Mapping, Tuple
 from modules.infra.log_manager import get_logger
 from modules.multimodal import build_path_geometry, evaluate_path
 
-from app.main.utils.state import resolve_runtime_db_path
+from app.main.utils.state import resolve_runtime_db_target
 
 _log = get_logger("streamlit_app")
 
@@ -57,7 +57,7 @@ def run_analysis(
 ) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None, str]:
     _log.info("Routing: %s -> %s (%.3ft)", payload["origin"], payload["destiny"], payload["cargo_t"])
 
-    db_target = resolve_runtime_db_path()
+    db_target = resolve_runtime_db_target()
 
     geo = build_path_geometry(
         payload["origin"],

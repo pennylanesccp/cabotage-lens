@@ -10,12 +10,12 @@ class StreamlitSecretsTests(unittest.TestCase):
     def test_load_local_secrets_reads_toml(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             secrets_path = Path(tmp_dir) / "secrets.toml"
-            secrets_path.write_text('ORS_API_KEY = "abc123"\nCARBON_WRITE_LOG_FILE = false\n', encoding="utf-8")
+            secrets_path.write_text('ORS_API_KEY = "abc123"\nLOG_ARCHIVE_ENABLED = false\n', encoding="utf-8")
 
             loaded = load_local_secrets(secrets_path)
 
         self.assertEqual(loaded["ORS_API_KEY"], "abc123")
-        self.assertFalse(loaded["CARBON_WRITE_LOG_FILE"])
+        self.assertFalse(loaded["LOG_ARCHIVE_ENABLED"])
 
     def test_load_local_secrets_reads_utf8_bom_toml(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -38,9 +38,9 @@ class StreamlitSecretsTests(unittest.TestCase):
     def test_get_secret_preserves_boolean_false(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             secrets_path = Path(tmp_dir) / "secrets.toml"
-            secrets_path.write_text("CARBON_WRITE_LOG_FILE = false\n", encoding="utf-8")
+            secrets_path.write_text("LOG_ARCHIVE_ENABLED = false\n", encoding="utf-8")
 
-            value = get_secret("CARBON_WRITE_LOG_FILE", True, path=secrets_path, include_runtime=False)
+            value = get_secret("LOG_ARCHIVE_ENABLED", True, path=secrets_path, include_runtime=False)
 
         self.assertFalse(value)
 

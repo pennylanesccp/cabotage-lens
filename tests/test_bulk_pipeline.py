@@ -2,8 +2,6 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
-from modules.infra.db.core import db_session
-from modules.infra.db.road_cache import upsert_run
 from modules.multimodal import bulk
 from modules.multimodal.bulk import BulkPerformanceTracker, RouteRequestCoordinator, RouteRequestSpec
 
@@ -52,21 +50,30 @@ class BulkPipelineCoordinatorTests(unittest.TestCase):
             perf=BulkPerformanceTracker(),
         )
 
-        with db_session(":memory:", backend="sqlite") as conn:
-            upsert_run(
-                conn,
-                origin="Origin",
-                origin_lat=-31.0,
-                origin_lon=-52.0,
-                destiny="Destiny",
-                destiny_lat=-3.0,
-                destiny_lon=-60.0,
-                distance_km=456.0,
-                profile_requested="driving-hgv",
-                profile_used="driving-hgv",
-                source="ors",
-            )
-            coordinator.prime(conn, [spec])
+        cached_row = {
+            spec.label_key: {
+                "origin": "Origin",
+                "destiny": "Destiny",
+                "distance_km": 456.0,
+                "is_hgv": True,
+                "origin_lat": -31.0,
+                "origin_lon": -52.0,
+                "destiny_lat": -3.0,
+                "destiny_lon": -60.0,
+                "profile_requested": "driving-hgv",
+                "profile_used": "driving-hgv",
+                "source": "ors",
+            }
+        }
+
+        with patch(
+            "modules.multimodal.bulk.list_runs_by_label_keys",
+            return_value=cached_row,
+        ), patch(
+            "modules.multimodal.bulk.list_runs_by_coord_keys",
+            return_value={},
+        ):
+            coordinator.prime(object(), [spec])
 
         with patch("modules.multimodal.bulk._calculate_route") as calculate_route_mock:
             leg = coordinator.resolve(spec)
@@ -108,3 +115,7 @@ class BulkPipelineExecutionTests(unittest.TestCase):
 
         self.assertIs(outcome, expected)
         pipeline_mock.assert_called_once()
+
+
+if __name__ == "__main__":
+    unittest.main()

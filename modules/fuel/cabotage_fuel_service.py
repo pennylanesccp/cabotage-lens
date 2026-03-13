@@ -713,8 +713,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Configure logging
     init_logging(
           level=args.log_level
-        , force=True
-        , write_output=False
+        , force_clean=True
+        , archive_to_storage=False
     )
 
     _log.info(

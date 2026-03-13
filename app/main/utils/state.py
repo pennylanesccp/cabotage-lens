@@ -62,25 +62,25 @@ def validated_log_level(value: Any, default: str = "INFO") -> str:
     return candidate if candidate in allowed else default
 
 
-def resolve_runtime_db_path() -> str:
+def resolve_runtime_db_target() -> str:
     try:
         settings = load_database_settings()
         return settings.display_target
     except Exception as exc:
         _log.warning("Database target could not be resolved from Streamlit secrets: %s", exc)
-        return str(DEFAULTS["db_path_str"])
+        return str(DEFAULTS["db_target_str"])
 
 
 def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     runtime_defaults: dict[str, Any] = dict(defaults or DEFAULTS)
-    runtime_defaults["db_path_str"] = str(resolve_runtime_db_path())
+    runtime_defaults["db_target_str"] = str(resolve_runtime_db_target())
     runtime_defaults["log_level"] = validated_log_level(
         runtime_defaults.get("log_level", "INFO"),
         default=str(runtime_defaults.get("log_level", "INFO")),
     )
-    runtime_defaults["write_log_file"] = bool_from_any(
-        secret_value("CARBON_WRITE_LOG_FILE", runtime_defaults.get("write_log_file", False)),
-        default=bool(runtime_defaults.get("write_log_file", False)),
+    runtime_defaults["archive_logs"] = bool_from_any(
+        secret_value("LOG_ARCHIVE_ENABLED", runtime_defaults.get("archive_logs", False)),
+        default=bool(runtime_defaults.get("archive_logs", False)),
     )
 
     for key, value in runtime_defaults.items():
@@ -91,14 +91,14 @@ def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     st.session_state.setdefault("last_results", None)
 
 
-def attach_streamlit_logging(level: str, write_to_file: bool) -> None:
+def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
     safe_level = validated_log_level(level, default=str(DEFAULTS["log_level"]))
     try:
-        init_logging(level=safe_level, write_to_file=write_to_file, force_clean=True)
+        init_logging(level=safe_level, archive_to_storage=archive_to_storage, force_clean=True)
     except Exception as exc:
-        init_logging(level=safe_level, write_to_file=False, force_clean=True)
-        st.session_state.write_log_file = False
-        _log.warning("File logging disabled due to runtime filesystem limits: %s", exc)
+        init_logging(level=safe_level, archive_to_storage=False, force_clean=True)
+        st.session_state.archive_logs = False
+        _log.warning("Supabase log archival disabled due to runtime configuration limits: %s", exc)
 
     root = logging.getLogger()
     for handler in list(root.handlers):

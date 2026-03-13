@@ -264,7 +264,7 @@ if __name__ == "__main__":
     #   python -m modules.ports.ports_index
     from modules.infra.log_manager import init_logging
 
-    init_logging(level="INFO", force=True, write_output=False)
+    init_logging(level="INFO", force_clean=True, archive_to_storage=False)
 
     fallback = [
         {

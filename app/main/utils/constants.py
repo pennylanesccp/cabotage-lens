@@ -55,7 +55,7 @@ DEFAULTS: Dict[str, Any] = {
     "map_center_lat": None,
     "map_center_lon": None,
     "log_level": "INFO",
-    "write_log_file": False,
-    "db_path_str": "postgresql://***",
+    "archive_logs": False,
+    "db_target_str": "postgresql://***",
     "log_last_n": 300,
 }

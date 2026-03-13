@@ -13,8 +13,8 @@ This repository is a Python project focused on multimodal freight evaluation:
 - `app/` - user-facing app entrypoint and Streamlit UI package
 - `scripts/` - CLI workflows (`compare_single.py`, `compare_bulk.py`)
 - `modules/` - domain and infrastructure code (routing, cabotage, fuel, costs, persistence)
-- `data/` - versioned inputs plus processed artifacts (including SQLite database)
-- `logs/` - runtime logs
+- `data/` - versioned inputs plus processed non-database artifacts
+- `supabase/` - SQL migrations for Supabase Postgres
 - `references/` - supporting documents and research artifacts
 
 Core flow:
@@ -22,13 +22,14 @@ Core flow:
 1. Resolve origin/destiny coordinates and nearest ports.
 2. Compute route geometry (road-only and multimodal legs).
 3. Evaluate fuel, emissions, and costs per leg.
-4. Persist and reuse results through SQLite cache/tables.
+4. Persist and reuse results through Supabase Postgres tables.
 
 ---
 
 ## Non-negotiables
 
-- SQLite is the local source of truth for cached routes and scenario outputs.
+- Supabase Postgres is the only durable database backend.
+- Supabase Storage is the only persisted file-log sink when archival is enabled.
 - ORS API calls must use `ORS_API_KEY` from Streamlit secrets.
 - Pipeline behavior must remain idempotent where possible.
 - Never commit secrets (`.streamlit/secrets.toml`, API keys, credentials).
@@ -39,7 +40,7 @@ Core flow:
 ## Architecture constraints
 
 1. Keep `modules/` as the main logic layer; `app/` and `scripts/` should stay thin orchestrators.
-2. Preserve routing cache behavior (avoid unnecessary ORS calls).
+2. Preserve routing cache behavior in Postgres (avoid unnecessary ORS calls).
 3. Prefer explicit typed data structures and clear boundaries between:
    - geometry building
    - cost/fuel/emissions evaluation
@@ -50,11 +51,10 @@ Core flow:
 
 ## Data and persistence rules
 
-- Default database path:
-  - `data/processed/database/carbon_footprint.sqlite`
-- Keep schema updates backward-aware; if behavior depends on schema changes, document them.
+- Keep schema updates backward-aware; if behavior depends on schema changes, document them in `supabase/migrations/`.
 - Avoid destructive data rewrites unless explicitly requested.
 - When adding new derived outputs, prefer deterministic generation over ad-hoc side effects.
+- Do not add embedded file-database fallbacks, maintenance readers, or compatibility shims back into the repo.
 
 ---
 
@@ -63,16 +63,22 @@ Core flow:
 Required secret:
 
 - `ORS_API_KEY` - OpenRouteService key for geocoding and routing.
+- `SUPABASE_DB_URL` - Supabase Postgres connection string.
 
 Optional secret:
 
-- `CARBON_LOG_LEVEL` - logging verbosity override (`DEBUG`, `INFO`, etc.).
+- `LOCATIONIQ_PAT` - fallback provider for geocoding and routing.
+- `SUPABASE_URL` - Supabase project URL for Storage archival.
+- `SUPABASE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` - Supabase credential for Storage archival.
+- `SUPABASE_STORAGE_LOGS_BUCKET` - Storage bucket for archived logs.
+- `LOG_LEVEL` - logging verbosity override (`DEBUG`, `INFO`, etc.).
+- `LOG_ARCHIVE_ENABLED` - enable compressed JSONL log archival to Supabase Storage.
 
 Local development conventions:
 
 - Use `venv` virtual environment.
 - Use `.streamlit/secrets.toml` for local secrets and settings.
-- `.streamlit/secrets.toml.example` should provide safe placeholders only.
+- `.streamlit/example_secrets.toml` should provide safe placeholders only.
 
 ---
 
@@ -93,6 +99,7 @@ Local development conventions:
 - Fail with clear diagnostics when required config is missing.
 - Keep user-facing output readable for both quick checks and debugging.
 - Preserve compatibility with `python app/app_streamlit.py` and direct script execution.
+- Runtime logs should go to stdout/stderr; archived log files, when enabled, should go to Supabase Storage.
 
 ---
 

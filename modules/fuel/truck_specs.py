@@ -216,8 +216,8 @@ def main(argv: List[str] | None = None) -> int:
 
     init_logging(
           level=args.log_level
-        , force=True
-        , write_output=False
+        , force_clean=True
+        , archive_to_storage=False
     )
 
     spec = get_truck_spec(args.truck_key)
