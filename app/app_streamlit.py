@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# app/EcoFreight_Brazil.py
+# app/app_streamlit.py
 # -*- coding: utf-8 -*-
 
-"""Streamlit page entrypoint."""
+"""CabotageLens Streamlit entrypoint."""
 
 from __future__ import annotations
 

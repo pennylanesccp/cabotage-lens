@@ -1,6 +1,6 @@
-# carbon-footprint
+# CabotageLens: A Multimodal Cost and Carbon Footprint Assessment Tool for Brazilian Freight Transport
 
-Multimodal freight comparison for Brazil, focused on road-only versus cabotage-assisted scenarios.
+CabotageLens is a multimodal freight comparison toolkit for Brazil, focused on road-only versus cabotage-assisted scenarios.
 
 The current architecture is intentionally simple:
 
@@ -76,7 +76,7 @@ python -m venv venv
 .\venv\Scripts\pip.exe install -e .
 ```
 
-## Run the Streamlit app
+## Run CabotageLens
 
 ```powershell
 .\run_streamlit.ps1

@@ -6,6 +6,7 @@ import streamlit as st
 
 from modules.fuel.truck_specs import list_truck_keys
 
+from app.main.sidebar.branding import render_sidebar_brand
 from app.main.sidebar.filters import (
     LOCATION_RESOLUTION_POLL_SECONDS,
     apply_resolved_location_values,
@@ -28,6 +29,7 @@ def render_sidebar(
     port_ops_scenarios: Iterable[str],
 ) -> None:
     with st.sidebar:
+        render_sidebar_brand()
         st.subheader("Scenario")
         _render_origin_field(origin_field_key)
         st.number_input("Cargo (t)", min_value=0.0, step=0.5, format="%g", key="heatmap_cargo")

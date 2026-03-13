@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "carbon-footprint"
-version = "1.7.0.0"
-description = "Multimodal freight assessment of logistics cost and carbon footprint."
+version = "1.7.0.1"
+description = "CabotageLens multimodal freight assessment of logistics cost and carbon footprint in Brazilian freight transport."
 requires-python = ">=3.10"
 dependencies = [
     "requests",

@@ -4,6 +4,7 @@ from typing import Iterable
 
 import streamlit as st
 
+from app.main.sidebar.branding import render_sidebar_brand
 from app.main.sidebar.advanced import render_advanced
 from app.main.sidebar.filters import render_filters
 from app.main.sidebar.run_button import render_run_button
@@ -11,6 +12,7 @@ from app.main.sidebar.run_button import render_run_button
 
 def render_sidebar(class_options: Iterable[str], port_ops_scenarios: Iterable[str]) -> bool:
     with st.sidebar:
+        render_sidebar_brand()
         st.subheader("Scenario")
         render_filters()
         with st.expander("Advanced", expanded=False):

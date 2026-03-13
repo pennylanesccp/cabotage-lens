@@ -97,7 +97,7 @@ def _render_header() -> None:
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
             <p style='margin: 0.65rem 0 0 0; max-width: 52rem; color: #334155;'>
-                Compare where multimodal freight wins or loses across Brazil using the current comparison table stored in Supabase. Run missing fills only unfound destinies; rerun overwrites only the comparison rows for this scenario.
+                CabotageLens compares where multimodal freight wins or loses across Brazil using the current comparison table stored in Supabase. Run missing fills only unfound destinies; rerun overwrites only the comparison rows for this scenario.
             </p>
         </section>
         """,

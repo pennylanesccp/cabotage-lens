@@ -190,7 +190,7 @@ def fetch_santos_prices(
     """
     sess = session or requests.Session()
     headers = {
-          "User-Agent": "carbon-footprint-tf1/1.0 (academic, non-commercial)"
+          "User-Agent": "cabotagelens/1.0 (academic, non-commercial)"
     }
 
     _log.info("Fetching Santos bunker prices from %s", SHIPANDBUNKER_BR_URL)

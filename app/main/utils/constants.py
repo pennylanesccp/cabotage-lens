@@ -9,7 +9,10 @@ from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO
 
 ROOT = Path(__file__).resolve().parents[3]
 
-PAGE_TITLE = "EcoFreight Brazil"
+APP_NAME = "CabotageLens"
+APP_FORMAL_TITLE = "CabotageLens: A Multimodal Cost and Carbon Footprint Assessment Tool for Brazilian Freight Transport"
+APP_TAGLINE = "Multimodal cost and carbon assessment for Brazilian freight."
+PAGE_TITLE = APP_NAME
 PAGE_ICON = ":earth_americas:"
 PAGE_LAYOUT = "wide"
 DEFAULT_ORIGIN = "Avenida Professor Luciano Gualberto, Sao Paulo"

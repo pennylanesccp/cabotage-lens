@@ -1,6 +1,6 @@
-# Supabase Architecture
+# CabotageLens Supabase Architecture
 
-`carbon-footprint` uses Supabase Postgres as the durable transactional store and Supabase Storage for optional persisted log archives.
+CabotageLens uses Supabase Postgres as the durable transactional store and Supabase Storage for optional persisted log archives.
 
 ## Core schema
 
