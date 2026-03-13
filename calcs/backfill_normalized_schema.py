@@ -333,23 +333,59 @@ _SHAPE_SPECS: tuple[ShapeSpec, ...] = (
     ShapeSpec(
         name="legacy_bulk_runs",
         role="source",
-        required=frozenset({"run_id", "origin_key", "origin_name", "destination_set_id", "status"}),
+        required=frozenset(
+            {
+                "run_id",
+                "origin_key",
+                "origin_name",
+                "destination_set_id",
+                "destination_count",
+                "success_count",
+                "fail_count",
+                "status",
+            }
+        ),
         preferred=frozenset({"input_origin", "cargo_t", "truck_key", "ors_profile", "updated_timestamp"}),
-        forbidden=frozenset({"selector_hash", "origin_location_id"}),
+        forbidden=frozenset({"selector_hash", "origin_location_id", "scenario_key", "input_destiny", "destiny_name", "road_cost_r"}),
     ),
     ShapeSpec(
         name="legacy_bulk_run_items",
         role="source",
-        required=frozenset({"run_id", "scenario_key", "origin_key", "destiny_key", "input_destiny", "status"}),
-        preferred=frozenset({"destiny_lat", "destiny_lon", "road_cost_r", "updated_timestamp"}),
-        forbidden=frozenset({"destination_location_id", "road_route_id"}),
+        required=frozenset(
+            {
+                "run_id",
+                "scenario_key",
+                "origin_key",
+                "destiny_key",
+                "input_destiny",
+                "status",
+                "road_cost_r",
+                "multimodal_cost_r",
+            }
+        ),
+        preferred=frozenset({"destiny_lat", "destiny_lon", "cost_delta_r", "updated_timestamp"}),
+        forbidden=frozenset({"destination_location_id", "road_route_id", "cargo_t", "truck_key", "road_fuel_cost_r"}),
     ),
     ShapeSpec(
         name="legacy_bulk_results_wide",
         role="source",
-        required=frozenset({"scenario_key", "origin_name", "destiny_name", "input_origin", "input_destiny", "status"}),
+        required=frozenset(
+            {
+                "scenario_key",
+                "origin_name",
+                "destiny_name",
+                "input_origin",
+                "input_destiny",
+                "cargo_t",
+                "truck_key",
+                "ors_profile",
+                "road_fuel_cost_r",
+                "total_fuel_cost_r",
+                "status",
+            }
+        ),
         preferred=frozenset({"run_id", "origin_key", "destiny_key", "destiny_lat", "destiny_lon", "updated_timestamp"}),
-        forbidden=frozenset({"selector_hash", "destination_location_id", "road_route_id"}),
+        forbidden=frozenset({"selector_hash", "destination_location_id", "road_route_id", "road_cost_r", "multimodal_cost_r"}),
     ),
     ShapeSpec(
         name="legacy_analysis_results",
@@ -458,28 +494,29 @@ def fingerprint_schema(conn: DBConnection) -> dict[str, TableFingerprint]:
 
 
 def classify_tables(fingerprints: Mapping[str, TableFingerprint], *, targets: TargetTables) -> tuple[dict[str, list[str]], dict[str, str], dict[str, list[str]]]:
-    source_tables: dict[str, list[str]] = {}
+    source_tables: dict[str, list[str]] = {
+        "legacy_place_points": [],
+        "legacy_routes": [],
+        "legacy_bulk_runs": [],
+        "legacy_bulk_run_items": [],
+        "legacy_bulk_results_wide": [],
+    }
     target_tables: dict[str, str] = {}
-    inspect_only_tables: dict[str, list[str]] = {}
+    inspect_only_tables: dict[str, list[str]] = {"legacy_analysis_results": []}
 
-    for shape_name in (
-        "legacy_place_points",
-        "legacy_routes",
-        "legacy_bulk_runs",
-        "legacy_bulk_run_items",
-        "legacy_bulk_results_wide",
-    ):
-        source_tables[shape_name] = sorted(
-            fingerprint.table_name
-            for fingerprint in fingerprints.values()
-            if fingerprint.matches_spec(shape_name)
-        )
+    for fingerprint in fingerprints.values():
+        primary = fingerprint.primary_match
+        if primary is None:
+            continue
+        if primary.role == "source" and primary.spec_name in source_tables:
+            source_tables[primary.spec_name].append(fingerprint.table_name)
+        elif primary.role == "inspect_only" and primary.spec_name in inspect_only_tables:
+            inspect_only_tables[primary.spec_name].append(fingerprint.table_name)
 
-    inspect_only_tables["legacy_analysis_results"] = sorted(
-        fingerprint.table_name
-        for fingerprint in fingerprints.values()
-        if fingerprint.matches_spec("legacy_analysis_results")
-    )
+    for table_names in source_tables.values():
+        table_names.sort()
+    for table_names in inspect_only_tables.values():
+        table_names.sort()
 
     required_targets = {
         "normalized_locations": targets.locations,

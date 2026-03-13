@@ -13,6 +13,7 @@ from calcs.backfill_normalized_schema import (
     _record_bulk_item_write,
     _record_bulk_run_write,
     _record_route_write,
+    classify_tables,
     validate_target_tables,
 )
 
@@ -97,6 +98,105 @@ class BackfillNormalizedSchemaTests(unittest.TestCase):
             validate_target_tables(fingerprints, targets)
 
         self.assertIn("normalized_route_cache", str(exc.exception))
+
+    def test_bulk_run_results_shape_prefers_run_items_not_wide_or_runs(self) -> None:
+        fingerprint = _fingerprint(
+            "legacy_run_results_like",
+            [
+                "run_id",
+                "scenario_key",
+                "origin_key",
+                "origin_name",
+                "origin_lat",
+                "origin_lon",
+                "origin_uf",
+                "destiny_key",
+                "destiny_name",
+                "destiny_lat",
+                "destiny_lon",
+                "destiny_uf",
+                "input_origin",
+                "input_destiny",
+                "destination_set_id",
+                "port_origin_name",
+                "port_destiny_name",
+                "status",
+                "error_message",
+                "road_cost_r",
+                "multimodal_cost_r",
+                "cost_delta_r",
+                "cost_savings_pct",
+                "road_emissions_kg",
+                "multimodal_emissions_kg",
+                "emissions_delta_kg",
+                "emissions_savings_pct",
+                "road_distance_km",
+                "sea_km",
+                "insertion_timestamp",
+                "updated_timestamp",
+            ],
+        )
+
+        self.assertEqual(fingerprint.primary_match.spec_name, "legacy_bulk_run_items")
+        self.assertFalse(fingerprint.matches_spec("legacy_bulk_results_wide"))
+        self.assertFalse(fingerprint.matches_spec("legacy_bulk_runs"))
+
+    def test_classify_tables_assigns_source_tables_to_single_primary_role(self) -> None:
+        targets = TargetTables().validated()
+        fingerprints = {
+            "bulk_evaluation_runs": _fingerprint(
+                "bulk_evaluation_runs",
+                [
+                    "run_id",
+                    "origin_key",
+                    "origin_name",
+                    "input_origin",
+                    "cargo_t",
+                    "truck_key",
+                    "ors_profile",
+                    "destination_set_id",
+                    "destination_count",
+                    "success_count",
+                    "fail_count",
+                    "status",
+                ],
+            ),
+            "bulk_evaluation_run_results": _fingerprint(
+                "bulk_evaluation_run_results",
+                [
+                    "run_id",
+                    "scenario_key",
+                    "origin_key",
+                    "destiny_key",
+                    "input_destiny",
+                    "status",
+                    "road_cost_r",
+                    "multimodal_cost_r",
+                ],
+            ),
+            "bulk_evaluation_results": _fingerprint(
+                "bulk_evaluation_results",
+                [
+                    "scenario_key",
+                    "origin_name",
+                    "destiny_name",
+                    "input_origin",
+                    "input_destiny",
+                    "cargo_t",
+                    "truck_key",
+                    "ors_profile",
+                    "road_fuel_cost_r",
+                    "total_fuel_cost_r",
+                    "status",
+                ],
+            ),
+        }
+
+        source_tables, _, _ = classify_tables(fingerprints, targets=targets)
+
+        self.assertEqual(source_tables["legacy_bulk_runs"], ["bulk_evaluation_runs"])
+        self.assertEqual(source_tables["legacy_bulk_run_items"], ["bulk_evaluation_run_results"])
+        self.assertEqual(source_tables["legacy_bulk_results_wide"], ["bulk_evaluation_results"])
 
     def test_write_counters_dedupe_repeated_target_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
