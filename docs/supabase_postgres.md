@@ -86,10 +86,18 @@ Apply:
 - `supabase/migrations/20260312_000003_bulk_pipeline_perf.sql`
 - `supabase/migrations/20260313_000004_normalized_location_route_bulk_schema.sql`
 
-For existing environments, run the one-time adapter after the additive migration:
+For existing environments, run the shape-aware one-time backfill after the additive migration:
 
-- `python calcs/migrate_normalized_cache_and_bulk.py --dry-run`
-- `python calcs/migrate_normalized_cache_and_bulk.py`
+- `python calcs/backfill_normalized_schema.py`
+- `python calcs/backfill_normalized_schema.py --apply`
+
+Behavior:
+
+- inspects `information_schema` first and classifies legacy/source tables by column shape instead of trusting names alone
+- validates that `locations`, `location_aliases`, `route_cache_entries`, `bulk_runs`, and `bulk_run_items` already exist with the normalized shape before writing
+- executes the real write path inside a transaction during default dry-run mode and rolls it back at the end
+- writes a schema fingerprint JSON file, a migration summary JSON file, and an anomaly JSONL report under `calcs/outputs/`
+- does not call external geocoding or routing services
 
 ## Logging behavior
 
