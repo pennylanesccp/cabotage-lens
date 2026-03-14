@@ -233,6 +233,8 @@ class BackfillContext:
     port_index: dict[str, dict[str, Any]]
     report: MigrationReport
     anomalies: "AnomalyRecorder"
+    location_cache: dict[tuple[str, str], dict[str, Any]] = field(default_factory=dict)
+    alias_location_cache: dict[str, Optional[int]] = field(default_factory=dict)
     seen_location_keys: set[tuple[str, str]] = field(default_factory=set)
     seen_alias_keys: set[str] = field(default_factory=set)
     seen_route_keys: set[tuple[int, int, bool]] = field(default_factory=set)
@@ -430,6 +432,10 @@ def _json_default(value: Any) -> Any:
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True, default=_json_default), encoding="utf-8")
+
+
+def _phase_progress(stats: PhaseStats, *, every: int = 250) -> bool:
+    return stats.rows_read > 0 and stats.rows_read % int(every) == 0
 
 
 def _safe_row_count(conn: DBConnection, table_name: str) -> int:
@@ -742,6 +748,9 @@ def _location_from_coords(
     coord_key = coord_lookup_key(lat, lon)
     if coord_key is None:
         return None
+    cached_location = context.location_cache.get(coord_key)
+    if cached_location is not None:
+        return cached_location
     existing = get_location_by_coords(
         context.conn,
         lat=lat,
@@ -768,6 +777,7 @@ def _location_from_coords(
             stats.rows_created += 1
         else:
             stats.rows_reused += 1
+    context.location_cache[coord_key] = location
     return location
 
 
@@ -802,6 +812,9 @@ def _resolve_location_id(
             return int(location["location_id"])
 
     for candidate in _candidate_aliases(label, *aliases):
+        place_key = normalize_place_key(candidate)
+        if place_key in context.alias_location_cache:
+            return context.alias_location_cache[place_key]
         cached = find_point(
             context.conn,
             place=candidate,
@@ -809,7 +822,9 @@ def _resolve_location_id(
             locations_table=context.targets.locations,
         )
         if cached is not None:
-            return int(cached["location_id"])
+            resolved = int(cached["location_id"])
+            context.alias_location_cache[place_key] = resolved
+            return resolved
     return None
 
 
@@ -830,6 +845,13 @@ def _upsert_alias_with_report(
     place_key = normalize_place_key(place)
     label = ascii_place_text(alias_label or place)
     if not place_key or not label:
+        return
+
+    cached_location_id = context.alias_location_cache.get(place_key)
+    if cached_location_id is not None and int(cached_location_id) == int(location_id):
+        if place_key not in context.seen_alias_keys:
+            context.seen_alias_keys.add(place_key)
+            stats.rows_reused += 1
         return
 
     existing = find_point(
@@ -860,6 +882,7 @@ def _upsert_alias_with_report(
         table_name=context.targets.aliases,
         locations_table=context.targets.locations,
     )
+    context.alias_location_cache[place_key] = int(location_id)
     if place_key not in context.seen_alias_keys:
         context.seen_alias_keys.add(place_key)
         if existing is None:
@@ -1057,6 +1080,14 @@ def backfill_locations(context: BackfillContext, *, chunk_size: int) -> None:
         for item in _iter_source_rows(context, shape_name, columns=columns, chunk_size=chunk_size):
             seeds = _location_seeds_from_row(item, context.port_index)
             stats.rows_read += 1
+            if _phase_progress(stats):
+                _log.info(
+                    "Backfill progress phase=locations rows_read=%s created=%s reused=%s skipped=%s",
+                    stats.rows_read,
+                    stats.rows_created,
+                    stats.rows_reused,
+                    stats.rows_skipped,
+                )
             if not seeds:
                 stats.rows_skipped += 1
                 continue
@@ -1124,6 +1155,15 @@ def backfill_aliases(context: BackfillContext, *, chunk_size: int) -> None:
         for item in _iter_source_rows(context, shape_name, columns=columns, chunk_size=chunk_size):
             row = item.row
             stats.rows_read += 1
+            if _phase_progress(stats):
+                _log.info(
+                    "Backfill progress phase=aliases rows_read=%s created=%s reused=%s skipped=%s conflicts=%s",
+                    stats.rows_read,
+                    stats.rows_created,
+                    stats.rows_reused,
+                    stats.rows_skipped,
+                    stats.conflicts_handled,
+                )
             pairs = (
                 (
                     _resolve_location_id(
@@ -1254,6 +1294,14 @@ def backfill_routes(context: BackfillContext, *, chunk_size: int) -> None:
     for item in _iter_source_rows(context, "legacy_routes", columns=columns, chunk_size=chunk_size):
         row = item.row
         stats.rows_read += 1
+        if _phase_progress(stats):
+            _log.info(
+                "Backfill progress phase=routes rows_read=%s created=%s reused=%s skipped=%s",
+                stats.rows_read,
+                stats.rows_created,
+                stats.rows_reused,
+                stats.rows_skipped,
+            )
         origin_location_id = _resolve_location_id(
             context,
             lat=row.get("origin_lat"),
@@ -1362,6 +1410,14 @@ def backfill_bulk_runs(context: BackfillContext, *, chunk_size: int) -> None:
     for item in _iter_source_rows(context, "legacy_bulk_runs", columns=columns, chunk_size=chunk_size):
         row = item.row
         stats.rows_read += 1
+        if _phase_progress(stats, every=50):
+            _log.info(
+                "Backfill progress phase=bulk_runs rows_read=%s created=%s reused=%s skipped=%s",
+                stats.rows_read,
+                stats.rows_created,
+                stats.rows_reused,
+                stats.rows_skipped,
+            )
         run_id = str(row.get("run_id") or "").strip()
         if not run_id:
             stats.rows_skipped += 1
@@ -1462,6 +1518,14 @@ def backfill_bulk_run_items(context: BackfillContext, *, chunk_size: int) -> Non
     for item in _iter_source_rows(context, "legacy_bulk_run_items", columns=columns, chunk_size=chunk_size):
         row = item.row
         stats.rows_read += 1
+        if _phase_progress(stats):
+            _log.info(
+                "Backfill progress phase=bulk_run_items rows_read=%s created=%s reused=%s skipped=%s",
+                stats.rows_read,
+                stats.rows_created,
+                stats.rows_reused,
+                stats.rows_skipped,
+            )
         run_id = str(row.get("run_id") or "").strip()
         scenario_key = _scenario_key_for_row(row)
         if not run_id or not scenario_key:
@@ -1709,6 +1773,14 @@ def backfill_wide_bulk_results(context: BackfillContext, *, chunk_size: int) -> 
     for item in _iter_source_rows(context, "legacy_bulk_results_wide", columns=columns, chunk_size=chunk_size):
         row = item.row
         stats.rows_read += 1
+        if _phase_progress(stats):
+            _log.info(
+                "Backfill progress phase=legacy_bulk_results rows_read=%s created=%s reused=%s skipped=%s",
+                stats.rows_read,
+                stats.rows_created,
+                stats.rows_reused,
+                stats.rows_skipped,
+            )
         origin_location_id = _resolve_location_id(
             context,
             lat=row.get("origin_lat"),
@@ -1888,7 +1960,7 @@ def run_backfill(
 
         _write_json(summary_path, report.to_dict())
         return report
-    except Exception:
+    except BaseException:
         conn.rollback()
         raise
     finally:

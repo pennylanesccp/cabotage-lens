@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from calcs.backfill_normalized_schema import (
     BackfillContext,
@@ -9,10 +10,12 @@ from calcs.backfill_normalized_schema import (
     TableFingerprint,
     TargetTables,
     _candidate_aliases,
+    _location_from_coords,
     _match_shapes,
     _record_bulk_item_write,
     _record_bulk_run_write,
     _record_route_write,
+    _upsert_alias_with_report,
     classify_tables,
     validate_target_tables,
 )
@@ -42,6 +45,25 @@ def _fingerprint(table_name: str, columns: list[str]) -> TableFingerprint:
 
 
 class BackfillNormalizedSchemaTests(unittest.TestCase):
+    def _context(self) -> BackfillContext:
+        tmp_dir = Path(tempfile.mkdtemp())
+        report = MigrationReport(
+            mode="dry-run",
+            database_target="test",
+            targets=TargetTables(),
+            fingerprint_path=tmp_dir / "fingerprint.json",
+            summary_path=tmp_dir / "summary.json",
+            anomaly_path=tmp_dir / "anomalies.jsonl",
+        )
+        return BackfillContext(
+            conn=object(),  # type: ignore[arg-type]
+            dry_run=True,
+            targets=TargetTables(),
+            port_index={},
+            report=report,
+            anomalies=_DummyAnomalies(),
+        )
+
     def test_shape_classifier_uses_table_columns_not_table_name(self) -> None:
         fingerprint = _fingerprint(
             "mystery_table",
@@ -231,6 +253,38 @@ class BackfillNormalizedSchemaTests(unittest.TestCase):
     def test_candidate_aliases_normalize_and_dedupe_variants(self) -> None:
         aliases = _candidate_aliases("Pelotas, RS", "pelotas, rs", "Pelotas, Brasil", "Pelotas")
         self.assertEqual(aliases, ["Pelotas, RS", "Pelotas"])
+
+    def test_location_cache_skips_repeated_coord_queries(self) -> None:
+        context = self._context()
+        with patch(
+            "calcs.backfill_normalized_schema.get_location_by_coords",
+            return_value=None,
+        ) as get_mock, patch(
+            "calcs.backfill_normalized_schema.get_or_create_location",
+            return_value={"location_id": 11, "lat": -31.77, "lon": -52.34},
+        ) as create_mock:
+            first = _location_from_coords(context, lat=-31.7700001, lon=-52.3400001, label="Pelotas", source="test")
+            second = _location_from_coords(context, lat=-31.7700002, lon=-52.3400002, label="Pelotas", source="test")
+
+        self.assertEqual(first["location_id"], 11)
+        self.assertEqual(second["location_id"], 11)
+        self.assertEqual(get_mock.call_count, 1)
+        self.assertEqual(create_mock.call_count, 1)
+
+    def test_alias_cache_skips_repeated_alias_upserts(self) -> None:
+        context = self._context()
+        with patch(
+            "calcs.backfill_normalized_schema.find_point",
+            return_value=None,
+        ) as find_mock, patch(
+            "calcs.backfill_normalized_schema.upsert_alias",
+            return_value={"place_key": "pelotas, rs", "location_id": 11},
+        ) as upsert_mock:
+            _upsert_alias_with_report(context, place="Pelotas, RS", alias_label="Pelotas, RS", location_id=11, source="test")
+            _upsert_alias_with_report(context, place="Pelotas, RS", alias_label="Pelotas, RS", location_id=11, source="test")
+
+        self.assertEqual(find_mock.call_count, 1)
+        self.assertEqual(upsert_mock.call_count, 1)
 
 
 if __name__ == "__main__":
