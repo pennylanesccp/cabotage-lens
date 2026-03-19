@@ -109,11 +109,34 @@ def init_state(defaults: Mapping[str, Any] | None = None) -> None:
 def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
     safe_level = validated_log_level(level, default=str(DEFAULTS["log_level"]))
     try:
-        init_logging(level=safe_level, archive_to_storage=archive_to_storage, force_clean=True)
+        init_logging(
+            level=safe_level,
+            archive_to_storage=archive_to_storage,
+            archive_to_local_file=archive_to_storage,
+            force_clean=True,
+        )
     except Exception as exc:
-        init_logging(level=safe_level, archive_to_storage=False, force_clean=True)
-        st.session_state.archive_logs = False
-        _log.warning("Supabase log archival disabled due to runtime configuration limits: %s", exc)
+        try:
+            init_logging(
+                level=safe_level,
+                archive_to_storage=False,
+                archive_to_local_file=archive_to_storage,
+                force_clean=True,
+            )
+            _log.warning("Supabase log archival disabled due to runtime configuration limits: %s", exc)
+        except Exception as fallback_exc:
+            init_logging(
+                level=safe_level,
+                archive_to_storage=False,
+                archive_to_local_file=False,
+                force_clean=True,
+            )
+            st.session_state.archive_logs = False
+            _log.warning(
+                "File and Storage logging disabled due to runtime configuration limits: %s / %s",
+                exc,
+                fallback_exc,
+            )
 
     root = logging.getLogger()
     for handler in list(root.handlers):

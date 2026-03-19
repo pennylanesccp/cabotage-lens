@@ -140,5 +140,9 @@ def _render_advanced(*, class_options: Iterable[str], port_ops_scenarios: Iterab
         disabled=True,
     )
     st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], key="log_level")
-    st.checkbox("Archive logs to Storage", key="archive_logs")
+    st.checkbox(
+        "Write logs",
+        key="archive_logs",
+        help="When enabled locally, append a session log file under ./logs. If Supabase Storage archival is configured, upload the compressed archive too.",
+    )
     st.slider("Debug log lines", min_value=50, max_value=1000, step=50, key="log_last_n")

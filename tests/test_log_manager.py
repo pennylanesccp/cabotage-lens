@@ -1,12 +1,15 @@
 import gzip
 import json
 import logging
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from modules.infra.log_manager import (
     bind_log_context,
     get_current_archive_object_path,
+    get_current_local_log_path,
     get_logger,
     init_logging,
 )
@@ -42,6 +45,7 @@ class LogManagerTests(unittest.TestCase):
         init_logging(level="INFO", archive_to_storage=False, force_clean=True)
 
         self.assertIsNone(get_current_archive_object_path())
+        self.assertIsNone(get_current_local_log_path())
         self.assertGreaterEqual(len(logging.getLogger().handlers), 2)
 
     def test_init_logging_archives_jsonl_gz_to_supabase_storage(self) -> None:
@@ -70,6 +74,7 @@ class LogManagerTests(unittest.TestCase):
                 root.removeHandler(handler)
 
         self.assertEqual(get_current_archive_object_path(), "logs/prod/2026/03/13/run-123.jsonl.gz")
+        self.assertIsNone(get_current_local_log_path())
         self.assertEqual(len(fake_client.uploads), 1)
         upload = fake_client.uploads[0]
         self.assertEqual(upload["content_type"], "application/gzip")
@@ -80,6 +85,32 @@ class LogManagerTests(unittest.TestCase):
         self.assertEqual(entry["message"], "bulk evaluation complete")
         self.assertEqual(entry["run_id"], "bulk-999")
         self.assertEqual(entry["scenario_key"], "scenario-1")
+
+    def test_init_logging_writes_local_log_file_when_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            init_logging(
+                level="INFO",
+                archive_to_storage=False,
+                archive_to_local_file=True,
+                archive_run_id="ui-session",
+                local_logs_dir=tmpdir,
+                force_clean=True,
+            )
+            get_logger("carbon.tests").info("local file logging works")
+
+            root = logging.getLogger()
+            for handler in list(root.handlers):
+                handler.close()
+                root.removeHandler(handler)
+
+            local_path = get_current_local_log_path()
+            self.assertIsNotNone(local_path)
+            assert local_path is not None
+            local_file = Path(local_path)
+            self.assertTrue(local_file.exists())
+            self.assertEqual(local_file.parent.name, Path(tmpdir).name)
+            self.assertIn("ui-session__", local_file.name)
+            self.assertIn("local file logging works", local_file.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

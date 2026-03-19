@@ -10,6 +10,7 @@ import uuid
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
 from modules.core.secrets import get_secret
@@ -20,7 +21,10 @@ from modules.infra.supabase_storage import (
 
 _LOG_CONTEXT: ContextVar[dict[str, Any]] = ContextVar("log_context", default={})
 _CONTEXT_FIELDS = ("run_id", "request_id", "correlation_id", "scenario_key")
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_DEFAULT_LOCAL_LOGS_DIR = _REPO_ROOT / "logs"
 _current_archive_object_path: Optional[str] = None
+_current_local_log_path: Optional[str] = None
 
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:
@@ -29,6 +33,10 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 
 def get_current_archive_object_path() -> Optional[str]:
     return _current_archive_object_path
+
+
+def get_current_local_log_path() -> Optional[str]:
+    return _current_local_log_path
 
 
 def _normalize_context(values: Mapping[str, Any]) -> dict[str, Any]:
@@ -217,16 +225,46 @@ def _close_root_handlers(root_logger: logging.Logger) -> None:
             pass
 
 
+def _safe_log_file_stem(value: Optional[str]) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "streamlit"
+    normalized = "".join(char if char.isalnum() or char in {"-", "_"} else "-" for char in text)
+    collapsed = "-".join(part for part in normalized.split("-") if part)
+    return collapsed or "streamlit"
+
+
+def _resolve_local_log_path(
+    *,
+    local_logs_dir: Optional[Path | str] = None,
+    archive_run_id: Optional[str] = None,
+) -> Path:
+    target_dir = Path(local_logs_dir) if local_logs_dir is not None else _DEFAULT_LOCAL_LOGS_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    existing = _current_local_log_path
+    if existing:
+        existing_path = Path(existing)
+        if existing_path.parent == target_dir:
+            return existing_path
+
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    stem = _safe_log_file_stem(archive_run_id)
+    return target_dir / f"{stem}__{timestamp}.log"
+
+
 def init_logging(
     level: str = "INFO",
     *,
     archive_to_storage: Optional[bool] = None,
+    archive_to_local_file: Optional[bool] = None,
     archive_run_id: Optional[str] = None,
     environment: Optional[str] = None,
+    local_logs_dir: Optional[Path | str] = None,
     silence_libs: Optional[list[str]] = None,
     force_clean: bool = True,
 ) -> None:
-    global _current_archive_object_path
+    global _current_archive_object_path, _current_local_log_path
 
     numeric_level = getattr(logging, str(level).upper(), logging.INFO)
     root_logger = logging.getLogger()
@@ -260,6 +298,26 @@ def init_logging(
 
     if archive_to_storage is None:
         archive_to_storage = _boolish(get_secret("LOG_ARCHIVE_ENABLED"), default=False)
+    if archive_to_local_file is None:
+        archive_to_local_file = False
+    if not archive_to_local_file:
+        _current_local_log_path = None
+
+    if archive_to_local_file:
+        try:
+            local_log_path = _resolve_local_log_path(
+                local_logs_dir=local_logs_dir,
+                archive_run_id=archive_run_id,
+            )
+            file_handler = logging.FileHandler(local_log_path, mode="a", encoding="utf-8")
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.addFilter(context_filter)
+            file_handler.setFormatter(formatter)
+            root_logger.addHandler(file_handler)
+            _current_local_log_path = str(local_log_path)
+        except Exception as exc:
+            _current_local_log_path = None
+            root_logger.warning("Local file logging disabled: %s", exc)
 
     if archive_to_storage:
         archive_environment = (
@@ -293,10 +351,11 @@ def init_logging(
         logging.getLogger(lib_name).setLevel(logging.WARNING)
 
     get_logger(__name__).debug(
-        "LogManager initialized. level=%s archive=%s object=%s",
+        "LogManager initialized. level=%s archive=%s object=%s local=%s",
         level,
         bool(archive_to_storage),
         _current_archive_object_path,
+        _current_local_log_path,
     )
 
 
