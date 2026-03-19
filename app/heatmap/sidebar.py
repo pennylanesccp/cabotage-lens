@@ -4,6 +4,7 @@ from typing import Iterable, Tuple
 
 import streamlit as st
 
+from app.access import render_logout_control
 from modules.fuel.truck_specs import list_truck_keys
 
 from app.main.sidebar.branding import render_sidebar_brand
@@ -61,6 +62,7 @@ def render_run_actions(*, found_count: int, missing_count: int) -> Tuple[bool, b
             use_container_width=True,
             key="heatmap_rerun_all_button",
         )
+        render_logout_control()
     return run_missing_clicked, rerun_clicked
 
 

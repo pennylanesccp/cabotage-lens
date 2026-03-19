@@ -175,7 +175,6 @@ def require_app_access() -> None:
         st.stop()
 
     if bool(st.session_state.get(_AUTHENTICATED_KEY, False)):
-        _render_logout_control()
         return
 
     _render_login_screen(config)
@@ -265,7 +264,7 @@ def _apply_pending_sensitive_input_clear() -> None:
     st.session_state[_CLEAR_SENSITIVE_NEXT_RUN_KEY] = False
 
 
-def _render_logout_control() -> None:
+def render_logout_control() -> None:
     with st.sidebar:
         st.divider()
         st.caption("Restricted session")

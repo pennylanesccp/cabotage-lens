@@ -4,6 +4,7 @@ from typing import Iterable
 
 import streamlit as st
 
+from app.access import render_logout_control
 from app.main.sidebar.branding import render_sidebar_brand
 from app.main.sidebar.advanced import render_advanced
 from app.main.sidebar.filters import render_filters
@@ -17,4 +18,6 @@ def render_sidebar(class_options: Iterable[str], port_ops_scenarios: Iterable[st
         render_filters()
         with st.expander("Advanced", expanded=False):
             render_advanced(class_options=class_options, port_ops_scenarios=port_ops_scenarios)
-        return render_run_button()
+        run_clicked = render_run_button()
+        render_logout_control()
+        return run_clicked
