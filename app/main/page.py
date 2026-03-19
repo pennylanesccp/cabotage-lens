@@ -16,12 +16,10 @@ from app.main.details import render_details
 from app.main.map import fit_view, map_points, render_map, render_map_placeholder
 from app.main.sidebar import render_sidebar
 from app.main.styles import inject_css
-from app.main.utils.constants import PAGE_ICON, PAGE_LAYOUT, PAGE_TITLE
+from app.main.utils.constants import PAGE_TITLE
 from app.main.utils.formatters import clean_place_label, safe_float
 from app.main.utils.pipeline import build_scenario_payload, run_analysis
 from app.main.utils.state import attach_streamlit_logging, init_state
-
-st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout=PAGE_LAYOUT)
 
 
 def _render_header(payload: dict[str, Any]) -> None:
@@ -49,7 +47,7 @@ def _normalize_choice(session_key: str, valid_options: Iterable[str], default_va
         st.session_state[session_key] = default_value if default_value in options else options[0]
 
 
-def main() -> None:
+def render_page() -> None:
     init_state()
     inject_css()
 
@@ -115,5 +113,9 @@ def main() -> None:
     render_details(payload=payload, geo=geo, results=results)
 
 
+def main() -> None:
+    render_page()
+
+
 if __name__ == "__main__":
-    main()
+    render_page()

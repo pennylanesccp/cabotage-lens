@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from app.main.utils.constants import APP_NAME, MAP_STYLES, ROOT
+from app.main.utils.constants import MAP_STYLES, ROOT
 
-HEATMAP_PAGE_TITLE = f"{APP_NAME} Heatmap"
+HEATMAP_PAGE_TITLE = "Heatmap"
 HEATMAP_PAGE_ICON = ":triangular_flag_on_post:"
 HEATMAP_DEFAULT_METRIC = "cost"
 HEATMAP_METRICS = ("cost", "emissions")

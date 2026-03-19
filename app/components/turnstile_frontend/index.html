@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/streamlit-component-lib@1.4.0/dist/index.js"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      #turnstile-shell {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        min-height: 72px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="turnstile-shell"></div>
+    <script>
+      let currentArgs = {};
+      let widgetId = null;
+      let renderedNonce = null;
+
+      function setFrameHeight() {
+        window.Streamlit.setFrameHeight(document.body.scrollHeight || 80);
+      }
+
+      function setToken(value) {
+        window.Streamlit.setComponentValue(value || "");
+        setFrameHeight();
+      }
+
+      function resetContainer() {
+        const root = document.getElementById("turnstile-shell");
+        root.innerHTML = "";
+        widgetId = null;
+      }
+
+      function renderWhenReady(attempt) {
+        if (!window.turnstile || !currentArgs.site_key) {
+          if (attempt < 50) {
+            window.setTimeout(function () {
+              renderWhenReady(attempt + 1);
+            }, 150);
+          }
+          return;
+        }
+
+        resetContainer();
+        widgetId = window.turnstile.render("#turnstile-shell", {
+          sitekey: currentArgs.site_key,
+          theme: currentArgs.theme || "light",
+          callback: function (token) {
+            setToken(token);
+          },
+          "expired-callback": function () {
+            setToken("");
+          },
+          "error-callback": function () {
+            setToken("");
+          }
+        });
+        setFrameHeight();
+      }
+
+      function onRender(event) {
+        currentArgs = event.detail.args || {};
+        const resetNonce = currentArgs.reset_nonce || 0;
+        if (renderedNonce !== resetNonce) {
+          renderedNonce = resetNonce;
+          setToken("");
+          renderWhenReady(0);
+          return;
+        }
+        setFrameHeight();
+      }
+
+      window.Streamlit.events.addEventListener(window.Streamlit.RENDER_EVENT, onRender);
+      window.Streamlit.setComponentReady();
+      setFrameHeight();
+    </script>
+  </body>
+</html>

@@ -51,6 +51,7 @@ Runtime logs are not written to a local persistent file by default.
 Required:
 
 ```toml
+APP_PASSWORD = "your-shared-app-password"
 ORS_API_KEY = "your-openrouteservice-key"
 SUPABASE_DB_URL = "postgresql://postgres:your-password@db.your-project-ref.supabase.co:5432/postgres?sslmode=require"
 ```
@@ -58,6 +59,8 @@ SUPABASE_DB_URL = "postgresql://postgres:your-password@db.your-project-ref.supab
 Optional:
 
 ```toml
+TURNSTILE_SITE_KEY = "your-cloudflare-turnstile-site-key"
+TURNSTILE_SECRET_KEY = "your-cloudflare-turnstile-secret-key"
 LOCATIONIQ_PAT = "your-locationiq-private-token"
 SUPABASE_URL = "https://your-project-ref.supabase.co"
 SUPABASE_KEY = "your-anon-or-service-role-key"
@@ -68,6 +71,13 @@ LOG_ARCHIVE_ENABLED = false
 ```
 
 Use `.streamlit/example_secrets.toml` as the local template.
+
+## App access gate
+
+- `APP_PASSWORD` is required for every environment. The app will stop early with a configuration error if it is missing.
+- `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` are optional. If both are present, the login screen requires a successful Cloudflare Turnstile verification in addition to the shared password.
+- If both Turnstile secrets are absent, the app falls back to password-only mode. This keeps local development simple while preserving the same access gate flow.
+- Do not commit secrets. For local runs, store them in `.streamlit/secrets.toml`. For Streamlit Cloud, add them in the app Secrets settings.
 
 ## Install
 
@@ -82,7 +92,7 @@ python -m venv venv
 .\run_streamlit.ps1
 ```
 
-The app reads `.streamlit/secrets.toml`, connects to Supabase Postgres, and keeps runtime logs on stdout/stderr. If `LOG_ARCHIVE_ENABLED=true` and Storage credentials are configured, it also archives compressed JSONL logs to Supabase Storage.
+The app reads `.streamlit/secrets.toml`, shows the Router and Heatmap pages after the access gate succeeds, connects to Supabase Postgres, and keeps runtime logs on stdout/stderr. If `LOG_ARCHIVE_ENABLED=true` and Storage credentials are configured, it also archives compressed JSONL logs to Supabase Storage.
 
 ## Run the CLIs
 
