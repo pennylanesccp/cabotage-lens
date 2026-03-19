@@ -752,11 +752,14 @@ def list_origin_names(
     ensure_main_table(conn, table, locations_table=locations)
     rows = conn.execute(
         f"""
-        SELECT DISTINCT COALESCE(NULLIF(TRIM(o.label), ''), CONCAT(o.lat6::text, ', ', o.lon6::text)) AS label
-        FROM {table} AS rc
-        INNER JOIN {locations} AS o
-                ON o.id = rc.origin_location_id
-        WHERE COALESCE(NULLIF(TRIM(o.label), ''), CONCAT(o.lat6::text, ', ', o.lon6::text)) <> ''
+        SELECT label
+        FROM (
+            SELECT DISTINCT COALESCE(NULLIF(TRIM(o.label), ''), CONCAT(o.lat6::text, ', ', o.lon6::text)) AS label
+            FROM {table} AS rc
+            INNER JOIN {locations} AS o
+                    ON o.id = rc.origin_location_id
+            WHERE COALESCE(NULLIF(TRIM(o.label), ''), CONCAT(o.lat6::text, ', ', o.lon6::text)) <> ''
+        ) AS origin_labels
         ORDER BY LOWER(label) ASC, label ASC
         LIMIT ?
         """,

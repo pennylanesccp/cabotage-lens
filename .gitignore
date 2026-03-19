@@ -5,6 +5,7 @@
 *.pem
 *.key
 *.crt
+logs
 
 .streamlit/secrets.toml
 

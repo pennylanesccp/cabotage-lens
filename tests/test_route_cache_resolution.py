@@ -22,8 +22,12 @@ class _FakeConnection:
     def __init__(self, *, row=None, rows=None) -> None:
         self._row = row
         self._rows = rows or []
+        self.last_sql = None
+        self.last_params = None
 
     def execute(self, _sql, _params=None):
+        self.last_sql = _sql
+        self.last_params = _params
         return _FakeCursor(row=self._row, rows=self._rows)
 
 
@@ -35,6 +39,11 @@ class RouteCacheResolutionTests(unittest.TestCase):
             origins = list_origin_names(conn)
 
         self.assertEqual(origins, ["Aracaju, SE", "Manaus, AM"])
+        self.assertIsNotNone(conn.last_sql)
+        assert conn.last_sql is not None
+        self.assertIn("FROM (", conn.last_sql)
+        self.assertIn("AS origin_labels", conn.last_sql)
+        self.assertEqual(conn.last_params, (10_000,))
 
     def test_find_place_point_uses_latest_cached_origin_or_destiny_coordinates(self) -> None:
         conn = _FakeConnection(
