@@ -99,8 +99,12 @@ def load_access_config(secret_reader: Callable[[str], Any] = get_secret) -> Acce
     )
 
 
+def _password_bytes(value: str) -> bytes:
+    return str(value or "").encode("utf-8")
+
+
 def password_matches(password_input: str, expected_password: str) -> bool:
-    return hmac.compare_digest(str(password_input or ""), str(expected_password or ""))
+    return hmac.compare_digest(_password_bytes(password_input), _password_bytes(expected_password))
 
 
 def verify_turnstile_token(

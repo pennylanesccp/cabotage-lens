@@ -19,6 +19,13 @@ class AppAccessTests(unittest.TestCase):
 
         self.assertTrue(authenticated)
 
+    def test_non_ascii_password_authenticates(self) -> None:
+        config = AccessConfig(password="senha-com-acentos-£")
+
+        authenticated = authenticate_attempt(config, password_input="senha-com-acentos-£")
+
+        self.assertTrue(authenticated)
+
     def test_wrong_password_does_not_authenticate(self) -> None:
         config = AccessConfig(password="shared-secret")
 
