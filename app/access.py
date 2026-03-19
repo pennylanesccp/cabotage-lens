@@ -15,6 +15,7 @@ from modules.core.secrets import get_secret
 _AUTHENTICATED_KEY = "_app_access_authenticated"
 _ERROR_KEY = "_app_access_error"
 _PASSWORD_INPUT_KEY = "_app_access_password"
+_CLEAR_SENSITIVE_NEXT_RUN_KEY = "_app_access_clear_sensitive_next_run"
 _TURNSTILE_RESET_KEY = "_app_access_turnstile_reset"
 _TURNSTILE_WIDGET_PREFIX = "_app_access_turnstile_"
 _TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
@@ -163,6 +164,7 @@ def logout() -> None:
 
 def require_app_access() -> None:
     _ensure_access_state()
+    _apply_pending_sensitive_input_clear()
     st.markdown(_ACCESS_CSS, unsafe_allow_html=True)
 
     try:
@@ -184,6 +186,7 @@ def _ensure_access_state() -> None:
     st.session_state.setdefault(_AUTHENTICATED_KEY, False)
     st.session_state.setdefault(_ERROR_KEY, None)
     st.session_state.setdefault(_PASSWORD_INPUT_KEY, "")
+    st.session_state.setdefault(_CLEAR_SENSITIVE_NEXT_RUN_KEY, False)
     st.session_state.setdefault(_TURNSTILE_RESET_KEY, 0)
 
 
@@ -230,7 +233,7 @@ def _render_login_screen(config: AccessConfig) -> None:
                 password_input=str(st.session_state.get(_PASSWORD_INPUT_KEY, "")),
                 turnstile_token=turnstile_token,
             )
-            _clear_sensitive_inputs()
+            _schedule_sensitive_input_clear()
             if authenticated:
                 st.session_state[_AUTHENTICATED_KEY] = True
                 st.session_state[_ERROR_KEY] = None
@@ -246,9 +249,20 @@ def _render_login_screen(config: AccessConfig) -> None:
 
 
 def _clear_sensitive_inputs() -> None:
-    st.session_state[_PASSWORD_INPUT_KEY] = ""
+    st.session_state.pop(_PASSWORD_INPUT_KEY, None)
     for key in [name for name in st.session_state.keys() if str(name).startswith(_TURNSTILE_WIDGET_PREFIX)]:
         del st.session_state[key]
+
+
+def _schedule_sensitive_input_clear() -> None:
+    st.session_state[_CLEAR_SENSITIVE_NEXT_RUN_KEY] = True
+
+
+def _apply_pending_sensitive_input_clear() -> None:
+    if not bool(st.session_state.get(_CLEAR_SENSITIVE_NEXT_RUN_KEY, False)):
+        return
+    _clear_sensitive_inputs()
+    st.session_state[_CLEAR_SENSITIVE_NEXT_RUN_KEY] = False
 
 
 def _render_logout_control() -> None:

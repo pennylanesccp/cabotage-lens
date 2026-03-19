@@ -9,6 +9,7 @@ from app.access import (
     load_access_config,
     logout,
 )
+from app import access
 
 
 class AppAccessTests(unittest.TestCase):
@@ -84,6 +85,22 @@ class AppAccessTests(unittest.TestCase):
                     "TURNSTILE_SITE_KEY": "site-key-only",
                 }.get(key)
             )
+
+    def test_pending_sensitive_inputs_are_cleared_on_next_run(self) -> None:
+        fake_streamlit = SimpleNamespace(
+            session_state={
+                "_app_access_password": "typed-secret",
+                "_app_access_turnstile_0": "token",
+                "_app_access_clear_sensitive_next_run": True,
+            }
+        )
+
+        with patch.object(access, "st", fake_streamlit):
+            access._apply_pending_sensitive_input_clear()
+
+        self.assertNotIn("_app_access_password", fake_streamlit.session_state)
+        self.assertNotIn("_app_access_turnstile_0", fake_streamlit.session_state)
+        self.assertFalse(fake_streamlit.session_state["_app_access_clear_sensitive_next_run"])
 
 
 if __name__ == "__main__":
