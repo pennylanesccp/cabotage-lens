@@ -172,7 +172,7 @@ def _joined_select_sql(table: str, locations_table: str) -> str:
     """
 
 
-def _get_route_by_location_ids(
+def _get_route_by_location_ids_and_mode(
     conn: DBConnection,
     *,
     origin_location_id: int,
@@ -193,6 +193,32 @@ def _get_route_by_location_ids(
         LIMIT 1
         """,
         (int(origin_location_id), int(destiny_location_id), bool(is_hgv)),
+    ).fetchone()
+    if not row:
+        return None
+    return _row_to_dict(row)
+
+
+def _get_latest_route_by_location_ids(
+    conn: DBConnection,
+    *,
+    origin_location_id: int,
+    destiny_location_id: int,
+    table_name: str = DEFAULT_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+) -> Optional[Dict[str, Any]]:
+    table = safe_table_name(table_name)
+    locations = safe_table_name(locations_table)
+    ensure_main_table(conn, table, locations_table=locations)
+    row = conn.execute(
+        _joined_select_sql(table, locations)
+        + """
+        WHERE rc.origin_location_id = ?
+          AND rc.destiny_location_id = ?
+        ORDER BY rc.updated_timestamp DESC, rc.insertion_timestamp DESC, rc.id DESC
+        LIMIT 1
+        """,
+        (int(origin_location_id), int(destiny_location_id)),
     ).fetchone()
     if not row:
         return None
@@ -320,7 +346,7 @@ def upsert_run(
         ),
     ).fetchone()
     assert row is not None
-    return _get_route_by_location_ids(
+    return _get_route_by_location_ids_and_mode(
         conn,
         origin_location_id=int(origin_location_id),
         destiny_location_id=int(destiny_location_id),
@@ -383,15 +409,15 @@ def get_run(
     aliases_table: str = DEFAULT_ALIASES_TABLE,
     locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> Optional[Dict[str, Any]]:
+    del profile_requested
     origin_point = find_point(conn, place=origin, table_name=aliases_table, locations_table=locations_table)
     destiny_point = find_point(conn, place=destiny, table_name=aliases_table, locations_table=locations_table)
     if origin_point is None or destiny_point is None:
         return None
-    return _get_route_by_location_ids(
+    return _get_latest_route_by_location_ids(
         conn,
         origin_location_id=int(origin_point["location_id"]),
         destiny_location_id=int(destiny_point["location_id"]),
-        is_hgv=profile_is_hgv(profile_requested),
         table_name=table_name,
         locations_table=locations_table,
     )
@@ -409,58 +435,77 @@ def get_run_by_coords(
     locations_table: str = DEFAULT_LOCATIONS_TABLE,
     tolerance_deg: float = 1e-5,
 ) -> Optional[Dict[str, Any]]:
+    del profile_requested
     del tolerance_deg
     origin_location = get_location_by_coords(conn, lat=origin_lat, lon=origin_lon, table_name=locations_table)
     destiny_location = get_location_by_coords(conn, lat=destiny_lat, lon=destiny_lon, table_name=locations_table)
     if origin_location is None or destiny_location is None:
         return None
-    return _get_route_by_location_ids(
+    return _get_latest_route_by_location_ids(
         conn,
         origin_location_id=int(origin_location["location_id"]),
         destiny_location_id=int(destiny_location["location_id"]),
-        is_hgv=profile_is_hgv(profile_requested),
         table_name=table_name,
         locations_table=locations_table,
     )
 
 
-def _list_routes_by_location_pairs(
+def _list_latest_routes_by_location_pairs(
     conn: DBConnection,
     *,
-    pairs: Iterable[tuple[int, int, bool]],
+    pairs: Iterable[tuple[int, int]],
     table_name: str = DEFAULT_TABLE,
     locations_table: str = DEFAULT_LOCATIONS_TABLE,
-) -> Dict[tuple[int, int, bool], Dict[str, Any]]:
+) -> Dict[tuple[int, int], Dict[str, Any]]:
     table = safe_table_name(table_name)
     locations = safe_table_name(locations_table)
     ensure_main_table(conn, table, locations_table=locations)
 
-    normalized = [(int(o), int(d), bool(mode)) for o, d, mode in pairs]
+    normalized = [(int(o), int(d)) for o, d in pairs]
     if not normalized:
         return {}
 
-    placeholders = ", ".join(["(?, ?, ?)"] * len(normalized))
+    placeholders = ", ".join(["(?, ?)"] * len(normalized))
     params: list[Any] = []
-    for origin_location_id, destiny_location_id, is_hgv in normalized:
-        params.extend((origin_location_id, destiny_location_id, is_hgv))
+    for origin_location_id, destiny_location_id in normalized:
+        params.extend((origin_location_id, destiny_location_id))
 
     rows = conn.execute(
         f"""
-        WITH wanted(origin_location_id, destiny_location_id, is_hgv) AS (
+        WITH wanted(origin_location_id, destiny_location_id) AS (
             VALUES {placeholders}
         )
-        """
-        + _joined_select_sql(table, locations)
-        + """
+        SELECT DISTINCT ON (rc.origin_location_id, rc.destiny_location_id)
+              rc.id
+            , rc.origin_location_id
+            , rc.destiny_location_id
+            , o.label AS origin_label
+            , o.lat6 AS origin_lat
+            , o.lon6 AS origin_lon
+            , d.label AS destiny_label
+            , d.lat6 AS destiny_lat
+            , d.lon6 AS destiny_lon
+            , rc.is_hgv
+            , rc.fallback_profile
+            , rc.provider
+            , rc.distance_km
+            , rc.duration_s
+            , rc.insertion_timestamp
+            , rc.updated_timestamp
+        FROM {table} AS rc
+        INNER JOIN {locations} AS o
+                ON o.id = rc.origin_location_id
+        INNER JOIN {locations} AS d
+                ON d.id = rc.destiny_location_id
         INNER JOIN wanted AS w
                 ON w.origin_location_id = rc.origin_location_id
                AND w.destiny_location_id = rc.destiny_location_id
-               AND w.is_hgv = rc.is_hgv
+        ORDER BY rc.origin_location_id ASC, rc.destiny_location_id ASC, rc.updated_timestamp DESC, rc.insertion_timestamp DESC, rc.id DESC
         """,
         params,
     ).fetchall()
     return {
-        (int(row[1]), int(row[2]), bool(row[9])): _row_to_dict(row)
+        (int(row[1]), int(row[2])): _row_to_dict(row)
         for row in rows
     }
 
@@ -483,7 +528,7 @@ def list_runs_by_label_keys(
         place_keys.append(destiny_key)
     points = list_points(conn, places=place_keys, table_name=aliases_table, locations_table=locations_table)
 
-    pairs: list[tuple[int, int, bool]] = []
+    pairs: list[tuple[int, int]] = []
     requested_keys: list[tuple[str, str, str]] = []
     for origin_key, destiny_key, profile_requested in prepared:
         origin_point = points.get(origin_key)
@@ -495,11 +540,10 @@ def list_runs_by_label_keys(
             (
                 int(origin_point["location_id"]),
                 int(destiny_point["location_id"]),
-                profile_is_hgv(profile_requested),
             )
         )
 
-    rows_by_pair = _list_routes_by_location_pairs(
+    rows_by_pair = _list_latest_routes_by_location_pairs(
         conn,
         pairs=pairs,
         table_name=table_name,
@@ -530,7 +574,7 @@ def list_runs_by_coord_keys(
         coords_to_fetch.append((destiny_lat, destiny_lon))
     locations_by_coord = list_locations_by_coords(conn, coords=coords_to_fetch, table_name=locations_table)
 
-    pairs: list[tuple[int, int, bool]] = []
+    pairs: list[tuple[int, int]] = []
     request_keys: list[tuple[str, str, str]] = []
     for origin_lat, origin_lon, destiny_lat, destiny_lon, profile_requested in prepared:
         origin_coord_key = coord_lookup_key(origin_lat, origin_lon)
@@ -551,11 +595,10 @@ def list_runs_by_coord_keys(
             (
                 int(origin_location["location_id"]),
                 int(destiny_location["location_id"]),
-                profile_is_hgv(profile_requested),
             )
         )
 
-    rows_by_pair = _list_routes_by_location_pairs(
+    rows_by_pair = _list_latest_routes_by_location_pairs(
         conn,
         pairs=pairs,
         table_name=table_name,
@@ -580,7 +623,7 @@ def overwrite_keys(
     table = safe_table_name(table_name)
     ensure_main_table(conn, table, locations_table=locations_table)
     deleted = 0
-    for origin, destiny, profile_requested in keys:
+    for origin, destiny, _profile_requested in keys:
         origin_point = find_point(conn, place=origin, table_name=aliases_table, locations_table=locations_table)
         destiny_point = find_point(conn, place=destiny, table_name=aliases_table, locations_table=locations_table)
         if origin_point is None or destiny_point is None:
@@ -590,12 +633,10 @@ def overwrite_keys(
             DELETE FROM {table}
             WHERE origin_location_id = ?
               AND destiny_location_id = ?
-              AND is_hgv = ?
             """,
             (
                 int(origin_point["location_id"]),
                 int(destiny_point["location_id"]),
-                profile_is_hgv(profile_requested),
             ),
         )
         deleted += int(cursor.rowcount or 0)
@@ -616,6 +657,7 @@ def delete_key(
     aliases_table: str = DEFAULT_ALIASES_TABLE,
     locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> int:
+    del profile_requested
     table = safe_table_name(table_name)
     locations = safe_table_name(locations_table)
     ensure_main_table(conn, table, locations_table=locations)
@@ -639,12 +681,10 @@ def delete_key(
                 DELETE FROM {table}
                 WHERE origin_location_id = ?
                   AND destiny_location_id = ?
-                  AND is_hgv = ?
                 """,
                 (
                     int(origin_location["location_id"]),
                     int(destiny_location["location_id"]),
-                    profile_is_hgv(profile_requested),
                 ),
             )
             deleted = int(cursor.rowcount or 0)
@@ -652,7 +692,7 @@ def delete_key(
                 return deleted
     return overwrite_keys(
         conn,
-        keys=[(origin, destiny, profile_requested)],
+        keys=[(origin, destiny, None)],
         table_name=table_name,
         aliases_table=aliases_table,
         locations_table=locations_table,

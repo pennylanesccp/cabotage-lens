@@ -226,7 +226,7 @@ def _render_login_screen(config: AccessConfig) -> None:
                 or ""
             ).strip()
 
-        if st.button("Continue", type="primary", use_container_width=True, key="_app_access_submit"):
+        if st.button("Continue", type="primary", width="stretch", key="_app_access_submit"):
             authenticated = authenticate_attempt(
                 config,
                 password_input=str(st.session_state.get(_PASSWORD_INPUT_KEY, "")),
@@ -268,5 +268,5 @@ def render_logout_control() -> None:
     with st.sidebar:
         st.divider()
         st.caption("Restricted session")
-        if st.button("Logout", use_container_width=True, key="_app_access_logout"):
+        if st.button("Logout", width="stretch", key="_app_access_logout"):
             logout()

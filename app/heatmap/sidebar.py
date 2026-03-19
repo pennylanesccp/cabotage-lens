@@ -53,13 +53,13 @@ def render_run_actions(*, found_count: int, missing_count: int) -> Tuple[bool, b
         run_missing_clicked = st.button(
             run_missing_label,
             type="primary",
-            use_container_width=True,
+            width="stretch",
             disabled=run_missing_disabled,
             key="heatmap_run_missing_button",
         )
         rerun_clicked = st.button(
             "Rerun all",
-            use_container_width=True,
+            width="stretch",
             key="heatmap_rerun_all_button",
         )
         render_logout_control()
