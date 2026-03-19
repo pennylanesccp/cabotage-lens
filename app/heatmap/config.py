@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.main.utils.constants import MAP_STYLES, ROOT
 
 HEATMAP_PAGE_TITLE = "Heatmap"
-HEATMAP_PAGE_ICON = ":triangular_flag_on_post:"
+HEATMAP_PAGE_ICON = "📍"
 HEATMAP_DEFAULT_METRIC = "cost"
 HEATMAP_METRICS = ("cost", "emissions")
 HEATMAP_DESTINATIONS_PATH = ROOT / "data" / "processed" / "destinies" / "city_dests_over50k.txt"

@@ -13,7 +13,7 @@ APP_NAME = "CabotageLens"
 APP_FORMAL_TITLE = "CabotageLens: A Multimodal Cost and Carbon Footprint Assessment Tool for Brazilian Freight Transport"
 APP_TAGLINE = "Multimodal cost and carbon assessment for Brazilian freight."
 PAGE_TITLE = "Router"
-PAGE_ICON = ":earth_americas:"
+PAGE_ICON = "🌎"
 PAGE_LAYOUT = "wide"
 DEFAULT_ORIGIN = "Avenida Professor Luciano Gualberto, Sao Paulo"
 
