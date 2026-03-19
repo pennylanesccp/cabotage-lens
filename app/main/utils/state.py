@@ -4,6 +4,10 @@ import logging
 from typing import Any, Mapping
 
 import streamlit as st
+try:
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+except Exception:  # pragma: no cover - Streamlit internals may move between releases
+    get_script_run_ctx = None
 
 from modules.core.secrets import get_secret
 from modules.infra.db.settings import load_database_settings
@@ -23,6 +27,8 @@ class StreamlitLogHandler(logging.Handler):
         self.max_lines = max_lines
 
     def emit(self, record: logging.LogRecord) -> None:
+        if not self._has_script_context():
+            return
         try:
             logs = st.session_state.setdefault(self.key, [])
             logs.append(self.format(record))
@@ -30,6 +36,15 @@ class StreamlitLogHandler(logging.Handler):
                 del logs[:-self.max_lines]
         except Exception:
             pass
+
+    @staticmethod
+    def _has_script_context() -> bool:
+        if get_script_run_ctx is None:
+            return True
+        try:
+            return get_script_run_ctx() is not None
+        except Exception:
+            return False
 
 
 def secret_value(key: str, default: Any = None) -> Any:
