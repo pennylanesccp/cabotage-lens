@@ -1,5 +1,4 @@
 import unittest
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import app.heatmap.surface as heatmap_surface
@@ -9,9 +8,8 @@ from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapRunInfo, Heat
 
 class HeatmapSurfaceTests(unittest.TestCase):
     def setUp(self) -> None:
-        heatmap_surface._boundary_cells.cache_clear()
-        heatmap_surface.load_brazil_boundary_geojson.cache_clear()
-        heatmap_surface._boundary_rings.cache_clear()
+        heatmap_surface._hull_cells.cache_clear()
+        heatmap_surface._surface_geometry_cached.cache_clear()
         heatmap_surface._build_surface_cached.cache_clear()
 
     def _dataset(self) -> HeatmapDataset:
@@ -37,9 +35,9 @@ class HeatmapSurfaceTests(unittest.TestCase):
             run_id="run-1",
             origin_name="Pelotas, RS",
             cargo_t=30.0,
-            destination_count=2,
-            found_count=2,
-            success_count=2,
+            destination_count=3,
+            found_count=3,
+            success_count=3,
             fail_count=0,
             missing_count=0,
             pending_count=0,
@@ -50,39 +48,57 @@ class HeatmapSurfaceTests(unittest.TestCase):
         )
         points = [
             HeatmapPoint(
-                destiny_name="Manaus",
-                destiny_lat=-3.1190,
-                destiny_lon=-60.0217,
-                destiny_uf="AM",
-                port_destiny_name="Manaus",
-                road_cost_r=15000.0,
-                multimodal_cost_r=11000.0,
-                cost_delta_r=4000.0,
-                cost_savings_pct=26.6667,
-                road_emissions_kg=9000.0,
-                multimodal_emissions_kg=5200.0,
-                emissions_delta_kg=3800.0,
-                emissions_savings_pct=42.2222,
-                road_distance_km=3900.0,
-                sea_km=3400.0,
+                destiny_name="Alpha",
+                destiny_lat=0.0,
+                destiny_lon=0.0,
+                destiny_uf="AA",
+                port_destiny_name="Alpha Port",
+                road_cost_r=1000.0,
+                multimodal_cost_r=1200.0,
+                cost_delta_r=-200.0,
+                cost_savings_pct=0.0,
+                road_emissions_kg=1000.0,
+                multimodal_emissions_kg=910.0,
+                emissions_delta_kg=90.0,
+                emissions_savings_pct=6.0,
+                road_distance_km=100.0,
+                sea_km=50.0,
                 updated_timestamp="2026-03-20 09:00:00",
             ),
             HeatmapPoint(
-                destiny_name="Belem",
-                destiny_lat=-1.4558,
-                destiny_lon=-48.4902,
-                destiny_uf="PA",
-                port_destiny_name="Belem",
-                road_cost_r=9000.0,
-                multimodal_cost_r=9500.0,
-                cost_delta_r=-500.0,
-                cost_savings_pct=-5.5556,
-                road_emissions_kg=5100.0,
-                multimodal_emissions_kg=4700.0,
-                emissions_delta_kg=400.0,
-                emissions_savings_pct=7.8431,
-                road_distance_km=2700.0,
-                sea_km=2100.0,
+                destiny_name="Beta",
+                destiny_lat=0.0,
+                destiny_lon=2.0,
+                destiny_uf="BB",
+                port_destiny_name="Beta Port",
+                road_cost_r=1000.0,
+                multimodal_cost_r=800.0,
+                cost_delta_r=200.0,
+                cost_savings_pct=20.0,
+                road_emissions_kg=1000.0,
+                multimodal_emissions_kg=820.0,
+                emissions_delta_kg=180.0,
+                emissions_savings_pct=18.0,
+                road_distance_km=110.0,
+                sea_km=55.0,
+                updated_timestamp="2026-03-20 09:00:00",
+            ),
+            HeatmapPoint(
+                destiny_name="Gamma",
+                destiny_lat=2.0,
+                destiny_lon=0.0,
+                destiny_uf="CC",
+                port_destiny_name="Gamma Port",
+                road_cost_r=1000.0,
+                multimodal_cost_r=600.0,
+                cost_delta_r=600.0,
+                cost_savings_pct=40.0,
+                road_emissions_kg=1000.0,
+                multimodal_emissions_kg=700.0,
+                emissions_delta_kg=300.0,
+                emissions_savings_pct=30.0,
+                road_distance_km=120.0,
+                sea_km=60.0,
                 updated_timestamp="2026-03-20 09:00:00",
             ),
         ]
@@ -90,64 +106,79 @@ class HeatmapSurfaceTests(unittest.TestCase):
             scenario=scenario,
             run=run,
             points=points,
-            max_abs_cost_delta=4000.0,
-            max_abs_emissions_delta=3800.0,
+            max_abs_cost_delta=600.0,
+            max_abs_emissions_delta=300.0,
         )
 
-    def test_build_surface_cost_mode_uses_cost_percentage_and_absolute_height(self) -> None:
+    def test_build_surface_cost_mode_uses_linear_triangle_interpolation(self) -> None:
         dataset = self._dataset()
         mock_cells = (
             (
-                ((-60.3, -3.4), (-59.7, -3.4), (-59.7, -2.8), (-60.3, -2.8)),
-                -3.1190,
-                -60.0217,
+                ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
+                0.5,
+                0.5,
             ),
         )
 
-        with patch("app.heatmap.surface._boundary_cells", return_value=mock_cells):
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells):
             surface = build_surface(dataset, "cost", "3d")
 
         self.assertEqual(surface.metric, "cost")
         self.assertEqual(surface.mode, "3d")
         self.assertEqual(len(surface.cells), 1)
-        self.assertAlmostEqual(surface.cells[0].percentage_value, 26.6667, places=3)
-        self.assertAlmostEqual(surface.cells[0].absolute_value, 4000.0, places=3)
+        self.assertAlmostEqual(surface.cells[0].percentage_value, 15.0, places=3)
+        self.assertAlmostEqual(surface.cells[0].absolute_value, 100.0, places=3)
         self.assertGreater(surface.cells[0].elevation_m, 0.0)
-        self.assertEqual(surface.cells[0].nearest_destiny_name, "Manaus")
+        self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
 
     def test_build_surface_emissions_mode_uses_emissions_values_and_flattens_2d(self) -> None:
         dataset = self._dataset()
         mock_cells = (
             (
-                ((-48.8, -1.8), (-48.2, -1.8), (-48.2, -1.2), (-48.8, -1.2)),
-                -1.4558,
-                -48.4902,
+                ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
+                0.5,
+                0.5,
             ),
         )
 
-        with patch("app.heatmap.surface._boundary_cells", return_value=mock_cells):
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells):
             surface = build_surface(dataset, "emissions", "2d")
 
         self.assertEqual(surface.metric, "emissions")
         self.assertEqual(surface.mode, "2d")
         self.assertEqual(len(surface.cells), 1)
-        self.assertAlmostEqual(surface.cells[0].percentage_value, 7.8431, places=3)
-        self.assertAlmostEqual(surface.cells[0].absolute_value, 400.0, places=3)
+        self.assertAlmostEqual(surface.cells[0].percentage_value, 15.0, places=3)
+        self.assertAlmostEqual(surface.cells[0].absolute_value, 165.0, places=3)
         self.assertEqual(surface.cells[0].elevation_m, 0.0)
-        self.assertEqual(surface.cells[0].nearest_destiny_name, "Belem")
+        self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
 
-    def test_boundary_cells_keep_only_cells_with_centers_inside_boundary(self) -> None:
-        ring = (((0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0), (0.0, 0.0)),)
-        heatmap_surface._boundary_cells.cache_clear()
+    def test_build_surface_3d_keeps_negative_values_above_floor(self) -> None:
+        dataset = self._dataset()
+        mock_cells = (
+            (
+                ((-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)),
+                0.0,
+                0.0,
+            ),
+        )
 
-        with patch("app.heatmap.surface._boundary_rings", return_value=ring), patch(
-            "app.heatmap.surface.HEATMAP_SURFACE_CELL_SIZE_DEGREES",
-            1.0,
-        ):
-            cells = heatmap_surface._boundary_cells()
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells):
+            surface = build_surface(dataset, "cost", "3d")
 
-        self.assertEqual(len(cells), 4)
-        self.assertEqual(cells[0][1:], (0.5, 0.5))
+        self.assertEqual(len(surface.cells), 1)
+        self.assertAlmostEqual(surface.cells[0].absolute_value, -200.0, places=3)
+        self.assertGreater(surface.cells[0].elevation_m, 0.0)
+
+    def test_hull_cells_keep_only_centroids_inside_convex_hull(self) -> None:
+        hull_polygon = ((0.0, 0.0), (2.0, 0.0), (0.0, 2.0))
+        heatmap_surface._hull_cells.cache_clear()
+
+        with patch("app.heatmap.surface.HEATMAP_SURFACE_CELL_SIZE_DEGREES", 1.0):
+            cells = heatmap_surface._hull_cells(hull_polygon)
+
+        centers = {(cell[2], cell[1]) for cell in cells}
+        self.assertNotIn((1.5, 1.5), centers)
+        self.assertTrue(all((lon + lat) <= 2.0 + 1e-9 for lon, lat in centers))
 
 
 if __name__ == "__main__":

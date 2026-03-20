@@ -103,7 +103,7 @@ def _render_header() -> None:
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
             <p style='margin: 0.65rem 0 0 0; max-width: 52rem; color: #334155;'>
-                CabotageLens interpolates the current Supabase comparison table into a continuous signed surface across Brazil. Color shows relative multimodal advantage, while the optional 3D mode lifts or lowers the terrain using absolute cost or emissions advantage.
+                CabotageLens interpolates the current Supabase comparison table into a continuous signed surface between the available destination cities. Color shows relative multimodal advantage, while the optional 3D mode raises the surface from a shared floor using absolute cost or emissions advantage.
             </p>
         </section>
         """,

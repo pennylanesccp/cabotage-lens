@@ -135,10 +135,13 @@ def _legend_labels(metric: str, mode: str, surface: HeatmapSurface) -> tuple[str
         "Yellow: near parity",
         "Red: road is better",
         "Color encodes relative advantage (%) across the interpolated surface.",
+        "Surface coverage is limited to the convex hull of available destination cities.",
         scale_text,
     ]
     if mode == "3d":
-        lines.append("Height encodes signed absolute advantage: peaks favor multimodal, basins favor road.")
+        lines.append(
+            "Height encodes signed absolute advantage on an upward floor: lower columns favor road, higher columns favor multimodal."
+        )
         lines.append(elevation_text)
     return title, lines
 
