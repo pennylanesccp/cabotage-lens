@@ -657,6 +657,24 @@ def _point_from_cached_record(record: Dict[str, Any]) -> Dict[str, Any]:
     return point
 
 
+def _point_from_result_record(record: Any) -> Optional[Dict[str, Any]]:
+    destiny_lat = getattr(record, "destiny_lat", None)
+    destiny_lon = getattr(record, "destiny_lon", None)
+    if destiny_lat is None or destiny_lon is None:
+        return None
+
+    point = {
+        "label": ascii_place_text(getattr(record, "destiny_name", None) or getattr(record, "input_destiny", None)),
+        "lat": float(destiny_lat),
+        "lon": float(destiny_lon),
+        "uf": getattr(record, "destiny_uf", None),
+    }
+    destination_location_id = getattr(record, "destination_location_id", None)
+    if destination_location_id is not None:
+        point["location_id"] = int(destination_location_id)
+    return point
+
+
 def _resolve_point_without_db(value: Any, ors: ORSClient) -> Optional[Dict[str, Any]]:
     point = resolve_point_null_safe(value, ors, _log)
     if not point:

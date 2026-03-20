@@ -262,6 +262,7 @@ class HeatmapServiceTests(unittest.TestCase):
         run_bulk_mock.assert_called_once()
         self.assertEqual(run_bulk_mock.call_args.kwargs["dest_list"], ["Belem, PA", "Rio Branco, AC"])
         self.assertFalse(run_bulk_mock.call_args.kwargs["overwrite_road"])
+        self.assertEqual(run_bulk_mock.call_args.kwargs["max_geocode_workers"], 1)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from modules.multimodal import bulk
@@ -136,6 +137,25 @@ class BulkPipelineCoordinatorTests(unittest.TestCase):
 
 
 class BulkPipelineExecutionTests(unittest.TestCase):
+    def test_point_from_result_record_reuses_coordinates_from_latest_bulk_rows(self) -> None:
+        record = SimpleNamespace(
+            destiny_name="Manaus, AM",
+            input_destiny="Manaus, AM",
+            destiny_lat=-3.1190,
+            destiny_lon=-60.0217,
+            destiny_uf="AM",
+            destination_location_id=42,
+        )
+
+        point = bulk._point_from_result_record(record)
+
+        assert point is not None
+        self.assertEqual(point["label"], "Manaus, AM")
+        self.assertEqual(point["uf"], "AM")
+        self.assertEqual(point["location_id"], 42)
+        self.assertAlmostEqual(point["lat"], -3.1190)
+        self.assertAlmostEqual(point["lon"], -60.0217)
+
     def test_run_bulk_evaluation_delegates_to_pipeline(self) -> None:
         expected = {"success_count": 1}
 

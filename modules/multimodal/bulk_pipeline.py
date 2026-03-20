@@ -9,6 +9,7 @@ from modules.infra.database_manager import (
     db_session,
     find_place_point,
     finish_bulk_run,
+    list_bulk_results,
     list_cached_place_points,
     list_route_place_points,
     start_bulk_run,
@@ -38,6 +39,7 @@ from modules.multimodal.bulk import (
     _evaluate_and_flatten,
     _make_exact_reference,
     _point_from_cached_record,
+    _point_from_result_record,
     _require_distance,
     _route_source_for_result,
     _select_nearest_exact_reference,
@@ -342,6 +344,18 @@ def run_bulk_evaluation_pipeline(
                 perf.incr("db_read_ops")
                 with perf.measure("db_read_s"):
                     route_point_rows = list_route_place_points(conn, places=unresolved_keys)
+            latest_result_points: dict[str, Dict[str, Any]] = {}
+            perf.incr("db_read_ops")
+            with perf.measure("db_read_s"):
+                latest_result_rows = list_bulk_results(conn, selector=run_selector, only_success=None)
+            for record in latest_result_rows:
+                input_destiny = normalize_bulk_place_input(getattr(record, "input_destiny", ""))
+                if not input_destiny:
+                    continue
+                point = _point_from_result_record(record)
+                if point is None:
+                    continue
+                latest_result_points.setdefault(input_destiny.casefold(), point)
 
             for item in work_items:
                 place_key = item.normalized_input.casefold()
@@ -366,6 +380,24 @@ def run_bulk_evaluation_pipeline(
                             "lon": item.point["lon"],
                             "uf": item.point.get("uf"),
                             "source": "route_cache",
+                        }
+                    )
+                    continue
+                latest_result_point = latest_result_points.get(place_key)
+                if latest_result_point is not None:
+                    item.point = dict(latest_result_point)
+                    item.destiny_name = item.point["label"]
+                    item.point_source = "bulk_results"
+                    perf.incr("destination_cache_hits")
+                    perf.incr("destination_result_hits")
+                    point_rows_to_persist.append(
+                        {
+                            "place": item.normalized_input,
+                            "label": item.point["label"],
+                            "lat": item.point["lat"],
+                            "lon": item.point["lon"],
+                            "uf": item.point.get("uf"),
+                            "source": "bulk_results",
                         }
                     )
                     continue

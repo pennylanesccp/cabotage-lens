@@ -474,6 +474,9 @@ def run_heatmap(
         port_ops_scenario=str(scenario.port_ops_scenario),
         destination_set_id=HEATMAP_DESTINATION_SET_ID,
         progress_callback=progress_callback,
+        # Heatmap reruns can fan out across hundreds of destinations; keep
+        # geocoding serialized to avoid burst quota failures before routing starts.
+        max_geocode_workers=1,
     )
     _log.info(
         (
