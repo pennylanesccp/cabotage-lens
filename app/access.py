@@ -207,26 +207,34 @@ def _render_login_screen(config: AccessConfig) -> None:
 
     _, center, _ = st.columns([1, 1.2, 1])
     with center:
-        st.text_input(
-            "Password",
-            type="password",
-            key=_PASSWORD_INPUT_KEY,
-            placeholder="Password",
-            help="Restricted access. Enter the shared password to continue.",
-        )
-
         turnstile_token = ""
-        if config.captcha_enabled:
-            turnstile_token = str(
-                render_turnstile_widget(
-                    site_key=str(config.turnstile_site_key or ""),
-                    reset_nonce=int(st.session_state.get(_TURNSTILE_RESET_KEY, 0)),
-                    key=f"{_TURNSTILE_WIDGET_PREFIX}{int(st.session_state.get(_TURNSTILE_RESET_KEY, 0))}",
-                )
-                or ""
-            ).strip()
+        with st.form("app_access_login", border=False, enter_to_submit=False):
+            st.text_input(
+                "Password",
+                type="password",
+                key=_PASSWORD_INPUT_KEY,
+                placeholder="Password",
+                help="Restricted access. Enter the shared password to continue.",
+            )
 
-        if st.button("Continue", type="primary", width="stretch", key="_app_access_submit"):
+            if config.captcha_enabled:
+                turnstile_token = str(
+                    render_turnstile_widget(
+                        site_key=str(config.turnstile_site_key or ""),
+                        reset_nonce=int(st.session_state.get(_TURNSTILE_RESET_KEY, 0)),
+                        key=f"{_TURNSTILE_WIDGET_PREFIX}{int(st.session_state.get(_TURNSTILE_RESET_KEY, 0))}",
+                    )
+                    or ""
+                ).strip()
+
+            submitted = st.form_submit_button(
+                "Continue",
+                type="primary",
+                width="stretch",
+                key="_app_access_submit",
+            )
+
+        if submitted:
             authenticated = authenticate_attempt(
                 config,
                 password_input=str(st.session_state.get(_PASSWORD_INPUT_KEY, "")),
