@@ -12,6 +12,7 @@ except ModuleNotFoundError:  # pragma: no cover - Python < 3.11
 _MISSING = object()
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_SECRETS_PATH = _REPO_ROOT / ".streamlit" / "secrets.toml"
+_runtime_secrets_cache: dict[str, Any] | None = None
 
 
 def default_secrets_path() -> Path:
@@ -34,24 +35,51 @@ def load_local_secrets(path: Path | None = None) -> dict[str, Any]:
     return data
 
 
-def _runtime_secret_value(key: str) -> Any:
+def _snapshot_runtime_secrets() -> dict[str, Any] | None:
     try:
         import streamlit as st
     except Exception:
-        return _MISSING
+        return None
+
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+    except Exception:
+        get_script_run_ctx = None
+
+    if get_script_run_ctx is not None:
+        try:
+            if get_script_run_ctx() is None:
+                return None
+        except Exception:
+            return None
 
     try:
         secrets = st.secrets
     except Exception:
-        return _MISSING
+        return None
 
     try:
-        if key in secrets:
-            return secrets[key]
+        return dict(secrets)
     except Exception:
+        try:
+            return {key: secrets[key] for key in secrets.keys()}
+        except Exception:
+            return None
+
+
+def _runtime_secret_value(key: str) -> Any:
+    global _runtime_secrets_cache
+
+    cached = _runtime_secrets_cache
+    if cached is not None:
+        return cached.get(key, _MISSING)
+
+    snapshot = _snapshot_runtime_secrets()
+    if snapshot is None:
         return _MISSING
 
-    return _MISSING
+    _runtime_secrets_cache = snapshot
+    return snapshot.get(key, _MISSING)
 
 
 def _normalize_secret_value(value: Any) -> Any:

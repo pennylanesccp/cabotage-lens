@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import modules.core.secrets as secrets_module
 from modules.core.secrets import get_secret, load_local_secrets
 
 
@@ -51,6 +52,39 @@ class StreamlitSecretsTests(unittest.TestCase):
             value = get_secret("LOCATIONIQ_PAT", "fallback", path=secrets_path, include_runtime=False)
 
         self.assertEqual(value, "env-token")
+
+    def test_get_secret_uses_cached_runtime_snapshot_without_touching_streamlit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir, patch.object(
+            secrets_module,
+            "_runtime_secrets_cache",
+            {"ORS_API_KEY": "runtime-key"},
+        ), patch.object(
+            secrets_module,
+            "_snapshot_runtime_secrets",
+            side_effect=AssertionError("runtime snapshot should not be reloaded"),
+        ):
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            value = get_secret("ORS_API_KEY", "fallback", path=secrets_path, include_runtime=True)
+
+        self.assertEqual(value, "runtime-key")
+
+    def test_get_secret_caches_runtime_snapshot_for_follow_up_calls(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir, patch.object(
+            secrets_module,
+            "_runtime_secrets_cache",
+            None,
+        ), patch.object(
+            secrets_module,
+            "_snapshot_runtime_secrets",
+            return_value={"ORS_API_KEY": "runtime-key"},
+        ) as snapshot_mock:
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            first = get_secret("ORS_API_KEY", "fallback", path=secrets_path, include_runtime=True)
+            second = get_secret("ORS_API_KEY", "fallback", path=secrets_path, include_runtime=True)
+
+        self.assertEqual(first, "runtime-key")
+        self.assertEqual(second, "runtime-key")
+        self.assertEqual(snapshot_mock.call_count, 1)
 
 
 if __name__ == "__main__":
