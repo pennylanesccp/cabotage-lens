@@ -11,9 +11,17 @@ except Exception:  # pragma: no cover - Streamlit internals may move between rel
 
 from modules.core.secrets import get_secret
 from modules.infra.db.settings import load_database_settings
-from modules.infra.log_manager import get_logger, init_logging
+from modules.infra.log_manager import (
+    detect_runtime_environment,
+    get_current_archive_object_path,
+    get_current_local_log_path,
+    get_logger,
+    init_logging,
+    local_file_logging_enabled_by_default,
+    storage_archival_enabled_by_default,
+)
 
-from app.main.utils.constants import DEFAULTS
+from app.main.utils.constants import DEFAULTS, ROOT
 
 _log = get_logger("streamlit_app")
 
@@ -88,14 +96,33 @@ def resolve_runtime_db_target() -> str:
 
 def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     runtime_defaults: dict[str, Any] = dict(defaults or DEFAULTS)
+    runtime_environment = detect_runtime_environment(secret_value("APP_ENV", None))
+    archive_default = (
+        storage_archival_enabled_by_default(runtime_environment)
+        if defaults is None
+        else bool_from_any(runtime_defaults.get("archive_logs"), default=False)
+    )
+    local_logs_default = (
+        local_file_logging_enabled_by_default(runtime_environment)
+        if defaults is None
+        else bool_from_any(
+            runtime_defaults.get("write_local_logs"),
+            default=local_file_logging_enabled_by_default(runtime_environment),
+        )
+    )
     runtime_defaults["db_target_str"] = str(resolve_runtime_db_target())
+    runtime_defaults["runtime_environment"] = runtime_environment
     runtime_defaults["log_level"] = validated_log_level(
         runtime_defaults.get("log_level", "INFO"),
         default=str(runtime_defaults.get("log_level", "INFO")),
     )
     runtime_defaults["archive_logs"] = bool_from_any(
-        secret_value("LOG_ARCHIVE_ENABLED", runtime_defaults.get("archive_logs", False)),
-        default=bool(runtime_defaults.get("archive_logs", False)),
+        secret_value("LOG_ARCHIVE_ENABLED", None),
+        default=archive_default,
+    )
+    runtime_defaults["write_local_logs"] = bool_from_any(
+        secret_value("LOG_LOCAL_ENABLED", None),
+        default=local_logs_default,
     )
 
     for key, value in runtime_defaults.items():
@@ -104,15 +131,26 @@ def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     st.session_state.setdefault("ui_logs", [])
     st.session_state.setdefault("last_geo", None)
     st.session_state.setdefault("last_results", None)
+    st.session_state.setdefault("local_log_path", None)
+    st.session_state.setdefault("archive_log_path", None)
 
 
 def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
     safe_level = validated_log_level(level, default=str(DEFAULTS["log_level"]))
+    runtime_environment = detect_runtime_environment(st.session_state.get("runtime_environment"))
+    write_local_logs = bool_from_any(
+        st.session_state.get("write_local_logs"),
+        default=local_file_logging_enabled_by_default(runtime_environment),
+    )
+    effective_archive_to_storage = bool(archive_to_storage)
+    effective_write_local_logs = bool(write_local_logs)
     try:
         init_logging(
             level=safe_level,
             archive_to_storage=archive_to_storage,
-            archive_to_local_file=archive_to_storage,
+            archive_to_local_file=write_local_logs,
+            environment=runtime_environment,
+            local_logs_dir=ROOT / "logs",
             force_clean=True,
         )
     except Exception as exc:
@@ -120,7 +158,9 @@ def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
             init_logging(
                 level=safe_level,
                 archive_to_storage=False,
-                archive_to_local_file=archive_to_storage,
+                archive_to_local_file=write_local_logs,
+                environment=runtime_environment,
+                local_logs_dir=ROOT / "logs",
                 force_clean=True,
             )
             _log.warning("Supabase log archival disabled due to runtime configuration limits: %s", exc)
@@ -129,14 +169,28 @@ def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
                 level=safe_level,
                 archive_to_storage=False,
                 archive_to_local_file=False,
+                environment=runtime_environment,
+                local_logs_dir=ROOT / "logs",
                 force_clean=True,
             )
             st.session_state.archive_logs = False
+            st.session_state.write_local_logs = False
+            effective_archive_to_storage = False
+            effective_write_local_logs = False
             _log.warning(
                 "File and Storage logging disabled due to runtime configuration limits: %s / %s",
                 exc,
                 fallback_exc,
             )
+        else:
+            effective_archive_to_storage = False
+            effective_write_local_logs = bool(write_local_logs)
+
+    st.session_state.runtime_environment = runtime_environment
+    st.session_state.archive_logs = effective_archive_to_storage
+    st.session_state.write_local_logs = effective_write_local_logs
+    st.session_state.local_log_path = get_current_local_log_path()
+    st.session_state.archive_log_path = get_current_archive_object_path()
 
     root = logging.getLogger()
     for handler in list(root.handlers):

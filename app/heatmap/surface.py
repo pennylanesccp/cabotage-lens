@@ -5,6 +5,8 @@ import math
 from functools import lru_cache
 from typing import Any, Iterable, Sequence
 
+from modules.infra.log_manager import get_logger
+
 from app.heatmap.config import (
     HEATMAP_BRAZIL_BOUNDARY_PATH,
     HEATMAP_COLOR_MID,
@@ -28,6 +30,8 @@ _Coordinate = tuple[float, float]
 _HullPolygon = tuple[_Coordinate, ...]
 _Cell = tuple[_HullPolygon, float, float]
 _PreparedTriangle = tuple[int, int, int, float, float, float, float, float]
+
+_log = get_logger(__name__)
 
 
 def _clamp(value: float, lower: float, upper: float) -> float:
@@ -479,7 +483,16 @@ def _elevation_for_value(value: float, scale: float, mode: str) -> float:
 @lru_cache(maxsize=24)
 def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str, mode: str) -> HeatmapSurface:
     if not points_signature:
-        return HeatmapSurface(metric=metric, mode=mode, cells=[], color_scale=1.0, elevation_scale=1.0)
+        return HeatmapSurface(
+            metric=metric,
+            mode=mode,
+            cells=[],
+            color_scale=1.0,
+            elevation_scale=1.0,
+            source_point_count=0,
+            unique_source_coordinate_count=0,
+            hull_vertex_count=0,
+        )
 
     geometry_samples, hull_polygon, prepared_triangles, hull_cells = _surface_geometry_cached(
         _geometry_signature(points_signature)
@@ -495,6 +508,9 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str, mo
             cells=[],
             color_scale=color_scale,
             elevation_scale=elevation_scale,
+            source_point_count=len(points_signature),
+            unique_source_coordinate_count=len(value_samples),
+            hull_vertex_count=len(hull_polygon),
         )
 
     cells: list[HeatmapSurfaceCell] = []
@@ -524,10 +540,29 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str, mo
         cells=cells,
         color_scale=color_scale,
         elevation_scale=elevation_scale,
+        source_point_count=len(points_signature),
+        unique_source_coordinate_count=len(value_samples),
+        hull_vertex_count=len(hull_polygon),
     )
 
 
 def build_surface(dataset: HeatmapDataset, metric: str, mode: str) -> HeatmapSurface:
     normalized_metric = "emissions" if str(metric).strip().lower() == "emissions" else "cost"
     normalized_mode = "3d" if str(mode).strip().lower() == "3d" else "2d"
-    return _build_surface_cached(_dataset_signature(dataset, normalized_metric), normalized_metric, normalized_mode)
+    points_signature = _dataset_signature(dataset, normalized_metric)
+    surface = _build_surface_cached(points_signature, normalized_metric, normalized_mode)
+    _log.info(
+        (
+            "Heatmap surface built origin=%s cargo_t=%.3f metric=%s mode=%s source_points=%d "
+            "unique_coordinates=%d hull_vertices=%d cells=%d"
+        ),
+        dataset.scenario.origin_name,
+        dataset.scenario.cargo_t,
+        normalized_metric,
+        normalized_mode,
+        surface.source_point_count,
+        surface.unique_source_coordinate_count,
+        surface.hull_vertex_count,
+        len(surface.cells),
+    )
+    return surface

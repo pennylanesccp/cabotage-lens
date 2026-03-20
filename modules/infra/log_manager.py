@@ -23,6 +23,7 @@ _LOG_CONTEXT: ContextVar[dict[str, Any]] = ContextVar("log_context", default={})
 _CONTEXT_FIELDS = ("run_id", "request_id", "correlation_id", "scenario_key")
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_LOCAL_LOGS_DIR = _REPO_ROOT / "logs"
+_LOCAL_SECRETS_PATH = _REPO_ROOT / ".streamlit" / "secrets.toml"
 _current_archive_object_path: Optional[str] = None
 _current_local_log_path: Optional[str] = None
 
@@ -113,6 +114,51 @@ def _boolish(value: Any, default: bool = False) -> bool:
     if normalized in {"0", "false", "no", "n", "off"}:
         return False
     return default
+
+
+def _normalize_runtime_environment(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return ""
+    if normalized in {"prod", "production", "cloud", "hosted", "streamlit_cloud"}:
+        return "hosted"
+    if normalized in {"local", "dev", "development"}:
+        return "local"
+    return normalized
+
+
+def detect_runtime_environment(explicit: Any = None) -> str:
+    explicit_value = _normalize_runtime_environment(explicit)
+    if explicit_value:
+        return explicit_value
+
+    env_candidates = (
+        os.environ.get("ENVIRONMENT"),
+        os.environ.get("APP_ENV"),
+        os.environ.get("STREAMLIT_RUNTIME_ENV"),
+    )
+    for candidate in env_candidates:
+        detected = _normalize_runtime_environment(candidate)
+        if detected:
+            return detected
+
+    if _boolish(os.environ.get("IS_STREAMLIT_CLOUD"), default=False):
+        return "hosted"
+    if str(os.environ.get("STREAMLIT_SHARING_MODE") or "").strip():
+        return "hosted"
+    if os.name != "nt" and str(_REPO_ROOT).startswith("/mount/src"):
+        return "hosted"
+    if _LOCAL_SECRETS_PATH.exists():
+        return "local"
+    return "local"
+
+
+def local_file_logging_enabled_by_default(environment: Any = None) -> bool:
+    return detect_runtime_environment(environment) == "local"
+
+
+def storage_archival_enabled_by_default(environment: Any = None) -> bool:
+    return detect_runtime_environment(environment) != "local"
 
 
 class _ContextFilter(logging.Filter):

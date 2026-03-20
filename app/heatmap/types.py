@@ -62,12 +62,30 @@ class HeatmapPoint:
 
 
 @dataclass(frozen=True)
+class HeatmapDatasetDiagnostics:
+    successful_rows: int
+    plottable_points: int
+    skipped_missing_coordinates: int
+    skipped_missing_costs: int
+    skipped_missing_emissions: int
+
+    @property
+    def skipped_total(self) -> int:
+        return (
+            int(self.skipped_missing_coordinates)
+            + int(self.skipped_missing_costs)
+            + int(self.skipped_missing_emissions)
+        )
+
+
+@dataclass(frozen=True)
 class HeatmapDataset:
     scenario: HeatmapScenario
     run: HeatmapRunInfo
     points: List[HeatmapPoint]
     max_abs_cost_delta: float
     max_abs_emissions_delta: float
+    diagnostics: HeatmapDatasetDiagnostics
 
 
 HeatmapCoordinate = Tuple[float, float]
@@ -95,3 +113,6 @@ class HeatmapSurface:
     cells: List[HeatmapSurfaceCell]
     color_scale: float
     elevation_scale: float
+    source_point_count: int
+    unique_source_coordinate_count: int
+    hull_vertex_count: int

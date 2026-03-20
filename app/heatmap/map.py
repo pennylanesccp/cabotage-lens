@@ -21,6 +21,56 @@ from app.heatmap.config import (
 from app.heatmap.surface import build_surface, load_brazil_boundary_geojson
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
 
+_HEATMAP_MAP_CSS = """
+<style>
+    div[data-testid="stDeckGlJsonChart"] {
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 22px;
+        overflow: hidden;
+        background: rgba(10, 18, 32, 0.08);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    div[data-testid="stDeckGlJsonChart"] * {
+        outline: none !important;
+    }
+    .heatmap-legend-card {
+        padding: 0.95rem 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 16px;
+        background:
+            linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(8, 15, 29, 0.94)),
+            #0f172a;
+        box-shadow: 0 14px 30px rgba(2, 6, 23, 0.18);
+        margin-bottom: 0.9rem;
+    }
+    .heatmap-legend-card__title {
+        color: #f8fafc;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .heatmap-legend-card__gradient {
+        height: 12px;
+        border-radius: 999px;
+        margin-bottom: 0.6rem;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .heatmap-legend-card__body {
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+    .heatmap-legend-card__semantic {
+        color: #e2e8f0;
+    }
+    .heatmap-legend-card__helper {
+        color: #cbd5e1;
+    }
+    .heatmap-legend-card__scale {
+        color: #f8fafc;
+        font-weight: 600;
+    }
+</style>
+"""
+
 
 def _format_timestamp(value: Any) -> str:
     if value is None:
@@ -120,7 +170,11 @@ def _point_rows(dataset: HeatmapDataset) -> List[dict[str, Any]]:
     ]
 
 
-def _legend_labels(metric: str, mode: str, surface: HeatmapSurface) -> tuple[str, list[str]]:
+def _inject_heatmap_map_css() -> None:
+    st.markdown(_HEATMAP_MAP_CSS, unsafe_allow_html=True)
+
+
+def _legend_labels(metric: str, mode: str, surface: HeatmapSurface) -> tuple[str, list[str], list[str], list[str]]:
     if metric == "cost":
         title = "Cost surface"
         scale_text = f"Color scale: robust +/- {surface.color_scale:,.1f}% cost advantage"
@@ -130,37 +184,42 @@ def _legend_labels(metric: str, mode: str, surface: HeatmapSurface) -> tuple[str
         scale_text = f"Color scale: robust +/- {surface.color_scale:,.1f}% emissions advantage"
         elevation_text = f"Height scale: robust +/- {_format_signed_emissions(surface.elevation_scale)}"
 
-    lines = [
+    semantic_lines = [
         "Green: multimodal is better",
         "Yellow: near parity",
         "Red: road is better",
+    ]
+    helper_lines = [
         "Color encodes relative advantage (%) across the interpolated surface.",
         "Surface coverage is limited to the convex hull of available destination cities.",
-        scale_text,
     ]
+    scale_lines = [scale_text]
     if mode == "3d":
-        lines.append(
+        helper_lines.append(
             "Height encodes signed absolute advantage on an upward floor: lower columns favor road, higher columns favor multimodal."
         )
-        lines.append(elevation_text)
-    return title, lines
+        scale_lines.append(elevation_text)
+    return title, semantic_lines, helper_lines, scale_lines
 
 
 def render_legend(metric: str, mode: str, surface: HeatmapSurface) -> None:
-    title, lines = _legend_labels(metric, mode, surface)
+    _inject_heatmap_map_css()
+    title, semantic_lines, helper_lines, scale_lines = _legend_labels(metric, mode, surface)
     gradient = (
         f"linear-gradient(90deg, rgb{HEATMAP_COLOR_NEGATIVE}, "
         f"rgb{HEATMAP_COLOR_MID}, rgb{HEATMAP_COLOR_POSITIVE})"
     )
     st.markdown(
         f"""
-        <div style='padding: 0.9rem 1rem; border: 1px solid rgba(16, 24, 40, 0.12); border-radius: 14px; background: rgba(255, 255, 255, 0.92); margin-bottom: 0.9rem;'>
-            <div style='font-weight: 700; margin-bottom: 0.5rem;'>{escape(title)}</div>
-            <div style='height: 12px; border-radius: 999px; background: {gradient}; margin-bottom: 0.55rem;'></div>
-            <div style='font-size: 0.92rem; line-height: 1.5;'>
-                {''.join(f"<div>{escape(line)}</div>" for line in lines)}
+        <section class='heatmap-legend-card'>
+            <div class='heatmap-legend-card__title'>{escape(title)}</div>
+            <div class='heatmap-legend-card__gradient' style='background: {gradient};'></div>
+            <div class='heatmap-legend-card__body'>
+                {''.join(f"<div class='heatmap-legend-card__semantic'>{escape(line)}</div>" for line in semantic_lines)}
+                {''.join(f"<div class='heatmap-legend-card__helper'>{escape(line)}</div>" for line in helper_lines)}
+                {''.join(f"<div class='heatmap-legend-card__scale'>{escape(line)}</div>" for line in scale_lines)}
             </div>
-        </div>
+        </section>
         """,
         unsafe_allow_html=True,
     )
@@ -174,12 +233,23 @@ def render_heatmap_map(
     show_points: bool = False,
     surface: HeatmapSurface | None = None,
 ) -> HeatmapSurface:
+    _inject_heatmap_map_css()
     surface = surface or build_surface(dataset, metric, mode)
     surface_rows = _surface_rows(surface, metric)
     boundary_geojson = load_brazil_boundary_geojson()
     is_3d = str(mode).strip().lower() == "3d"
 
     layers: list[pdk.Layer] = [
+        pdk.Layer(
+            "GeoJsonLayer",
+            data=boundary_geojson,
+            pickable=False,
+            stroked=True,
+            filled=False,
+            get_line_color=[100, 116, 139, 42],
+            line_width_min_pixels=0.6,
+            opacity=0.25,
+        ),
         pdk.Layer(
             "PolygonLayer",
             data=surface_rows,
@@ -192,15 +262,6 @@ def render_heatmap_map(
             filled=True,
             wireframe=False,
             opacity=0.86,
-        ),
-        pdk.Layer(
-            "GeoJsonLayer",
-            data=boundary_geojson,
-            pickable=False,
-            stroked=True,
-            filled=False,
-            get_line_color=[18, 28, 33, 200],
-            line_width_min_pixels=1.5,
         ),
     ]
 

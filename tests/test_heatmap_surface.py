@@ -3,7 +3,13 @@ from unittest.mock import patch
 
 import app.heatmap.surface as heatmap_surface
 from app.heatmap.surface import build_surface
-from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapRunInfo, HeatmapScenario
+from app.heatmap.types import (
+    HeatmapDataset,
+    HeatmapDatasetDiagnostics,
+    HeatmapPoint,
+    HeatmapRunInfo,
+    HeatmapScenario,
+)
 
 
 class HeatmapSurfaceTests(unittest.TestCase):
@@ -108,6 +114,13 @@ class HeatmapSurfaceTests(unittest.TestCase):
             points=points,
             max_abs_cost_delta=600.0,
             max_abs_emissions_delta=300.0,
+            diagnostics=HeatmapDatasetDiagnostics(
+                successful_rows=3,
+                plottable_points=3,
+                skipped_missing_coordinates=0,
+                skipped_missing_costs=0,
+                skipped_missing_emissions=0,
+            ),
         )
 
     def test_build_surface_cost_mode_uses_linear_triangle_interpolation(self) -> None:
@@ -130,6 +143,8 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertAlmostEqual(surface.cells[0].absolute_value, 100.0, places=3)
         self.assertGreater(surface.cells[0].elevation_m, 0.0)
         self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
+        self.assertEqual(surface.source_point_count, 3)
+        self.assertEqual(surface.unique_source_coordinate_count, 3)
 
     def test_build_surface_emissions_mode_uses_emissions_values_and_flattens_2d(self) -> None:
         dataset = self._dataset()
@@ -151,6 +166,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertAlmostEqual(surface.cells[0].absolute_value, 165.0, places=3)
         self.assertEqual(surface.cells[0].elevation_m, 0.0)
         self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
+        self.assertEqual(surface.hull_vertex_count, 3)
 
     def test_build_surface_3d_keeps_negative_values_above_floor(self) -> None:
         dataset = self._dataset()

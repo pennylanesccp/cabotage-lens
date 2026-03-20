@@ -59,8 +59,10 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     )
     st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], key="log_level")
     st.checkbox(
-        "Write logs",
+        "Archive logs to Supabase",
         key="archive_logs",
-        help="When enabled locally, append a session log file under ./logs. If Supabase Storage archival is configured, upload the compressed archive too.",
+        help="Local runs always append logs under ./logs. This toggle controls Supabase Storage archival when credentials are configured.",
     )
+    if st.session_state.get("write_local_logs", False):
+        st.caption("Local file logging is active for this session under ./logs.")
     st.slider("Debug log lines", min_value=50, max_value=1000, step=50, key="log_last_n")

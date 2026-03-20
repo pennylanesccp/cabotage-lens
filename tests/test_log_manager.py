@@ -7,11 +7,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 from modules.infra.log_manager import (
+    detect_runtime_environment,
     bind_log_context,
     get_current_archive_object_path,
     get_current_local_log_path,
     get_logger,
     init_logging,
+    local_file_logging_enabled_by_default,
+    storage_archival_enabled_by_default,
 )
 
 
@@ -111,6 +114,30 @@ class LogManagerTests(unittest.TestCase):
             self.assertEqual(local_file.parent.name, Path(tmpdir).name)
             self.assertIn("ui-session__", local_file.name)
             self.assertIn("local file logging works", local_file.read_text(encoding="utf-8"))
+
+    def test_runtime_environment_defaults_local_logging_policy(self) -> None:
+        with patch("modules.infra.log_manager._LOCAL_SECRETS_PATH.exists", return_value=True), patch.dict(
+            "os.environ",
+            {},
+            clear=True,
+        ):
+            environment = detect_runtime_environment()
+
+        self.assertEqual(environment, "local")
+        self.assertTrue(local_file_logging_enabled_by_default(environment))
+        self.assertFalse(storage_archival_enabled_by_default(environment))
+
+    def test_runtime_environment_defaults_hosted_archival_policy(self) -> None:
+        with patch("modules.infra.log_manager._LOCAL_SECRETS_PATH.exists", return_value=False), patch.dict(
+            "os.environ",
+            {"IS_STREAMLIT_CLOUD": "true"},
+            clear=True,
+        ):
+            environment = detect_runtime_environment()
+
+        self.assertEqual(environment, "hosted")
+        self.assertFalse(local_file_logging_enabled_by_default(environment))
+        self.assertTrue(storage_archival_enabled_by_default(environment))
 
 
 if __name__ == "__main__":

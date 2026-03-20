@@ -126,6 +126,46 @@ def _clear_loaded_dataset_if_stale(scenario: HeatmapScenario) -> None:
         st.session_state.heatmap_dataset = None
 
 
+def _same_timestamp(left: Any, right: Any) -> bool:
+    return str(left or "").strip() == str(right or "").strip()
+
+
+def _dataset_matches_status(dataset: HeatmapDataset, status: Any) -> bool:
+    return (
+        dataset.run.run_id == status.run_id
+        and dataset.run.destination_count == status.destination_count
+        and dataset.run.found_count == status.found_count
+        and dataset.run.success_count == status.success_count
+        and dataset.run.fail_count == status.fail_count
+        and _same_timestamp(dataset.run.updated_timestamp, status.updated_timestamp)
+    )
+
+
+def _clear_loaded_dataset_if_outdated(scenario: HeatmapScenario, status: Any) -> None:
+    dataset = st.session_state.get("heatmap_dataset")
+    if not isinstance(dataset, HeatmapDataset):
+        return
+    if dataset.scenario != scenario:
+        return
+    if _dataset_matches_status(dataset, status):
+        return
+    _log.info(
+        (
+            "Clearing outdated heatmap dataset origin=%s cargo_t=%.3f cached_run_id=%s current_run_id=%s "
+            "cached_found=%d current_found=%d cached_success=%d current_success=%d"
+        ),
+        scenario.origin_name,
+        scenario.cargo_t,
+        dataset.run.run_id or "<none>",
+        status.run_id or "<none>",
+        dataset.run.found_count,
+        status.found_count,
+        dataset.run.success_count,
+        status.success_count,
+    )
+    st.session_state.heatmap_dataset = None
+
+
 def _progress_callback(progress_bar: Any, status_box: Any):
     def _callback(payload: dict[str, Any]) -> None:
         total = max(int(payload.get("total") or 0), 1)
@@ -170,18 +210,50 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
             help="Overlay the source destination-city points for debugging and hover inspection.",
         )
 
-    better_cost = sum(1 for point in dataset.points if point.cost_delta_r > 0)
-    better_emissions = sum(1 for point in dataset.points if point.emissions_delta_kg > 0)
-    cols = st.columns(4)
-    cols[0].metric("Destinations loaded", f"{len(dataset.points)}")
-    cols[1].metric("Stored rows", f"{dataset.run.found_count}/{dataset.run.destination_count}")
-    cols[2].metric("Multimodal better on cost", f"{better_cost}")
-    cols[3].metric("Multimodal better on emissions", f"{better_emissions}")
-    st.caption(
-        f"Surface interpolation is derived from the latest successful destination comparisons in {HEATMAP_DESTINATION_LABEL}."
-    )
-
     surface = build_surface(dataset, metric, surface_mode)
+    diagnostics = dataset.diagnostics
+    cols = st.columns(5)
+    cols[0].metric("Latest stored rows", f"{dataset.run.found_count}/{dataset.run.destination_count}")
+    cols[1].metric("Successful stored rows", f"{dataset.run.success_count}")
+    cols[2].metric("Plottable points", f"{diagnostics.plottable_points}")
+    cols[3].metric("Skipped rows", f"{diagnostics.skipped_total}")
+    cols[4].metric("Surface vertices", f"{surface.unique_source_coordinate_count}")
+    st.caption(
+        (
+            f"Loaded {diagnostics.plottable_points} plottable destination points from "
+            f"{diagnostics.successful_rows} successful stored rows in {HEATMAP_DESTINATION_LABEL}. "
+            f"The surface interpolates {surface.unique_source_coordinate_count} unique source coordinates into "
+            f"{len(surface.cells)} rendered cells."
+        )
+    )
+    if dataset.run.success_count != diagnostics.successful_rows:
+        st.warning(
+            (
+                f"Heatmap summary/load mismatch: expected {dataset.run.success_count} successful latest rows, "
+                f"but loaded {diagnostics.successful_rows} rows for plotting. Check the runtime logs for selector details."
+            )
+        )
+    if diagnostics.skipped_total > 0:
+        st.warning(
+            (
+                f"Loaded {diagnostics.plottable_points} plottable destination points from "
+                f"{diagnostics.successful_rows} successful stored rows. "
+                f"Skipped {diagnostics.skipped_total} successful rows due to missing map values "
+                f"(coords={diagnostics.skipped_missing_coordinates}, costs={diagnostics.skipped_missing_costs}, "
+                f"emissions={diagnostics.skipped_missing_emissions})."
+            )
+        )
+    if dataset.run.fail_count > 0:
+        st.info(
+            f"The heatmap excludes {dataset.run.fail_count} latest failed rows; only successful latest rows are eligible for plotting."
+        )
+    if surface.unique_source_coordinate_count < diagnostics.plottable_points:
+        st.caption(
+            (
+                f"{diagnostics.plottable_points - surface.unique_source_coordinate_count} plottable rows share coordinates, "
+                "so the interpolation surface collapses them into fewer unique source vertices."
+            )
+        )
     render_legend(metric, surface_mode, surface)
     render_heatmap_map(
         dataset,
@@ -192,8 +264,8 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
     )
 
 
-def _load_dataset_into_session(scenario: HeatmapScenario) -> None:
-    dataset = load_current_dataset(scenario)
+def _load_dataset_into_session(scenario: HeatmapScenario, *, status: Any | None = None) -> None:
+    dataset = load_current_dataset(scenario, status=status)
     if dataset is not None:
         st.session_state.heatmap_dataset = dataset
 
@@ -269,9 +341,11 @@ def render_page() -> None:
         st.error(f"Failed to query the current heatmap status: {exc}")
         return
 
+    _clear_loaded_dataset_if_outdated(scenario, status)
+
     if st.session_state.get("heatmap_dataset") is None and status.found_count > 0:
         try:
-            _load_dataset_into_session(scenario)
+            _load_dataset_into_session(scenario, status=status)
         except HeatmapDataError as exc:
             _log.warning(
                 "Heatmap comparison rows are not plottable origin=%s cargo_t=%.3f error=%s",

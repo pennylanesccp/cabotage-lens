@@ -16,12 +16,19 @@ from modules.infra.database_manager import (
     load_database_settings,
     summarize_bulk_results,
 )
+from modules.infra.db.bulk_runs import selector_hash
 from modules.infra.log_manager import get_logger
 from modules.multimodal.bulk import load_destinations, run_bulk_evaluation
 from modules.multimodal.scenario_keys import normalize_bulk_place_input
 
 from app.heatmap.config import HEATMAP_DESTINATION_LABEL, HEATMAP_DESTINATION_SET_ID, HEATMAP_DESTINATIONS_PATH
-from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapRunInfo, HeatmapScenario
+from app.heatmap.types import (
+    HeatmapDataset,
+    HeatmapDatasetDiagnostics,
+    HeatmapPoint,
+    HeatmapRunInfo,
+    HeatmapScenario,
+)
 from app.main.utils.constants import DEFAULTS
 
 _log = get_logger(__name__)
@@ -207,11 +214,32 @@ def _build_selector_for_origin_location(
     )
 
 
+def _selector_log_details(selector: BulkRunSelector) -> str:
+    return (
+        f"selector_hash={selector_hash(selector)} "
+        f"origin_location_id={selector.origin_location_id} "
+        f"cargo_t={selector.cargo_t:.3f} "
+        f"truck_key={selector.truck_key} "
+        f"ors_profile={selector.ors_profile} "
+        f"vessel_class={selector.vessel_class} "
+        f"include_hoteling={selector.include_hoteling} "
+        f"include_port_ops={selector.include_port_ops} "
+        f"allocation_mode={selector.allocation_mode or 'auto'} "
+        f"destination_set={selector.destination_set_id}"
+    )
+
+
 def _select_active_selector(
     conn: Any,
     scenario: HeatmapScenario,
 ) -> tuple[BulkRunSelector, Any, Any]:
     selector = _build_selector_for_origin_location(scenario, _origin_location_id(scenario.origin_name))
+    _log.info(
+        "Resolved heatmap selector origin=%s cargo_t=%.3f %s",
+        scenario.origin_name,
+        scenario.cargo_t,
+        _selector_log_details(selector),
+    )
     summary = summarize_bulk_results(conn, selector=selector)
     latest_completed = get_latest_completed_run(conn, selector=selector)
     return selector, summary, latest_completed
@@ -347,8 +375,12 @@ def pending_destinations(scenario: HeatmapScenario) -> List[str]:
     return pending
 
 
-def load_current_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
-    status = get_heatmap_status(scenario)
+def load_current_dataset(
+    scenario: HeatmapScenario,
+    *,
+    status: HeatmapRunInfo | None = None,
+) -> Optional[HeatmapDataset]:
+    status = status or get_heatmap_status(scenario)
     if status.found_count <= 0:
         return None
 
@@ -356,6 +388,31 @@ def load_current_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
     with db_session() as conn:
         selector, _, _ = _select_active_selector(conn, scenario)
         rows = list_bulk_results(conn, selector=selector, only_success=True)
+
+    _log.info(
+        (
+            "Heatmap dataset row load origin=%s cargo_t=%.3f total_latest_rows=%d success_summary=%d "
+            "fail_summary=%d loaded_success_rows=%d %s"
+        ),
+        scenario.origin_name,
+        scenario.cargo_t,
+        status.found_count,
+        status.success_count,
+        status.fail_count,
+        len(rows),
+        _selector_log_details(selector),
+    )
+    if len(rows) != status.success_count:
+        _log.warning(
+            (
+                "Heatmap dataset success-row mismatch origin=%s cargo_t=%.3f success_summary=%d "
+                "loaded_success_rows=%d"
+            ),
+            scenario.origin_name,
+            scenario.cargo_t,
+            status.success_count,
+            len(rows),
+        )
 
     points: List[HeatmapPoint] = []
     skipped_missing_coordinates = 0
@@ -378,7 +435,10 @@ def load_current_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
 
     if not points:
         _log.warning(
-            "Heatmap comparison rows are not plottable origin=%s cargo_t=%.3f success_rows=%d skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d",
+            (
+                "Heatmap comparison rows are not plottable origin=%s cargo_t=%.3f success_rows=%d "
+                "skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d"
+            ),
             scenario.origin_name,
             scenario.cargo_t,
             len(rows),
@@ -390,19 +450,35 @@ def load_current_dataset(scenario: HeatmapScenario) -> Optional[HeatmapDataset]:
             "Stored comparison rows were found, but none of them have plottable map values. Use rerun to refresh the comparison table."
         )
 
+    diagnostics = HeatmapDatasetDiagnostics(
+        successful_rows=len(rows),
+        plottable_points=len(points),
+        skipped_missing_coordinates=skipped_missing_coordinates,
+        skipped_missing_costs=skipped_missing_costs,
+        skipped_missing_emissions=skipped_missing_emissions,
+    )
     dataset = HeatmapDataset(
         scenario=scenario,
         run=status,
         points=points,
         max_abs_cost_delta=_max_abs([point.cost_delta_r for point in points]),
         max_abs_emissions_delta=_max_abs([point.emissions_delta_kg for point in points]),
+        diagnostics=diagnostics,
     )
     _log.info(
-        "Loaded heatmap dataset origin=%s cargo_t=%.3f plotted_rows=%d success_rows=%d missing=%d",
+        (
+            "Loaded heatmap dataset origin=%s cargo_t=%.3f stored_rows=%d success_rows=%d "
+            "plottable_points=%d skipped_missing_coordinates=%d skipped_missing_costs=%d "
+            "skipped_missing_emissions=%d missing=%d"
+        ),
         scenario.origin_name,
         scenario.cargo_t,
-        len(points),
-        len(rows),
+        status.found_count,
+        diagnostics.successful_rows,
+        diagnostics.plottable_points,
+        diagnostics.skipped_missing_coordinates,
+        diagnostics.skipped_missing_costs,
+        diagnostics.skipped_missing_emissions,
         status.missing_count,
     )
     return dataset
