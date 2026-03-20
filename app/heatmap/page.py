@@ -12,9 +12,13 @@ from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops
 from app.heatmap.config import (
     HEATMAP_DEFAULT_METRIC,
     HEATMAP_DESTINATION_LABEL,
+    HEATMAP_METRICS,
     HEATMAP_PAGE_TITLE,
+    HEATMAP_SURFACE_MODE_DEFAULT,
+    HEATMAP_SURFACE_MODES,
 )
 from app.heatmap.map import render_heatmap_map, render_legend
+from app.heatmap.surface import build_surface
 from app.heatmap.service import (
     HeatmapConfigurationError,
     HeatmapDataError,
@@ -39,6 +43,8 @@ def _init_page_state() -> None:
     st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, str(DEFAULT_ORIGIN))
     st.session_state.setdefault("heatmap_cargo", 30.0)
     st.session_state.setdefault("heatmap_metric", HEATMAP_DEFAULT_METRIC)
+    st.session_state.setdefault("heatmap_surface_mode", HEATMAP_SURFACE_MODE_DEFAULT)
+    st.session_state.setdefault("heatmap_show_points", False)
     st.session_state.setdefault("heatmap_dataset", None)
 
 
@@ -97,7 +103,7 @@ def _render_header() -> None:
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
             <p style='margin: 0.65rem 0 0 0; max-width: 52rem; color: #334155;'>
-                CabotageLens compares where multimodal freight wins or loses across Brazil using the current comparison table stored in Supabase. Run missing retries failed destinies and fills any absent ones; rerun overwrites the comparison rows for this scenario.
+                CabotageLens interpolates the current Supabase comparison table into a continuous signed surface across Brazil. Color shows relative multimodal advantage, while the optional 3D mode lifts or lowers the terrain using absolute cost or emissions advantage.
             </p>
         </section>
         """,
@@ -140,13 +146,29 @@ def _progress_callback(progress_bar: Any, status_box: Any):
 
 
 def _render_dataset(dataset: HeatmapDataset) -> None:
-    metric = st.radio(
-        "View",
-        options=["cost", "emissions"],
-        format_func=lambda value: "Cost" if value == "cost" else "Emissions",
-        horizontal=True,
-        key="heatmap_metric",
-    )
+    control_cols = st.columns([1.2, 1.0, 1.0])
+    with control_cols[0]:
+        metric = st.radio(
+            "Color metric",
+            options=list(HEATMAP_METRICS),
+            format_func=lambda value: "Cost" if value == "cost" else "Emissions",
+            horizontal=True,
+            key="heatmap_metric",
+        )
+    with control_cols[1]:
+        surface_mode = st.radio(
+            "Surface",
+            options=list(HEATMAP_SURFACE_MODES),
+            format_func=lambda value: "2D" if value == "2d" else "3D",
+            horizontal=True,
+            key="heatmap_surface_mode",
+        )
+    with control_cols[2]:
+        show_points = st.toggle(
+            "Show destination points",
+            key="heatmap_show_points",
+            help="Overlay the source destination-city points for debugging and hover inspection.",
+        )
 
     better_cost = sum(1 for point in dataset.points if point.cost_delta_r > 0)
     better_emissions = sum(1 for point in dataset.points if point.emissions_delta_kg > 0)
@@ -155,9 +177,19 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
     cols[1].metric("Stored rows", f"{dataset.run.found_count}/{dataset.run.destination_count}")
     cols[2].metric("Multimodal better on cost", f"{better_cost}")
     cols[3].metric("Multimodal better on emissions", f"{better_emissions}")
+    st.caption(
+        f"Surface interpolation is derived from the latest successful destination comparisons in {HEATMAP_DESTINATION_LABEL}."
+    )
 
-    render_legend(metric)
-    render_heatmap_map(dataset, metric)
+    surface = build_surface(dataset, metric, surface_mode)
+    render_legend(metric, surface_mode, surface)
+    render_heatmap_map(
+        dataset,
+        metric,
+        surface_mode,
+        show_points=bool(show_points),
+        surface=surface,
+    )
 
 
 def _load_dataset_into_session(scenario: HeatmapScenario) -> None:

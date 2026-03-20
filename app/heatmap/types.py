@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -68,3 +68,30 @@ class HeatmapDataset:
     points: List[HeatmapPoint]
     max_abs_cost_delta: float
     max_abs_emissions_delta: float
+
+
+HeatmapCoordinate = Tuple[float, float]
+HeatmapPolygon = Tuple[HeatmapCoordinate, ...]
+
+
+@dataclass(frozen=True)
+class HeatmapSurfaceCell:
+    polygon: HeatmapPolygon
+    center_lat: float
+    center_lon: float
+    percentage_value: float
+    absolute_value: float
+    fill_color: Tuple[int, int, int, int]
+    elevation_m: float
+    nearest_destiny_name: str
+    nearest_destiny_uf: Optional[str]
+    nearest_distance_km: float
+
+
+@dataclass(frozen=True)
+class HeatmapSurface:
+    metric: str
+    mode: str
+    cells: List[HeatmapSurfaceCell]
+    color_scale: float
+    elevation_scale: float

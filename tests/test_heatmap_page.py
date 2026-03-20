@@ -15,6 +15,8 @@ class HeatmapPageTests(unittest.TestCase):
 
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_ORIGIN_FIELD], DEFAULT_ORIGIN)
         self.assertEqual(fake_streamlit.session_state["heatmap_cargo"], 30.0)
+        self.assertEqual(fake_streamlit.session_state["heatmap_surface_mode"], "2d")
+        self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
 
 
 if __name__ == "__main__":
