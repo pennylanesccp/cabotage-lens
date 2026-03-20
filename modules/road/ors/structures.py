@@ -5,14 +5,15 @@
 ORS Data Structures.
 ====================
 
-Defines the configuration, constants, and custom exceptions for the
-OpenRouteService client. This module contains no logic, only definitions.
+Defines the configuration, constants, secret helpers, and custom exceptions
+for the OpenRouteService client.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from pathlib import Path
+from typing import Any, Optional
 
 from modules.core.secrets import get_secret
 
@@ -22,6 +23,7 @@ from modules.core.secrets import get_secret
 
 DEFAULT_BASE_URL = "https://api.openrouteservice.org"
 DEFAULT_USER_AGENT = "CarbonFootprint-ORS/2.0"
+SECRET_API_KEYS = "ORS_API_KEYS"
 SECRET_API_KEY = "ORS_API_KEY"
 SECONDARY_SECRET_API_KEY = "ORS_API_KEY_2"
 
@@ -53,6 +55,69 @@ class GeocodeNotFound(ORSError):
     """
     pass
 
+
+def _append_secret_values(target: list[str], raw: Any) -> None:
+    if raw is None:
+        return
+    if isinstance(raw, (list, tuple)):
+        for item in raw:
+            _append_secret_values(target, item)
+        return
+
+    text = str(raw).strip()
+    if not text:
+        return
+
+    for part in text.replace("\r", "\n").replace(";", ",").replace("\n", ",").split(","):
+        value = part.strip()
+        if value and value not in target:
+            target.append(value)
+
+
+def get_configured_ors_api_keys(
+    *,
+    explicit_api_key: Optional[str] = None,
+    path: Path | None = None,
+    include_runtime: bool = True,
+) -> list[str]:
+    """Return ORS API keys in configured failover order."""
+    keys: list[str] = []
+    _append_secret_values(keys, explicit_api_key)
+
+    configured_list = get_secret(
+        SECRET_API_KEYS,
+        None,
+        path=path,
+        include_runtime=include_runtime,
+    )
+    list_keys: list[str] = []
+    _append_secret_values(list_keys, configured_list)
+    if list_keys:
+        for key in list_keys:
+            if key not in keys:
+                keys.append(key)
+        return keys
+
+    _append_secret_values(
+        keys,
+        get_secret(
+            SECRET_API_KEY,
+            None,
+            path=path,
+            include_runtime=include_runtime,
+        ),
+    )
+    _append_secret_values(
+        keys,
+        get_secret(
+            SECONDARY_SECRET_API_KEY,
+            None,
+            path=path,
+            include_runtime=include_runtime,
+        ),
+    )
+    return keys
+
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Configuration
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -66,7 +131,8 @@ class ORSConfig:
     ----------
     api_key : str, optional
         The OpenRouteService API key. If None, the client will attempt
-        to load it from the `ORS_API_KEY` Streamlit secret.
+        to load the first configured key from `ORS_API_KEYS` or the
+        legacy `ORS_API_KEY` Streamlit secret.
     base_url : str
         The root URL for the API. Defaults to the public ORS instance.
     cache_enabled : bool
@@ -103,7 +169,8 @@ class ORSConfig:
         Loads the API key from Streamlit secrets if one wasn't provided explicitly.
         """
         if not self.api_key:
-            self.api_key = get_secret(SECRET_API_KEY)
+            keys = get_configured_ors_api_keys()
+            self.api_key = keys[0] if keys else None
 
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

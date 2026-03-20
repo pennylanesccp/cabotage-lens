@@ -104,7 +104,7 @@ def _resolve_custom_location_label(value: str) -> tuple[str | None, str | None]:
 
     ors = ORSClient()
     if not ors.has_geocoding_provider():
-        return None, "No geocoding provider is configured. Set ORS_API_KEY or LOCATIONIQ_PAT."
+        return None, "No geocoding provider is configured. Set ORS_API_KEYS or LOCATIONIQ_PAT."
 
     point = resolve_point_null_safe(query, ors, _log)
     if not point:

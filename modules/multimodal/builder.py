@@ -33,6 +33,7 @@ from modules.infra.database_manager import db_session, find_place_point
 from modules.infra.log_manager import get_logger
 from modules.ports.ports_index import load_ports
 from modules.ports.ports_nearest import find_nearest_port
+from modules.road.ors.structures import get_configured_ors_api_keys
 from modules.road.router import ORSClient, ORSConfig, get_or_create_leg
 
 _log = get_logger(__name__)
@@ -78,8 +79,9 @@ class PathGeometry(TypedDict):
 
 
 @lru_cache(maxsize=4)
-def _cached_ors_client(api_key: str, locationiq_pat: str) -> ORSClient:
-    return ORSClient(ORSConfig(api_key=api_key or None))
+def _cached_ors_client(api_keys: tuple[str, ...], locationiq_pat: str) -> ORSClient:
+    primary_key = api_keys[0] if api_keys else ""
+    return ORSClient(ORSConfig(api_key=primary_key or None))
 
 
 @lru_cache(maxsize=8)
@@ -107,7 +109,7 @@ def load_routing_assets(
     s_json = _resolve_path(sea_matrix_path, _DEFAULT_SEA_MATRIX_JSON)
 
     ors = _cached_ors_client(
-        str(get_secret("ORS_API_KEY", "")),
+        tuple(get_configured_ors_api_keys()),
         str(get_secret("LOCATIONIQ_PAT", "")),
     )
     ports = _cached_ports(str(p_json))

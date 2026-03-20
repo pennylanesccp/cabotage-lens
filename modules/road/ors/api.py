@@ -8,7 +8,7 @@ Road provider facade.
 This module keeps the public `ORSClient` API stable for the rest of the
 application while centralizing provider failover:
 
-- primary provider: OpenRouteService
+- primary chain: one or more OpenRouteService keys
 - fallback provider: LocationIQ
 
 The rest of the app continues to call `ORSClient.geocode_*()` and
@@ -31,17 +31,16 @@ if __name__ == "__main__":
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
 
-from modules.core.secrets import get_secret
 from modules.infra.log_manager import get_logger
 from modules.road.locationiq import LocationIQClient
 from modules.road.ors.http import ORSHttpClient
 from modules.road.ors.structures import (
-    SECONDARY_SECRET_API_KEY,
     GeocodeNotFound,
     NoRoute,
     ORSConfig,
     ORSError,
     RateLimited,
+    get_configured_ors_api_keys,
 )
 from modules.road.provider_base import BaseRoadProvider
 
@@ -212,8 +211,8 @@ class ORSClient:
     Backward-compatible road client facade.
 
     All existing call sites keep using `ORSClient`, but the implementation now
-    attempts ORS first and automatically falls back to LocationIQ when ORS
-    fails, is unavailable, or returns no usable result.
+    attempts each configured ORS key first and automatically falls back to
+    LocationIQ when ORS fails, is unavailable, or returns no usable result.
     """
 
     def __init__(
@@ -225,13 +224,12 @@ class ORSClient:
         fallback_provider: Optional[_ProviderProtocol] = None,
     ) -> None:
         self.cfg = config or ORSConfig()
-        self._primary = primary_provider or OpenRouteServiceProvider(self.cfg, provider_name="ors")
-        if secondary_provider is not None:
-            self._secondary = secondary_provider
-        elif primary_provider is None and fallback_provider is None:
-            self._secondary = self._build_secondary_provider()
+        if primary_provider is None and secondary_provider is None:
+            self._ors_providers = self._build_configured_ors_providers()
         else:
-            self._secondary = None
+            self._ors_providers = [primary_provider or OpenRouteServiceProvider(self.cfg, provider_name="ors")]
+            if secondary_provider is not None:
+                self._ors_providers.append(secondary_provider)
         self._fallback = fallback_provider if fallback_provider is not None else LocationIQClient()
         self._metrics_lock = threading.Lock()
         self._provider_metrics: dict[str, dict[str, dict[str, float]]] = {}
@@ -338,20 +336,18 @@ class ORSClient:
         with self._metrics_lock:
             self._provider_metrics.clear()
 
-    def _build_secondary_provider(self) -> Optional[_ProviderProtocol]:
-        secondary_key = str(get_secret(SECONDARY_SECRET_API_KEY, "") or "").strip()
-        primary_key = str(self.cfg.api_key or "").strip()
-        if not secondary_key or secondary_key == primary_key:
-            return None
-        secondary_config = replace(self.cfg, api_key=secondary_key)
-        return OpenRouteServiceProvider(secondary_config, provider_name="ors_secondary")
+    def _build_configured_ors_providers(self) -> list[_ProviderProtocol]:
+        providers: list[_ProviderProtocol] = []
+        for index, api_key in enumerate(get_configured_ors_api_keys(explicit_api_key=self.cfg.api_key), start=1):
+            provider_name = "ors" if index == 1 else f"ors_{index}"
+            provider_config = replace(self.cfg, api_key=api_key)
+            providers.append(OpenRouteServiceProvider(provider_config, provider_name=provider_name))
+        if not providers:
+            providers.append(OpenRouteServiceProvider(self.cfg, provider_name="ors"))
+        return providers
 
     def _provider_sequence(self) -> list[_ProviderProtocol]:
-        providers = [self._primary]
-        if self._secondary is not None:
-            providers.append(self._secondary)
-        providers.append(self._fallback)
-        return providers
+        return [*self._ors_providers, self._fallback]
 
     def _call_with_fallback(
         self,
@@ -363,7 +359,7 @@ class ORSClient:
         enabled_calls = [(provider, call) for provider, call in provider_calls if provider.is_enabled()]
         if not enabled_calls:
             raise ORSError(
-                f"No provider is configured for {operation}. Set ORS_API_KEY, ORS_API_KEY_2, or LOCATIONIQ_PAT."
+                f"No provider is configured for {operation}. Set ORS_API_KEYS (preferred), ORS_API_KEY/ORS_API_KEY_2, or LOCATIONIQ_PAT."
             )
 
         failures: list[tuple[str, Exception]] = []

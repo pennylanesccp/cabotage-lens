@@ -1,9 +1,17 @@
+import tempfile
 import unittest
+from pathlib import Path
 
 from modules.road.locationiq.api import LocationIQClient
 from modules.road.locationiq.structures import LocationIQConfig
 from modules.road.ors.api import ORSClient
-from modules.road.ors.structures import GeocodeNotFound, NoRoute, ORSError, RateLimited
+from modules.road.ors.structures import (
+    GeocodeNotFound,
+    NoRoute,
+    ORSError,
+    RateLimited,
+    get_configured_ors_api_keys,
+)
 
 
 class _FakeProvider:
@@ -52,6 +60,30 @@ class _FakeProvider:
 
 
 class ORSClientFallbackTests(unittest.TestCase):
+    def test_loads_ors_key_list_from_array_secret(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            secrets_path.write_text(
+                'ORS_API_KEYS = ["key-1", " key-2 ", "key-1"]\n',
+                encoding="utf-8",
+            )
+
+            keys = get_configured_ors_api_keys(path=secrets_path, include_runtime=False)
+
+        self.assertEqual(keys, ["key-1", "key-2"])
+
+    def test_falls_back_to_legacy_ors_keys_when_list_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            secrets_path.write_text(
+                'ORS_API_KEY = "key-1"\nORS_API_KEY_2 = "key-2"\n',
+                encoding="utf-8",
+            )
+
+            keys = get_configured_ors_api_keys(path=secrets_path, include_runtime=False)
+
+        self.assertEqual(keys, ["key-1", "key-2"])
+
     def test_prefers_ors_when_primary_succeeds(self) -> None:
         primary = _FakeProvider(
             "ors",
@@ -98,15 +130,15 @@ class ORSClientFallbackTests(unittest.TestCase):
     def test_falls_back_to_secondary_ors_before_locationiq(self) -> None:
         primary = _FakeProvider("ors", geocode_exc=RateLimited("ORS quota"))
         secondary = _FakeProvider(
-            "ors_secondary",
+            "ors_2",
             geocode_result=[
                 {
                     "geometry": {"coordinates": [-46.730357, -23.558808]},
                     "properties": {
                         "label": "Avenida Professor Luciano Gualberto, Sao Paulo",
-                        "provider": "ors_secondary",
+                        "provider": "ors_2",
                     },
-                    "provider": "ors_secondary",
+                    "provider": "ors_2",
                 }
             ],
         )
@@ -119,7 +151,7 @@ class ORSClientFallbackTests(unittest.TestCase):
 
         features = client.geocode_text("Avenida Professor Luciano Gualberto, Sao Paulo")
 
-        self.assertEqual(features[0]["provider"], "ors_secondary")
+        self.assertEqual(features[0]["provider"], "ors_2")
         self.assertEqual(primary.geocode_calls, 1)
         self.assertEqual(secondary.geocode_calls, 1)
         self.assertEqual(fallback.geocode_calls, 0)

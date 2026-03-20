@@ -26,6 +26,20 @@ from modules.core.secrets import get_secret
 # Main Configuration Class
 # ────────────────────────────────────────────────────────────────────────────────
 
+def _first_configured_ors_key() -> Optional[str]:
+    configured = get_secret("ORS_API_KEYS", [])
+    if isinstance(configured, (list, tuple)):
+        for value in configured:
+            text = str(value).strip()
+            if text:
+                return text
+    elif isinstance(configured, str):
+        text = configured.strip()
+        if text:
+            return text.split(",", 1)[0].strip()
+    return get_secret("ORS_API_KEY")
+
+
 @dataclass
 class Config:
     """
@@ -62,7 +76,7 @@ class Config:
     # --- Streamlit secrets ---
     # Auto-loads API key from Streamlit secrets if available
     ors_api_key: Optional[str] = field(
-        default_factory=lambda: get_secret("ORS_API_KEY")
+        default_factory=_first_configured_ors_key
     )
 
     def __post_init__(self) -> None:

@@ -122,7 +122,9 @@ class ORSHttpClient:
 
         if not self.cfg.api_key:
             _log.error("Attempted API call without ORS_API_KEY.")
-            raise ORSError("ORS API Key is missing. Set ORS_API_KEY in Streamlit secrets or the environment.")
+            raise ORSError(
+                "ORS API key is missing. Set ORS_API_KEYS (preferred) or ORS_API_KEY in Streamlit secrets or the environment."
+            )
 
         url = f"{self.cfg.base_url}{endpoint}"
         _log.info("API CALL: %s %s", method, endpoint)
