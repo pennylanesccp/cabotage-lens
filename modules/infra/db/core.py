@@ -20,10 +20,11 @@ _SCHEMA_READY: set[tuple[str, str, str]] = set()
 class DBConnection:
     """Thin wrapper that keeps repository SQL portable within psycopg."""
 
-    def __init__(self, raw: Any, *, target: str) -> None:
+    def __init__(self, raw: Any, *, target: str, reconnect_dsn: str | None = None) -> None:
         self._raw = raw
         self.backend = "postgres"
         self.target = target
+        self._reconnect_dsn = reconnect_dsn
 
     def _adapt_sql(self, sql: str) -> str:
         return sql.replace("?", "%s")
@@ -58,6 +59,20 @@ class DBConnection:
 
     def cursor(self) -> Any:
         return self._raw.cursor()
+
+    def ping(self) -> None:
+        cursor = self._raw.execute("SELECT 1")
+        if hasattr(cursor, "fetchone"):
+            cursor.fetchone()
+
+    def reconnect(self) -> None:
+        if not self._reconnect_dsn:
+            raise RuntimeError("This DB connection cannot be reconnected.")
+        try:
+            self._raw.close()
+        except Exception:
+            pass
+        self._raw = _open_raw_connection(self._reconnect_dsn)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._raw, name)
@@ -157,6 +172,18 @@ def list_tables(conn: DBConnection) -> list[str]:
     return [str(row[0]) for row in rows]
 
 
+def _open_raw_connection(postgres_dsn: str) -> Any:
+    return psycopg.connect(
+        postgres_dsn,
+        connect_timeout=10,
+        prepare_threshold=None,
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=3,
+    )
+
+
 def connect(database_url: str | None = None) -> DBConnection:
     """Open a Supabase Postgres connection."""
     settings = _resolve_settings(database_url)
@@ -164,12 +191,8 @@ def connect(database_url: str | None = None) -> DBConnection:
         raise RuntimeError("Supabase Postgres requires psycopg.")
 
     _log.debug("Connecting to Postgres: %s", settings.display_target)
-    raw = psycopg.connect(
-        settings.postgres_dsn,
-        connect_timeout=10,
-        prepare_threshold=None,
-    )
-    return DBConnection(raw, target=settings.display_target)
+    raw = _open_raw_connection(settings.postgres_dsn)
+    return DBConnection(raw, target=settings.display_target, reconnect_dsn=settings.postgres_dsn)
 
 
 @contextmanager
@@ -181,7 +204,13 @@ def db_session(database_url: str | None = None) -> Generator[DBConnection, None,
         conn.commit()
     except Exception as exc:
         _log.error("DB transaction failed: %s -> rolling back.", exc)
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception as rollback_exc:
+            _log.warning("DB rollback failed after transaction error: %s", rollback_exc)
         raise
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except Exception as close_exc:
+            _log.warning("DB connection close failed: %s", close_exc)

@@ -392,6 +392,12 @@ class BulkPersistenceBuffer:
     def flush(self) -> None:
         if not self._bulk_rows:
             return
+        if hasattr(self._conn, "ping") and hasattr(self._conn, "reconnect"):
+            try:
+                self._conn.ping()
+            except Exception as exc:
+                _log.warning("Bulk persistence DB connection lost before flush; reconnecting: %s", exc)
+                self._conn.reconnect()
         self._perf.incr("db_write_ops")
         with self._perf.measure("db_write_s"):
             if self._results_table != self._run_results_table:

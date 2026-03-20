@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from modules.infra.db.core import DBConnection, connect
+from modules.infra.db.core import DBConnection, connect, db_session
 from modules.infra.db.settings import DatabaseSettings
 
 
@@ -45,10 +45,35 @@ class DBConnectionTests(unittest.TestCase):
         self.assertEqual(cursor.rowcount, 2)
         self.assertFalse(cursor.closed)
 
+    def test_ping_executes_simple_query(self) -> None:
+        cursor = MagicMock()
+        raw = MagicMock()
+        raw.execute.return_value = cursor
+        conn = DBConnection(raw, target="postgresql://postgres:***@example.supabase.co:5432/postgres")
+
+        conn.ping()
+
+        raw.execute.assert_called_once_with("SELECT 1")
+        cursor.fetchone.assert_called_once_with()
+
+    def test_reconnect_reopens_raw_connection(self) -> None:
+        old_raw = MagicMock()
+        new_raw = MagicMock()
+        conn = DBConnection(
+            old_raw,
+            target="postgresql://postgres:***@example.supabase.co:5432/postgres",
+            reconnect_dsn="postgresql://postgres:secret@example.com:6543/postgres?sslmode=require",
+        )
+
+        with patch("modules.infra.db.core._open_raw_connection", return_value=new_raw) as open_mock:
+            conn.reconnect()
+
+        old_raw.close.assert_called_once_with()
+        open_mock.assert_called_once_with("postgresql://postgres:secret@example.com:6543/postgres?sslmode=require")
+        self.assertIs(conn._raw, new_raw)
+
     def test_connect_uses_supabase_postgres_only(self) -> None:
         fake_raw = object()
-        fake_psycopg = MagicMock()
-        fake_psycopg.connect.return_value = fake_raw
         settings = DatabaseSettings(
             postgres_dsn="postgresql://postgres:secret@example.com:6543/postgres?sslmode=require",
             display_target="postgresql://postgres:***@example.com:6543/postgres?sslmode=require",
@@ -59,18 +84,40 @@ class DBConnectionTests(unittest.TestCase):
         )
 
         with patch("modules.infra.db.core.load_database_settings", return_value=settings), patch(
-            "modules.infra.db.core.psycopg",
-            fake_psycopg,
+            "modules.infra.db.core._open_raw_connection",
+            return_value=fake_raw,
         ):
             conn = connect()
 
         self.assertIsInstance(conn, DBConnection)
         self.assertIs(conn._raw, fake_raw)
-        fake_psycopg.connect.assert_called_once_with(
-            settings.postgres_dsn,
-            connect_timeout=10,
-            prepare_threshold=None,
-        )
+        self.assertEqual(conn._reconnect_dsn, settings.postgres_dsn)
+
+
+class DBSessionTests(unittest.TestCase):
+    def test_db_session_preserves_original_exception_when_rollback_fails(self) -> None:
+        conn = MagicMock()
+        conn.commit.side_effect = RuntimeError("commit failed")
+        conn.rollback.side_effect = RuntimeError("rollback failed")
+
+        with patch("modules.infra.db.core.connect", return_value=conn):
+            with self.assertRaisesRegex(RuntimeError, "commit failed"):
+                with db_session():
+                    pass
+
+        conn.rollback.assert_called_once_with()
+        conn.close.assert_called_once_with()
+
+    def test_db_session_ignores_close_failure_after_successful_commit(self) -> None:
+        conn = MagicMock()
+        conn.close.side_effect = RuntimeError("close failed")
+
+        with patch("modules.infra.db.core.connect", return_value=conn):
+            with db_session():
+                pass
+
+        conn.commit.assert_called_once_with()
+        conn.close.assert_called_once_with()
 
 
 if __name__ == "__main__":

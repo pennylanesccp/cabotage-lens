@@ -187,6 +187,35 @@ class BulkPipelineExecutionTests(unittest.TestCase):
         self.assertIs(outcome, expected)
         pipeline_mock.assert_called_once()
 
+    def test_bulk_persistence_buffer_reconnects_before_flush(self) -> None:
+        conn = SimpleNamespace(
+            ping=unittest.mock.MagicMock(side_effect=RuntimeError("connection lost")),
+            reconnect=unittest.mock.MagicMock(),
+            commit=unittest.mock.MagicMock(),
+        )
+        persistence = bulk.BulkPersistenceBuffer(
+            conn,
+            results_table="bulk_results",
+            run_results_table="bulk_run_results",
+            batch_size=2,
+            perf=BulkPerformanceTracker(),
+        )
+        bulk_row = {"scenario_key": "scenario-a"}
+        run_row = {"run_id": "run-a"}
+
+        persistence.add(bulk_row, run_row)
+
+        with patch("modules.multimodal.bulk.upsert_bulk_results") as upsert_mock, patch(
+            "modules.multimodal.bulk.insert_bulk_run_results"
+        ) as insert_mock:
+            persistence.flush()
+
+        conn.ping.assert_called_once_with()
+        conn.reconnect.assert_called_once_with()
+        upsert_mock.assert_called_once()
+        insert_mock.assert_called_once()
+        conn.commit.assert_called_once_with()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -149,9 +149,19 @@ def run_bulk_evaluation_pipeline(
         message="Phase 0/4 bootstrap",
     )
 
+    def _ensure_live_connection(conn: Any, *, context: str) -> None:
+        if not hasattr(conn, "ping") or not hasattr(conn, "reconnect"):
+            return
+        try:
+            conn.ping()
+        except Exception as exc:
+            _log.warning("Bulk pipeline DB connection lost before %s; reconnecting: %s", context, exc)
+            conn.reconnect()
+
     def _flush_point_rows(conn: Any, rows: List[Dict[str, Any]]) -> None:
         if not rows:
             return
+        _ensure_live_connection(conn, context="place-point flush")
         deduped = {}
         for row in rows:
             place = str(row.get("place") or "").strip()
@@ -170,6 +180,7 @@ def run_bulk_evaluation_pipeline(
     def _flush_route_rows(conn: Any, rows: List[Dict[str, Any]]) -> None:
         if not rows:
             return
+        _ensure_live_connection(conn, context="route-cache flush")
         perf.incr("db_write_ops")
         with perf.measure("db_write_s"):
             upsert_runs(conn, rows=rows)
