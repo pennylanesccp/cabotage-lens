@@ -18,6 +18,7 @@ provider actually answered.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple, TypeVar, Union
@@ -30,10 +31,12 @@ if __name__ == "__main__":
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
 
+from modules.core.secrets import get_secret
 from modules.infra.log_manager import get_logger
 from modules.road.locationiq import LocationIQClient
 from modules.road.ors.http import ORSHttpClient
 from modules.road.ors.structures import (
+    SECONDARY_SECRET_API_KEY,
     GeocodeNotFound,
     NoRoute,
     ORSConfig,
@@ -88,8 +91,9 @@ class OpenRouteServiceProvider(BaseRoadProvider):
 
     name = "ors"
 
-    def __init__(self, config: Optional[ORSConfig] = None) -> None:
+    def __init__(self, config: Optional[ORSConfig] = None, *, provider_name: Optional[str] = None) -> None:
         self.cfg = config or ORSConfig()
+        self.name = str(provider_name or self.name).strip() or "ors"
         self._http = ORSHttpClient(self.cfg)
 
     def is_enabled(self) -> bool:
@@ -217,26 +221,32 @@ class ORSClient:
         config: Optional[ORSConfig] = None,
         *,
         primary_provider: Optional[_ProviderProtocol] = None,
+        secondary_provider: Optional[_ProviderProtocol] = None,
         fallback_provider: Optional[_ProviderProtocol] = None,
     ) -> None:
         self.cfg = config or ORSConfig()
-        self._primary = primary_provider or OpenRouteServiceProvider(self.cfg)
+        self._primary = primary_provider or OpenRouteServiceProvider(self.cfg, provider_name="ors")
+        if secondary_provider is not None:
+            self._secondary = secondary_provider
+        elif primary_provider is None and fallback_provider is None:
+            self._secondary = self._build_secondary_provider()
+        else:
+            self._secondary = None
         self._fallback = fallback_provider if fallback_provider is not None else LocationIQClient()
         self._metrics_lock = threading.Lock()
         self._provider_metrics: dict[str, dict[str, dict[str, float]]] = {}
 
     def has_geocoding_provider(self) -> bool:
-        return self._primary.is_enabled() or self._fallback.is_enabled()
+        return any(provider.is_enabled() for provider in self._provider_sequence())
 
     def has_routing_provider(self) -> bool:
         return self.has_geocoding_provider()
 
     def available_providers(self) -> tuple[str, ...]:
         names: list[str] = []
-        if self._primary.is_enabled():
-            names.append(self._primary.name)
-        if self._fallback.is_enabled():
-            names.append(self._fallback.name)
+        for provider in self._provider_sequence():
+            if provider.is_enabled():
+                names.append(provider.name)
         return tuple(names)
 
     def geocode_text(
@@ -248,8 +258,13 @@ class ORSClient:
         return self._call_with_fallback(
             operation="geocode_text",
             query=text,
-            primary_call=lambda: self._primary.geocode_text(text, size=size, country=country),
-            fallback_call=lambda: self._fallback.geocode_text(text, size=size, country=country),
+            provider_calls=[
+                (
+                    provider,
+                    lambda provider=provider: provider.geocode_text(text, size=size, country=country),
+                )
+                for provider in self._provider_sequence()
+            ],
         )
 
     def geocode_structured(
@@ -266,22 +281,20 @@ class ORSClient:
         return self._call_with_fallback(
             operation="geocode_structured",
             query=query,
-            primary_call=lambda: self._primary.geocode_structured(
-                address=address,
-                locality=locality,
-                region=region,
-                postalcode=postalcode,
-                country=country,
-                size=size,
-            ),
-            fallback_call=lambda: self._fallback.geocode_structured(
-                address=address,
-                locality=locality,
-                region=region,
-                postalcode=postalcode,
-                country=country,
-                size=size,
-            ),
+            provider_calls=[
+                (
+                    provider,
+                    lambda provider=provider: provider.geocode_structured(
+                        address=address,
+                        locality=locality,
+                        region=region,
+                        postalcode=postalcode,
+                        country=country,
+                        size=size,
+                    ),
+                )
+                for provider in self._provider_sequence()
+            ],
         )
 
     def resolve_lat_lon(self, query: str) -> Tuple[float, float, str]:
@@ -302,8 +315,13 @@ class ORSClient:
         return self._call_with_fallback(
             operation="route_road",
             query=query,
-            primary_call=lambda: self._primary.route_road(origin, destiny, profile=profile),
-            fallback_call=lambda: self._fallback.route_road(origin, destiny, profile=profile),
+            provider_calls=[
+                (
+                    provider,
+                    lambda provider=provider: provider.route_road(origin, destiny, profile=profile),
+                )
+                for provider in self._provider_sequence()
+            ],
         )
 
     def metrics_snapshot(self) -> Dict[str, Dict[str, Dict[str, float]]]:
@@ -320,127 +338,117 @@ class ORSClient:
         with self._metrics_lock:
             self._provider_metrics.clear()
 
+    def _build_secondary_provider(self) -> Optional[_ProviderProtocol]:
+        secondary_key = str(get_secret(SECONDARY_SECRET_API_KEY, "") or "").strip()
+        primary_key = str(self.cfg.api_key or "").strip()
+        if not secondary_key or secondary_key == primary_key:
+            return None
+        secondary_config = replace(self.cfg, api_key=secondary_key)
+        return OpenRouteServiceProvider(secondary_config, provider_name="ors_secondary")
+
+    def _provider_sequence(self) -> list[_ProviderProtocol]:
+        providers = [self._primary]
+        if self._secondary is not None:
+            providers.append(self._secondary)
+        providers.append(self._fallback)
+        return providers
+
     def _call_with_fallback(
         self,
         *,
         operation: str,
         query: str,
-        primary_call: Callable[[], _T],
-        fallback_call: Callable[[], _T],
+        provider_calls: List[Tuple[_ProviderProtocol, Callable[[], _T]]],
     ) -> _T:
-        primary_enabled = self._primary.is_enabled()
-        fallback_enabled = self._fallback.is_enabled()
-        if not primary_enabled and not fallback_enabled:
+        enabled_calls = [(provider, call) for provider, call in provider_calls if provider.is_enabled()]
+        if not enabled_calls:
             raise ORSError(
-                f"No provider is configured for {operation}. Set ORS_API_KEY or LOCATIONIQ_PAT."
+                f"No provider is configured for {operation}. Set ORS_API_KEY, ORS_API_KEY_2, or LOCATIONIQ_PAT."
             )
 
-        primary_exc: Exception | None = None
-        fallback_exc: Exception | None = None
+        failures: list[tuple[str, Exception]] = []
+        previous_provider_name: str | None = None
 
-        if primary_enabled:
+        for index, (provider, call) in enumerate(enabled_calls, start=1):
+            has_next = index < len(enabled_calls)
             try:
                 t0 = time.perf_counter()
-                self._record_metric(self._primary.name, operation, "attempts", 1.0)
+                self._record_metric(provider.name, operation, "attempts", 1.0)
                 _log.info(
                     "Provider attempt operation=%s provider=%s query=%s",
                     operation,
-                    self._primary.name,
+                    provider.name,
                     query,
                 )
-                result = primary_call()
+                result = call()
                 duration_s = time.perf_counter() - t0
-                self._record_metric(self._primary.name, operation, "successes", 1.0, duration_s=duration_s)
-                _log.info(
-                    "Provider success operation=%s provider=%s query=%s",
-                    operation,
-                    self._primary.name,
-                    query,
-                )
+                self._record_metric(provider.name, operation, "successes", 1.0, duration_s=duration_s)
+                if previous_provider_name is None:
+                    _log.info(
+                        "Provider success operation=%s provider=%s query=%s",
+                        operation,
+                        provider.name,
+                        query,
+                    )
+                else:
+                    _log.info(
+                        "Provider success operation=%s provider=%s query=%s fallback_from=%s",
+                        operation,
+                        provider.name,
+                        query,
+                        previous_provider_name,
+                    )
                 return result
             except Exception as exc:
                 duration_s = time.perf_counter() - t0
-                self._record_metric(self._primary.name, operation, "failures", 1.0, duration_s=duration_s)
-                primary_exc = exc
-                _log.warning(
-                    "Provider fallback triggered operation=%s provider=%s query=%s reason=%s",
-                    operation,
-                    self._primary.name,
-                    query,
-                    self._format_exception(exc),
-                )
-        else:
-            primary_exc = ORSError("ORS_API_KEY is not configured.")
-            _log.warning(
-                "Primary provider unavailable operation=%s provider=%s query=%s reason=%s",
-                operation,
-                self._primary.name,
-                query,
-                self._format_exception(primary_exc),
-            )
+                self._record_metric(provider.name, operation, "failures", 1.0, duration_s=duration_s)
+                failures.append((provider.name, exc))
+                if has_next:
+                    _log.warning(
+                        "Provider fallback triggered operation=%s provider=%s query=%s reason=%s",
+                        operation,
+                        provider.name,
+                        query,
+                        self._format_exception(exc),
+                    )
+                else:
+                    _log.error(
+                        "Provider fallback failed operation=%s provider=%s query=%s reason=%s",
+                        operation,
+                        provider.name,
+                        query,
+                        self._format_exception(exc),
+                    )
+                previous_provider_name = provider.name
 
-        if fallback_enabled:
-            try:
-                t0 = time.perf_counter()
-                self._record_metric(self._fallback.name, operation, "attempts", 1.0)
-                _log.info(
-                    "Provider attempt operation=%s provider=%s query=%s",
-                    operation,
-                    self._fallback.name,
-                    query,
-                )
-                result = fallback_call()
-                duration_s = time.perf_counter() - t0
-                self._record_metric(self._fallback.name, operation, "successes", 1.0, duration_s=duration_s)
-                _log.info(
-                    "Provider success operation=%s provider=%s query=%s fallback_from=%s",
-                    operation,
-                    self._fallback.name,
-                    query,
-                    self._primary.name,
-                )
-                return result
-            except Exception as exc:
-                duration_s = time.perf_counter() - t0
-                self._record_metric(self._fallback.name, operation, "failures", 1.0, duration_s=duration_s)
-                fallback_exc = exc
-                _log.error(
-                    "Provider fallback failed operation=%s provider=%s query=%s reason=%s",
-                    operation,
-                    self._fallback.name,
-                    query,
-                    self._format_exception(exc),
-                )
-        else:
-            _log.warning(
-                "Fallback provider unavailable operation=%s provider=%s query=%s reason=LOCATIONIQ_PAT is not configured",
-                operation,
-                self._fallback.name,
-                query,
-            )
-
-        if primary_exc and fallback_exc:
-            raise self._merge_failures(operation, primary_exc, fallback_exc)
-        if primary_exc:
-            raise primary_exc
-        raise ORSError(f"{operation} failed without a usable provider result.")
+        if len(failures) == 1:
+            raise failures[0][1]
+        raise self._merge_failures(operation, failures)
 
     def _merge_failures(
         self,
         operation: str,
-        primary_exc: Exception,
-        fallback_exc: Exception,
+        failures: List[Tuple[str, Exception]],
     ) -> Exception:
-        message = (
-            f"{operation} failed for ORS and LocationIQ: "
-            f"ors={self._format_exception(primary_exc)}; "
-            f"locationiq={self._format_exception(fallback_exc)}"
+        provider_names = [name for name, _ in failures]
+        details = "; ".join(
+            f"{name}={self._format_exception(exc)}"
+            for name, exc in failures
         )
-        if isinstance(primary_exc, RateLimited) or isinstance(fallback_exc, RateLimited):
+        if len(provider_names) == 2:
+            providers_text = f"{provider_names[0]} and {provider_names[1]}"
+        else:
+            providers_text = ", ".join(provider_names[:-1]) + f", and {provider_names[-1]}"
+        message = (
+            f"{operation} failed for {providers_text}: "
+            f"{details}"
+        )
+        exceptions = [exc for _, exc in failures]
+        if any(isinstance(exc, RateLimited) for exc in exceptions):
             return RateLimited(message)
-        if isinstance(primary_exc, GeocodeNotFound) and isinstance(fallback_exc, GeocodeNotFound):
+        if exceptions and all(isinstance(exc, GeocodeNotFound) for exc in exceptions):
             return GeocodeNotFound(message)
-        if isinstance(primary_exc, NoRoute) and isinstance(fallback_exc, NoRoute):
+        if exceptions and all(isinstance(exc, NoRoute) for exc in exceptions):
             return NoRoute(message)
         return ORSError(message)
 

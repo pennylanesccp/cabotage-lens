@@ -23,6 +23,7 @@ from modules.core.secrets import get_secret
 DEFAULT_BASE_URL = "https://api.openrouteservice.org"
 DEFAULT_USER_AGENT = "CarbonFootprint-ORS/2.0"
 SECRET_API_KEY = "ORS_API_KEY"
+SECONDARY_SECRET_API_KEY = "ORS_API_KEY_2"
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Exceptions

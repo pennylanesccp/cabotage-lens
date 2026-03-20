@@ -3,7 +3,7 @@ import unittest
 from modules.road.locationiq.api import LocationIQClient
 from modules.road.locationiq.structures import LocationIQConfig
 from modules.road.ors.api import ORSClient
-from modules.road.ors.structures import GeocodeNotFound, NoRoute, ORSError
+from modules.road.ors.structures import GeocodeNotFound, NoRoute, ORSError, RateLimited
 
 
 class _FakeProvider:
@@ -94,6 +94,35 @@ class ORSClientFallbackTests(unittest.TestCase):
         self.assertEqual(features[0]["provider"], "locationiq")
         self.assertEqual(primary.geocode_calls, 1)
         self.assertEqual(fallback.geocode_calls, 1)
+
+    def test_falls_back_to_secondary_ors_before_locationiq(self) -> None:
+        primary = _FakeProvider("ors", geocode_exc=RateLimited("ORS quota"))
+        secondary = _FakeProvider(
+            "ors_secondary",
+            geocode_result=[
+                {
+                    "geometry": {"coordinates": [-46.730357, -23.558808]},
+                    "properties": {
+                        "label": "Avenida Professor Luciano Gualberto, Sao Paulo",
+                        "provider": "ors_secondary",
+                    },
+                    "provider": "ors_secondary",
+                }
+            ],
+        )
+        fallback = _FakeProvider("locationiq", geocode_result=[])
+        client = ORSClient(
+            primary_provider=primary,
+            secondary_provider=secondary,
+            fallback_provider=fallback,
+        )
+
+        features = client.geocode_text("Avenida Professor Luciano Gualberto, Sao Paulo")
+
+        self.assertEqual(features[0]["provider"], "ors_secondary")
+        self.assertEqual(primary.geocode_calls, 1)
+        self.assertEqual(secondary.geocode_calls, 1)
+        self.assertEqual(fallback.geocode_calls, 0)
 
     def test_falls_back_to_locationiq_for_routing(self) -> None:
         primary = _FakeProvider("ors", route_exc=ORSError("timeout"))
