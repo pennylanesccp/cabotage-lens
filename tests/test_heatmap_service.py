@@ -90,6 +90,7 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(status.success_count, 380)
         self.assertEqual(status.fail_count, 20)
         self.assertEqual(status.missing_count, 208)
+        self.assertEqual(status.pending_count, 228)
         self.assertEqual(summarize_mock.call_args.kwargs["selector"].origin_location_id, 17)
 
     def test_load_current_dataset_builds_map_points_from_normalized_rows(self) -> None:
@@ -103,6 +104,7 @@ class HeatmapServiceTests(unittest.TestCase):
             success_count=2,
             fail_count=0,
             missing_count=606,
+            pending_count=606,
             duration_s=42.0,
             completed_timestamp="2026-03-10 12:00:00",
             updated_timestamp="2026-03-10 12:00:00",
@@ -180,6 +182,7 @@ class HeatmapServiceTests(unittest.TestCase):
             success_count=1,
             fail_count=0,
             missing_count=607,
+            pending_count=607,
             duration_s=10.0,
             completed_timestamp="2026-03-10 12:00:00",
             updated_timestamp="2026-03-10 12:00:00",
@@ -221,23 +224,23 @@ class HeatmapServiceTests(unittest.TestCase):
             with self.assertRaises(HeatmapDataError):
                 load_current_dataset(scenario)
 
-    def test_pending_destinations_skips_existing_rows_for_origin_location_id(self) -> None:
+    def test_pending_destinations_retries_failed_and_absent_destinations(self) -> None:
         scenario = self._scenario()
         with patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
             "app.heatmap.service._origin_location_id",
             return_value=17,
         ), patch(
-            "app.heatmap.service.list_bulk_result_input_destiny_keys",
-            return_value=["manaus, am", "belem, pa"],
+            "app.heatmap.service.list_bulk_results",
+            return_value=[SimpleNamespace(input_destiny="Manaus, AM")],
         ), patch(
             "app.heatmap.service._heatmap_destinations",
             return_value=("Manaus, AM", "Belem, PA", "Rio Branco, AC"),
         ):
             pending = pending_destinations(scenario)
 
-        self.assertEqual(pending, ["Rio Branco, AC"])
+        self.assertEqual(pending, ["Belem, PA", "Rio Branco, AC"])
 
-    def test_run_heatmap_missing_only_processes_only_unfound_destinations(self) -> None:
+    def test_run_heatmap_missing_only_processes_pending_destinations(self) -> None:
         scenario = self._scenario()
         dataset = SimpleNamespace(points=[1, 2, 3])
 
@@ -246,7 +249,7 @@ class HeatmapServiceTests(unittest.TestCase):
             return_value=("Manaus, AM", "Belem, PA", "Rio Branco, AC"),
         ), patch(
             "app.heatmap.service.pending_destinations",
-            return_value=["Rio Branco, AC"],
+            return_value=["Belem, PA", "Rio Branco, AC"],
         ), patch(
             "app.heatmap.service.run_bulk_evaluation",
         ) as run_bulk_mock, patch(
@@ -257,7 +260,7 @@ class HeatmapServiceTests(unittest.TestCase):
 
         self.assertIs(result, dataset)
         run_bulk_mock.assert_called_once()
-        self.assertEqual(run_bulk_mock.call_args.kwargs["dest_list"], ["Rio Branco, AC"])
+        self.assertEqual(run_bulk_mock.call_args.kwargs["dest_list"], ["Belem, PA", "Rio Branco, AC"])
         self.assertFalse(run_bulk_mock.call_args.kwargs["overwrite_road"])
 
 

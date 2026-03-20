@@ -10,7 +10,6 @@ from modules.infra.database_manager import (
     db_session,
     find_place_point,
     get_latest_completed_run,
-    list_bulk_result_input_destiny_keys,
     list_bulk_results,
     list_bulk_run_cargo_values,
     list_bulk_run_origins,
@@ -86,16 +85,21 @@ def _to_run_info(
     completed_timestamp: Any,
 ) -> HeatmapRunInfo:
     destination_count = len(_heatmap_destinations())
-    found_count = min(int(row_count), destination_count)
+    found_count = max(min(int(row_count), destination_count), 0)
+    success_total = max(min(int(success_count), destination_count), 0)
+    fail_total = max(min(int(fail_count), destination_count), 0)
+    missing_count = max(destination_count - found_count, 0)
+    pending_count = max(destination_count - success_total, 0)
     return HeatmapRunInfo(
         run_id=latest_run_id,
         origin_name=scenario.origin_name,
         cargo_t=float(scenario.cargo_t),
         destination_count=destination_count,
         found_count=found_count,
-        success_count=int(success_count),
-        fail_count=int(fail_count),
-        missing_count=max(destination_count - found_count, 0),
+        success_count=success_total,
+        fail_count=fail_total,
+        missing_count=missing_count,
+        pending_count=pending_count,
         duration_s=duration_s,
         completed_timestamp=completed_timestamp,
         updated_timestamp=latest_updated_timestamp,
@@ -315,28 +319,29 @@ def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
     return status if status.updated_timestamp is not None else None
 
 
-def _existing_destination_inputs(scenario: HeatmapScenario) -> set[str]:
+def _successful_destination_inputs(scenario: HeatmapScenario) -> set[str]:
     with db_session() as conn:
         selector = _build_selector_for_origin_location(scenario, _origin_location_id(scenario.origin_name))
         return {
-            str(key).casefold()
-            for key in list_bulk_result_input_destiny_keys(conn, selector=selector, only_success=None)
-            if str(key).strip()
+            normalize_bulk_place_input(record.input_destiny).casefold()
+            for record in list_bulk_results(conn, selector=selector, only_success=True)
+            if str(record.input_destiny).strip()
         }
 
 
 def pending_destinations(scenario: HeatmapScenario) -> List[str]:
-    existing = _existing_destination_inputs(scenario)
+    successful = _successful_destination_inputs(scenario)
     pending = [
         destination
         for destination in _heatmap_destinations()
-        if normalize_bulk_place_input(destination).casefold() not in existing
+        if normalize_bulk_place_input(destination).casefold() not in successful
     ]
     _log.info(
-        "Computed pending heatmap destinations origin=%s cargo_t=%.3f pending=%d total=%d",
+        "Computed pending heatmap destinations origin=%s cargo_t=%.3f pending=%d successful=%d total=%d",
         scenario.origin_name,
         scenario.cargo_t,
         len(pending),
+        len(successful),
         len(_heatmap_destinations()),
     )
     return pending
@@ -423,7 +428,7 @@ def run_heatmap(
         mode_label = "rerun"
     else:
         destinations_to_process = pending_destinations(scenario)
-        mode_label = "missing-only run"
+        mode_label = "pending run"
 
     if not destinations_to_process:
         _log.info(

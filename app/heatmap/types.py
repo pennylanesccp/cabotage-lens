@@ -34,6 +34,7 @@ class HeatmapRunInfo:
     success_count: int
     fail_count: int
     missing_count: int
+    pending_count: int
     duration_s: Optional[float]
     completed_timestamp: Any
     updated_timestamp: Any

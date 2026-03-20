@@ -48,7 +48,7 @@ class SidebarLogoutTests(unittest.TestCase):
             heatmap_sidebar,
             "render_logout_control",
         ) as logout_mock:
-            run_missing, rerun = heatmap_sidebar.render_run_actions(found_count=0, missing_count=10)
+            run_missing, rerun = heatmap_sidebar.render_run_actions(found_count=0, pending_count=10)
 
         self.assertFalse(run_missing)
         self.assertFalse(rerun)

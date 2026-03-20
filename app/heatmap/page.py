@@ -97,7 +97,7 @@ def _render_header() -> None:
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
             <p style='margin: 0.65rem 0 0 0; max-width: 52rem; color: #334155;'>
-                CabotageLens compares where multimodal freight wins or loses across Brazil using the current comparison table stored in Supabase. Run missing fills only unfound destinies; rerun overwrites only the comparison rows for this scenario.
+                CabotageLens compares where multimodal freight wins or loses across Brazil using the current comparison table stored in Supabase. Run missing retries failed destinies and fills any absent ones; rerun overwrites the comparison rows for this scenario.
             </p>
         </section>
         """,
@@ -263,8 +263,8 @@ def render_page() -> None:
         st.caption(
             (
                 f"Stored rows: {status.found_count}/{status.destination_count}. "
-                f"ok={status.success_count} fail={status.fail_count} missing={status.missing_count}. "
-                "Run missing only fills unfound destinies; rerun overwrites the comparison rows for this scenario."
+                f"ok={status.success_count} fail={status.fail_count} missing={status.missing_count} pending={status.pending_count}. "
+                "Run missing retries failed destinies and fills any absent ones; rerun overwrites the comparison rows for this scenario."
             )
         )
 
@@ -274,18 +274,18 @@ def render_page() -> None:
 
     run_missing_clicked, rerun_clicked = render_run_actions(
         found_count=status.found_count,
-        missing_count=status.missing_count,
+        pending_count=status.pending_count,
     )
 
     if run_missing_clicked:
         _log.info(
-            "Heatmap UI requested missing-only run origin=%s cargo_t=%.3f",
+            "Heatmap UI requested pending run origin=%s cargo_t=%.3f",
             scenario.origin_name,
             scenario.cargo_t,
         )
         progress_bar = st.progress(0.0)
         status_box = st.empty()
-        status_box.markdown("Starting missing-only run...")
+        status_box.markdown("Starting pending run...")
         try:
             dataset = run_heatmap(
                 scenario,
@@ -294,7 +294,7 @@ def render_page() -> None:
             )
         except Exception as exc:
             _log.exception(
-                "Heatmap missing-only run failed origin=%s cargo_t=%.3f",
+                "Heatmap pending run failed origin=%s cargo_t=%.3f",
                 scenario.origin_name,
                 scenario.cargo_t,
             )
@@ -303,7 +303,7 @@ def render_page() -> None:
             st.error(f"Heatmap run failed: {exc}")
         else:
             progress_bar.progress(1.0)
-            status_box.markdown("Run completed. Comparison table refreshed.")
+            status_box.markdown("Pending run completed. Comparison table refreshed.")
             st.session_state.heatmap_dataset = dataset
 
     if rerun_clicked:

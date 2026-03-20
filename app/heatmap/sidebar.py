@@ -44,9 +44,9 @@ def render_sidebar(
             _render_advanced(class_options=class_options, port_ops_scenarios=port_ops_scenarios)
 
 
-def render_run_actions(*, found_count: int, missing_count: int) -> Tuple[bool, bool]:
+def render_run_actions(*, found_count: int, pending_count: int) -> Tuple[bool, bool]:
     run_missing_label = "Run batch" if found_count <= 0 else "Run missing"
-    run_missing_disabled = found_count > 0 and missing_count <= 0
+    run_missing_disabled = pending_count <= 0
 
     with st.sidebar:
         st.markdown("##### Batch")
