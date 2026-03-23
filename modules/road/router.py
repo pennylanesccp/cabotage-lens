@@ -270,29 +270,42 @@ def _calculate_route(
     , primary_profile: str
     , fallback: bool
 ) -> Tuple[Optional[str], Optional[float], Optional[str]]:
-    """Try primary profile, fallback if needed. Returns (profile, km, provider)."""
-    profiles = [primary_profile]
-    if fallback and primary_profile != "driving-car":
-        profiles.append("driving-car")
+    """Try the requested profile and only fall back to car when there is no route."""
+    try:
+        res = ors.route_road(origin, destiny, profile=primary_profile)
+    except RateLimited:
+        raise
+    except NoRoute as exc:
+        _log.debug("Route returned no path for profile=%s: %s", primary_profile, exc)
+        if not fallback or primary_profile == "driving-car":
+            return primary_profile, None, None
+    except Exception as exc:
+        _log.debug("Route failed for profile=%s without car fallback: %s", primary_profile, exc)
+        raise
+    else:
+        m = res.get("distance_m")
+        km = m / 1000.0 if m is not None else None
+        used_profile = str(res.get("profile_used") or primary_profile).strip() or primary_profile
+        route_source = str(res.get("source") or res.get("provider") or "ors").strip().lower() or "ors"
+        return used_profile, km, route_source
 
-    last_exc = None
+    fallback_profile = "driving-car"
+    try:
+        res = ors.route_road(origin, destiny, profile=fallback_profile)
+    except RateLimited:
+        raise
+    except NoRoute as exc:
+        _log.debug("Fallback route returned no path for profile=%s: %s", fallback_profile, exc)
+        return fallback_profile, None, None
+    except Exception as exc:
+        _log.debug("Fallback route failed for profile=%s: %s", fallback_profile, exc)
+        raise
 
-    for prof in profiles:
-        try:
-            res = ors.route_road(origin, destiny, profile=prof)
-            m = res.get("distance_m")
-            km = m / 1000.0 if m is not None else None
-            used_profile = str(res.get("profile_used") or prof).strip() or prof
-            route_source = str(res.get("source") or res.get("provider") or "ors").strip().lower() or "ors"
-            return used_profile, km, route_source
-        except RateLimited:
-            raise
-        except (NoRoute, Exception) as e:
-            _log.debug(f"Route failed for {prof}: {e}")
-            last_exc = e
-
-    _log.warning(f"All profiles failed for leg. Last error: {last_exc}")
-    return (profiles[-1] if profiles else None), None, None
+    m = res.get("distance_m")
+    km = m / 1000.0 if m is not None else None
+    used_profile = str(res.get("profile_used") or fallback_profile).strip() or fallback_profile
+    route_source = str(res.get("source") or res.get("provider") or "ors").strip().lower() or "ors"
+    return used_profile, km, route_source
 
 
 # ────────────────────────────────────────────────────────────────────────────────

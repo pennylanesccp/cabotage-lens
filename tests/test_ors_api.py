@@ -156,6 +156,34 @@ class ORSClientFallbackTests(unittest.TestCase):
         self.assertEqual(secondary.geocode_calls, 1)
         self.assertEqual(fallback.geocode_calls, 0)
 
+    def test_rate_limited_provider_enters_cooldown_and_is_skipped_on_followup_call(self) -> None:
+        primary = _FakeProvider("ors", geocode_exc=RateLimited("ORS quota"))
+        secondary = _FakeProvider(
+            "ors_2",
+            geocode_result=[
+                {
+                    "geometry": {"coordinates": [-46.6333, -23.5505]},
+                    "properties": {"label": "Sao Paulo, SP", "provider": "ors_2"},
+                    "provider": "ors_2",
+                }
+            ],
+        )
+        client = ORSClient(
+            primary_provider=primary,
+            secondary_provider=secondary,
+            fallback_provider=_FakeProvider("locationiq", enabled=False),
+        )
+
+        first = client.geocode_text("Sao Paulo")
+        second = client.geocode_text("Sao Paulo")
+
+        self.assertEqual(first[0]["provider"], "ors_2")
+        self.assertEqual(second[0]["provider"], "ors_2")
+        self.assertEqual(primary.geocode_calls, 1)
+        self.assertEqual(secondary.geocode_calls, 2)
+        metrics = client.metrics_snapshot()
+        self.assertEqual(metrics["ors"]["geocode_text"]["skipped_cooldown"], 1.0)
+
     def test_falls_back_to_locationiq_for_routing(self) -> None:
         primary = _FakeProvider("ors", route_exc=ORSError("timeout"))
         fallback = _FakeProvider(

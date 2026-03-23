@@ -16,6 +16,8 @@ def clean_place_text(label: Any) -> str:
         return ""
 
     text = re.sub(r"\s*,\s*(?:brazil|brasil)\s*$", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s*[/-]\s*([A-Za-z]{2})\s*$", r", \1", text)
+    text = re.sub(r"\s*,\s*", ", ", text)
     text = re.sub(r"\s*,\s*,+", ", ", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip(" ,")

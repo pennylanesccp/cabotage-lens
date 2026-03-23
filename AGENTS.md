@@ -157,12 +157,7 @@ Conventional Commits rules:
 - Allowed types: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `perf`
 - Suggested scopes for this repo: `app`, `scripts`, `modules`, `road`, `multimodal`, `fuel`, `costs`, `infra`, `db`, `data`, `deps`, `docs`
 
-Body format (required when files changed):
-
-- 1 to 9 bullets summarizing changes
-- Final bullet must be one of:
-  - `- Tests: {commands you ran}`
-  - `- Tests: not run ({reason})`
+Body format (required when files changed): 1 to 9 bullets summarizing changes
 
 Output format:
 

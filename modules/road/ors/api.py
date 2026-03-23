@@ -46,6 +46,27 @@ from modules.road.provider_base import BaseRoadProvider
 
 _log = get_logger(__name__)
 _T = TypeVar("_T")
+_TIMEOUT_HINTS = (
+    "timed out",
+    "timeout",
+    "read timed out",
+    "connect timeout",
+)
+_NETWORK_HINTS = (
+    "communication failure",
+    "connection aborted",
+    "connection reset",
+    "connection refused",
+    "max retries exceeded",
+    "temporary failure",
+    "network is unreachable",
+    "name resolution",
+)
+_PROVIDER_COOLDOWN_SECONDS = {
+    "rate_limited": 300.0,
+    "timeout": 90.0,
+    "network_error": 60.0,
+}
 
 
 class _ProviderProtocol(Protocol):
@@ -233,6 +254,7 @@ class ORSClient:
         self._fallback = fallback_provider if fallback_provider is not None else LocationIQClient()
         self._metrics_lock = threading.Lock()
         self._provider_metrics: dict[str, dict[str, dict[str, float]]] = {}
+        self._provider_cooldowns: dict[str, tuple[float, str]] = {}
 
     def has_geocoding_provider(self) -> bool:
         return any(provider.is_enabled() for provider in self._provider_sequence())
@@ -335,6 +357,7 @@ class ORSClient:
     def reset_metrics(self) -> None:
         with self._metrics_lock:
             self._provider_metrics.clear()
+            self._provider_cooldowns.clear()
 
     def _build_configured_ors_providers(self) -> list[_ProviderProtocol]:
         providers: list[_ProviderProtocol] = []
@@ -363,14 +386,28 @@ class ORSClient:
             )
 
         failures: list[tuple[str, Exception]] = []
+        cooldown_skips: list[tuple[str, float, str]] = []
         previous_provider_name: str | None = None
 
         for index, (provider, call) in enumerate(enabled_calls, start=1):
             has_next = index < len(enabled_calls)
+            remaining_cooldown_s, cooldown_reason = self._provider_cooldown_state(provider.name)
+            if remaining_cooldown_s > 0.0:
+                self._record_metric(provider.name, operation, "skipped_cooldown", 1.0)
+                cooldown_skips.append((provider.name, remaining_cooldown_s, cooldown_reason))
+                _log.debug(
+                    "Provider cooldown skip operation=%s provider=%s reason=%s remaining_s=%.1f query=%s",
+                    operation,
+                    provider.name,
+                    cooldown_reason,
+                    remaining_cooldown_s,
+                    query,
+                )
+                continue
             try:
                 t0 = time.perf_counter()
                 self._record_metric(provider.name, operation, "attempts", 1.0)
-                _log.info(
+                _log.debug(
                     "Provider attempt operation=%s provider=%s query=%s",
                     operation,
                     provider.name,
@@ -379,44 +416,44 @@ class ORSClient:
                 result = call()
                 duration_s = time.perf_counter() - t0
                 self._record_metric(provider.name, operation, "successes", 1.0, duration_s=duration_s)
-                if previous_provider_name is None:
-                    _log.info(
-                        "Provider success operation=%s provider=%s query=%s",
-                        operation,
-                        provider.name,
-                        query,
-                    )
-                else:
-                    _log.info(
-                        "Provider success operation=%s provider=%s query=%s fallback_from=%s",
-                        operation,
-                        provider.name,
-                        query,
-                        previous_provider_name,
-                    )
+                self._clear_provider_cooldown(provider.name)
+                _log.debug(
+                    "Provider success operation=%s provider=%s query=%s fallback_from=%s",
+                    operation,
+                    provider.name,
+                    query,
+                    previous_provider_name or "<none>",
+                )
                 return result
             except Exception as exc:
                 duration_s = time.perf_counter() - t0
                 self._record_metric(provider.name, operation, "failures", 1.0, duration_s=duration_s)
+                failure_category = self._failure_category(exc)
+                self._record_metric(provider.name, operation, failure_category, 1.0)
+                cooldown_s = _PROVIDER_COOLDOWN_SECONDS.get(failure_category, 0.0)
+                if cooldown_s > 0.0:
+                    self._set_provider_cooldown(provider.name, failure_category, cooldown_s)
                 failures.append((provider.name, exc))
-                if has_next:
-                    _log.warning(
-                        "Provider fallback triggered operation=%s provider=%s query=%s reason=%s",
-                        operation,
-                        provider.name,
-                        query,
-                        self._format_exception(exc),
-                    )
-                else:
-                    _log.error(
-                        "Provider fallback failed operation=%s provider=%s query=%s reason=%s",
-                        operation,
-                        provider.name,
-                        query,
-                        self._format_exception(exc),
-                    )
+                _log.debug(
+                    "Provider failure operation=%s provider=%s category=%s has_next=%s query=%s reason=%s",
+                    operation,
+                    provider.name,
+                    failure_category,
+                    has_next,
+                    query,
+                    self._format_exception(exc),
+                )
                 previous_provider_name = provider.name
 
+        if not failures and cooldown_skips:
+            details = "; ".join(
+                f"{provider}={reason}({remaining_s:.1f}s)"
+                for provider, remaining_s, reason in cooldown_skips
+            )
+            message = f"{operation} is temporarily cooling down across all configured providers: {details}"
+            if any(reason == "rate_limited" for _, _, reason in cooldown_skips):
+                raise RateLimited(message)
+            raise ORSError(message)
         if len(failures) == 1:
             raise failures[0][1]
         raise self._merge_failures(operation, failures)
@@ -470,10 +507,52 @@ class ORSClient:
                     "successes": 0.0,
                     "failures": 0.0,
                     "duration_s": 0.0,
+                    "rate_limited": 0.0,
+                    "timeout": 0.0,
+                    "network_error": 0.0,
+                    "not_found": 0.0,
+                    "other_error": 0.0,
+                    "skipped_cooldown": 0.0,
                 },
             )
             operation_metrics[field] = float(operation_metrics.get(field, 0.0) + value)
             operation_metrics["duration_s"] = float(operation_metrics.get("duration_s", 0.0) + duration_s)
+
+    def _failure_category(self, exc: Exception) -> str:
+        if isinstance(exc, RateLimited):
+            return "rate_limited"
+        if isinstance(exc, (GeocodeNotFound, NoRoute)):
+            return "not_found"
+
+        lowered = self._format_exception(exc).lower()
+        if any(token in lowered for token in _TIMEOUT_HINTS):
+            return "timeout"
+        if any(token in lowered for token in _NETWORK_HINTS):
+            return "network_error"
+        if any(token in lowered for token in ("quota", "rate limit", "too many requests", "429")):
+            return "rate_limited"
+        return "other_error"
+
+    def _provider_cooldown_state(self, provider: str) -> tuple[float, str]:
+        with self._metrics_lock:
+            cooldown = self._provider_cooldowns.get(provider)
+        if cooldown is None:
+            return 0.0, ""
+
+        cooldown_until, reason = cooldown
+        remaining_s = cooldown_until - time.monotonic()
+        if remaining_s <= 0.0:
+            self._clear_provider_cooldown(provider)
+            return 0.0, ""
+        return remaining_s, reason
+
+    def _set_provider_cooldown(self, provider: str, reason: str, duration_s: float) -> None:
+        with self._metrics_lock:
+            self._provider_cooldowns[provider] = (time.monotonic() + float(duration_s), str(reason))
+
+    def _clear_provider_cooldown(self, provider: str) -> None:
+        with self._metrics_lock:
+            self._provider_cooldowns.pop(provider, None)
 
 
 if __name__ == "__main__":

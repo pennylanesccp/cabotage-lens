@@ -63,12 +63,12 @@ def render_page() -> None:
     port_ops_scenarios = list(list_port_ops_scenarios())
     _normalize_choice("port_ops_scenario", port_ops_scenarios, DEFAULT_PORT_OPS_SCENARIO)
 
-    run_clicked = render_sidebar(class_options=class_options, port_ops_scenarios=port_ops_scenarios)
-
     attach_streamlit_logging(
         level=str(st.session_state.log_level),
         archive_to_storage=bool(st.session_state.archive_logs),
     )
+
+    run_clicked = render_sidebar(class_options=class_options, port_ops_scenarios=port_ops_scenarios)
 
     payload = build_scenario_payload(st.session_state)
     _render_header(payload)

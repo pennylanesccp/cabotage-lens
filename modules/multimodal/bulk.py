@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 
-from modules.addressing.resolver import resolve_point_null_safe
+from modules.addressing.resolver import resolve_point
 from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.infra.database_manager import (
     DEFAULT_BULK_RESULTS_TABLE,
@@ -53,6 +53,18 @@ ProgressCallback = Callable[[Dict[str, Any]], None]
 
 _APPROX_ROUTE_SOURCE = "nearest_exact_delta_straight_line"
 _MIN_APPROX_ROAD_DISTANCE_KM = 1.0
+_RETRYABLE_FAILURE_STATUSES = frozenset({"rate_limited", "timeout", "network_error"})
+_TERMINAL_FAILURE_STATUSES = frozenset(
+    {
+        "geocode_failed",
+        "no_road_route",
+        "last_mile_no_road_route",
+        "nearest_port_failed",
+        "geometry_failed",
+        "evaluation_failed",
+        "error",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -475,18 +487,42 @@ def _classify_failure(exc: Exception) -> tuple[str, str, bool]:
     message = str(exc).strip() or exc.__class__.__name__
     lowered = message.lower()
 
+    if any(token in lowered for token in ("quota", "rate limit", "too many requests", "429")):
+        return "rate_limited", message, False
+    if any(token in lowered for token in ("timed out", "timeout", "read timed out", "connect timeout")):
+        return "timeout", message, False
+    if any(
+        token in lowered
+        for token in (
+            "communication failure",
+            "connection aborted",
+            "connection reset",
+            "connection refused",
+            "max retries exceeded",
+            "temporary failure",
+            "network is unreachable",
+            "name resolution",
+        )
+    ):
+        return "network_error", message, False
     if "last_mile road distance is unavailable" in lowered:
         return "last_mile_no_road_route", message, False
     if "road_direct road distance is unavailable" in lowered or "road distance is unavailable" in lowered:
         return "no_road_route", message, False
     if "failed to resolve destination" in lowered:
         return "geocode_failed", message, False
+    if "nearest-port lookup failed" in lowered or "nearest port" in lowered:
+        return "nearest_port_failed", message, False
     if "geometry build failed" in lowered:
         return "geometry_failed", message, False
     if "path evaluation failed" in lowered:
         return "evaluation_failed", message, False
 
     return "error", message, True
+
+
+def bulk_failure_is_retryable(status: str) -> bool:
+    return str(status or "").strip().lower() in _RETRYABLE_FAILURE_STATUSES
 
 
 def _route_source_for_result(
@@ -682,7 +718,7 @@ def _point_from_result_record(record: Any) -> Optional[Dict[str, Any]]:
 
 
 def _resolve_point_without_db(value: Any, ors: ORSClient) -> Optional[Dict[str, Any]]:
-    point = resolve_point_null_safe(value, ors, _log)
+    point = resolve_point(value, ors, _log)
     if not point:
         return None
     return {
@@ -1155,8 +1191,8 @@ def run_bulk_evaluation(
     shuffle_destinations: bool = True,
     shuffle_seed: Optional[int] = None,
     approximation_fallback: bool = True,
-    max_geocode_workers: int = 4,
-    max_route_workers: int = 8,
+    max_geocode_workers: int = 2,
+    max_route_workers: int = 2,
     persist_batch_size: int = 64,
 ) -> Dict[str, Any]:
     from modules.multimodal.bulk_pipeline import run_bulk_evaluation_pipeline

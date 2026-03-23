@@ -29,7 +29,7 @@ from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_text
 from modules.cabotage.sea_matrix import SeaMatrix
 from modules.core.secrets import get_secret
-from modules.infra.database_manager import db_session, find_place_point
+from modules.infra.database_manager import db_session, find_place_point, upsert_place_point
 from modules.infra.log_manager import get_logger
 from modules.ports.ports_index import load_ports
 from modules.ports.ports_nearest import find_nearest_port
@@ -157,8 +157,48 @@ def _cached_point_for_geometry(value: Any, *, db_path: Optional[Path | str] = No
         "label": ascii_place_text(cached_point.get("label") or query_text),
         "lat": float(cached_point["lat"]),
         "lon": float(cached_point["lon"]),
-        "uf": None,
+        "uf": cached_point.get("uf"),
     }
+
+
+def _persist_point_for_geometry(
+    query_text: str,
+    resolved_point: Dict[str, Any],
+    *,
+    db_path: Optional[Path | str] = None,
+) -> Dict[str, Any]:
+    if not query_text:
+        return dict(resolved_point)
+
+    try:
+        with db_session(db_path) as conn:
+            cached_point = upsert_place_point(
+                conn,
+                place=query_text,
+                label=resolved_point.get("label") or query_text,
+                lat=resolved_point.get("lat"),
+                lon=resolved_point.get("lon"),
+                uf=resolved_point.get("uf"),
+                source="provider",
+            )
+            if hasattr(conn, "commit"):
+                conn.commit()
+    except Exception as exc:
+        _log.debug("Failed to persist resolved point for %s: %s", query_text, exc)
+        return dict(resolved_point)
+
+    if not cached_point:
+        return dict(resolved_point)
+
+    persisted_point = {
+        "label": ascii_place_text(cached_point.get("label") or resolved_point.get("label") or query_text),
+        "lat": float(cached_point.get("lat") or resolved_point["lat"]),
+        "lon": float(cached_point.get("lon") or resolved_point["lon"]),
+        "uf": cached_point.get("uf", resolved_point.get("uf")),
+    }
+    if cached_point.get("location_id") is not None:
+        persisted_point["location_id"] = int(cached_point["location_id"])
+    return persisted_point
 
 
 def resolve_point_for_geometry(
@@ -188,6 +228,8 @@ def resolve_point_for_geometry(
         "lon": point.lon,
         "uf": point.uf,
     }
+    if cache_key:
+        resolved_point = _persist_point_for_geometry(cache_key, resolved_point, db_path=db_path)
     if point_cache is not None and cache_key:
         point_cache[cache_key] = dict(resolved_point)
     return resolved_point
@@ -292,6 +334,8 @@ def build_path_geometry(
         sea_matrix_path=sea_matrix_path,
         db_path=db_path,
     )
+    if hasattr(ors, "reset_metrics"):
+        ors.reset_metrics()
 
     _log.debug("Resolving endpoints: %r -> %r", origin_input, destiny_input)
     origin_pt = resolve_point_for_geometry(origin_input, ors, db_path=db_path)
@@ -301,16 +345,36 @@ def build_path_geometry(
         _log.error("Failed to geocode one or both endpoints. Aborting geometry build.")
         return None
 
-    return build_path_geometry_from_resolved(
-        origin_pt,
-        destiny_pt,
-        ors=ors,
-        ports=ports,
-        sea_matrix=sea_matrix,
-        ors_profile=ors_profile,
-        overwrite_road=overwrite_road,
-        db_path=db_path,
-    )
+    try:
+        geometry = build_path_geometry_from_resolved(
+            origin_pt,
+            destiny_pt,
+            ors=ors,
+            ports=ports,
+            sea_matrix=sea_matrix,
+            ors_profile=ors_profile,
+            overwrite_road=overwrite_road,
+            db_path=db_path,
+        )
+    except Exception as exc:
+        _log.error("Failed to build route geometry for %r -> %r: %s", origin_input, destiny_input, exc)
+        return None
+
+    if geometry and geometry.get("status") == "ok":
+        provider_calls = ors.metrics_snapshot() if hasattr(ors, "metrics_snapshot") else {}
+        _log.info(
+            (
+                "Single-route geometry summary origin=%s destiny=%s direct_source=%s "
+                "first_mile_source=%s last_mile_source=%s providers=%s"
+            ),
+            geometry["origin"]["label"],
+            geometry["destiny"]["label"],
+            geometry["road_direct"].get("source"),
+            geometry["first_mile"].get("source"),
+            geometry["last_mile"].get("source"),
+            provider_calls,
+        )
+    return geometry
 
 
 if __name__ == "__main__":

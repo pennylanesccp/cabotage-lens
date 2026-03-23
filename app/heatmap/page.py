@@ -14,8 +14,6 @@ from app.heatmap.config import (
     HEATMAP_DESTINATION_LABEL,
     HEATMAP_METRICS,
     HEATMAP_PAGE_TITLE,
-    HEATMAP_SURFACE_MODE_DEFAULT,
-    HEATMAP_SURFACE_MODES,
 )
 from app.heatmap.map import render_heatmap_map, render_legend
 from app.heatmap.surface import build_surface
@@ -43,7 +41,6 @@ def _init_page_state() -> None:
     st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, str(DEFAULT_ORIGIN))
     st.session_state.setdefault("heatmap_cargo", 30.0)
     st.session_state.setdefault("heatmap_metric", HEATMAP_DEFAULT_METRIC)
-    st.session_state.setdefault("heatmap_surface_mode", HEATMAP_SURFACE_MODE_DEFAULT)
     st.session_state.setdefault("heatmap_show_points", False)
     st.session_state.setdefault("heatmap_dataset", None)
 
@@ -103,7 +100,7 @@ def _render_header() -> None:
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
             <p style='margin: 0.65rem 0 0 0; max-width: 52rem; color: #334155;'>
-                CabotageLens interpolates the current Supabase comparison table into a continuous signed surface between the available destination cities. Color shows relative multimodal advantage, while the optional 3D mode raises the surface from a shared floor using absolute cost or emissions advantage.
+                CabotageLens interpolates the current Supabase comparison table into a continuous signed 3D surface between the available destination cities. Color shows relative multimodal advantage, while elevation shows the signed absolute magnitude so regional terrain differences are immediately visible.
             </p>
         </section>
         """,
@@ -186,7 +183,7 @@ def _progress_callback(progress_bar: Any, status_box: Any):
 
 
 def _render_dataset(dataset: HeatmapDataset) -> None:
-    control_cols = st.columns([1.2, 1.0, 1.0])
+    control_cols = st.columns([1.5, 1.0])
     with control_cols[0]:
         metric = st.radio(
             "Color metric",
@@ -196,36 +193,35 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
             key="heatmap_metric",
         )
     with control_cols[1]:
-        surface_mode = st.radio(
-            "Surface",
-            options=list(HEATMAP_SURFACE_MODES),
-            format_func=lambda value: "2D" if value == "2d" else "3D",
-            horizontal=True,
-            key="heatmap_surface_mode",
-        )
-    with control_cols[2]:
         show_points = st.toggle(
             "Show destination points",
             key="heatmap_show_points",
             help="Overlay the source destination-city points for debugging and hover inspection.",
         )
 
-    surface = build_surface(dataset, metric, surface_mode)
+    surface = build_surface(dataset, metric)
     diagnostics = dataset.diagnostics
     cols = st.columns(5)
     cols[0].metric("Latest stored rows", f"{dataset.run.found_count}/{dataset.run.destination_count}")
-    cols[1].metric("Successful stored rows", f"{dataset.run.success_count}")
-    cols[2].metric("Plottable points", f"{diagnostics.plottable_points}")
-    cols[3].metric("Skipped rows", f"{diagnostics.skipped_total}")
-    cols[4].metric("Surface vertices", f"{surface.unique_source_coordinate_count}")
+    cols[1].metric("Successful latest", f"{dataset.run.success_count}")
+    cols[2].metric("Failed latest", f"{dataset.run.fail_count}")
+    cols[3].metric("Plottable points", f"{diagnostics.plottable_points}")
+    cols[4].metric("Missing rows", f"{dataset.run.missing_count}")
+    retryable_failures = max(dataset.run.pending_count - dataset.run.missing_count, 0)
     st.caption(
         (
             f"Loaded {diagnostics.plottable_points} plottable destination points from "
-            f"{diagnostics.successful_rows} successful stored rows in {HEATMAP_DESTINATION_LABEL}. "
-            f"The surface interpolates {surface.unique_source_coordinate_count} unique source coordinates into "
+            f"{diagnostics.successful_rows} successful latest rows in {HEATMAP_DESTINATION_LABEL}. "
+            f"The 3D surface interpolates {surface.unique_source_coordinate_count} unique source coordinates into "
             f"{len(surface.cells)} rendered cells."
         )
     )
+    if retryable_failures > 0:
+        st.info(
+            f"{retryable_failures} latest failed rows are marked retryable and will be revisited by Run missing."
+        )
+    if dataset.run.pending_count > 0 and retryable_failures == 0 and dataset.run.missing_count > 0:
+        st.info(f"{dataset.run.missing_count} destinations still have no latest stored row for this scenario.")
     if dataset.run.success_count != diagnostics.successful_rows:
         st.warning(
             (
@@ -237,7 +233,7 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
         st.warning(
             (
                 f"Loaded {diagnostics.plottable_points} plottable destination points from "
-                f"{diagnostics.successful_rows} successful stored rows. "
+                f"{diagnostics.successful_rows} successful latest rows. "
                 f"Skipped {diagnostics.skipped_total} successful rows due to missing map values "
                 f"(coords={diagnostics.skipped_missing_coordinates}, costs={diagnostics.skipped_missing_costs}, "
                 f"emissions={diagnostics.skipped_missing_emissions})."
@@ -254,11 +250,10 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
                 "so the interpolation surface collapses them into fewer unique source vertices."
             )
         )
-    render_legend(metric, surface_mode, surface)
+    render_legend(metric, surface)
     render_heatmap_map(
         dataset,
         metric,
-        surface_mode,
         show_points=bool(show_points),
         surface=surface,
     )
@@ -370,7 +365,7 @@ def render_page() -> None:
             (
                 f"Stored rows: {status.found_count}/{status.destination_count}. "
                 f"ok={status.success_count} fail={status.fail_count} missing={status.missing_count} pending={status.pending_count}. "
-                "Run missing retries failed destinies and fills any absent ones; rerun overwrites the comparison rows for this scenario."
+                "Pending counts only missing rows plus retryable transient failures; terminal failed rows stay out of Run missing until rerun all."
             )
         )
 

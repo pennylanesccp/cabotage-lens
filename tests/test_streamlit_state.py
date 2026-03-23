@@ -137,8 +137,10 @@ class StreamlitStateTests(unittest.TestCase):
             state.attach_streamlit_logging(level="INFO", archive_to_storage=True)
 
         self.assertEqual(init_logging_mock.call_count, 2)
-        self.assertFalse(fake_streamlit.session_state["archive_logs"])
+        self.assertTrue(fake_streamlit.session_state["archive_logs"])
+        self.assertFalse(fake_streamlit.session_state["effective_archive_logs"])
         self.assertTrue(fake_streamlit.session_state["write_local_logs"])
+        self.assertIn("Supabase log archival disabled", fake_streamlit.session_state["logging_policy_message"])
 
     def test_init_state_defaults_hosted_archival_policy(self) -> None:
         fake_streamlit = SimpleNamespace(session_state={})

@@ -134,7 +134,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         )
 
         with patch("app.heatmap.surface._hull_cells", return_value=mock_cells):
-            surface = build_surface(dataset, "cost", "3d")
+            surface = build_surface(dataset, "cost")
 
         self.assertEqual(surface.metric, "cost")
         self.assertEqual(surface.mode, "3d")
@@ -146,7 +146,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertEqual(surface.source_point_count, 3)
         self.assertEqual(surface.unique_source_coordinate_count, 3)
 
-    def test_build_surface_emissions_mode_uses_emissions_values_and_flattens_2d(self) -> None:
+    def test_build_surface_emissions_mode_uses_emissions_values_and_keeps_3d_relief(self) -> None:
         dataset = self._dataset()
         mock_cells = (
             (
@@ -157,14 +157,14 @@ class HeatmapSurfaceTests(unittest.TestCase):
         )
 
         with patch("app.heatmap.surface._hull_cells", return_value=mock_cells):
-            surface = build_surface(dataset, "emissions", "2d")
+            surface = build_surface(dataset, "emissions")
 
         self.assertEqual(surface.metric, "emissions")
-        self.assertEqual(surface.mode, "2d")
+        self.assertEqual(surface.mode, "3d")
         self.assertEqual(len(surface.cells), 1)
         self.assertAlmostEqual(surface.cells[0].percentage_value, 15.0, places=3)
         self.assertAlmostEqual(surface.cells[0].absolute_value, 165.0, places=3)
-        self.assertEqual(surface.cells[0].elevation_m, 0.0)
+        self.assertGreater(surface.cells[0].elevation_m, 0.0)
         self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
         self.assertEqual(surface.hull_vertex_count, 3)
 
@@ -179,7 +179,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         )
 
         with patch("app.heatmap.surface._hull_cells", return_value=mock_cells):
-            surface = build_surface(dataset, "cost", "3d")
+            surface = build_surface(dataset, "cost")
 
         self.assertEqual(len(surface.cells), 1)
         self.assertAlmostEqual(surface.cells[0].absolute_value, -200.0, places=3)

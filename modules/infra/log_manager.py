@@ -20,7 +20,18 @@ from modules.infra.supabase_storage import (
 )
 
 _LOG_CONTEXT: ContextVar[dict[str, Any]] = ContextVar("log_context", default={})
-_CONTEXT_FIELDS = ("run_id", "request_id", "correlation_id", "scenario_key")
+_CONTEXT_FIELDS = (
+    "run_id",
+    "request_id",
+    "correlation_id",
+    "scenario_key",
+    "selector_hash",
+    "origin",
+    "destination_set_id",
+    "ors_profile",
+    "runtime_environment",
+    "entrypoint",
+)
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_LOCAL_LOGS_DIR = _REPO_ROOT / "logs"
 _LOCAL_SECRETS_PATH = _REPO_ROOT / ".streamlit" / "secrets.toml"
@@ -208,11 +219,9 @@ class _SupabaseArchiveHandler(logging.Handler):
                 "level": record.levelname,
                 "module": record.name,
                 "message": record.getMessage(),
-                "run_id": getattr(record, "run_id", None),
-                "request_id": getattr(record, "request_id", None),
-                "correlation_id": getattr(record, "correlation_id", None),
-                "scenario_key": getattr(record, "scenario_key", None),
             }
+            for field_name in _CONTEXT_FIELDS:
+                payload[field_name] = getattr(record, field_name, None)
             if record.exc_info:
                 payload["exception"] = self._exception_formatter.formatException(record.exc_info)
             line = json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n"

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.text import ascii_place_text
 from modules.core.models import GeoPoint
+from modules.road.ors.structures import GeocodeNotFound
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -144,9 +145,12 @@ def resolve_point(
                     props.get("region_a") or props.get("region"),
                 )
                 return GeoPoint(lat=coords[1], lon=coords[0], uf=uf, label=label)
+        except GeocodeNotFound:
+            pass
         except Exception as exc:
             if log:
                 log.warning("CEP geocode failed for %s: %s", val_str, exc)
+            raise
 
     try:
         if log:
@@ -162,9 +166,12 @@ def resolve_point(
                 props.get("region_a") or props.get("region"),
             )
             return GeoPoint(lat=coords[1], lon=coords[0], uf=uf, label=label)
+    except GeocodeNotFound:
+        return None
     except Exception as exc:
         if log:
             log.warning("Text geocode failed for %s: %s", val_str, exc)
+        raise
 
     return None
 

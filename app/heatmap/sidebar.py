@@ -146,5 +146,16 @@ def _render_advanced(*, class_options: Iterable[str], port_ops_scenarios: Iterab
         help="Local runs always append logs under ./logs. This toggle controls Supabase Storage archival when credentials are configured.",
     )
     if st.session_state.get("write_local_logs", False):
-        st.caption("Local file logging is active for this session under ./logs.")
+        local_path = st.session_state.get("local_log_path")
+        if local_path:
+            st.caption(f"Local file logging is active: `{local_path}`")
+        else:
+            st.caption("Local file logging is active for this session under ./logs.")
+    if st.session_state.get("effective_archive_logs", False):
+        archive_path = st.session_state.get("archive_log_path")
+        if archive_path:
+            st.caption(f"Supabase archival is active: `{archive_path}`")
+    policy_message = st.session_state.get("logging_policy_message")
+    if policy_message:
+        st.caption(str(policy_message))
     st.slider("Debug log lines", min_value=50, max_value=1000, step=50, key="log_last_n")

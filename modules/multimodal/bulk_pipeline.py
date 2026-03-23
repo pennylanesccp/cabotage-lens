@@ -11,12 +11,12 @@ from modules.infra.database_manager import (
     finish_bulk_run,
     list_bulk_results,
     list_cached_place_points,
-    list_route_place_points,
     start_bulk_run,
     upsert_place_points,
     upsert_runs,
 )
-from modules.infra.log_manager import get_logger
+from modules.infra.db.bulk_runs import selector_hash
+from modules.infra.log_manager import get_log_context, get_logger, set_log_context
 from modules.multimodal.builder import build_path_geometry_from_resolved, build_port_node, load_routing_assets
 from modules.multimodal.bulk import (
     BulkPerformanceTracker,
@@ -53,6 +53,60 @@ from modules.multimodal.scenario_keys import build_bulk_scenario_key
 _log = get_logger(__name__)
 
 
+def _provider_operation_totals(provider_calls: Dict[str, Dict[str, Dict[str, float]]]) -> Dict[str, float]:
+    totals: dict[str, float] = {
+        "geocode_attempts": 0.0,
+        "route_attempts": 0.0,
+        "rate_limited": 0.0,
+        "timeout": 0.0,
+        "network_error": 0.0,
+        "cooldown_skips": 0.0,
+    }
+    for operations in provider_calls.values():
+        for operation_name, metrics in operations.items():
+            attempts = float(metrics.get("attempts", 0.0) or 0.0)
+            if operation_name in {"geocode_text", "geocode_structured"}:
+                totals["geocode_attempts"] += attempts
+            elif operation_name == "route_road":
+                totals["route_attempts"] += attempts
+            totals["rate_limited"] += float(metrics.get("rate_limited", 0.0) or 0.0)
+            totals["timeout"] += float(metrics.get("timeout", 0.0) or 0.0)
+            totals["network_error"] += float(metrics.get("network_error", 0.0) or 0.0)
+            totals["cooldown_skips"] += float(metrics.get("skipped_cooldown", 0.0) or 0.0)
+    return totals
+
+
+def _format_provider_summary(provider_calls: Dict[str, Dict[str, Dict[str, float]]]) -> str:
+    segments: list[str] = []
+    for provider_name, operations in sorted(provider_calls.items()):
+        operation_segments: list[str] = []
+        for operation_name, metrics in sorted(operations.items()):
+            attempts = int(metrics.get("attempts", 0.0) or 0.0)
+            successes = int(metrics.get("successes", 0.0) or 0.0)
+            failures = int(metrics.get("failures", 0.0) or 0.0)
+            rate_limited = int(metrics.get("rate_limited", 0.0) or 0.0)
+            timeout = int(metrics.get("timeout", 0.0) or 0.0)
+            network_error = int(metrics.get("network_error", 0.0) or 0.0)
+            cooldown_skips = int(metrics.get("skipped_cooldown", 0.0) or 0.0)
+            operation_segments.append(
+                (
+                    f"{operation_name}:attempts={attempts},ok={successes},fail={failures},"
+                    f"rate_limited={rate_limited},timeout={timeout},network={network_error},cooldown={cooldown_skips}"
+                )
+            )
+        if operation_segments:
+            segments.append(f"{provider_name}[{' | '.join(operation_segments)}]")
+    return "; ".join(segments) if segments else "none"
+
+
+def _status_counts(summary_rows: List[Dict[str, Any]]) -> Dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in summary_rows:
+        status = str(row.get("status") or "").strip().lower() or "unknown"
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
 def run_bulk_evaluation_pipeline(
     origin: str,
     dest_list: List[str],
@@ -82,11 +136,12 @@ def run_bulk_evaluation_pipeline(
     shuffle_destinations: bool = True,
     shuffle_seed: Optional[int] = None,
     approximation_fallback: bool = True,
-    max_geocode_workers: int = 4,
-    max_route_workers: int = 8,
+    max_geocode_workers: int = 2,
+    max_route_workers: int = 2,
     persist_batch_size: int = 64,
 ) -> Dict[str, Any]:
     deduped_destinations = _dedupe_preserve_order(dest_list)
+    requested_destination_count = len([item for item in dest_list if str(item).strip()])
     if not deduped_destinations:
         return {
             "summary_rows": [],
@@ -117,19 +172,31 @@ def run_bulk_evaluation_pipeline(
     success_count = 0
     fail_count = 0
     run_id: Optional[str] = None
+    selector_hash_value: Optional[str] = None
 
     started_global = time.perf_counter()
     ors, ports, sea_matrix, resolved_db_path = load_routing_assets(db_path=db_path)
     if hasattr(ors, "reset_metrics"):
         ors.reset_metrics()
 
+    perf.incr("destinations_requested", requested_destination_count)
+    perf.incr("destinations_unique", len(shuffled_destinations))
+    perf.incr("destinations_deduped", max(requested_destination_count - len(shuffled_destinations), 0))
+
     origin_input_norm = normalize_bulk_place_input(origin)
+    set_log_context(
+        origin=origin_input_norm or origin,
+        destination_set_id=destination_set_id,
+        ors_profile=profile,
+        entrypoint="bulk",
+    )
     _log.info(
         (
-            "Starting staged bulk evaluation: origin=%r destinations=%d destination_set=%s "
+            "Starting staged bulk evaluation origin=%r requested=%d unique=%d destination_set=%s "
             "shuffle=%s shuffle_seed=%s approximation_fallback=%s geocode_workers=%d route_workers=%d batch_size=%d"
         ),
         origin,
+        requested_destination_count,
         len(shuffled_destinations),
         destination_set_id,
         shuffle_destinations,
@@ -261,6 +328,7 @@ def run_bulk_evaluation_pipeline(
                     port_ops_scenario=port_ops_scenario,
                     destination_set_id=destination_set_id,
                 )
+                selector_hash_value = selector_hash(run_selector)
 
                 evaluation_kwargs = {
                     "cargo_t": cargo_t,
@@ -300,6 +368,27 @@ def run_bulk_evaluation_pipeline(
                         table_name=runs_table,
                     )
                     conn.commit()
+                set_log_context(
+                    run_id=str(run_id),
+                    selector_hash=selector_hash_value,
+                    origin=origin_pt["label"],
+                    destination_set_id=destination_set_id,
+                    ors_profile=profile,
+                    entrypoint="bulk",
+                )
+                _log.info(
+                    (
+                        "Bulk run initialized run_id=%s selector_hash=%s origin=%s destination_set=%s "
+                        "cargo_t=%.3f truck_key=%s profile=%s"
+                    ),
+                    run_id,
+                    selector_hash_value,
+                    origin_pt["label"],
+                    destination_set_id,
+                    cargo_t,
+                    truck_key,
+                    profile,
+                )
 
             work_items: list[DestinationWorkItem] = []
             with perf.measure("destination_normalization_s"):
@@ -345,16 +434,6 @@ def run_bulk_evaluation_pipeline(
             perf.incr("db_read_ops")
             with perf.measure("db_read_s"):
                 cached_points = list_cached_place_points(conn, places=[item.normalized_input for item in work_items])
-            unresolved_keys = [
-                item.normalized_input
-                for item in work_items
-                if item.normalized_input.casefold() not in cached_points
-            ]
-            route_point_rows: dict[str, Dict[str, Any]] = {}
-            if unresolved_keys:
-                perf.incr("db_read_ops")
-                with perf.measure("db_read_s"):
-                    route_point_rows = list_route_place_points(conn, places=unresolved_keys)
             latest_result_points: dict[str, Dict[str, Any]] = {}
             perf.incr("db_read_ops")
             with perf.measure("db_read_s"):
@@ -377,23 +456,6 @@ def run_bulk_evaluation_pipeline(
                     item.point_source = "place_cache"
                     perf.incr("destination_cache_hits")
                     continue
-                cached = route_point_rows.get(place_key)
-                if cached is not None:
-                    item.point = _point_from_cached_record(cached)
-                    item.destiny_name = item.point["label"]
-                    item.point_source = "route_cache"
-                    perf.incr("destination_cache_hits")
-                    point_rows_to_persist.append(
-                        {
-                            "place": item.normalized_input,
-                            "label": item.point["label"],
-                            "lat": item.point["lat"],
-                            "lon": item.point["lon"],
-                            "uf": item.point.get("uf"),
-                            "source": "route_cache",
-                        }
-                    )
-                    continue
                 latest_result_point = latest_result_points.get(place_key)
                 if latest_result_point is not None:
                     item.point = dict(latest_result_point)
@@ -415,8 +477,11 @@ def run_bulk_evaluation_pipeline(
                 perf.incr("destination_cache_misses")
 
             unresolved_items = [item for item in work_items if item.point is None]
+            resolution_log_context = get_log_context()
 
             def _resolve_destination(item: DestinationWorkItem):
+                if resolution_log_context:
+                    set_log_context(**resolution_log_context)
                 started = time.perf_counter()
                 try:
                     point = _resolve_point_without_db(item.destiny_input, ors)
@@ -434,8 +499,9 @@ def run_bulk_evaluation_pipeline(
                         perf.add_duration("destination_geocode_s", duration_s)
                         completed += 1
                         if error is not None:
-                            item.failure_status = "geocode_failed"
-                            item.error_message = str(error).strip() or f"Failed to resolve destination: {item.destiny_input}"
+                            failure_status, failure_message, _ = _classify_failure(error)
+                            item.failure_status = failure_status
+                            item.error_message = failure_message
                         elif point is None:
                             item.failure_status = "geocode_failed"
                             item.error_message = f"Failed to resolve destination: {item.destiny_input}"
@@ -464,6 +530,19 @@ def run_bulk_evaluation_pipeline(
                         )
 
             _flush_point_rows(conn, point_rows_to_persist)
+            _log.info(
+                (
+                    "Bulk destination resolution summary run_id=%s total=%d cache_hits=%.0f cache_misses=%.0f "
+                    "latest_result_hits=%.0f geocode_attempts=%d failures=%d"
+                ),
+                run_id,
+                len(work_items),
+                perf.counters.get("destination_cache_hits", 0.0),
+                perf.counters.get("destination_cache_misses", 0.0),
+                perf.counters.get("destination_result_hits", 0.0),
+                len(unresolved_items),
+                sum(1 for item in work_items if item.failure_status is not None),
+            )
 
             geometry_items = [item for item in work_items if item.point is not None and item.failure_status is None]
             _emit_progress(
@@ -489,8 +568,11 @@ def run_bulk_evaluation_pipeline(
                 item for item in geometry_items if item.failure_status is None and item.port_destiny is not None
             ]
             route_coordinator.prime(conn, route_specs)
+            geometry_log_context = get_log_context()
 
             def _build_geometry(item: DestinationWorkItem):
+                if geometry_log_context:
+                    set_log_context(**geometry_log_context)
                 started = time.perf_counter()
                 try:
                     assert item.point is not None
@@ -525,8 +607,9 @@ def run_bulk_evaluation_pipeline(
                         perf.add_duration("geometry_acquisition_s", duration_s)
                         completed += 1
                         if error is not None:
-                            item.failure_status = "geometry_failed"
-                            item.error_message = str(error).strip() or "Geometry build failed"
+                            failure_status, failure_message, _ = _classify_failure(error)
+                            item.failure_status = failure_status
+                            item.error_message = failure_message
                         elif not geometry or geometry.get("status") != "ok":
                             item.failure_status = "geometry_failed"
                             item.error_message = "Geometry build failed"
@@ -543,6 +626,23 @@ def run_bulk_evaluation_pipeline(
                         )
 
             _flush_route_rows(conn, route_coordinator.drain_pending_rows())
+            routing_provider_totals = _provider_operation_totals(
+                ors.metrics_snapshot() if hasattr(ors, "metrics_snapshot") else {}
+            )
+            _log.info(
+                (
+                    "Bulk routing summary run_id=%s routable=%d direct_cache_hits=%.0f direct_cache_misses=%.0f "
+                    "last_mile_cache_hits=%.0f last_mile_cache_misses=%.0f route_provider_calls=%.0f geometry_failures=%d"
+                ),
+                run_id,
+                len(routable_items),
+                perf.counters.get("road_direct_cache_hits", 0.0),
+                perf.counters.get("road_direct_cache_misses", 0.0),
+                perf.counters.get("last_mile_cache_hits", 0.0),
+                perf.counters.get("last_mile_cache_misses", 0.0),
+                routing_provider_totals["route_attempts"],
+                sum(1 for item in work_items if item.failure_status is not None),
+            )
 
             persistence = BulkPersistenceBuffer(
                 conn,
@@ -951,8 +1051,27 @@ def run_bulk_evaluation_pipeline(
     duration = time.perf_counter() - started_global
     perf.add_duration("total_run_s", duration)
     provider_calls = ors.metrics_snapshot() if hasattr(ors, "metrics_snapshot") else {}
+    provider_totals = _provider_operation_totals(provider_calls)
     performance = perf.snapshot()
     performance["provider_calls"] = provider_calls
+    status_counts = _status_counts(summary_rows)
+    top_failure_reasons = ", ".join(
+        f"{status}={count}"
+        for status, count in sorted(
+            ((status, count) for status, count in status_counts.items() if status != "ok"),
+            key=lambda item: (-item[1], item[0]),
+        )[:5]
+    ) or "none"
+    total_route_cache_hits = (
+        perf.counters.get("first_mile_cache_hits", 0.0)
+        + perf.counters.get("road_direct_cache_hits", 0.0)
+        + perf.counters.get("last_mile_cache_hits", 0.0)
+    )
+    total_route_cache_misses = (
+        perf.counters.get("first_mile_cache_misses", 0.0)
+        + perf.counters.get("road_direct_cache_misses", 0.0)
+        + perf.counters.get("last_mile_cache_misses", 0.0)
+    )
 
     _emit_progress(
         progress_callback,
@@ -971,11 +1090,11 @@ def run_bulk_evaluation_pipeline(
     )
     _log.info(
         (
-            "Bulk performance summary run_id=%s bootstrap=%.2fs normalize=%.2fs geocode=%.2fs geometry=%.2fs "
-            "exact=%.2fs approx=%.2fs db_read=%.2fs db_write=%.2fs direct_hit=%.0f direct_miss=%.0f "
-            "last_hit=%.0f last_miss=%.0f providers=%s"
+            "Bulk performance summary run_id=%s selector_hash=%s bootstrap=%.2fs normalize=%.2fs geocode=%.2fs "
+            "geometry=%.2fs exact=%.2fs approx=%.2fs db_read=%.2fs db_write=%.2fs total_runtime=%.2fs"
         ),
         run_id,
+        selector_hash_value or "<none>",
         performance["timings_s"].get("bootstrap_s", 0.0),
         performance["timings_s"].get("destination_normalization_s", 0.0),
         performance["timings_s"].get("destination_geocode_s", 0.0),
@@ -984,23 +1103,46 @@ def run_bulk_evaluation_pipeline(
         performance["timings_s"].get("approximation_pass_s", 0.0),
         performance["timings_s"].get("db_read_s", 0.0),
         performance["timings_s"].get("db_write_s", 0.0),
-        performance["counts"].get("road_direct_cache_hits", 0.0),
-        performance["counts"].get("road_direct_cache_misses", 0.0),
-        performance["counts"].get("last_mile_cache_hits", 0.0),
-        performance["counts"].get("last_mile_cache_misses", 0.0),
-        provider_calls,
+        duration,
     )
     _log.info(
         (
-            "Bulk evaluation complete: total=%d exact_success=%d approximated_success=%d "
-            "unresolved_failures=%d duration_s=%.2f run_id=%s"
+            "Bulk evaluation summary run_id=%s requested=%d unique=%d address_cache_hits=%.0f address_cache_misses=%.0f "
+            "route_cache_hits=%.0f route_cache_misses=%.0f geocode_provider_calls=%.0f route_provider_calls=%.0f "
+            "successes=%d failures=%d approximations=%d rows_persisted=%.0f workers=geocode:%d route:%d "
+            "rate_limited=%.0f timeout=%.0f network_error=%.0f cooldown_skips=%.0f duration_s=%.2f"
         ),
-        len(shuffled_destinations),
-        exact_success_count,
-        approximated_success_count,
-        unresolved_fail_count,
-        duration,
         run_id,
+        requested_destination_count,
+        len(shuffled_destinations),
+        perf.counters.get("destination_cache_hits", 0.0),
+        perf.counters.get("destination_cache_misses", 0.0),
+        total_route_cache_hits,
+        total_route_cache_misses,
+        provider_totals["geocode_attempts"],
+        provider_totals["route_attempts"],
+        success_count,
+        fail_count,
+        approximated_success_count,
+        perf.counters.get("bulk_rows_persisted", 0.0),
+        int(max_geocode_workers),
+        int(max_route_workers),
+        provider_totals["rate_limited"],
+        provider_totals["timeout"],
+        provider_totals["network_error"],
+        provider_totals["cooldown_skips"],
+        duration,
+    )
+    _log.info(
+        "Bulk failure summary run_id=%s top_failures=%s statuses=%s",
+        run_id,
+        top_failure_reasons,
+        status_counts,
+    )
+    _log.info(
+        "Bulk provider summary run_id=%s providers=%s",
+        run_id,
+        _format_provider_summary(provider_calls),
     )
     return {
         "summary_rows": summary_rows,
@@ -1011,6 +1153,8 @@ def run_bulk_evaluation_pipeline(
         "unresolved_fail_count": unresolved_fail_count,
         "duration_s": duration,
         "run_id": run_id,
+        "selector_hash": selector_hash_value,
         "shuffle_seed_used": shuffle_seed_used,
+        "status_counts": status_counts,
         "performance": performance,
     }

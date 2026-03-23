@@ -55,7 +55,18 @@ def resolve_cargo_teu(payload: Mapping[str, Any]) -> int:
 def run_analysis(
     payload: Mapping[str, Any],
 ) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None, str]:
-    _log.info("Routing: %s -> %s (%.3ft)", payload["origin"], payload["destiny"], payload["cargo_t"])
+    _log.info(
+        (
+            "Single analysis start origin=%s destiny=%s cargo_t=%.3f truck=%s profile=%s "
+            "allocation_mode=%s"
+        ),
+        payload["origin"],
+        payload["destiny"],
+        payload["cargo_t"],
+        payload["truck_key"],
+        payload["ors_profile"],
+        payload["allocation_mode"] or "auto",
+    )
 
     db_target = resolve_runtime_db_target()
 
@@ -68,6 +79,18 @@ def run_analysis(
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")
         return None, None, "Failed to build route geometry. Check inputs and API key.", str(db_target)
+
+    _log.info(
+        (
+            "Single analysis geometry origin=%s destiny=%s direct_source=%s first_mile_source=%s "
+            "last_mile_source=%s"
+        ),
+        geo["origin"]["label"],
+        geo["destiny"]["label"],
+        geo["road_direct"].get("source"),
+        geo["first_mile"].get("source"),
+        geo["last_mile"].get("source"),
+    )
 
     _log.info("Calculating costs and emissions...")
     results = evaluate_path(
@@ -96,5 +119,26 @@ def run_analysis(
             str(db_target),
         )
 
-    _log.info("Analysis finished.")
+    comparison = results.get("comparison", {})
+    road_only = results.get("road_only", {})
+    multimodal = results.get("multimodal", {})
+    emissions_savings_pct = None
+    road_total_co2e = road_only.get("co2e")
+    multimodal_total_co2e = multimodal.get("total_co2e")
+    if isinstance(road_total_co2e, (int, float)) and float(road_total_co2e) > 0 and isinstance(
+        multimodal_total_co2e,
+        (int, float),
+    ):
+        emissions_savings_pct = (1.0 - (float(multimodal_total_co2e) / float(road_total_co2e))) * 100.0
+    _log.info(
+        (
+            "Single analysis complete road_km=%s sea_km=%s cost_savings_pct=%s emissions_savings_pct=%s "
+            "db_target=%s"
+        ),
+        geo["road_direct"].get("distance_km"),
+        geo["sea_leg"].get("distance_km"),
+        comparison.get("savings_pct"),
+        emissions_savings_pct,
+        db_target,
+    )
     return geo, results, None, str(db_target)

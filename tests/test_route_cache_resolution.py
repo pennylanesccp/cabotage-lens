@@ -1,5 +1,6 @@
 import contextlib
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from modules.infra.db.road_cache import (
@@ -110,6 +111,45 @@ class RouteCacheResolutionTests(unittest.TestCase):
             },
         )
         resolve_mock.assert_not_called()
+
+    def test_resolve_point_for_geometry_persists_provider_result_in_place_cache(self) -> None:
+        fake_conn = SimpleNamespace(commit=unittest.mock.MagicMock())
+        resolved = SimpleNamespace(label="Sao Paulo, SP", lat=-23.5505, lon=-46.6333, uf="SP")
+
+        with patch(
+            "modules.multimodal.builder.db_session",
+            return_value=contextlib.nullcontext(fake_conn),
+        ), patch(
+            "modules.multimodal.builder.find_place_point",
+            return_value=None,
+        ), patch(
+            "modules.multimodal.builder.resolve_point_null_safe",
+            return_value=resolved,
+        ), patch(
+            "modules.multimodal.builder.upsert_place_point",
+            return_value={
+                "label": "Sao Paulo, SP",
+                "lat": -23.5505,
+                "lon": -46.6333,
+                "uf": "SP",
+                "location_id": 55,
+            },
+        ) as upsert_mock:
+            point = resolve_point_for_geometry("Sao Paulo - SP", ors=object())
+
+        self.assertEqual(
+            point,
+            {
+                "label": "Sao Paulo, SP",
+                "lat": -23.5505,
+                "lon": -46.6333,
+                "uf": "SP",
+                "location_id": 55,
+            },
+        )
+        upsert_mock.assert_called_once()
+        self.assertEqual(upsert_mock.call_args.kwargs["place"], "Sao Paulo, SP")
+        fake_conn.commit.assert_called_once_with()
 
     def test_get_run_ignores_requested_profile_and_uses_latest_route_for_pair(self) -> None:
         conn = _FakeConnection(

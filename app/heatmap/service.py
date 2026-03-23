@@ -17,8 +17,8 @@ from modules.infra.database_manager import (
     summarize_bulk_results,
 )
 from modules.infra.db.bulk_runs import selector_hash
-from modules.infra.log_manager import get_logger
-from modules.multimodal.bulk import load_destinations, run_bulk_evaluation
+from modules.infra.log_manager import bind_log_context, get_logger
+from modules.multimodal.bulk import bulk_failure_is_retryable, load_destinations, run_bulk_evaluation
 from modules.multimodal.scenario_keys import normalize_bulk_place_input
 
 from app.heatmap.config import HEATMAP_DESTINATION_LABEL, HEATMAP_DESTINATION_SET_ID, HEATMAP_DESTINATIONS_PATH
@@ -86,6 +86,7 @@ def _to_run_info(
     row_count: int,
     success_count: int,
     fail_count: int,
+    retryable_fail_count: int,
     latest_updated_timestamp: Any,
     latest_run_id: Optional[str],
     duration_s: Optional[float],
@@ -96,7 +97,7 @@ def _to_run_info(
     success_total = max(min(int(success_count), destination_count), 0)
     fail_total = max(min(int(fail_count), destination_count), 0)
     missing_count = max(destination_count - found_count, 0)
-    pending_count = max(destination_count - success_total, 0)
+    pending_count = max(missing_count + max(int(retryable_fail_count), 0), 0)
     return HeatmapRunInfo(
         run_id=latest_run_id,
         origin_name=scenario.origin_name,
@@ -229,6 +230,27 @@ def _selector_log_details(selector: BulkRunSelector) -> str:
     )
 
 
+def _retryable_failure_count(records: List[Any]) -> int:
+    return sum(1 for record in records if bulk_failure_is_retryable(getattr(record, "status", "")))
+
+
+def _pending_destination_list(records: List[Any]) -> List[str]:
+    latest_statuses: dict[str, str] = {}
+    for record in records:
+        normalized_input = normalize_bulk_place_input(getattr(record, "input_destiny", ""))
+        if not normalized_input:
+            continue
+        latest_statuses[normalized_input.casefold()] = str(getattr(record, "status", "")).strip().lower()
+
+    pending: list[str] = []
+    for destination in _heatmap_destinations():
+        normalized_input = normalize_bulk_place_input(destination).casefold()
+        status = latest_statuses.get(normalized_input)
+        if status is None or bulk_failure_is_retryable(status):
+            pending.append(destination)
+    return pending
+
+
 def _select_active_selector(
     conn: Any,
     scenario: HeatmapScenario,
@@ -304,42 +326,49 @@ def list_cargo_options(origin_name: str) -> List[float]:
 
 def get_heatmap_status(scenario: HeatmapScenario) -> HeatmapRunInfo:
     _require_postgres()
-    _log.info(
-        "Querying heatmap comparison status origin=%s cargo_t=%.3f destination_set=%s",
-        scenario.origin_name,
-        scenario.cargo_t,
-        HEATMAP_DESTINATION_SET_ID,
-    )
-    with db_session() as conn:
-        _, summary, latest_completed = _select_active_selector(conn, scenario)
+    with bind_log_context(origin=scenario.origin_name, destination_set_id=HEATMAP_DESTINATION_SET_ID, ors_profile=scenario.ors_profile, entrypoint="heatmap"):
+        _log.info(
+            "Querying heatmap comparison status origin=%s cargo_t=%.3f destination_set=%s",
+            scenario.origin_name,
+            scenario.cargo_t,
+            HEATMAP_DESTINATION_SET_ID,
+        )
+        with db_session() as conn:
+            selector, summary, latest_completed = _select_active_selector(conn, scenario)
+            latest_rows = list_bulk_results(conn, selector=selector, only_success=None)
 
-    status = _to_run_info(
-        scenario,
-        row_count=summary.row_count,
-        success_count=summary.success_count,
-        fail_count=summary.fail_count,
-        latest_updated_timestamp=(
-            summary.latest_updated_timestamp
-            or (None if latest_completed is None else latest_completed.updated_timestamp)
-        ),
-        latest_run_id=summary.latest_run_id or (None if latest_completed is None else latest_completed.run_id),
-        duration_s=None if latest_completed is None else latest_completed.duration_s,
-        completed_timestamp=None if latest_completed is None else latest_completed.completed_timestamp,
-    )
-    _log.info(
-        (
-            "Heatmap comparison status origin=%s cargo_t=%.3f found=%d success=%d fail=%d "
-            "missing=%d latest_run_id=%s"
-        ),
-        scenario.origin_name,
-        scenario.cargo_t,
-        status.found_count,
-        status.success_count,
-        status.fail_count,
-        status.missing_count,
-        status.run_id or "<none>",
-    )
-    return status
+        retryable_fail_count = _retryable_failure_count(latest_rows)
+        status = _to_run_info(
+            scenario,
+            row_count=summary.row_count,
+            success_count=summary.success_count,
+            fail_count=summary.fail_count,
+            retryable_fail_count=retryable_fail_count,
+            latest_updated_timestamp=(
+                summary.latest_updated_timestamp
+                or (None if latest_completed is None else latest_completed.updated_timestamp)
+            ),
+            latest_run_id=summary.latest_run_id or (None if latest_completed is None else latest_completed.run_id),
+            duration_s=None if latest_completed is None else latest_completed.duration_s,
+            completed_timestamp=None if latest_completed is None else latest_completed.completed_timestamp,
+        )
+        _log.info(
+            (
+                "Heatmap comparison status origin=%s cargo_t=%.3f found=%d success=%d fail=%d "
+                "missing=%d retryable_failures=%d pending=%d latest_run_id=%s selector_hash=%s"
+            ),
+            scenario.origin_name,
+            scenario.cargo_t,
+            status.found_count,
+            status.success_count,
+            status.fail_count,
+            status.missing_count,
+            retryable_fail_count,
+            status.pending_count,
+            status.run_id or "<none>",
+            selector_hash(selector),
+        )
+        return status
 
 
 def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
@@ -347,29 +376,24 @@ def get_latest_run_info(scenario: HeatmapScenario) -> Optional[HeatmapRunInfo]:
     return status if status.updated_timestamp is not None else None
 
 
-def _successful_destination_inputs(scenario: HeatmapScenario) -> set[str]:
+def pending_destinations(scenario: HeatmapScenario) -> List[str]:
     with db_session() as conn:
         selector = _build_selector_for_origin_location(scenario, _origin_location_id(scenario.origin_name))
-        return {
-            normalize_bulk_place_input(record.input_destiny).casefold()
-            for record in list_bulk_results(conn, selector=selector, only_success=True)
-            if str(record.input_destiny).strip()
-        }
+        latest_rows = list_bulk_results(conn, selector=selector, only_success=None)
 
-
-def pending_destinations(scenario: HeatmapScenario) -> List[str]:
-    successful = _successful_destination_inputs(scenario)
-    pending = [
-        destination
-        for destination in _heatmap_destinations()
-        if normalize_bulk_place_input(destination).casefold() not in successful
-    ]
+    pending = _pending_destination_list(latest_rows)
+    retryable_failures = _retryable_failure_count(latest_rows)
+    missing_count = max(len(_heatmap_destinations()) - len(latest_rows), 0)
     _log.info(
-        "Computed pending heatmap destinations origin=%s cargo_t=%.3f pending=%d successful=%d total=%d",
+        (
+            "Computed pending heatmap destinations origin=%s cargo_t=%.3f pending=%d missing=%d "
+            "retryable_failures=%d total=%d"
+        ),
         scenario.origin_name,
         scenario.cargo_t,
         len(pending),
-        len(successful),
+        missing_count,
+        retryable_failures,
         len(_heatmap_destinations()),
     )
     return pending
@@ -520,54 +544,55 @@ def run_heatmap(
             )
         return dataset
 
-    _log.info(
-        "Starting heatmap %s origin=%s cargo_t=%.3f destination_set=%s destinations=%d overwrite_road=%s",
-        mode_label,
-        scenario.origin_name,
-        scenario.cargo_t,
-        HEATMAP_DESTINATION_SET_ID,
-        len(destinations_to_process),
-        False,
-    )
-    bulk_summary = run_bulk_evaluation(
-        origin=scenario.origin_name,
-        dest_list=destinations_to_process,
-        cargo_t=float(scenario.cargo_t),
-        truck_key=str(scenario.truck_key),
-        profile=str(scenario.ors_profile),
-        overwrite_road=False,
-        vessel_class=str(scenario.vessel_class),
-        include_hoteling=bool(scenario.include_hoteling),
-        hoteling_hours_per_call=float(scenario.hoteling_hours_per_call),
-        port_calls=int(scenario.port_calls),
-        include_port_ops=bool(scenario.include_port_ops),
-        port_moves_per_call=scenario.port_moves_per_call,
-        cargo_teu=scenario.cargo_teu,
-        t_per_teu_default=float(scenario.t_per_teu_default),
-        allocation_mode=scenario.allocation_mode,
-        allocation_load_factor=float(scenario.allocation_load_factor),
-        full_call_mode=bool(scenario.full_call_mode),
-        port_ops_scenario=str(scenario.port_ops_scenario),
-        destination_set_id=HEATMAP_DESTINATION_SET_ID,
-        progress_callback=progress_callback,
-        # Heatmap reruns can fan out across hundreds of destinations; keep
-        # geocoding serialized to avoid burst quota failures before routing starts.
-        max_geocode_workers=1,
-    )
-    _log.info(
-        (
-            "Heatmap %s bulk summary origin=%s cargo_t=%.3f success=%d fail=%d "
-            "exact_success=%d approximated_success=%d run_id=%s"
-        ),
-        mode_label,
-        scenario.origin_name,
-        scenario.cargo_t,
-        int(bulk_summary.get("success_count") or 0),
-        int(bulk_summary.get("fail_count") or 0),
-        int(bulk_summary.get("exact_success_count") or 0),
-        int(bulk_summary.get("approximated_success_count") or 0),
-        bulk_summary.get("run_id") or "<none>",
-    )
+    with bind_log_context(origin=scenario.origin_name, destination_set_id=HEATMAP_DESTINATION_SET_ID, ors_profile=scenario.ors_profile, entrypoint="heatmap"):
+        _log.info(
+            "Starting heatmap %s origin=%s cargo_t=%.3f destination_set=%s destinations=%d overwrite_road=%s",
+            mode_label,
+            scenario.origin_name,
+            scenario.cargo_t,
+            HEATMAP_DESTINATION_SET_ID,
+            len(destinations_to_process),
+            False,
+        )
+        bulk_summary = run_bulk_evaluation(
+            origin=scenario.origin_name,
+            dest_list=destinations_to_process,
+            cargo_t=float(scenario.cargo_t),
+            truck_key=str(scenario.truck_key),
+            profile=str(scenario.ors_profile),
+            overwrite_road=False,
+            vessel_class=str(scenario.vessel_class),
+            include_hoteling=bool(scenario.include_hoteling),
+            hoteling_hours_per_call=float(scenario.hoteling_hours_per_call),
+            port_calls=int(scenario.port_calls),
+            include_port_ops=bool(scenario.include_port_ops),
+            port_moves_per_call=scenario.port_moves_per_call,
+            cargo_teu=scenario.cargo_teu,
+            t_per_teu_default=float(scenario.t_per_teu_default),
+            allocation_mode=scenario.allocation_mode,
+            allocation_load_factor=float(scenario.allocation_load_factor),
+            full_call_mode=bool(scenario.full_call_mode),
+            port_ops_scenario=str(scenario.port_ops_scenario),
+            destination_set_id=HEATMAP_DESTINATION_SET_ID,
+            progress_callback=progress_callback,
+            max_geocode_workers=1,
+            max_route_workers=2,
+        )
+        _log.info(
+            (
+                "Heatmap %s bulk summary origin=%s cargo_t=%.3f success=%d fail=%d "
+                "exact_success=%d approximated_success=%d run_id=%s selector_hash=%s"
+            ),
+            mode_label,
+            scenario.origin_name,
+            scenario.cargo_t,
+            int(bulk_summary.get("success_count") or 0),
+            int(bulk_summary.get("fail_count") or 0),
+            int(bulk_summary.get("exact_success_count") or 0),
+            int(bulk_summary.get("approximated_success_count") or 0),
+            bulk_summary.get("run_id") or "<none>",
+            bulk_summary.get("selector_hash") or "<none>",
+        )
     dataset = load_current_dataset(scenario)
     if dataset is None:
         post_status = get_heatmap_status(scenario)

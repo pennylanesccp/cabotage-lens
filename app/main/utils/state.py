@@ -133,22 +133,25 @@ def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     st.session_state.setdefault("last_results", None)
     st.session_state.setdefault("local_log_path", None)
     st.session_state.setdefault("archive_log_path", None)
+    st.session_state.setdefault("effective_archive_logs", bool(st.session_state.get("archive_logs", False)))
+    st.session_state.setdefault("logging_policy_message", None)
 
 
 def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
     safe_level = validated_log_level(level, default=str(DEFAULTS["log_level"]))
     runtime_environment = detect_runtime_environment(st.session_state.get("runtime_environment"))
-    write_local_logs = bool_from_any(
-        st.session_state.get("write_local_logs"),
-        default=local_file_logging_enabled_by_default(runtime_environment),
+    requested_archive_to_storage = bool_from_any(
+        archive_to_storage,
+        default=storage_archival_enabled_by_default(runtime_environment),
     )
-    effective_archive_to_storage = bool(archive_to_storage)
-    effective_write_local_logs = bool(write_local_logs)
+    effective_archive_to_storage = bool(requested_archive_to_storage)
+    effective_write_local_logs = local_file_logging_enabled_by_default(runtime_environment)
+    policy_message: str | None = None
     try:
         init_logging(
             level=safe_level,
-            archive_to_storage=archive_to_storage,
-            archive_to_local_file=write_local_logs,
+            archive_to_storage=effective_archive_to_storage,
+            archive_to_local_file=effective_write_local_logs,
             environment=runtime_environment,
             local_logs_dir=ROOT / "logs",
             force_clean=True,
@@ -158,12 +161,14 @@ def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
             init_logging(
                 level=safe_level,
                 archive_to_storage=False,
-                archive_to_local_file=write_local_logs,
+                archive_to_local_file=effective_write_local_logs,
                 environment=runtime_environment,
                 local_logs_dir=ROOT / "logs",
                 force_clean=True,
             )
-            _log.warning("Supabase log archival disabled due to runtime configuration limits: %s", exc)
+            effective_archive_to_storage = False
+            policy_message = f"Supabase log archival disabled for this session: {exc}"
+            _log.warning(policy_message)
         except Exception as fallback_exc:
             init_logging(
                 level=safe_level,
@@ -173,24 +178,22 @@ def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
                 local_logs_dir=ROOT / "logs",
                 force_clean=True,
             )
-            st.session_state.archive_logs = False
-            st.session_state.write_local_logs = False
             effective_archive_to_storage = False
             effective_write_local_logs = False
-            _log.warning(
-                "File and Storage logging disabled due to runtime configuration limits: %s / %s",
-                exc,
-                fallback_exc,
+            policy_message = (
+                "File and Storage logging disabled for this session: "
+                f"{exc} / {fallback_exc}"
             )
-        else:
-            effective_archive_to_storage = False
-            effective_write_local_logs = bool(write_local_logs)
+            _log.warning(
+                policy_message,
+            )
 
     st.session_state.runtime_environment = runtime_environment
-    st.session_state.archive_logs = effective_archive_to_storage
     st.session_state.write_local_logs = effective_write_local_logs
+    st.session_state.effective_archive_logs = effective_archive_to_storage
     st.session_state.local_log_path = get_current_local_log_path()
     st.session_state.archive_log_path = get_current_archive_object_path()
+    st.session_state.logging_policy_message = policy_message
 
     root = logging.getLogger()
     for handler in list(root.handlers):

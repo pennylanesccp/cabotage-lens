@@ -18,33 +18,31 @@ from app.heatmap.config import (
     HEATMAP_MAP_STYLE,
     HEATMAP_POINT_OVERLAY_RADIUS_M,
 )
-from app.heatmap.surface import build_surface, load_brazil_boundary_geojson
+from app.heatmap.surface import build_surface
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
 
 _HEATMAP_MAP_CSS = """
 <style>
     div[data-testid="stDeckGlJsonChart"] {
-        border: 1px solid rgba(148, 163, 184, 0.12);
+        border: 1px solid rgba(148, 163, 184, 0.14);
         border-radius: 22px;
         overflow: hidden;
-        background: rgba(10, 18, 32, 0.08);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        background: rgba(248, 250, 252, 0.92);
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
     }
     div[data-testid="stDeckGlJsonChart"] * {
         outline: none !important;
     }
     .heatmap-legend-card {
         padding: 0.95rem 1rem;
-        border: 1px solid rgba(148, 163, 184, 0.18);
+        border: 1px solid rgba(148, 163, 184, 0.16);
         border-radius: 16px;
-        background:
-            linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(8, 15, 29, 0.94)),
-            #0f172a;
-        box-shadow: 0 14px 30px rgba(2, 6, 23, 0.18);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
         margin-bottom: 0.9rem;
     }
     .heatmap-legend-card__title {
-        color: #f8fafc;
+        color: #0f172a;
         font-weight: 700;
         margin-bottom: 0.5rem;
     }
@@ -52,20 +50,20 @@ _HEATMAP_MAP_CSS = """
         height: 12px;
         border-radius: 999px;
         margin-bottom: 0.6rem;
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(148, 163, 184, 0.18);
     }
     .heatmap-legend-card__body {
         font-size: 0.92rem;
         line-height: 1.5;
     }
     .heatmap-legend-card__semantic {
-        color: #e2e8f0;
+        color: #0f172a;
     }
     .heatmap-legend-card__helper {
-        color: #cbd5e1;
+        color: #334155;
     }
     .heatmap-legend-card__scale {
-        color: #f8fafc;
+        color: #0f172a;
         font-weight: 600;
     }
 </style>
@@ -174,13 +172,13 @@ def _inject_heatmap_map_css() -> None:
     st.markdown(_HEATMAP_MAP_CSS, unsafe_allow_html=True)
 
 
-def _legend_labels(metric: str, mode: str, surface: HeatmapSurface) -> tuple[str, list[str], list[str], list[str]]:
+def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str], list[str], list[str]]:
     if metric == "cost":
-        title = "Cost surface"
+        title = "3D cost surface"
         scale_text = f"Color scale: robust +/- {surface.color_scale:,.1f}% cost advantage"
         elevation_text = f"Height scale: robust +/- {_format_signed_currency(surface.elevation_scale)}"
     else:
-        title = "Emissions surface"
+        title = "3D emissions surface"
         scale_text = f"Color scale: robust +/- {surface.color_scale:,.1f}% emissions advantage"
         elevation_text = f"Height scale: robust +/- {_format_signed_emissions(surface.elevation_scale)}"
 
@@ -192,19 +190,15 @@ def _legend_labels(metric: str, mode: str, surface: HeatmapSurface) -> tuple[str
     helper_lines = [
         "Color encodes relative advantage (%) across the interpolated surface.",
         "Surface coverage is limited to the convex hull of available destination cities.",
+        "Height encodes signed absolute advantage: lower terrain favors road, higher terrain favors multimodal.",
     ]
-    scale_lines = [scale_text]
-    if mode == "3d":
-        helper_lines.append(
-            "Height encodes signed absolute advantage on an upward floor: lower columns favor road, higher columns favor multimodal."
-        )
-        scale_lines.append(elevation_text)
+    scale_lines = [scale_text, elevation_text]
     return title, semantic_lines, helper_lines, scale_lines
 
 
-def render_legend(metric: str, mode: str, surface: HeatmapSurface) -> None:
+def render_legend(metric: str, surface: HeatmapSurface) -> None:
     _inject_heatmap_map_css()
-    title, semantic_lines, helper_lines, scale_lines = _legend_labels(metric, mode, surface)
+    title, semantic_lines, helper_lines, scale_lines = _legend_labels(metric, surface)
     gradient = (
         f"linear-gradient(90deg, rgb{HEATMAP_COLOR_NEGATIVE}, "
         f"rgb{HEATMAP_COLOR_MID}, rgb{HEATMAP_COLOR_POSITIVE})"
@@ -228,28 +222,15 @@ def render_legend(metric: str, mode: str, surface: HeatmapSurface) -> None:
 def render_heatmap_map(
     dataset: HeatmapDataset,
     metric: str,
-    mode: str,
     *,
     show_points: bool = False,
     surface: HeatmapSurface | None = None,
 ) -> HeatmapSurface:
     _inject_heatmap_map_css()
-    surface = surface or build_surface(dataset, metric, mode)
+    surface = surface or build_surface(dataset, metric)
     surface_rows = _surface_rows(surface, metric)
-    boundary_geojson = load_brazil_boundary_geojson()
-    is_3d = str(mode).strip().lower() == "3d"
 
     layers: list[pdk.Layer] = [
-        pdk.Layer(
-            "GeoJsonLayer",
-            data=boundary_geojson,
-            pickable=False,
-            stroked=True,
-            filled=False,
-            get_line_color=[100, 116, 139, 42],
-            line_width_min_pixels=0.6,
-            opacity=0.25,
-        ),
         pdk.Layer(
             "PolygonLayer",
             data=surface_rows,
@@ -257,11 +238,11 @@ def render_heatmap_map(
             get_fill_color="fill_color",
             get_elevation="elevation",
             pickable=True,
-            extruded=is_3d,
+            extruded=True,
             stroked=False,
             filled=True,
             wireframe=False,
-            opacity=0.86,
+            opacity=0.9,
         ),
     ]
 
@@ -288,8 +269,8 @@ def render_heatmap_map(
             latitude=HEATMAP_BRAZIL_CENTER_LAT,
             longitude=HEATMAP_BRAZIL_CENTER_LON,
             zoom=HEATMAP_BRAZIL_ZOOM,
-            pitch=(HEATMAP_3D_PITCH if is_3d else 0),
-            bearing=(HEATMAP_3D_BEARING if is_3d else 0),
+            pitch=HEATMAP_3D_PITCH,
+            bearing=HEATMAP_3D_BEARING,
         ),
         layers=layers,
         tooltip={

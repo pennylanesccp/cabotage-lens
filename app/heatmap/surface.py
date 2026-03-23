@@ -16,6 +16,7 @@ from app.heatmap.config import (
     HEATMAP_SURFACE_CELL_SIZE_DEGREES,
     HEATMAP_SURFACE_COLOR_QUANTILE,
     HEATMAP_SURFACE_ELEVATION_FLOOR_RATIO,
+    HEATMAP_SURFACE_ELEVATION_GAMMA,
     HEATMAP_SURFACE_ELEVATION_QUANTILE,
     HEATMAP_SURFACE_MAX_ELEVATION_M,
 )
@@ -468,24 +469,23 @@ def _surface_geometry_cached(
     return geometry_samples, hull_polygon, prepared_triangles, _hull_cells(hull_polygon)
 
 
-def _elevation_for_value(value: float, scale: float, mode: str) -> float:
-    if mode != "3d":
-        return 0.0
+def _elevation_for_value(value: float, scale: float) -> float:
     floor_height = float(HEATMAP_SURFACE_MAX_ELEVATION_M) * float(HEATMAP_SURFACE_ELEVATION_FLOOR_RATIO)
     if scale <= 0.0:
-        return round(floor_height, 2)
+        return round(floor_height + ((float(HEATMAP_SURFACE_MAX_ELEVATION_M) - floor_height) * 0.5), 2)
     usable_height = max(float(HEATMAP_SURFACE_MAX_ELEVATION_M) - floor_height, 0.0)
     normalized = _clamp(float(value) / float(scale), -1.0, 1.0)
-    shifted = (normalized + 1.0) / 2.0
+    curved = math.copysign(abs(normalized) ** float(HEATMAP_SURFACE_ELEVATION_GAMMA), normalized)
+    shifted = (curved + 1.0) / 2.0
     return round(floor_height + (shifted * usable_height), 2)
 
 
 @lru_cache(maxsize=24)
-def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str, mode: str) -> HeatmapSurface:
+def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) -> HeatmapSurface:
     if not points_signature:
         return HeatmapSurface(
             metric=metric,
-            mode=mode,
+            mode="3d",
             cells=[],
             color_scale=1.0,
             elevation_scale=1.0,
@@ -504,7 +504,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str, mo
     if len(value_samples) < 3 or len(hull_polygon) < 3 or not prepared_triangles or not hull_cells:
         return HeatmapSurface(
             metric=metric,
-            mode=mode,
+            mode="3d",
             cells=[],
             color_scale=color_scale,
             elevation_scale=elevation_scale,
@@ -527,7 +527,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str, mo
                 percentage_value=percentage_value,
                 absolute_value=absolute_value,
                 fill_color=_color_for_value(percentage_value, color_scale),
-                elevation_m=_elevation_for_value(absolute_value, elevation_scale, mode),
+                elevation_m=_elevation_for_value(absolute_value, elevation_scale),
                 nearest_destiny_name=nearest_name,
                 nearest_destiny_uf=nearest_uf,
                 nearest_distance_km=nearest_distance,
@@ -536,7 +536,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str, mo
 
     return HeatmapSurface(
         metric=metric,
-        mode=mode,
+        mode="3d",
         cells=cells,
         color_scale=color_scale,
         elevation_scale=elevation_scale,
@@ -546,20 +546,18 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str, mo
     )
 
 
-def build_surface(dataset: HeatmapDataset, metric: str, mode: str) -> HeatmapSurface:
+def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
     normalized_metric = "emissions" if str(metric).strip().lower() == "emissions" else "cost"
-    normalized_mode = "3d" if str(mode).strip().lower() == "3d" else "2d"
     points_signature = _dataset_signature(dataset, normalized_metric)
-    surface = _build_surface_cached(points_signature, normalized_metric, normalized_mode)
+    surface = _build_surface_cached(points_signature, normalized_metric)
     _log.info(
         (
-            "Heatmap surface built origin=%s cargo_t=%.3f metric=%s mode=%s source_points=%d "
+            "Heatmap surface built origin=%s cargo_t=%.3f metric=%s mode=3d source_points=%d "
             "unique_coordinates=%d hull_vertices=%d cells=%d"
         ),
         dataset.scenario.origin_name,
         dataset.scenario.cargo_t,
         normalized_metric,
-        normalized_mode,
         surface.source_point_count,
         surface.unique_source_coordinate_count,
         surface.hull_vertex_count,

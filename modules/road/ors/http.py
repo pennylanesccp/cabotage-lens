@@ -127,7 +127,7 @@ class ORSHttpClient:
             )
 
         url = f"{self.cfg.base_url}{endpoint}"
-        _log.info("API CALL: %s %s", method, endpoint)
+        _log.debug("API CALL: %s %s", method, endpoint)
 
         try:
             t0 = time.time()
@@ -146,7 +146,7 @@ class ORSHttpClient:
                 resp.status_code == 403
                 and any(token in normalized_text for token in _QUOTA_ERROR_HINTS)
             ):
-                _log.warning("ORS quota limit exceeded (status=%s).", resp.status_code)
+                _log.debug("ORS quota limit exceeded endpoint=%s status=%s", endpoint, resp.status_code)
                 raise RateLimited(f"Quota exceeded ({resp.status_code}): {response_text}")
 
             resp.raise_for_status()
@@ -161,7 +161,7 @@ class ORSHttpClient:
             return data
 
         except requests.RequestException as exc:
-            _log.error("Network Error on %s: %s", endpoint, exc)
+            _log.debug("Network error on %s: %s", endpoint, exc)
             raise ORSError(f"Communication failure: {exc}") from exc
 
 

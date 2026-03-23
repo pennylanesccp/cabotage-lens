@@ -100,7 +100,7 @@ class LocationIQHttpClient:
         merged_params["key"] = self.cfg.api_key
 
         url = f"{self.cfg.base_url}{endpoint}"
-        _log.info("API CALL: %s %s provider=locationiq", method, endpoint)
+        _log.debug("API CALL: %s %s provider=locationiq", method, endpoint)
 
         try:
             t0 = time.time()
