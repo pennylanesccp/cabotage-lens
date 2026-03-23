@@ -24,37 +24,37 @@ from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, Heat
 _HEATMAP_MAP_CSS = """
 <style>
     div[data-testid="stDeckGlJsonChart"] {
-        border: 1px solid rgba(148, 163, 184, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.0);
         border-radius: 22px;
         overflow: hidden;
-        background: rgba(248, 250, 252, 0.92);
-        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+        background: rgba(248, 250, 252, 0.94);
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
     }
     div[data-testid="stDeckGlJsonChart"] * {
         outline: none !important;
     }
     .heatmap-legend-card {
-        padding: 0.85rem 1rem;
-        border: 1px solid rgba(148, 163, 184, 0.16);
+        padding: 0.7rem 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.0);
         border-radius: 16px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-        margin-bottom: 0.8rem;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.92));
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+        margin-bottom: 0.65rem;
     }
     .heatmap-legend-card__title {
         color: #0f172a;
         font-weight: 700;
-        margin-bottom: 0.45rem;
+        margin-bottom: 0.3rem;
     }
     .heatmap-legend-card__gradient {
-        height: 12px;
+        height: 14px;
         border-radius: 999px;
-        margin-bottom: 0.5rem;
-        border: 1px solid rgba(148, 163, 184, 0.18);
+        margin-bottom: 0.45rem;
+        border: 1px solid rgba(148, 163, 184, 0.12);
     }
     .heatmap-legend-card__body {
-        font-size: 0.9rem;
-        line-height: 1.45;
+        font-size: 0.86rem;
+        line-height: 1.4;
     }
     .heatmap-legend-card__semantic {
         color: #0f172a;
@@ -69,19 +69,6 @@ _HEATMAP_MAP_CSS = """
     }
 </style>
 """
-
-
-def _format_timestamp(value: Any) -> str:
-    if value is None:
-        return "Unknown"
-    text = str(value).strip()
-    if "T" in text:
-        text = text.replace("T", " ")
-    if "+" in text:
-        text = text.split("+", 1)[0].strip()
-    return text or "Unknown"
-
-
 def _format_signed_currency(value: float) -> str:
     return f"R$ {value:,.2f}"
 
@@ -99,28 +86,27 @@ def _reference_city_label(name: str, uf: str | None) -> str:
 def _surface_tooltip_html(cell: HeatmapSurfaceCell, metric: str) -> str:
     reference_label = _reference_city_label(cell.nearest_destiny_name, cell.nearest_destiny_uf)
     if metric == "cost":
-        percentage_label = "Interpolated cost advantage"
-        absolute_label = "Interpolated signed absolute advantage"
+        percentage_label = "Cost advantage"
+        absolute_label = "Absolute advantage"
         absolute_value = _format_signed_currency(cell.absolute_value)
     else:
-        percentage_label = "Interpolated emissions advantage"
-        absolute_label = "Interpolated signed absolute advantage"
+        percentage_label = "Emissions advantage"
+        absolute_label = "Absolute advantage"
         absolute_value = _format_signed_emissions(cell.absolute_value)
 
     return (
-        f"<div style='font-family: sans-serif; min-width: 260px;'>"
-        f"<div style='font-weight: 700; margin-bottom: 4px;'>Brazil surface cell</div>"
+        f"<div style='font-family: sans-serif; min-width: 220px;'>"
+        f"<div style='font-weight: 700; margin-bottom: 4px;'>Surface cell</div>"
         f"<div>{escape(percentage_label)}: {cell.percentage_value:,.2f}%</div>"
         f"<div>{escape(absolute_label)}: {escape(absolute_value)}</div>"
         f"<div>Reference city: {escape(reference_label)}</div>"
-        f"<div>Reference distance: {cell.nearest_distance_km:,.1f} km</div>"
         f"</div>"
     )
 
 
 def _point_tooltip_html(point: HeatmapPoint) -> str:
     return (
-        f"<div style='font-family: sans-serif; min-width: 260px;'>"
+        f"<div style='font-family: sans-serif; min-width: 240px;'>"
         f"<div style='font-weight: 700; margin-bottom: 4px;'>{escape(point.destiny_name)}</div>"
         f"<div>Road cost: R$ {point.road_cost_r:,.2f}</div>"
         f"<div>Multimodal cost: R$ {point.multimodal_cost_r:,.2f}</div>"
@@ -131,7 +117,6 @@ def _point_tooltip_html(point: HeatmapPoint) -> str:
         f"<div>Emissions advantage: {_format_signed_emissions(point.emissions_delta_kg)}</div>"
         f"<div>Emissions advantage (%): {_safe_percentage(point.emissions_savings_pct, point.emissions_delta_kg, point.road_emissions_kg):,.2f}%</div>"
         f"<div>Nearest destination port: {escape(point.port_destiny_name or 'n/a')}</div>"
-        f"<div>Last updated: {escape(_format_timestamp(point.updated_timestamp))}</div>"
         f"</div>"
     )
 
@@ -180,7 +165,7 @@ def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str]
         title = "3D emissions surface"
 
     semantic_lines = [
-        "Terracotta favors road, sand marks parity, teal favors multimodal.",
+        "Orange-red favors road, golden sand marks parity, green favors multimodal.",
     ]
     helper_lines = [
         "Color shows relative advantage across the interpolated surface.",
@@ -234,6 +219,7 @@ def render_heatmap_map(
             stroked=False,
             filled=True,
             wireframe=False,
+            elevation_scale=1.12,
             opacity=0.94,
         ),
     ]
@@ -248,7 +234,7 @@ def render_heatmap_map(
                 get_line_color="line_color",
                 get_radius="radius",
                 radius_min_pixels=2,
-                radius_max_pixels=6,
+                radius_max_pixels=5,
                 stroked=True,
                 line_width_min_pixels=1,
                 pickable=True,

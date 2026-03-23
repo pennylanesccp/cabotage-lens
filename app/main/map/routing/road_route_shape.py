@@ -118,6 +118,45 @@ def _shape_control_points_parabola(
     return controls
 
 
+def _shape_parabola_path(
+    origin: tuple[float, float],
+    destiny: tuple[float, float],
+    *,
+    n_points: int,
+) -> list[list[float]]:
+    start_lat, start_lon = origin
+    end_lat, end_lon = destiny
+    ref_lat = (start_lat + end_lat) / 2.0
+
+    x0, y0 = _project(start_lat, start_lon, ref_lat)
+    x1, y1 = _project(end_lat, end_lon, ref_lat)
+    dx = x1 - x0
+    dy = y1 - y0
+    seg_len = math.hypot(dx, dy)
+    if seg_len <= EPS:
+        return [[float(start_lon), float(start_lat)], [float(end_lon), float(end_lat)]]
+
+    sign = _stable_direction(origin, destiny)
+    perp_x = (-dy / seg_len) * sign
+    perp_y = (dx / seg_len) * sign
+    arc_height = max(0.16, min(seg_len * 0.32, 2.9))
+
+    curved_path: list[list[float]] = []
+    total_points = max(int(n_points), 24)
+    for idx in range(total_points):
+        t = idx / max(total_points - 1, 1)
+        base_x = x0 + (dx * t)
+        base_y = y0 + (dy * t)
+        lift = (4.0 * t * (1.0 - t)) ** 0.92
+        lat, lon = _unproject(
+            base_x + (perp_x * arc_height * lift),
+            base_y + (perp_y * arc_height * lift),
+            ref_lat,
+        )
+        curved_path.append([float(lon), float(lat)])
+    return curved_path
+
+
 def build_shaped_road_path(
     origin_latlon: tuple[float, float],
     dest_latlon: tuple[float, float],
@@ -138,6 +177,9 @@ def build_shaped_road_path(
 
     style_key = str(style or "wave").strip().lower()
     if style_key == "parabola":
+        dense = _shape_parabola_path(origin_latlon, dest_latlon, n_points=max(int(n_points), 24))
+        return smooth_lonlat_path(dense, smooth_window=max(int(smooth_window), 5))
+    elif style_key == "parabola_controls":
         control_points = dedupe_latlon_path(_shape_control_points_parabola(origin_latlon, dest_latlon))
     else:
         control_points = dedupe_latlon_path(_shape_control_points_wave(origin_latlon, dest_latlon))

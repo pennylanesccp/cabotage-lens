@@ -86,6 +86,13 @@ class HeatmapPageTests(unittest.TestCase):
 
         self.assertIsNone(fake_streamlit.session_state["heatmap_dataset"])
 
+    def test_format_height_scale_uses_metric_specific_units(self) -> None:
+        cost_surface = SimpleNamespace(metric="cost", elevation_scale=1234.5)
+        emissions_surface = SimpleNamespace(metric="emissions", elevation_scale=678.9)
+
+        self.assertEqual(page._format_height_scale(cost_surface), "R$ 1,234.50")
+        self.assertEqual(page._format_height_scale(emissions_surface), "678.9 kg CO2e")
+
 
 if __name__ == "__main__":
     unittest.main()

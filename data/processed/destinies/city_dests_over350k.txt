@@ -1,4 +1,4 @@
-﻿Maceió, AL
+Maceió, AL
 Manaus, AM
 Macapá, AP
 Feira de Santana, BA
@@ -56,8 +56,8 @@ Piracicaba, SP
 Ribeirão Preto, SP
 Santo André, SP
 Santos, SP
-São Bernardo do Campo, SP
-São José do Rio Preto, SP
-São José Dos Campos, SP
-São Paulo, SP
 Sorocaba, SP
+São Bernardo do Campo, SP
+São José Dos Campos, SP
+São José do Rio Preto, SP
+São Paulo, SP

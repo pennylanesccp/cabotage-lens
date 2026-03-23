@@ -128,46 +128,6 @@ def _clear_loaded_dataset_if_stale(scenario: HeatmapScenario) -> None:
         st.session_state.heatmap_dataset = None
 
 
-def _same_timestamp(left: Any, right: Any) -> bool:
-    return str(left or "").strip() == str(right or "").strip()
-
-
-def _dataset_matches_status(dataset: HeatmapDataset, status: Any) -> bool:
-    return (
-        dataset.run.run_id == status.run_id
-        and dataset.run.destination_count == status.destination_count
-        and dataset.run.found_count == status.found_count
-        and dataset.run.success_count == status.success_count
-        and dataset.run.fail_count == status.fail_count
-        and _same_timestamp(dataset.run.updated_timestamp, status.updated_timestamp)
-    )
-
-
-def _clear_loaded_dataset_if_outdated(scenario: HeatmapScenario, status: Any) -> None:
-    dataset = st.session_state.get("heatmap_dataset")
-    if not isinstance(dataset, HeatmapDataset):
-        return
-    if dataset.scenario != scenario:
-        return
-    if _dataset_matches_status(dataset, status):
-        return
-    _log.info(
-        (
-            "Clearing outdated heatmap dataset origin=%s cargo_t=%.3f cached_run_id=%s current_run_id=%s "
-            "cached_found=%d current_found=%d cached_success=%d current_success=%d"
-        ),
-        scenario.origin_name,
-        scenario.cargo_t,
-        dataset.run.run_id or "<none>",
-        status.run_id or "<none>",
-        dataset.run.found_count,
-        status.found_count,
-        dataset.run.success_count,
-        status.success_count,
-    )
-    st.session_state.heatmap_dataset = None
-
-
 def _progress_callback(progress_bar: Any, status_box: Any):
     def _callback(payload: dict[str, Any]) -> None:
         total = max(int(payload.get("total") or 0), 1)
@@ -207,10 +167,7 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
 
     surface = build_surface(dataset, metric)
     diagnostics = dataset.diagnostics
-    overview = st.columns(3)
-    overview[0].metric("Plottable", f"{diagnostics.plottable_points}")
-    overview[1].metric("Stored latest", f"{dataset.run.found_count}/{dataset.run.destination_count}")
-    overview[2].metric("Pending refresh", f"{dataset.run.pending_count}")
+    st.caption(f"{diagnostics.plottable_points} destination points currently shape the 3D surface.")
     render_legend(metric, surface)
     render_heatmap_map(
         dataset,
@@ -280,7 +237,7 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
 def _render_unloaded_state(origin_name: str) -> None:
     st.markdown(
         f"""
-        <section style='padding: 1.1rem 1.2rem; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); background: rgba(248, 250, 252, 0.82);'>
+        <section style='padding: 1.05rem 1.15rem; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.12); background: rgba(248, 250, 252, 0.74);'>
             <p style='margin: 0 0 0.3rem 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.76rem; color: #64748b;'>3D surface</p>
             <h3 style='margin: 0; color: #0f172a;'>Surface not loaded</h3>
             <p style='margin: 0.55rem 0 0 0; color: #334155; max-width: 46rem;'>

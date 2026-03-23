@@ -476,7 +476,7 @@ def _elevation_for_value(value: float, scale: float) -> float:
     usable_height = max(float(HEATMAP_SURFACE_MAX_ELEVATION_M) - floor_height, 0.0)
     normalized = _clamp(float(value) / float(scale), -1.0, 1.0)
     curved = math.copysign(abs(normalized) ** float(HEATMAP_SURFACE_ELEVATION_GAMMA), normalized)
-    curved = math.copysign(min(abs(curved) * 1.08, 1.0), curved)
+    curved = math.copysign(min(abs(curved) * 1.42, 1.0), curved)
     shifted = (curved + 1.0) / 2.0
     return round(floor_height + (shifted * usable_height), 2)
 
