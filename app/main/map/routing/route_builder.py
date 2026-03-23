@@ -35,6 +35,8 @@ def build_route_rows(
         origin,
         destiny,
         preferred_path=direct_candidate,
+        n_points=64,
+        smooth_window=7,
         style="parabola",
         preserve_preferred_path=False,
     )
@@ -58,9 +60,10 @@ def build_route_rows(
         route_rows.append(
             {
                 "route_name": "Road",
+                "map_label": "Road",
                 "path": direct_path,
                 "color": [220, 72, 62, 215],
-                "width": 5,
+                "width": 6,
                 "tooltip": route_metric_label(
                     "Road",
                     road.get("distance_km"),
@@ -74,6 +77,7 @@ def build_route_rows(
         route_rows.append(
             {
                 "route_name": "Road (pre-carriage)",
+                "map_label": "Pre-carriage",
                 "path": first_path,
                 "color": [155, 89, 182, 220],
                 "width": 5,
@@ -90,6 +94,7 @@ def build_route_rows(
         route_rows.append(
             {
                 "route_name": f"Sea (cabotage): {port_origin_name} -> {port_destiny_name}",
+                "map_label": "Sea",
                 "path": sea_path,
                 "color": [41, 128, 185, 230],
                 "width": 6,
@@ -106,6 +111,7 @@ def build_route_rows(
         route_rows.append(
             {
                 "route_name": "Road (on-carriage)",
+                "map_label": "On-carriage",
                 "path": last_path,
                 "color": [155, 89, 182, 220],
                 "width": 5,
@@ -120,7 +126,7 @@ def build_route_rows(
 
     for row in route_rows:
         row["label_position"] = path_midpoint(row.get("path") or [])
-        row["label"] = row["tooltip"]
+        row["label"] = row.get("map_label") or row["route_name"]
         row["hitbox_color"] = [255, 255, 255, 4]
         row["hitbox_width"] = 18
 

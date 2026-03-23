@@ -98,9 +98,11 @@ def _shape_control_points_parabola(
     perp_x = (-dy / seg_len) * sign
     perp_y = (dx / seg_len) * sign
 
-    amplitude = max(0.03, min(seg_len * 0.18, 1.45))
-    fractions = (0.22, 0.50, 0.78)
-    offsets = (0.55, 1.00, 0.55)
+    # Keep the path on a single side of the chord, but bias the curve so the
+    # midpoint rises more clearly and reads like a deliberate visual arc.
+    amplitude = max(0.08, min(seg_len * 0.24, 2.25))
+    fractions = (0.12, 0.28, 0.50, 0.72, 0.88)
+    offsets = (0.16, 0.58, 1.18, 0.58, 0.16)
 
     controls: list[tuple[float, float]] = [origin]
     for fraction, offset in zip(fractions, offsets, strict=True):

@@ -41,15 +41,19 @@ class SidebarLogoutTests(unittest.TestCase):
         fake_streamlit = SimpleNamespace(
             sidebar=contextlib.nullcontext(),
             markdown=Mock(),
-            button=Mock(side_effect=[False, False]),
+            button=Mock(side_effect=[False, False, False]),
         )
 
         with patch.object(heatmap_sidebar, "st", fake_streamlit), patch.object(
             heatmap_sidebar,
             "render_logout_control",
         ) as logout_mock:
-            run_missing, rerun = heatmap_sidebar.render_run_actions(found_count=0, pending_count=10)
+            load_clicked, run_missing, rerun = heatmap_sidebar.render_run_actions(
+                has_origin=True,
+                has_loaded_dataset=False,
+            )
 
+        self.assertFalse(load_clicked)
         self.assertFalse(run_missing)
         self.assertFalse(rerun)
         logout_mock.assert_called_once_with()

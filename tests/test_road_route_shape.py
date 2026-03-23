@@ -62,6 +62,24 @@ class RoadRouteShapeTests(unittest.TestCase):
         first_sign = math.copysign(1.0, significant[0])
         self.assertTrue(all(math.copysign(1.0, distance) == first_sign for distance in significant))
 
+    def test_parabola_style_peaks_near_the_middle_of_the_path(self) -> None:
+        path = build_shaped_road_path(
+            (0.0, 0.0),
+            (0.0, 4.0),
+            preferred_path=None,
+            n_points=41,
+            smooth_window=7,
+            style="parabola",
+        )
+
+        signed_distances = [abs(self._signed_distance(point, path[0], path[-1])) for point in path]
+        quarter = signed_distances[len(signed_distances) // 4]
+        midpoint = signed_distances[len(signed_distances) // 2]
+        three_quarter = signed_distances[(len(signed_distances) * 3) // 4]
+
+        self.assertGreater(midpoint, quarter)
+        self.assertGreater(midpoint, three_quarter)
+
     @staticmethod
     def _signed_distance(
         point_lonlat: list[float],

@@ -44,26 +44,35 @@ def render_sidebar(
             _render_advanced(class_options=class_options, port_ops_scenarios=port_ops_scenarios)
 
 
-def render_run_actions(*, found_count: int, pending_count: int) -> Tuple[bool, bool]:
-    run_missing_label = "Run batch" if found_count <= 0 else "Run missing"
-    run_missing_disabled = pending_count <= 0
-
+def render_run_actions(*, has_origin: bool, has_loaded_dataset: bool) -> Tuple[bool, bool, bool]:
     with st.sidebar:
-        st.markdown("##### Batch")
-        run_missing_clicked = st.button(
-            run_missing_label,
+        st.markdown("##### Actions")
+        load_clicked = st.button(
+            "Load stored surface",
             type="primary",
             width="stretch",
-            disabled=run_missing_disabled,
+            disabled=(not has_origin),
+            key="heatmap_load_surface_button",
+            help="Read the latest stored rows for the selected scenario without starting a new bulk run.",
+        )
+        run_missing_clicked = st.button(
+            "Run missing",
+            width="stretch",
+            disabled=(not has_origin),
             key="heatmap_run_missing_button",
+            help="Compute only destinations that are still missing or marked retryable for this scenario.",
         )
         rerun_clicked = st.button(
             "Rerun all",
             width="stretch",
+            disabled=(not has_origin),
             key="heatmap_rerun_all_button",
+            help="Recompute the full stored destination set for this scenario.",
         )
+        if has_loaded_dataset:
+            st.caption("The loaded surface stays in session until you change the scenario or refresh it.")
         render_logout_control()
-    return run_missing_clicked, rerun_clicked
+    return load_clicked, run_missing_clicked, rerun_clicked
 
 
 def _render_origin_field(field_name: str) -> None:

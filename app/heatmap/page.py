@@ -20,14 +20,13 @@ from app.heatmap.surface import build_surface
 from app.heatmap.service import (
     HeatmapConfigurationError,
     HeatmapDataError,
-    get_heatmap_status,
     list_cargo_options,
     load_current_dataset,
     rerun_heatmap,
     run_heatmap,
 )
 from app.heatmap.sidebar import render_run_actions, render_sidebar
-from app.heatmap.types import HeatmapDataset, HeatmapScenario
+from app.heatmap.types import HeatmapDataset, HeatmapScenario, HeatmapSurface
 from app.main.sidebar.filters import location_is_loading
 from app.main.styles import inject_css
 from app.main.utils.constants import DEFAULT_ORIGIN
@@ -93,14 +92,20 @@ def _format_timestamp(value: Any) -> str:
     return text or "Unknown"
 
 
+def _format_height_scale(surface: HeatmapSurface) -> str:
+    if surface.metric == "emissions":
+        return f"{surface.elevation_scale:,.1f} kg CO2e"
+    return f"R$ {surface.elevation_scale:,.2f}"
+
+
 def _render_header() -> None:
     st.markdown(
         f"""
         <section style='padding: 1.4rem 1.5rem; border-radius: 24px; background: linear-gradient(135deg, rgba(233, 247, 235, 0.98), rgba(255, 244, 224, 0.96)); border: 1px solid rgba(22, 101, 52, 0.12); margin-bottom: 1rem;'>
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
-            <p style='margin: 0.65rem 0 0 0; max-width: 52rem; color: #334155;'>
-                CabotageLens interpolates the current Supabase comparison table into a continuous signed 3D surface between the available destination cities. Color shows relative multimodal advantage, while elevation shows the signed absolute magnitude so regional terrain differences are immediately visible.
+            <p style='margin: 0.65rem 0 0 0; max-width: 48rem; color: #334155;'>
+                Explore the current Brazil-wide 3D comparison surface. Color shows relative advantage and elevation shows absolute magnitude.
             </p>
         </section>
         """,
@@ -183,7 +188,7 @@ def _progress_callback(progress_bar: Any, status_box: Any):
 
 
 def _render_dataset(dataset: HeatmapDataset) -> None:
-    control_cols = st.columns([1.5, 1.0])
+    control_cols = st.columns([1.35, 1.0])
     with control_cols[0]:
         metric = st.radio(
             "Color metric",
@@ -193,63 +198,19 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
             key="heatmap_metric",
         )
     with control_cols[1]:
-        show_points = st.toggle(
-            "Show destination points",
-            key="heatmap_show_points",
-            help="Overlay the source destination-city points for debugging and hover inspection.",
-        )
+        with st.expander("Display options", expanded=False):
+            show_points = st.toggle(
+                "Show destination points",
+                key="heatmap_show_points",
+                help="Overlay the source destination-city points for hover inspection.",
+            )
 
     surface = build_surface(dataset, metric)
     diagnostics = dataset.diagnostics
-    cols = st.columns(5)
-    cols[0].metric("Latest stored rows", f"{dataset.run.found_count}/{dataset.run.destination_count}")
-    cols[1].metric("Successful latest", f"{dataset.run.success_count}")
-    cols[2].metric("Failed latest", f"{dataset.run.fail_count}")
-    cols[3].metric("Plottable points", f"{diagnostics.plottable_points}")
-    cols[4].metric("Missing rows", f"{dataset.run.missing_count}")
-    retryable_failures = max(dataset.run.pending_count - dataset.run.missing_count, 0)
-    st.caption(
-        (
-            f"Loaded {diagnostics.plottable_points} plottable destination points from "
-            f"{diagnostics.successful_rows} successful latest rows in {HEATMAP_DESTINATION_LABEL}. "
-            f"The 3D surface interpolates {surface.unique_source_coordinate_count} unique source coordinates into "
-            f"{len(surface.cells)} rendered cells."
-        )
-    )
-    if retryable_failures > 0:
-        st.info(
-            f"{retryable_failures} latest failed rows are marked retryable and will be revisited by Run missing."
-        )
-    if dataset.run.pending_count > 0 and retryable_failures == 0 and dataset.run.missing_count > 0:
-        st.info(f"{dataset.run.missing_count} destinations still have no latest stored row for this scenario.")
-    if dataset.run.success_count != diagnostics.successful_rows:
-        st.warning(
-            (
-                f"Heatmap summary/load mismatch: expected {dataset.run.success_count} successful latest rows, "
-                f"but loaded {diagnostics.successful_rows} rows for plotting. Check the runtime logs for selector details."
-            )
-        )
-    if diagnostics.skipped_total > 0:
-        st.warning(
-            (
-                f"Loaded {diagnostics.plottable_points} plottable destination points from "
-                f"{diagnostics.successful_rows} successful latest rows. "
-                f"Skipped {diagnostics.skipped_total} successful rows due to missing map values "
-                f"(coords={diagnostics.skipped_missing_coordinates}, costs={diagnostics.skipped_missing_costs}, "
-                f"emissions={diagnostics.skipped_missing_emissions})."
-            )
-        )
-    if dataset.run.fail_count > 0:
-        st.info(
-            f"The heatmap excludes {dataset.run.fail_count} latest failed rows; only successful latest rows are eligible for plotting."
-        )
-    if surface.unique_source_coordinate_count < diagnostics.plottable_points:
-        st.caption(
-            (
-                f"{diagnostics.plottable_points - surface.unique_source_coordinate_count} plottable rows share coordinates, "
-                "so the interpolation surface collapses them into fewer unique source vertices."
-            )
-        )
+    overview = st.columns(3)
+    overview[0].metric("Plottable", f"{diagnostics.plottable_points}")
+    overview[1].metric("Stored latest", f"{dataset.run.found_count}/{dataset.run.destination_count}")
+    overview[2].metric("Pending refresh", f"{dataset.run.pending_count}")
     render_legend(metric, surface)
     render_heatmap_map(
         dataset,
@@ -257,12 +218,78 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
         show_points=bool(show_points),
         surface=surface,
     )
+    _render_dataset_diagnostics(dataset, surface)
 
 
-def _load_dataset_into_session(scenario: HeatmapScenario, *, status: Any | None = None) -> None:
-    dataset = load_current_dataset(scenario, status=status)
-    if dataset is not None:
-        st.session_state.heatmap_dataset = dataset
+def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface) -> None:
+    diagnostics = dataset.diagnostics
+    retryable_failures = max(dataset.run.pending_count - dataset.run.missing_count, 0)
+
+    with st.expander("Diagnostics", expanded=False):
+        diag_cols = st.columns(5)
+        diag_cols[0].metric("Successful latest", f"{dataset.run.success_count}")
+        diag_cols[1].metric("Failed latest", f"{dataset.run.fail_count}")
+        diag_cols[2].metric("Missing rows", f"{dataset.run.missing_count}")
+        diag_cols[3].metric("Surface cells", f"{len(surface.cells)}")
+        diag_cols[4].metric("Unique coordinates", f"{surface.unique_source_coordinate_count}")
+
+        if dataset.run.updated_timestamp is not None:
+            st.caption(f"Latest stored update: {_format_timestamp(dataset.run.updated_timestamp)}")
+        if dataset.run.run_id:
+            st.caption(f"Latest run id: `{dataset.run.run_id}`")
+        if dataset.run.duration_s is not None:
+            st.caption(f"Run duration: {float(dataset.run.duration_s):,.1f} s")
+
+        st.caption(
+            (
+                f"{HEATMAP_DESTINATION_LABEL}: loaded {diagnostics.plottable_points} plottable points from "
+                f"{diagnostics.successful_rows} successful latest rows. "
+                f"Robust scales: color +/- {surface.color_scale:,.1f}% and height +/- {_format_height_scale(surface)}."
+            )
+        )
+
+        if retryable_failures > 0:
+            st.caption(f"Retryable latest failures: {retryable_failures}")
+        if diagnostics.skipped_total > 0:
+            st.caption(
+                (
+                    f"Skipped successful rows with incomplete map values: total={diagnostics.skipped_total} "
+                    f"(coords={diagnostics.skipped_missing_coordinates}, costs={diagnostics.skipped_missing_costs}, "
+                    f"emissions={diagnostics.skipped_missing_emissions})."
+                )
+            )
+        if dataset.run.success_count != diagnostics.successful_rows:
+            st.caption(
+                (
+                    f"Stored success summary and loaded success rows differ "
+                    f"({dataset.run.success_count} vs {diagnostics.successful_rows})."
+                )
+            )
+        if surface.unique_source_coordinate_count < diagnostics.plottable_points:
+            st.caption(
+                (
+                    f"{diagnostics.plottable_points - surface.unique_source_coordinate_count} plottable rows share "
+                    "coordinates, so the interpolated surface uses fewer unique vertices."
+                )
+            )
+        st.caption(
+            "This page reads the normalized bulk comparison tables only; it does not overwrite the canonical routes cache."
+        )
+
+
+def _render_unloaded_state(origin_name: str) -> None:
+    st.markdown(
+        f"""
+        <section style='padding: 1.1rem 1.2rem; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.18); background: rgba(248, 250, 252, 0.82);'>
+            <p style='margin: 0 0 0.3rem 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.76rem; color: #64748b;'>3D surface</p>
+            <h3 style='margin: 0; color: #0f172a;'>Surface not loaded</h3>
+            <p style='margin: 0.55rem 0 0 0; color: #334155; max-width: 46rem;'>
+                Load the stored surface for <strong>{escape(origin_name)}</strong> from the sidebar, or run missing / rerun all if you want fresh comparison rows.
+            </p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_page() -> None:
@@ -316,67 +343,47 @@ def render_page() -> None:
         st.info("Select an origin in the sidebar to inspect current heatmap rows or launch a run.")
         return
 
-    try:
-        status = get_heatmap_status(scenario)
-    except HeatmapConfigurationError as exc:
-        _log.error(
-            "Heatmap status lookup unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
-            scenario.origin_name,
-            scenario.cargo_t,
-            exc,
-        )
-        st.error(str(exc))
-        return
-    except Exception as exc:
-        _log.exception(
-            "Failed to query heatmap comparison status origin=%s cargo_t=%.3f",
-            scenario.origin_name,
-            scenario.cargo_t,
-        )
-        st.error(f"Failed to query the current heatmap status: {exc}")
-        return
+    dataset = st.session_state.get("heatmap_dataset")
+    load_clicked, run_missing_clicked, rerun_clicked = render_run_actions(
+        has_origin=bool(scenario.origin_name),
+        has_loaded_dataset=isinstance(dataset, HeatmapDataset),
+    )
 
-    _clear_loaded_dataset_if_outdated(scenario, status)
-
-    if st.session_state.get("heatmap_dataset") is None and status.found_count > 0:
+    if load_clicked:
         try:
-            _load_dataset_into_session(scenario, status=status)
-        except HeatmapDataError as exc:
-            _log.warning(
-                "Heatmap comparison rows are not plottable origin=%s cargo_t=%.3f error=%s",
+            dataset = load_current_dataset(scenario)
+        except HeatmapConfigurationError as exc:
+            _log.error(
+                "Heatmap surface load unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
                 exc,
             )
             st.error(str(exc))
+            st.session_state.heatmap_dataset = None
+        except HeatmapDataError as exc:
+            _log.warning(
+                "Stored heatmap rows are not plottable origin=%s cargo_t=%.3f error=%s",
+                scenario.origin_name,
+                scenario.cargo_t,
+                exc,
+            )
+            st.warning(str(exc))
+            st.session_state.heatmap_dataset = None
         except Exception as exc:
             _log.exception(
-                "Failed to load current heatmap rows origin=%s cargo_t=%.3f",
+                "Failed to load stored heatmap surface origin=%s cargo_t=%.3f",
                 scenario.origin_name,
                 scenario.cargo_t,
             )
-            st.error(f"Failed to load the current heatmap rows: {exc}")
-
-    if status.updated_timestamp is None:
-        st.warning("No comparison rows are stored yet for this scenario in Supabase.")
-    else:
-        st.success(f"Latest comparison update: {_format_timestamp(status.updated_timestamp)}.")
-        st.caption(
-            (
-                f"Stored rows: {status.found_count}/{status.destination_count}. "
-                f"ok={status.success_count} fail={status.fail_count} missing={status.missing_count} pending={status.pending_count}. "
-                "Pending counts only missing rows plus retryable transient failures; terminal failed rows stay out of Run missing until rerun all."
-            )
-        )
-
-    st.caption(
-        "This page never overwrites the canonical routes cache. It only writes to the normalized bulk run tables used by the heatmap."
-    )
-
-    run_missing_clicked, rerun_clicked = render_run_actions(
-        found_count=status.found_count,
-        pending_count=status.pending_count,
-    )
+            st.error(f"Failed to load the stored heatmap surface: {exc}")
+            st.session_state.heatmap_dataset = None
+        else:
+            if dataset is None:
+                st.info("No stored comparison rows were found for this scenario yet. Use Run missing or Rerun all.")
+                st.session_state.heatmap_dataset = None
+            else:
+                st.session_state.heatmap_dataset = dataset
 
     if run_missing_clicked:
         _log.info(
@@ -440,5 +447,4 @@ def render_page() -> None:
         _render_dataset(dataset)
         return
 
-    if status.found_count > 0:
-        st.info("Stored comparison rows were found. Use the sidebar to run missing, rerun all, or adjust the scenario.")
+    _render_unloaded_state(scenario.origin_name)

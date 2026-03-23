@@ -34,30 +34,31 @@ _HEATMAP_MAP_CSS = """
         outline: none !important;
     }
     .heatmap-legend-card {
-        padding: 0.95rem 1rem;
+        padding: 0.85rem 1rem;
         border: 1px solid rgba(148, 163, 184, 0.16);
         border-radius: 16px;
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
         box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-        margin-bottom: 0.9rem;
+        margin-bottom: 0.8rem;
     }
     .heatmap-legend-card__title {
         color: #0f172a;
         font-weight: 700;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.45rem;
     }
     .heatmap-legend-card__gradient {
         height: 12px;
         border-radius: 999px;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.5rem;
         border: 1px solid rgba(148, 163, 184, 0.18);
     }
     .heatmap-legend-card__body {
-        font-size: 0.92rem;
-        line-height: 1.5;
+        font-size: 0.9rem;
+        line-height: 1.45;
     }
     .heatmap-legend-card__semantic {
         color: #0f172a;
+        font-weight: 600;
     }
     .heatmap-legend-card__helper {
         color: #334155;
@@ -172,33 +173,25 @@ def _inject_heatmap_map_css() -> None:
     st.markdown(_HEATMAP_MAP_CSS, unsafe_allow_html=True)
 
 
-def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str], list[str], list[str]]:
+def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str], list[str]]:
     if metric == "cost":
         title = "3D cost surface"
-        scale_text = f"Color scale: robust +/- {surface.color_scale:,.1f}% cost advantage"
-        elevation_text = f"Height scale: robust +/- {_format_signed_currency(surface.elevation_scale)}"
     else:
         title = "3D emissions surface"
-        scale_text = f"Color scale: robust +/- {surface.color_scale:,.1f}% emissions advantage"
-        elevation_text = f"Height scale: robust +/- {_format_signed_emissions(surface.elevation_scale)}"
 
     semantic_lines = [
-        "Green: multimodal is better",
-        "Yellow: near parity",
-        "Red: road is better",
+        "Terracotta favors road, sand marks parity, teal favors multimodal.",
     ]
     helper_lines = [
-        "Color encodes relative advantage (%) across the interpolated surface.",
-        "Surface coverage is limited to the convex hull of available destination cities.",
-        "Height encodes signed absolute advantage: lower terrain favors road, higher terrain favors multimodal.",
+        "Color shows relative advantage across the interpolated surface.",
+        "Height shows signed absolute magnitude, with lower terrain favoring road and higher terrain favoring multimodal.",
     ]
-    scale_lines = [scale_text, elevation_text]
-    return title, semantic_lines, helper_lines, scale_lines
+    return title, semantic_lines, helper_lines
 
 
 def render_legend(metric: str, surface: HeatmapSurface) -> None:
     _inject_heatmap_map_css()
-    title, semantic_lines, helper_lines, scale_lines = _legend_labels(metric, surface)
+    title, semantic_lines, helper_lines = _legend_labels(metric, surface)
     gradient = (
         f"linear-gradient(90deg, rgb{HEATMAP_COLOR_NEGATIVE}, "
         f"rgb{HEATMAP_COLOR_MID}, rgb{HEATMAP_COLOR_POSITIVE})"
@@ -211,7 +204,6 @@ def render_legend(metric: str, surface: HeatmapSurface) -> None:
             <div class='heatmap-legend-card__body'>
                 {''.join(f"<div class='heatmap-legend-card__semantic'>{escape(line)}</div>" for line in semantic_lines)}
                 {''.join(f"<div class='heatmap-legend-card__helper'>{escape(line)}</div>" for line in helper_lines)}
-                {''.join(f"<div class='heatmap-legend-card__scale'>{escape(line)}</div>" for line in scale_lines)}
             </div>
         </section>
         """,
@@ -242,7 +234,7 @@ def render_heatmap_map(
             stroked=False,
             filled=True,
             wireframe=False,
-            opacity=0.9,
+            opacity=0.94,
         ),
     ]
 
