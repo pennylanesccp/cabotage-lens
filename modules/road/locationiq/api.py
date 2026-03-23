@@ -50,8 +50,9 @@ class LocationIQClient(BaseRoadProvider):
 
     name = "locationiq"
 
-    def __init__(self, config: Optional[LocationIQConfig] = None) -> None:
+    def __init__(self, config: Optional[LocationIQConfig] = None, *, provider_name: Optional[str] = None) -> None:
         self.cfg = config or LocationIQConfig()
+        self.name = str(provider_name or self.name).strip() or "locationiq"
         self._http = LocationIQHttpClient(self.cfg)
 
     def is_enabled(self) -> bool:

@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from modules.road.locationiq.api import LocationIQClient
-from modules.road.locationiq.structures import LocationIQConfig
+from modules.road.locationiq.structures import LocationIQConfig, get_configured_locationiq_api_keys
 from modules.road.ors.api import ORSClient
 from modules.road.ors.structures import (
     GeocodeNotFound,
@@ -83,6 +83,18 @@ class ORSClientFallbackTests(unittest.TestCase):
             keys = get_configured_ors_api_keys(path=secrets_path, include_runtime=False)
 
         self.assertEqual(keys, ["key-1", "key-2"])
+
+    def test_loads_locationiq_key_list_from_array_secret(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            secrets_path = Path(tmp_dir) / "secrets.toml"
+            secrets_path.write_text(
+                'LOCATIONIQ_PATS = ["li-1", " li-2 ", "li-1"]\n',
+                encoding="utf-8",
+            )
+
+            keys = get_configured_locationiq_api_keys(path=secrets_path, include_runtime=False)
+
+        self.assertEqual(keys, ["li-1", "li-2"])
 
     def test_prefers_ors_when_primary_succeeds(self) -> None:
         primary = _FakeProvider(
@@ -204,6 +216,31 @@ class ORSClientFallbackTests(unittest.TestCase):
         self.assertEqual(route["profile_used"], "driving-car")
         self.assertEqual(primary.route_calls, 1)
         self.assertEqual(fallback.route_calls, 1)
+
+    def test_falls_back_to_second_locationiq_provider_when_first_token_fails(self) -> None:
+        primary = _FakeProvider("ors", route_exc=ORSError("timeout"))
+        fallback_1 = _FakeProvider("locationiq", route_exc=RateLimited("LocationIQ quota"))
+        fallback_2 = _FakeProvider(
+            "locationiq_2",
+            route_result={
+                "distance_m": 2400.0,
+                "duration_s": 240.0,
+                "profile_used": "driving-car",
+                "source": "locationiq_2",
+                "provider": "locationiq_2",
+            },
+        )
+        client = ORSClient(
+            primary_provider=primary,
+            fallback_provider=[fallback_1, fallback_2],
+        )
+
+        route = client.route_road({"lat": -23.5, "lon": -46.6}, {"lat": -23.9, "lon": -46.3})
+
+        self.assertEqual(route["source"], "locationiq_2")
+        self.assertEqual(primary.route_calls, 1)
+        self.assertEqual(fallback_1.route_calls, 1)
+        self.assertEqual(fallback_2.route_calls, 1)
 
     def test_raises_clean_error_when_both_providers_fail(self) -> None:
         primary = _FakeProvider("ors", route_exc=NoRoute("ORS no route"))

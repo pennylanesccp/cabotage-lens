@@ -56,7 +56,10 @@ Runtime stdout/stderr:
 Set these in `.streamlit/secrets.toml` or environment variables:
 
 ```toml
-ORS_API_KEY = "your-openrouteservice-key"
+ORS_API_KEYS = [
+  "your-openrouteservice-key",
+  "your-second-openrouteservice-key",
+]
 SUPABASE_PROJECT_REF = "your-project-ref"
 SUPABASE_DB_HOST = "aws-0-your-region.pooler.supabase.com"
 SUPABASE_DB_PORT = 6543
@@ -71,7 +74,18 @@ SUPABASE_DB_SSLMODE = "require"
 Optional geocoding fallback:
 
 ```toml
-LOCATIONIQ_PAT = "your-locationiq-private-token"
+LOCATIONIQ_PATS = [
+  "your-locationiq-private-token",
+  "your-second-locationiq-private-token",
+]
+```
+
+Legacy single-key entries are still accepted when the list is absent:
+
+```toml
+# ORS_API_KEY = "your-openrouteservice-key"
+# ORS_API_KEY_2 = "your-second-openrouteservice-key"
+# LOCATIONIQ_PAT = "your-locationiq-private-token"
 ```
 
 Optional log archival:

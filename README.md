@@ -52,7 +52,10 @@ Required:
 
 ```toml
 APP_PASSWORD = "your-shared-app-password"
-ORS_API_KEY = "your-openrouteservice-key"
+ORS_API_KEYS = [
+  "your-openrouteservice-key",
+  "your-second-openrouteservice-key",
+]
 SUPABASE_DB_URL = "postgresql://postgres:your-password@db.your-project-ref.supabase.co:5432/postgres?sslmode=require"
 ```
 
@@ -61,13 +64,24 @@ Optional:
 ```toml
 TURNSTILE_SITE_KEY = "your-cloudflare-turnstile-site-key"
 TURNSTILE_SECRET_KEY = "your-cloudflare-turnstile-secret-key"
-LOCATIONIQ_PAT = "your-locationiq-private-token"
+LOCATIONIQ_PATS = [
+  "your-locationiq-private-token",
+  "your-second-locationiq-private-token",
+]
 SUPABASE_URL = "https://your-project-ref.supabase.co"
 SUPABASE_KEY = "your-anon-or-service-role-key"
 # SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
 SUPABASE_STORAGE_LOGS_BUCKET = "carbon-logs"
 LOG_LEVEL = "INFO"
 LOG_ARCHIVE_ENABLED = false
+```
+
+Legacy single-key entries are still accepted when the list is absent:
+
+```toml
+# ORS_API_KEY = "your-openrouteservice-key"
+# ORS_API_KEY_2 = "your-second-openrouteservice-key"
+# LOCATIONIQ_PAT = "your-locationiq-private-token"
 ```
 
 Use `.streamlit/example_secrets.toml` as the local template.

@@ -28,11 +28,11 @@ from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_text
 from modules.cabotage.sea_matrix import SeaMatrix
-from modules.core.secrets import get_secret
 from modules.infra.database_manager import db_session, find_place_point, upsert_place_point
 from modules.infra.log_manager import get_logger
 from modules.ports.ports_index import load_ports
 from modules.ports.ports_nearest import find_nearest_port
+from modules.road.locationiq.structures import get_configured_locationiq_api_keys
 from modules.road.ors.structures import get_configured_ors_api_keys
 from modules.road.router import ORSClient, ORSConfig, get_or_create_leg
 
@@ -79,8 +79,9 @@ class PathGeometry(TypedDict):
 
 
 @lru_cache(maxsize=4)
-def _cached_ors_client(api_keys: tuple[str, ...], locationiq_pat: str) -> ORSClient:
+def _cached_ors_client(api_keys: tuple[str, ...], locationiq_api_keys: tuple[str, ...]) -> ORSClient:
     primary_key = api_keys[0] if api_keys else ""
+    del locationiq_api_keys
     return ORSClient(ORSConfig(api_key=primary_key or None))
 
 
@@ -110,7 +111,7 @@ def load_routing_assets(
 
     ors = _cached_ors_client(
         tuple(get_configured_ors_api_keys()),
-        str(get_secret("LOCATIONIQ_PAT", "")),
+        tuple(get_configured_locationiq_api_keys()),
     )
     ports = _cached_ports(str(p_json))
     sea_matrix = _cached_sea_matrix(str(s_json))

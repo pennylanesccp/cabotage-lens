@@ -94,7 +94,9 @@ class LocationIQHttpClient:
                 return cached_data
 
         if not self.cfg.api_key:
-            raise ORSError("LOCATIONIQ_PAT is missing. Set LOCATIONIQ_PAT in Streamlit secrets or the environment.")
+            raise ORSError(
+                "LocationIQ API key is missing. Set LOCATIONIQ_PATS (preferred) or LOCATIONIQ_PAT in Streamlit secrets or the environment."
+            )
 
         merged_params = dict(params or {})
         merged_params["key"] = self.cfg.api_key

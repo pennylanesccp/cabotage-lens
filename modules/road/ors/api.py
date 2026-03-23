@@ -9,7 +9,7 @@ This module keeps the public `ORSClient` API stable for the rest of the
 application while centralizing provider failover:
 
 - primary chain: one or more OpenRouteService keys
-- fallback provider: LocationIQ
+- fallback chain: one or more LocationIQ tokens
 
 The rest of the app continues to call `ORSClient.geocode_*()` and
 `ORSClient.route_road()` and receives normalized results regardless of which
@@ -33,6 +33,7 @@ if __name__ == "__main__":
 
 from modules.infra.log_manager import get_logger
 from modules.road.locationiq import LocationIQClient
+from modules.road.locationiq.structures import LocationIQConfig, get_configured_locationiq_api_keys
 from modules.road.ors.http import ORSHttpClient
 from modules.road.ors.structures import (
     GeocodeNotFound,
@@ -232,8 +233,9 @@ class ORSClient:
     Backward-compatible road client facade.
 
     All existing call sites keep using `ORSClient`, but the implementation now
-    attempts each configured ORS key first and automatically falls back to
-    LocationIQ when ORS fails, is unavailable, or returns no usable result.
+    attempts each configured ORS key first and automatically falls back across
+    configured LocationIQ tokens when ORS fails, is unavailable, or returns no
+    usable result.
     """
 
     def __init__(
@@ -242,7 +244,7 @@ class ORSClient:
         *,
         primary_provider: Optional[_ProviderProtocol] = None,
         secondary_provider: Optional[_ProviderProtocol] = None,
-        fallback_provider: Optional[_ProviderProtocol] = None,
+        fallback_provider: Optional[Union[_ProviderProtocol, list[_ProviderProtocol], tuple[_ProviderProtocol, ...]]] = None,
     ) -> None:
         self.cfg = config or ORSConfig()
         if primary_provider is None and secondary_provider is None:
@@ -251,7 +253,12 @@ class ORSClient:
             self._ors_providers = [primary_provider or OpenRouteServiceProvider(self.cfg, provider_name="ors")]
             if secondary_provider is not None:
                 self._ors_providers.append(secondary_provider)
-        self._fallback = fallback_provider if fallback_provider is not None else LocationIQClient()
+        if fallback_provider is None:
+            self._fallback_providers = self._build_configured_locationiq_providers()
+        elif isinstance(fallback_provider, (list, tuple)):
+            self._fallback_providers = list(fallback_provider)
+        else:
+            self._fallback_providers = [fallback_provider]
         self._metrics_lock = threading.Lock()
         self._provider_metrics: dict[str, dict[str, dict[str, float]]] = {}
         self._provider_cooldowns: dict[str, tuple[float, str]] = {}
@@ -369,8 +376,18 @@ class ORSClient:
             providers.append(OpenRouteServiceProvider(self.cfg, provider_name="ors"))
         return providers
 
+    def _build_configured_locationiq_providers(self) -> list[_ProviderProtocol]:
+        providers: list[_ProviderProtocol] = []
+        for index, api_key in enumerate(get_configured_locationiq_api_keys(), start=1):
+            provider_name = "locationiq" if index == 1 else f"locationiq_{index}"
+            provider_config = LocationIQConfig(api_key=api_key)
+            providers.append(LocationIQClient(provider_config, provider_name=provider_name))
+        if not providers:
+            providers.append(LocationIQClient())
+        return providers
+
     def _provider_sequence(self) -> list[_ProviderProtocol]:
-        return [*self._ors_providers, self._fallback]
+        return [*self._ors_providers, *self._fallback_providers]
 
     def _call_with_fallback(
         self,
@@ -382,7 +399,7 @@ class ORSClient:
         enabled_calls = [(provider, call) for provider, call in provider_calls if provider.is_enabled()]
         if not enabled_calls:
             raise ORSError(
-                f"No provider is configured for {operation}. Set ORS_API_KEYS (preferred), ORS_API_KEY/ORS_API_KEY_2, or LOCATIONIQ_PAT."
+                f"No provider is configured for {operation}. Set ORS_API_KEYS (preferred), ORS_API_KEY/ORS_API_KEY_2, or LOCATIONIQ_PATS/LOCATIONIQ_PAT."
             )
 
         failures: list[tuple[str, Exception]] = []
