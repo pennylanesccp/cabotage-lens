@@ -9,6 +9,7 @@ from modules.infra.database_manager import (
     db_session,
     find_place_point,
     finish_bulk_run,
+    list_bulk_result_points_by_input_keys,
     list_bulk_results,
     list_cached_place_points,
     start_bulk_run,
@@ -105,6 +106,71 @@ def _status_counts(summary_rows: List[Dict[str, Any]]) -> Dict[str, int]:
         status = str(row.get("status") or "").strip().lower() or "unknown"
         counts[status] = counts.get(status, 0) + 1
     return counts
+
+
+def _persistable_point_row(*, place: str, point: Dict[str, Any], source: str) -> Dict[str, Any]:
+    return {
+        "place": place,
+        "label": point["label"],
+        "lat": point["lat"],
+        "lon": point["lon"],
+        "uf": point.get("uf"),
+        "source": source,
+    }
+
+
+def _apply_destination_point_reuse(
+    work_items: List[DestinationWorkItem],
+    *,
+    cached_points: Dict[str, Dict[str, Any]],
+    latest_result_points: Dict[str, Dict[str, Any]],
+    historical_result_points: Dict[str, Dict[str, Any]],
+    perf: BulkPerformanceTracker,
+    point_rows_to_persist: List[Dict[str, Any]],
+) -> None:
+    for item in work_items:
+        place_key = item.normalized_input.casefold()
+        cached = cached_points.get(place_key)
+        if cached is not None:
+            item.point = _point_from_cached_record(cached)
+            item.destiny_name = item.point["label"]
+            item.point_source = "place_cache"
+            perf.incr("destination_cache_hits")
+            continue
+
+        latest_result_point = latest_result_points.get(place_key)
+        if latest_result_point is not None:
+            item.point = dict(latest_result_point)
+            item.destiny_name = item.point["label"]
+            item.point_source = "bulk_results"
+            perf.incr("destination_cache_hits")
+            perf.incr("destination_result_hits")
+            point_rows_to_persist.append(
+                _persistable_point_row(
+                    place=item.normalized_input,
+                    point=item.point,
+                    source="bulk_results",
+                )
+            )
+            continue
+
+        historical_result_point = historical_result_points.get(place_key)
+        if historical_result_point is not None:
+            item.point = dict(historical_result_point)
+            item.destiny_name = item.point["label"]
+            item.point_source = "bulk_result_history"
+            perf.incr("destination_cache_hits")
+            perf.incr("destination_history_hits")
+            point_rows_to_persist.append(
+                _persistable_point_row(
+                    place=item.normalized_input,
+                    point=item.point,
+                    source="bulk_result_history",
+                )
+            )
+            continue
+
+        perf.incr("destination_cache_misses")
 
 
 def run_bulk_evaluation_pipeline(
@@ -446,35 +512,21 @@ def run_bulk_evaluation_pipeline(
                 if point is None:
                     continue
                 latest_result_points.setdefault(input_destiny.casefold(), point)
+            perf.incr("db_read_ops")
+            with perf.measure("db_read_s"):
+                historical_result_points = list_bulk_result_points_by_input_keys(
+                    conn,
+                    input_keys=[item.normalized_input for item in work_items],
+                )
 
-            for item in work_items:
-                place_key = item.normalized_input.casefold()
-                cached = cached_points.get(place_key)
-                if cached is not None:
-                    item.point = _point_from_cached_record(cached)
-                    item.destiny_name = item.point["label"]
-                    item.point_source = "place_cache"
-                    perf.incr("destination_cache_hits")
-                    continue
-                latest_result_point = latest_result_points.get(place_key)
-                if latest_result_point is not None:
-                    item.point = dict(latest_result_point)
-                    item.destiny_name = item.point["label"]
-                    item.point_source = "bulk_results"
-                    perf.incr("destination_cache_hits")
-                    perf.incr("destination_result_hits")
-                    point_rows_to_persist.append(
-                        {
-                            "place": item.normalized_input,
-                            "label": item.point["label"],
-                            "lat": item.point["lat"],
-                            "lon": item.point["lon"],
-                            "uf": item.point.get("uf"),
-                            "source": "bulk_results",
-                        }
-                    )
-                    continue
-                perf.incr("destination_cache_misses")
+            _apply_destination_point_reuse(
+                work_items,
+                cached_points=cached_points,
+                latest_result_points=latest_result_points,
+                historical_result_points=historical_result_points,
+                perf=perf,
+                point_rows_to_persist=point_rows_to_persist,
+            )
 
             unresolved_items = [item for item in work_items if item.point is None]
             resolution_log_context = get_log_context()
@@ -533,13 +585,14 @@ def run_bulk_evaluation_pipeline(
             _log.info(
                 (
                     "Bulk destination resolution summary run_id=%s total=%d cache_hits=%.0f cache_misses=%.0f "
-                    "latest_result_hits=%.0f geocode_attempts=%d failures=%d"
+                    "latest_result_hits=%.0f historical_result_hits=%.0f geocode_attempts=%d failures=%d"
                 ),
                 run_id,
                 len(work_items),
                 perf.counters.get("destination_cache_hits", 0.0),
                 perf.counters.get("destination_cache_misses", 0.0),
                 perf.counters.get("destination_result_hits", 0.0),
+                perf.counters.get("destination_history_hits", 0.0),
                 len(unresolved_items),
                 sum(1 for item in work_items if item.failure_status is not None),
             )

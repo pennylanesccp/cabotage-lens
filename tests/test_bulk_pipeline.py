@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from modules.multimodal import bulk
+from modules.multimodal import bulk_pipeline
 from modules.multimodal.bulk import BulkPerformanceTracker, RouteRequestCoordinator, RouteRequestSpec
 
 
@@ -155,6 +156,44 @@ class BulkPipelineExecutionTests(unittest.TestCase):
         self.assertEqual(point["location_id"], 42)
         self.assertAlmostEqual(point["lat"], -3.1190)
         self.assertAlmostEqual(point["lon"], -60.0217)
+
+    def test_apply_destination_point_reuse_uses_historical_bulk_points_before_geocoding(self) -> None:
+        perf = BulkPerformanceTracker()
+        work_item = bulk.DestinationWorkItem(
+            index=1,
+            destiny_input="Manaus, AM",
+            normalized_input="Manaus, AM",
+            scenario_key="scenario-1",
+            scenario_payload={"input_destiny": "Manaus, AM"},
+            destiny_name="Manaus, AM",
+        )
+        point_rows_to_persist: list[dict[str, object]] = []
+
+        bulk_pipeline._apply_destination_point_reuse(
+            [work_item],
+            cached_points={},
+            latest_result_points={},
+            historical_result_points={
+                "manaus, am": {
+                    "label": "Manaus, AM",
+                    "lat": -3.1190,
+                    "lon": -60.0217,
+                    "uf": "AM",
+                    "location_id": 42,
+                }
+            },
+            perf=perf,
+            point_rows_to_persist=point_rows_to_persist,
+        )
+
+        self.assertIsNotNone(work_item.point)
+        assert work_item.point is not None
+        self.assertEqual(work_item.point["label"], "Manaus, AM")
+        self.assertEqual(work_item.point_source, "bulk_result_history")
+        self.assertEqual(perf.counters["destination_cache_hits"], 1.0)
+        self.assertEqual(perf.counters["destination_history_hits"], 1.0)
+        self.assertNotIn("destination_cache_misses", perf.counters)
+        self.assertEqual(point_rows_to_persist[0]["source"], "bulk_result_history")
 
     def test_run_bulk_evaluation_delegates_to_pipeline(self) -> None:
         expected = {"success_count": 1}

@@ -448,6 +448,91 @@ def list_input_destiny_keys(
     return [str(row[0]) for row in rows if row and row[0] not in (None, "")]
 
 
+def list_latest_successful_points_by_input_keys(
+    conn: DBConnection,
+    *,
+    input_keys: Iterable[str],
+    table_name: str = DEFAULT_TABLE,
+    runs_table: str = DEFAULT_RUNS_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+    route_table: str = DEFAULT_ROUTE_CACHE_TABLE,
+) -> dict[str, dict[str, Any]]:
+    normalized_keys = sorted(
+        {
+            str(value).strip().lower()
+            for value in input_keys
+            if str(value).strip()
+        }
+    )
+    if not normalized_keys:
+        return {}
+
+    items = safe_table_name(table_name)
+    runs = safe_table_name(runs_table)
+    locations = safe_table_name(locations_table)
+    routes = safe_table_name(route_table)
+    ensure_results_table(
+        conn,
+        items,
+        runs_table=runs,
+        locations_table=locations,
+        route_table=routes,
+    )
+
+    placeholders = ", ".join(["?"] * len(normalized_keys))
+    rows = conn.execute(
+        f"""
+        WITH ranked AS (
+            SELECT
+                  LOWER(TRIM(i.input_destiny)) AS input_destiny_key
+                , i.destination_location_id
+                , COALESCE(NULLIF(TRIM(dest.label), ''), i.input_destiny) AS destiny_name
+                , dest.lat6
+                , dest.lon6
+                , dest.state
+                , ROW_NUMBER() OVER (
+                      PARTITION BY LOWER(TRIM(i.input_destiny))
+                      ORDER BY COALESCE(r.completed_timestamp, r.updated_timestamp, r.started_timestamp, i.updated_timestamp, i.insertion_timestamp) DESC NULLS LAST,
+                               i.updated_timestamp DESC,
+                               i.insertion_timestamp DESC,
+                               i.id DESC
+                  ) AS row_rank
+            FROM {items} AS i
+            INNER JOIN {runs} AS r
+                    ON r.run_id = i.run_id
+            LEFT JOIN {locations} AS dest
+                   ON dest.id = i.destination_location_id
+            WHERE i.status = 'ok'
+              AND TRIM(COALESCE(i.input_destiny, '')) <> ''
+              AND LOWER(TRIM(i.input_destiny)) IN ({placeholders})
+              AND dest.lat6 IS NOT NULL
+              AND dest.lon6 IS NOT NULL
+        )
+        SELECT
+              input_destiny_key
+            , destination_location_id
+            , destiny_name
+            , lat6
+            , lon6
+            , state
+        FROM ranked
+        WHERE row_rank = 1
+        """,
+        normalized_keys,
+    ).fetchall()
+    return {
+        str(row[0]): {
+            "location_id": (None if row[1] is None else int(row[1])),
+            "label": str(row[2]),
+            "lat": float(row[3]),
+            "lon": float(row[4]),
+            "uf": _normalize_text(row[5]),
+        }
+        for row in rows
+        if row and row[0] not in (None, "") and row[3] is not None and row[4] is not None
+    }
+
+
 def upsert_result(
     conn: DBConnection,
     *,
