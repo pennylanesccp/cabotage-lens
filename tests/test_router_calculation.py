@@ -6,7 +6,7 @@ from modules.road.router import _calculate_route
 
 
 class RouterCalculationTests(unittest.TestCase):
-    def test_calculate_route_falls_back_to_car_only_when_no_route_exists(self) -> None:
+    def test_calculate_route_falls_back_to_car_when_hgv_has_no_route(self) -> None:
         ors = Mock()
         ors.route_road.side_effect = [
             NoRoute("No route for hgv"),
@@ -37,20 +37,30 @@ class RouterCalculationTests(unittest.TestCase):
             ],
         )
 
-    def test_calculate_route_does_not_fallback_to_car_on_transient_provider_error(self) -> None:
+    def test_calculate_route_falls_back_to_car_when_hgv_request_errors(self) -> None:
         ors = Mock()
-        ors.route_road.side_effect = ORSError("timeout")
+        ors.route_road.side_effect = [
+            ORSError("timeout"),
+            {
+                "distance_m": 2400.0,
+                "duration_s": 240.0,
+                "profile_used": "driving-car",
+                "source": "ors",
+            },
+        ]
 
-        with self.assertRaises(ORSError):
-            _calculate_route(
-                ors,
-                {"lat": -23.5, "lon": -46.6},
-                {"lat": -23.9, "lon": -46.3},
-                "driving-hgv",
-                True,
-            )
+        profile_used, distance_km, route_source = _calculate_route(
+            ors,
+            {"lat": -23.5, "lon": -46.6},
+            {"lat": -23.9, "lon": -46.3},
+            "driving-hgv",
+            True,
+        )
 
-        self.assertEqual(ors.route_road.call_count, 1)
+        self.assertEqual(profile_used, "driving-car")
+        self.assertAlmostEqual(distance_km or 0.0, 2.4)
+        self.assertEqual(route_source, "ors")
+        self.assertEqual(ors.route_road.call_count, 2)
 
 
 if __name__ == "__main__":

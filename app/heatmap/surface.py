@@ -86,6 +86,16 @@ def _metric_absolute(point: HeatmapPoint, metric: str) -> float:
     return float(point.cost_delta_r if metric == "cost" else point.emissions_delta_kg)
 
 
+def _align_quantitative_sign(percentage_value: float, quantitative_value: float) -> float:
+    value = float(quantitative_value)
+    if value == 0.0:
+        return 0.0
+    direction = float(percentage_value)
+    if direction == 0.0:
+        return value
+    return math.copysign(abs(value), direction)
+
+
 def _dataset_signature(dataset: HeatmapDataset, metric: str) -> tuple[_Sample, ...]:
     return tuple(
         sorted(
@@ -524,15 +534,16 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         if interpolated is None:
             continue
         percentage_value, absolute_value, nearest_name, nearest_uf, nearest_distance = interpolated
+        signed_quantitative_value = _align_quantitative_sign(percentage_value, absolute_value)
         cells.append(
             HeatmapSurfaceCell(
                 polygon=polygon,
                 center_lat=center_lat,
                 center_lon=center_lon,
                 percentage_value=percentage_value,
-                absolute_value=absolute_value,
+                absolute_value=signed_quantitative_value,
                 fill_color=_color_for_value(percentage_value, color_scale),
-                elevation_m=_elevation_for_value(absolute_value, elevation_scale),
+                elevation_m=_elevation_for_value(signed_quantitative_value, elevation_scale),
                 nearest_destiny_name=nearest_name,
                 nearest_destiny_uf=nearest_uf,
                 nearest_distance_km=nearest_distance,

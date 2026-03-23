@@ -9,7 +9,8 @@ from modules.fuel.truck_specs import list_truck_keys
 
 def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[str]) -> None:
     st.markdown("##### Routing")
-    st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], key="profile")
+    st.session_state["profile"] = "driving-hgv"
+    st.caption("ORS routing always requests `driving-hgv` and falls back to `driving-car` automatically when HGV cannot be solved.")
     st.checkbox("Overwrite road cache", key="overwrite_road")
 
     st.markdown("##### Road")

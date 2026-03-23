@@ -86,11 +86,11 @@ def _surface_tooltip_html(cell: HeatmapSurfaceCell, metric: str) -> str:
     reference_label = _reference_city_label(cell.nearest_destiny_name, cell.nearest_destiny_uf)
     if metric == "cost":
         percentage_label = "Cost advantage"
-        absolute_label = "Absolute advantage"
+        absolute_label = "Cost difference"
         absolute_value = _format_signed_currency(cell.absolute_value)
     else:
         percentage_label = "Emissions advantage"
-        absolute_label = "Absolute advantage"
+        absolute_label = "Emissions difference"
         absolute_value = _format_signed_emissions(cell.absolute_value)
 
     return (
@@ -109,11 +109,11 @@ def _point_tooltip_html(point: HeatmapPoint) -> str:
         f"<div style='font-weight: 700; margin-bottom: 4px;'>{escape(point.destiny_name)}</div>"
         f"<div>Road cost: R$ {point.road_cost_r:,.2f}</div>"
         f"<div>Multimodal cost: R$ {point.multimodal_cost_r:,.2f}</div>"
-        f"<div>Cost advantage: {_format_signed_currency(point.cost_delta_r)}</div>"
+        f"<div>Cost difference: {_format_signed_currency(point.cost_delta_r)}</div>"
         f"<div>Cost advantage (%): {_safe_percentage(point.cost_savings_pct, point.cost_delta_r, point.road_cost_r):,.2f}%</div>"
         f"<div>Road emissions: {point.road_emissions_kg:,.1f} kg CO2e</div>"
         f"<div>Multimodal emissions: {point.multimodal_emissions_kg:,.1f} kg CO2e</div>"
-        f"<div>Emissions advantage: {_format_signed_emissions(point.emissions_delta_kg)}</div>"
+        f"<div>Emissions difference: {_format_signed_emissions(point.emissions_delta_kg)}</div>"
         f"<div>Emissions advantage (%): {_safe_percentage(point.emissions_savings_pct, point.emissions_delta_kg, point.road_emissions_kg):,.2f}%</div>"
         f"<div>Nearest destination port: {escape(point.port_destiny_name or 'n/a')}</div>"
         f"</div>"
@@ -183,15 +183,17 @@ def _inject_heatmap_map_css() -> None:
 def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str], list[str]]:
     if metric == "cost":
         title = "3D cost surface"
+        height_line = "Height shows signed cost difference around a zero plane, with road-favoring cells below it and multimodal-favoring cells above it."
     else:
         title = "3D emissions surface"
+        height_line = "Height shows signed emissions difference around a zero plane, with road-favoring cells below it and multimodal-favoring cells above it."
 
     semantic_lines = [
         "Orange-red favors road, golden sand marks parity, green favors multimodal.",
     ]
     helper_lines = [
         "Color lives on the raised top surface and shows relative advantage across the interpolated terrain.",
-        "Height shows signed magnitude around a zero plane, with road-favoring cells below it and multimodal-favoring cells above it.",
+        height_line,
     ]
     return title, semantic_lines, helper_lines
 

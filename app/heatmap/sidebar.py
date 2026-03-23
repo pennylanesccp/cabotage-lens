@@ -126,7 +126,8 @@ def _render_advanced(
     )
 
     st.markdown("##### Routing")
-    st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], key="profile")
+    st.session_state["profile"] = "driving-hgv"
+    st.caption("Heatmap routing always requests `driving-hgv` and falls back to `driving-car` automatically when HGV cannot be solved.")
     st.caption("Routes cache is never overwritten from the heatmap page.")
 
     st.markdown("##### Road")

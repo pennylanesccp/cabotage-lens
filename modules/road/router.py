@@ -270,7 +270,8 @@ def _calculate_route(
     , primary_profile: str
     , fallback: bool
 ) -> Tuple[Optional[str], Optional[float], Optional[str]]:
-    """Try the requested profile and only fall back to car when there is no route."""
+    """Try HGV first and fall back to car when HGV cannot be obtained."""
+    fallback_reason: Optional[str] = None
     try:
         res = ors.route_road(origin, destiny, profile=primary_profile)
     except RateLimited:
@@ -279,9 +280,12 @@ def _calculate_route(
         _log.debug("Route returned no path for profile=%s: %s", primary_profile, exc)
         if not fallback or primary_profile == "driving-car":
             return primary_profile, None, None
+        fallback_reason = f"no_route:{exc}"
     except Exception as exc:
-        _log.debug("Route failed for profile=%s without car fallback: %s", primary_profile, exc)
-        raise
+        _log.debug("Route failed for profile=%s; trying car fallback: %s", primary_profile, exc)
+        if not fallback or primary_profile == "driving-car":
+            raise
+        fallback_reason = f"{type(exc).__name__}:{exc}"
     else:
         m = res.get("distance_m")
         km = m / 1000.0 if m is not None else None
@@ -290,6 +294,12 @@ def _calculate_route(
         return used_profile, km, route_source
 
     fallback_profile = "driving-car"
+    _log.info(
+        "Road routing fallback: requested_profile=%s fallback_profile=%s reason=%s",
+        primary_profile,
+        fallback_profile,
+        fallback_reason or "<unknown>",
+    )
     try:
         res = ors.route_road(origin, destiny, profile=fallback_profile)
     except RateLimited:

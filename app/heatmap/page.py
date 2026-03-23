@@ -70,7 +70,7 @@ def _current_scenario() -> HeatmapScenario:
         origin_name=str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
         cargo_t=float(st.session_state.get("heatmap_cargo", 30.0)),
         truck_key=str(st.session_state.get("truck_key", "")),
-        ors_profile=str(st.session_state.get("profile", "driving-hgv")),
+        ors_profile="driving-hgv",
         vessel_class=str(st.session_state.get("vessel_class", "")),
         include_hoteling=bool(st.session_state.get("include_hoteling", True)),
         hoteling_hours_per_call=float(st.session_state.get("hoteling_hours_per_call", 14.0)),
@@ -108,7 +108,7 @@ def _render_header() -> None:
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
             <p style='margin: 0.65rem 0 0 0; max-width: 48rem; color: #334155;'>
-                Explore the current Brazil-wide 3D comparison surface. Color shows relative advantage and elevation shows signed magnitude around a neutral zero plane.
+                Explore the current Brazil-wide 3D comparison surface. Color shows relative advantage and elevation shows signed quantitative difference around a neutral zero plane.
             </p>
         </section>
         """,

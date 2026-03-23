@@ -200,6 +200,26 @@ class HeatmapSurfaceTests(unittest.TestCase):
 
         self.assertGreater(surface.cells[0].elevation_m, 400000.0)
 
+    def test_build_surface_aligns_quantitative_sign_with_percentage_direction(self) -> None:
+        dataset = self._dataset()
+        mock_cells = (
+            (
+                ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
+                0.5,
+                0.5,
+            ),
+        )
+
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells), patch(
+            "app.heatmap.surface._triangulated_interpolate",
+            return_value=(-12.0, 250.0, "Alpha", "AA", 10.0),
+        ):
+            surface = build_surface(dataset, "cost")
+
+        self.assertEqual(len(surface.cells), 1)
+        self.assertAlmostEqual(surface.cells[0].absolute_value, -250.0, places=3)
+        self.assertLess(surface.cells[0].elevation_m, 0.0)
+
     def test_hull_cells_keep_only_centroids_inside_convex_hull(self) -> None:
         hull_polygon = ((0.0, 0.0), (2.0, 0.0), (0.0, 2.0))
         heatmap_surface._hull_cells.cache_clear()
