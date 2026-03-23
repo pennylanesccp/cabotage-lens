@@ -15,6 +15,7 @@ from app.heatmap.config import (
     HEATMAP_SURFACE_ALPHA,
     HEATMAP_SURFACE_CELL_SIZE_DEGREES,
     HEATMAP_SURFACE_COLOR_QUANTILE,
+    HEATMAP_SURFACE_ELEVATION_BOOST,
     HEATMAP_SURFACE_ELEVATION_FLOOR_RATIO,
     HEATMAP_SURFACE_ELEVATION_GAMMA,
     HEATMAP_SURFACE_ELEVATION_QUANTILE,
@@ -476,7 +477,7 @@ def _elevation_for_value(value: float, scale: float) -> float:
     usable_height = max(float(HEATMAP_SURFACE_MAX_ELEVATION_M) - floor_height, 0.0)
     normalized = _clamp(float(value) / float(scale), -1.0, 1.0)
     curved = math.copysign(abs(normalized) ** float(HEATMAP_SURFACE_ELEVATION_GAMMA), normalized)
-    curved = math.copysign(min(abs(curved) * 1.42, 1.0), curved)
+    curved = math.copysign(min(abs(curved) * float(HEATMAP_SURFACE_ELEVATION_BOOST), 1.0), curved)
     shifted = (curved + 1.0) / 2.0
     return round(floor_height + (shifted * usable_height), 2)
 

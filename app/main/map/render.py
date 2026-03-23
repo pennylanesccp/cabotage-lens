@@ -3,61 +3,13 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping, Tuple
 
 import pydeck as pdk
-import streamlit.components.v1 as components
 import streamlit as st
 
+from app.components.deck import render_deck_chart
 from app.main.map.ports import build_port_and_endpoint_points
 from app.main.map.routes import build_route_rows
 from app.main.utils.constants import MAP_STYLES
 from app.main.utils.formatters import clean_place_label, safe_float
-
-_CTRL_WHEEL_ZOOM_SCRIPT = """
-    (function enableModifierWheelZoom() {
-      const map = deckInstance && typeof deckInstance.getMapboxMap === 'function'
-        ? deckInstance.getMapboxMap()
-        : null;
-      if (!map || !map.scrollZoom) {
-        return;
-      }
-
-      const mapContainer = map.getContainer ? map.getContainer() : container;
-      let keyboardModifierPressed = false;
-      let disableTimer = null;
-
-      const syncScrollZoom = (modifierActive = keyboardModifierPressed) => {
-        if (modifierActive) {
-          map.scrollZoom.enable();
-        } else {
-          map.scrollZoom.disable();
-        }
-      };
-
-      const handleKeyState = (event) => {
-        keyboardModifierPressed = Boolean(event.ctrlKey || event.metaKey);
-        syncScrollZoom();
-      };
-
-      const handleWheel = (event) => {
-        const modifierActive = Boolean(event.ctrlKey || event.metaKey || keyboardModifierPressed);
-        syncScrollZoom(modifierActive);
-        window.clearTimeout(disableTimer);
-        disableTimer = window.setTimeout(() => {
-          if (!keyboardModifierPressed) {
-            map.scrollZoom.disable();
-          }
-        }, 180);
-      };
-
-      syncScrollZoom();
-      window.addEventListener('keydown', handleKeyState, true);
-      window.addEventListener('keyup', handleKeyState, true);
-      window.addEventListener('blur', () => {
-        keyboardModifierPressed = false;
-        syncScrollZoom();
-      }, true);
-      mapContainer.addEventListener('wheel', handleWheel, {capture: true, passive: true});
-    })();
-"""
 
 
 def safe_latlon(point: Mapping[str, Any]) -> Tuple[float, float]:
@@ -271,32 +223,10 @@ def build_map_deck(geo: Mapping[str, Any], results: Mapping[str, Any] | None, st
     )
 
 
-def _inject_modifier_wheel_zoom(deck_html: str) -> str:
-    html = deck_html.replace(
-        "const deckInstance = createDeck({",
-        "const deckInstance = window.__ecoFreightDeck = createDeck({",
-        1,
-    )
-    return html.replace(
-        "\n\n  </script>\n</html>",
-        f"\n{_CTRL_WHEEL_ZOOM_SCRIPT}\n  </script>\n</html>",
-        1,
-    )
-
-
 def render_map(geo: Mapping[str, Any], results: Mapping[str, Any] | None, state: Mapping[str, Any]) -> None:
     map_height = 560
     deck = build_map_deck(geo, results=results, state=state)
-
-    deck_html = deck.to_html(
-        as_string=True,
-        notebook_display=False,
-        iframe_width="100%",
-        iframe_height=map_height,
-    )
-    deck_html = _inject_modifier_wheel_zoom(deck_html)
-
-    components.html(deck_html, height=map_height, scrolling=False)
+    render_deck_chart(deck, height=map_height, require_ctrl_for_wheel_zoom=True)
 
 
 def render_map_placeholder() -> None:

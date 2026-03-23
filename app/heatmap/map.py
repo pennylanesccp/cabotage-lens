@@ -6,6 +6,7 @@ from typing import Any, List
 import pydeck as pdk
 import streamlit as st
 
+from app.components.deck import render_deck_chart
 from app.heatmap.config import (
     HEATMAP_3D_BEARING,
     HEATMAP_3D_PITCH,
@@ -16,23 +17,18 @@ from app.heatmap.config import (
     HEATMAP_COLOR_NEGATIVE,
     HEATMAP_COLOR_POSITIVE,
     HEATMAP_MAP_STYLE,
+    HEATMAP_MAP_HEIGHT,
     HEATMAP_POINT_OVERLAY_RADIUS_M,
+    HEATMAP_SURFACE_SIDE_WALL_ALPHA,
+    HEATMAP_SURFACE_SIDE_WALL_NEUTRAL,
+    HEATMAP_SURFACE_SIDE_WALL_TINT_RATIO,
+    HEATMAP_SURFACE_TOP_CAP_LIFT_M,
 )
 from app.heatmap.surface import build_surface
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
 
 _HEATMAP_MAP_CSS = """
 <style>
-    div[data-testid="stDeckGlJsonChart"] {
-        border: 1px solid rgba(255, 255, 255, 0.0);
-        border-radius: 22px;
-        overflow: hidden;
-        background: rgba(248, 250, 252, 0.94);
-        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
-    }
-    div[data-testid="stDeckGlJsonChart"] * {
-        outline: none !important;
-    }
     .heatmap-legend-card {
         padding: 0.7rem 0.9rem;
         border: 1px solid rgba(255, 255, 255, 0.0);
@@ -69,6 +65,8 @@ _HEATMAP_MAP_CSS = """
     }
 </style>
 """
+
+
 def _format_signed_currency(value: float) -> str:
     return f"R$ {value:,.2f}"
 
@@ -129,12 +127,33 @@ def _safe_percentage(raw_value: float | None, absolute_value: float, baseline: f
     return (float(absolute_value) / float(baseline)) * 100.0
 
 
-def _surface_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, Any]]:
+def _muted_side_fill_color(fill_color: tuple[int, int, int, int]) -> list[int]:
+    tint_ratio = min(max(float(HEATMAP_SURFACE_SIDE_WALL_TINT_RATIO), 0.0), 1.0)
+    rgb = [
+        int(round((float(channel) * tint_ratio) + (float(neutral) * (1.0 - tint_ratio))))
+        for channel, neutral in zip(fill_color[:3], HEATMAP_SURFACE_SIDE_WALL_NEUTRAL)
+    ]
+    return [*rgb, int(HEATMAP_SURFACE_SIDE_WALL_ALPHA)]
+
+
+def _surface_body_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, Any]]:
     return [
         {
             "polygon": [[lon, lat] for lon, lat in cell.polygon],
-            "fill_color": list(cell.fill_color),
+            "fill_color": _muted_side_fill_color(cell.fill_color),
             "elevation": float(cell.elevation_m),
+            "tooltip_html": _surface_tooltip_html(cell, metric),
+        }
+        for cell in surface.cells
+    ]
+
+
+def _surface_cap_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, Any]]:
+    cap_lift = float(HEATMAP_SURFACE_TOP_CAP_LIFT_M)
+    return [
+        {
+            "polygon": [[lon, lat, float(cell.elevation_m) + cap_lift] for lon, lat in cell.polygon],
+            "fill_color": list(cell.fill_color),
             "tooltip_html": _surface_tooltip_html(cell, metric),
         }
         for cell in surface.cells
@@ -168,7 +187,7 @@ def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str]
         "Orange-red favors road, golden sand marks parity, green favors multimodal.",
     ]
     helper_lines = [
-        "Color shows relative advantage across the interpolated surface.",
+        "Color lives on the raised top surface and shows relative advantage across the interpolated terrain.",
         "Height shows signed absolute magnitude, with lower terrain favoring road and higher terrain favoring multimodal.",
     ]
     return title, semantic_lines, helper_lines
@@ -205,12 +224,13 @@ def render_heatmap_map(
 ) -> HeatmapSurface:
     _inject_heatmap_map_css()
     surface = surface or build_surface(dataset, metric)
-    surface_rows = _surface_rows(surface, metric)
+    body_rows = _surface_body_rows(surface, metric)
+    cap_rows = _surface_cap_rows(surface, metric)
 
     layers: list[pdk.Layer] = [
         pdk.Layer(
             "PolygonLayer",
-            data=surface_rows,
+            data=body_rows,
             get_polygon="polygon",
             get_fill_color="fill_color",
             get_elevation="elevation",
@@ -219,8 +239,20 @@ def render_heatmap_map(
             stroked=False,
             filled=True,
             wireframe=False,
-            elevation_scale=1.12,
-            opacity=0.94,
+            elevation_scale=1.0,
+            opacity=0.92,
+        ),
+        pdk.Layer(
+            "PolygonLayer",
+            data=cap_rows,
+            get_polygon="polygon",
+            get_fill_color="fill_color",
+            pickable=True,
+            extruded=False,
+            stroked=False,
+            filled=True,
+            wireframe=False,
+            opacity=0.98,
         ),
     ]
 
@@ -260,5 +292,5 @@ def render_heatmap_map(
             },
         },
     )
-    st.pydeck_chart(deck, width="stretch")
+    render_deck_chart(deck, height=HEATMAP_MAP_HEIGHT, require_ctrl_for_wheel_zoom=True)
     return surface
