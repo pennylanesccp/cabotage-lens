@@ -19,9 +19,6 @@ from app.heatmap.config import (
     HEATMAP_MAP_STYLE,
     HEATMAP_MAP_HEIGHT,
     HEATMAP_POINT_OVERLAY_RADIUS_M,
-    HEATMAP_SURFACE_SIDE_WALL_ALPHA,
-    HEATMAP_SURFACE_SIDE_WALL_NEUTRAL,
-    HEATMAP_SURFACE_SIDE_WALL_TINT_RATIO,
     HEATMAP_SURFACE_TOP_CAP_LIFT_M,
     HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M,
 )
@@ -128,28 +125,6 @@ def _safe_percentage(raw_value: float | None, absolute_value: float, baseline: f
     return (float(absolute_value) / float(baseline)) * 100.0
 
 
-def _muted_side_fill_color(fill_color: tuple[int, int, int, int]) -> list[int]:
-    tint_ratio = min(max(float(HEATMAP_SURFACE_SIDE_WALL_TINT_RATIO), 0.0), 1.0)
-    rgb = [
-        int(round((float(channel) * tint_ratio) + (float(neutral) * (1.0 - tint_ratio))))
-        for channel, neutral in zip(fill_color[:3], HEATMAP_SURFACE_SIDE_WALL_NEUTRAL)
-    ]
-    return [*rgb, int(HEATMAP_SURFACE_SIDE_WALL_ALPHA)]
-
-
-def _surface_body_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, Any]]:
-    zero_plane = float(HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M)
-    return [
-        {
-            "polygon": [[lon, lat, zero_plane] for lon, lat in cell.polygon],
-            "fill_color": _muted_side_fill_color(cell.fill_color),
-            "elevation": float(cell.elevation_m),
-            "tooltip_html": _surface_tooltip_html(cell, metric),
-        }
-        for cell in surface.cells
-    ]
-
-
 def _surface_cap_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, Any]]:
     cap_lift = float(HEATMAP_SURFACE_TOP_CAP_LIFT_M)
     zero_plane = float(HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M)
@@ -192,7 +167,7 @@ def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str]
         "Orange-red favors road, golden sand marks parity, green favors multimodal.",
     ]
     helper_lines = [
-        "Only the raised top surface is colored; the cell body stays transparent to keep the comparison readable.",
+        "Only the raised top surface is drawn, so adjacent cells no longer get blocked by transparent side walls.",
         height_line,
     ]
     return title, semantic_lines, helper_lines
@@ -229,24 +204,9 @@ def render_heatmap_map(
 ) -> HeatmapSurface:
     _inject_heatmap_map_css()
     surface = surface or build_surface(dataset, metric)
-    body_rows = _surface_body_rows(surface, metric)
     cap_rows = _surface_cap_rows(surface, metric)
 
     layers: list[pdk.Layer] = [
-        pdk.Layer(
-            "PolygonLayer",
-            data=body_rows,
-            get_polygon="polygon",
-            get_fill_color="fill_color",
-            get_elevation="elevation",
-            pickable=False,
-            extruded=True,
-            stroked=False,
-            filled=True,
-            wireframe=False,
-            elevation_scale=1.0,
-            opacity=1.0,
-        ),
         pdk.Layer(
             "PolygonLayer",
             data=cap_rows,

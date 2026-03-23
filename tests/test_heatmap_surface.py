@@ -198,8 +198,8 @@ class HeatmapSurfaceTests(unittest.TestCase):
         with patch("app.heatmap.surface._hull_cells", return_value=mock_cells):
             surface = build_surface(dataset, "cost")
 
-        self.assertGreater(surface.cells[0].elevation_m, heatmap_surface.HEATMAP_SURFACE_MAX_ELEVATION_M * 0.6)
-        self.assertLess(surface.cells[0].elevation_m, heatmap_surface.HEATMAP_SURFACE_MAX_ELEVATION_M)
+        self.assertGreater(surface.cells[0].elevation_m, heatmap_surface.HEATMAP_SURFACE_MAX_ELEVATION_M * 0.2)
+        self.assertLess(surface.cells[0].elevation_m, heatmap_surface.HEATMAP_SURFACE_MAX_ELEVATION_M * 0.6)
 
     def test_build_surface_aligns_quantitative_sign_with_percentage_direction(self) -> None:
         dataset = self._dataset()

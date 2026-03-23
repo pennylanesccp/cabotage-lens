@@ -1,5 +1,6 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from app.heatmap import map as heatmap_map
 
@@ -17,23 +18,6 @@ class HeatmapMapTests(unittest.TestCase):
             nearest_distance_km=24.0,
         )
         return SimpleNamespace(cells=[cell])
-
-    def test_surface_body_rows_keep_cell_bodies_transparent(self) -> None:
-        surface = self._surface()
-
-        rows = heatmap_map._surface_body_rows(surface, "cost")
-
-        self.assertEqual(
-            rows[0]["polygon"],
-            [
-                [0.0, 0.0, heatmap_map.HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M],
-                [1.0, 0.0, heatmap_map.HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M],
-                [1.0, 1.0, heatmap_map.HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M],
-                [0.0, 1.0, heatmap_map.HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M],
-            ],
-        )
-        self.assertEqual(rows[0]["fill_color"][3], heatmap_map.HEATMAP_SURFACE_SIDE_WALL_ALPHA)
-        self.assertEqual(rows[0]["elevation"], surface.cells[0].elevation_m)
 
     def test_surface_cap_rows_keep_color_on_top_face(self) -> None:
         surface = self._surface()
@@ -60,6 +44,19 @@ class HeatmapMapTests(unittest.TestCase):
         rows = heatmap_map._surface_cap_rows(surface, "cost")
 
         self.assertLess(rows[0]["polygon"][0][2], heatmap_map.HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M)
+
+    def test_render_heatmap_map_renders_caps_only_to_avoid_body_occlusion(self) -> None:
+        dataset = SimpleNamespace(points=[])
+        surface = self._surface()
+
+        with patch("app.heatmap.map._inject_heatmap_map_css"), patch(
+            "app.heatmap.map.render_deck_chart"
+        ) as render_mock:
+            returned_surface = heatmap_map.render_heatmap_map(dataset, "cost", surface=surface)
+
+        deck = render_mock.call_args.args[0]
+        self.assertIs(returned_surface, surface)
+        self.assertEqual(len(deck.layers), 1)
 
 
 if __name__ == "__main__":
