@@ -185,6 +185,41 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertAlmostEqual(surface.cells[0].absolute_value, -200.0, places=3)
         self.assertLess(surface.cells[0].elevation_m, 0.0)
 
+    def test_color_for_value_uses_red_yellow_green_by_signed_delta(self) -> None:
+        self.assertEqual(
+            heatmap_surface._color_for_value(-100.0, 100.0),
+            (*heatmap_surface.HEATMAP_COLOR_NEGATIVE, heatmap_surface.HEATMAP_SURFACE_ALPHA),
+        )
+        self.assertEqual(
+            heatmap_surface._color_for_value(0.0, 100.0),
+            (*heatmap_surface.HEATMAP_COLOR_MID, heatmap_surface.HEATMAP_SURFACE_ALPHA),
+        )
+        self.assertEqual(
+            heatmap_surface._color_for_value(100.0, 100.0),
+            (*heatmap_surface.HEATMAP_COLOR_POSITIVE, heatmap_surface.HEATMAP_SURFACE_ALPHA),
+        )
+
+    def test_build_surface_colors_follow_signed_quantitative_delta(self) -> None:
+        dataset = self._dataset()
+        mock_cells = (
+            (
+                ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
+                0.5,
+                0.5,
+            ),
+        )
+
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells), patch(
+            "app.heatmap.surface._triangulated_interpolate",
+            return_value=(-12.0, 250.0, "Alpha", "AA", 10.0),
+        ):
+            surface = build_surface(dataset, "cost")
+
+        self.assertEqual(
+            surface.cells[0].fill_color,
+            heatmap_surface._color_for_value(surface.cells[0].absolute_value, surface.color_scale),
+        )
+
     def test_build_surface_3d_keeps_moderate_values_below_peak_relief(self) -> None:
         dataset = self._dataset()
         mock_cells = (

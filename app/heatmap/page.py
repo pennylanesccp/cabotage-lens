@@ -101,6 +101,12 @@ def _format_height_scale(surface: HeatmapSurface) -> str:
     return f"R$ {surface.elevation_scale:,.2f}"
 
 
+def _format_color_scale(surface: HeatmapSurface) -> str:
+    if surface.metric == "emissions":
+        return f"{surface.color_scale:,.1f} kg CO2e"
+    return f"R$ {surface.color_scale:,.2f}"
+
+
 def _render_header() -> None:
     st.markdown(
         f"""
@@ -108,7 +114,7 @@ def _render_header() -> None:
             <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
             <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
             <p style='margin: 0.65rem 0 0 0; max-width: 48rem; color: #334155;'>
-                Explore the current Brazil-wide 3D comparison surface. Color shows relative advantage and elevation shows signed quantitative difference around a neutral zero plane.
+                Explore the current Brazil-wide 3D comparison surface. Color and elevation both follow the signed quantitative difference around a neutral zero plane.
             </p>
         </section>
         """,
@@ -211,7 +217,7 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
             (
                 f"{heatmap_destination_label(dataset.run.destination_set_id)}: loaded {diagnostics.plottable_points} plottable points from "
                 f"{diagnostics.successful_rows} successful latest rows. "
-                f"Robust scales: color +/- {surface.color_scale:,.1f}% and height +/- {_format_height_scale(surface)}."
+                f"Robust scales: color +/- {_format_color_scale(surface)} and height +/- {_format_height_scale(surface)}."
             )
         )
 

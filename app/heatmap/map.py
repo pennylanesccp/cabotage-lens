@@ -158,13 +158,13 @@ def _inject_heatmap_map_css() -> None:
 def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str], list[str]]:
     if metric == "cost":
         title = "3D cost surface"
-        height_line = "Height shows signed cost difference around a zero plane, with road-favoring cells below it and multimodal-favoring cells above it."
+        height_line = "Height shows signed cost difference around a zero plane, with negative cells below it and positive cells above it."
     else:
         title = "3D emissions surface"
-        height_line = "Height shows signed emissions difference around a zero plane, with road-favoring cells below it and multimodal-favoring cells above it."
+        height_line = "Height shows signed emissions difference around a zero plane, with negative cells below it and positive cells above it."
 
     semantic_lines = [
-        "Orange-red favors road, golden sand marks parity, green favors multimodal.",
+        "Negative delta stays in the red spectrum, zero is yellow, and positive delta moves from yellow to green.",
     ]
     helper_lines = [
         "Only the raised top surface is drawn, so adjacent cells no longer get blocked by transparent side walls.",

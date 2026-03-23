@@ -513,7 +513,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         _geometry_signature(points_signature)
     )
     value_samples = _value_samples(points_signature, geometry_samples)
-    color_scale = _robust_abs_scale([float(sample[4]) for sample in value_samples], HEATMAP_SURFACE_COLOR_QUANTILE)
+    color_scale = _robust_abs_scale([float(sample[5]) for sample in value_samples], HEATMAP_SURFACE_COLOR_QUANTILE)
     elevation_scale = _robust_abs_scale([float(sample[5]) for sample in value_samples], HEATMAP_SURFACE_ELEVATION_QUANTILE)
 
     if len(value_samples) < 3 or len(hull_polygon) < 3 or not prepared_triangles or not hull_cells:
@@ -542,7 +542,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
                 center_lon=center_lon,
                 percentage_value=percentage_value,
                 absolute_value=signed_quantitative_value,
-                fill_color=_color_for_value(percentage_value, color_scale),
+                fill_color=_color_for_value(signed_quantitative_value, color_scale),
                 elevation_m=_elevation_for_value(signed_quantitative_value, elevation_scale),
                 nearest_destiny_name=nearest_name,
                 nearest_destiny_uf=nearest_uf,

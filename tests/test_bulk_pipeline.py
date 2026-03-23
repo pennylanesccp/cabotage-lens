@@ -273,6 +273,20 @@ class BulkPipelineExecutionTests(unittest.TestCase):
         self.assertIn("status=timeout", joined)
         self.assertIn("error=Request timed out", joined)
 
+    def test_format_failed_destinies_includes_actual_destination_names(self) -> None:
+        rows = [
+            {"status": "timeout", "destiny_name": "Manaus, AM", "input_destiny": "Manaus, AM"},
+            {"status": "timeout", "destiny_name": "Recife, PE", "input_destiny": "Recife, PE"},
+            {"status": "rate_limited", "destiny_name": "", "input_destiny": "Olinda, PE"},
+            {"status": "ok", "destiny_name": "Curitiba, PR", "input_destiny": "Curitiba, PR"},
+        ]
+
+        summary = bulk_pipeline._format_failed_destinies(rows, max_statuses=5, max_destinies_per_status=5)
+
+        self.assertIn("timeout=[Manaus, AM; Recife, PE]", summary)
+        self.assertIn("rate_limited=[Olinda, PE]", summary)
+        self.assertNotIn("Curitiba, PR", summary)
+
     def test_bulk_persistence_buffer_reconnects_before_flush(self) -> None:
         conn = SimpleNamespace(
             ping=unittest.mock.MagicMock(side_effect=RuntimeError("connection lost")),

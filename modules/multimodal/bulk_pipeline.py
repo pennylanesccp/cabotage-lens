@@ -178,6 +178,35 @@ def _status_counts(summary_rows: List[Dict[str, Any]]) -> Dict[str, int]:
     return counts
 
 
+def _format_failed_destinies(
+    summary_rows: List[Dict[str, Any]],
+    *,
+    max_statuses: int = 5,
+    max_destinies_per_status: int = 5,
+) -> str:
+    grouped: dict[str, list[str]] = {}
+    for row in summary_rows:
+        status = str(row.get("status") or "").strip().lower() or "unknown"
+        if status == "ok":
+            continue
+        destiny = str(row.get("destiny_name") or row.get("input_destiny") or "").strip() or "<unknown>"
+        bucket = grouped.setdefault(status, [])
+        if destiny not in bucket:
+            bucket.append(destiny)
+
+    if not grouped:
+        return "none"
+
+    segments: list[str] = []
+    for status, destinies in sorted(grouped.items(), key=lambda item: (-len(item[1]), item[0]))[:max_statuses]:
+        shown = destinies[:max_destinies_per_status]
+        suffix = ""
+        if len(destinies) > len(shown):
+            suffix = f" (+{len(destinies) - len(shown)} more)"
+        segments.append(f"{status}=[{'; '.join(shown)}]{suffix}")
+    return "; ".join(segments)
+
+
 def _persistable_point_row(*, place: str, point: Dict[str, Any], source: str) -> Dict[str, Any]:
     return {
         "place": place,
@@ -1247,6 +1276,7 @@ def run_bulk_evaluation_pipeline(
     performance = perf.snapshot()
     performance["provider_calls"] = provider_calls
     status_counts = _status_counts(summary_rows)
+    failed_destinies = _format_failed_destinies(summary_rows)
     top_failure_reasons = ", ".join(
         f"{status}={count}"
         for status, count in sorted(
@@ -1326,10 +1356,11 @@ def run_bulk_evaluation_pipeline(
         duration,
     )
     _log.info(
-        "Bulk failure summary run_id=%s top_failures=%s statuses=%s",
+        "Bulk failure summary run_id=%s top_failures=%s statuses=%s failed_destinies=%s",
         run_id,
         top_failure_reasons,
         status_counts,
+        failed_destinies,
     )
     _log.info(
         "Bulk provider summary run_id=%s providers=%s",
