@@ -164,7 +164,7 @@ def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str]
         height_line = "Height shows signed emissions difference around a zero plane, with negative cells below it and positive cells above it."
 
     semantic_lines = [
-        "Negative delta stays in the red spectrum, zero is yellow, and positive delta moves from yellow to green.",
+        "Negative delta stays in the red spectrum, zero is white, and positive delta moves from white to green.",
     ]
     helper_lines = [
         "Only the raised top surface is drawn, so adjacent cells no longer get blocked by transparent side walls.",

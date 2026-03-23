@@ -47,15 +47,20 @@ def _interpolate_channel(start: Iterable[int], end: Iterable[int], ratio: float)
     return tuple(int(round(s + ((e - s) * weight))) for s, e in zip(start_values, end_values))  # type: ignore[return-value]
 
 
-def _color_for_value(value: float, scale: float) -> tuple[int, int, int, int]:
-    if scale <= 0.0:
+def _color_for_value(value: float, negative_scale: float, positive_scale: float) -> tuple[int, int, int, int]:
+    numeric_value = float(value)
+    if numeric_value == 0.0:
         rgb = tuple(HEATMAP_COLOR_MID)
-    else:
-        normalized = _clamp(float(value) / float(scale), -1.0, 1.0)
-        if normalized >= 0.0:
-            rgb = _interpolate_channel(HEATMAP_COLOR_MID, HEATMAP_COLOR_POSITIVE, normalized)
+    elif numeric_value > 0.0:
+        if positive_scale <= 0.0:
+            rgb = tuple(HEATMAP_COLOR_MID)
         else:
-            rgb = _interpolate_channel(HEATMAP_COLOR_MID, HEATMAP_COLOR_NEGATIVE, abs(normalized))
+            rgb = _interpolate_channel(HEATMAP_COLOR_MID, HEATMAP_COLOR_POSITIVE, numeric_value / float(positive_scale))
+    else:
+        if negative_scale <= 0.0:
+            rgb = tuple(HEATMAP_COLOR_MID)
+        else:
+            rgb = _interpolate_channel(HEATMAP_COLOR_MID, HEATMAP_COLOR_NEGATIVE, abs(numeric_value) / float(negative_scale))
     return (*rgb, HEATMAP_SURFACE_ALPHA)
 
 
@@ -68,6 +73,16 @@ def _robust_abs_scale(values: Sequence[float], quantile: float) -> float:
     index = min(max(int(round((len(ordered) - 1) * quantile)), 0), len(ordered) - 1)
     candidate = ordered[index]
     return candidate if candidate > 0.0 else 1.0
+
+
+def _robust_side_scale(values: Sequence[float], quantile: float, *, positive: bool) -> float:
+    filtered = [abs(float(value)) for value in values if (float(value) > 0.0 if positive else float(value) < 0.0)]
+    if not filtered:
+        return 0.0
+    ordered = sorted(filtered)
+    index = min(max(int(round((len(ordered) - 1) * quantile)), 0), len(ordered) - 1)
+    candidate = ordered[index]
+    return candidate if candidate > 0.0 else 0.0
 
 
 def _metric_percentage(point: HeatmapPoint, metric: str) -> float:
@@ -503,6 +518,8 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
             mode="3d",
             cells=[],
             color_scale=1.0,
+            negative_color_scale=0.0,
+            positive_color_scale=0.0,
             elevation_scale=1.0,
             source_point_count=0,
             unique_source_coordinate_count=0,
@@ -513,7 +530,10 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         _geometry_signature(points_signature)
     )
     value_samples = _value_samples(points_signature, geometry_samples)
-    color_scale = _robust_abs_scale([float(sample[5]) for sample in value_samples], HEATMAP_SURFACE_COLOR_QUANTILE)
+    signed_values = [float(sample[5]) for sample in value_samples]
+    negative_color_scale = _robust_side_scale(signed_values, HEATMAP_SURFACE_COLOR_QUANTILE, positive=False)
+    positive_color_scale = _robust_side_scale(signed_values, HEATMAP_SURFACE_COLOR_QUANTILE, positive=True)
+    color_scale = max(negative_color_scale, positive_color_scale, 1.0)
     elevation_scale = _robust_abs_scale([float(sample[5]) for sample in value_samples], HEATMAP_SURFACE_ELEVATION_QUANTILE)
 
     if len(value_samples) < 3 or len(hull_polygon) < 3 or not prepared_triangles or not hull_cells:
@@ -522,6 +542,8 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
             mode="3d",
             cells=[],
             color_scale=color_scale,
+            negative_color_scale=negative_color_scale,
+            positive_color_scale=positive_color_scale,
             elevation_scale=elevation_scale,
             source_point_count=len(points_signature),
             unique_source_coordinate_count=len(value_samples),
@@ -542,7 +564,11 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
                 center_lon=center_lon,
                 percentage_value=percentage_value,
                 absolute_value=signed_quantitative_value,
-                fill_color=_color_for_value(signed_quantitative_value, color_scale),
+                fill_color=_color_for_value(
+                    signed_quantitative_value,
+                    negative_color_scale,
+                    positive_color_scale,
+                ),
                 elevation_m=_elevation_for_value(signed_quantitative_value, elevation_scale),
                 nearest_destiny_name=nearest_name,
                 nearest_destiny_uf=nearest_uf,
@@ -555,6 +581,8 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         mode="3d",
         cells=cells,
         color_scale=color_scale,
+        negative_color_scale=negative_color_scale,
+        positive_color_scale=positive_color_scale,
         elevation_scale=elevation_scale,
         source_point_count=len(points_signature),
         unique_source_coordinate_count=len(value_samples),

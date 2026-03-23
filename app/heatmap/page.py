@@ -95,16 +95,29 @@ def _format_timestamp(value: Any) -> str:
     return text or "Unknown"
 
 
+def _format_metric_scale(metric: str, value: float) -> str:
+    if metric == "emissions":
+        return f"{value:,.1f} kg CO2e"
+    return f"R$ {value:,.2f}"
+
+
 def _format_height_scale(surface: HeatmapSurface) -> str:
-    if surface.metric == "emissions":
-        return f"{surface.elevation_scale:,.1f} kg CO2e"
-    return f"R$ {surface.elevation_scale:,.2f}"
+    return _format_metric_scale(surface.metric, surface.elevation_scale)
 
 
 def _format_color_scale(surface: HeatmapSurface) -> str:
-    if surface.metric == "emissions":
-        return f"{surface.color_scale:,.1f} kg CO2e"
-    return f"R$ {surface.color_scale:,.2f}"
+    negative_scale = max(float(surface.negative_color_scale), 0.0)
+    positive_scale = max(float(surface.positive_color_scale), 0.0)
+    if negative_scale > 0.0 and positive_scale > 0.0:
+        return (
+            f"red={_format_metric_scale(surface.metric, negative_scale)} / "
+            f"green={_format_metric_scale(surface.metric, positive_scale)}"
+        )
+    if negative_scale > 0.0:
+        return f"red={_format_metric_scale(surface.metric, negative_scale)}"
+    if positive_scale > 0.0:
+        return f"green={_format_metric_scale(surface.metric, positive_scale)}"
+    return _format_metric_scale(surface.metric, surface.color_scale)
 
 
 def _render_header() -> None:

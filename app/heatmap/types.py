@@ -112,6 +112,8 @@ class HeatmapSurface:
     mode: str
     cells: List[HeatmapSurfaceCell]
     color_scale: float
+    negative_color_scale: float
+    positive_color_scale: float
     elevation_scale: float
     source_point_count: int
     unique_source_coordinate_count: int
