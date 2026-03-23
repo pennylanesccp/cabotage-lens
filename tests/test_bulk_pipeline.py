@@ -226,6 +226,53 @@ class BulkPipelineExecutionTests(unittest.TestCase):
         self.assertIs(outcome, expected)
         pipeline_mock.assert_called_once()
 
+    def test_log_destination_failure_context_includes_route_details(self) -> None:
+        item = bulk.DestinationWorkItem(
+            index=1,
+            destiny_input="Manaus, AM",
+            normalized_input="Manaus, AM",
+            scenario_key="scenario-1",
+            scenario_payload={"input_destiny": "Manaus, AM"},
+            destiny_name="Manaus, AM",
+            point={"label": "Manaus, AM", "lat": -3.1190, "lon": -60.0217},
+            point_source="place_cache",
+            port_destiny={"name": "Porto de Manaus"},
+        )
+        geo = {
+            "road_direct": {
+                "source": "cache",
+                "distance_km": 3950.4,
+                "profile_used": "driving-hgv",
+                "cached": True,
+            },
+            "last_mile": {
+                "source": "ors",
+                "distance_km": 12.6,
+                "profile_used": "driving-hgv",
+                "cached": False,
+            },
+        }
+
+        with self.assertLogs("modules.multimodal.bulk_pipeline", level="WARNING") as captured:
+            bulk_pipeline._log_destination_failure_context(
+                phase="geometry",
+                origin_pt={"label": "Sao Paulo, SP", "lat": -23.5505, "lon": -46.6333},
+                origin_port={"name": "Porto de Santos"},
+                item=item,
+                status="timeout",
+                error_message="Request timed out",
+                geo=geo,
+            )
+
+        joined = "\n".join(captured.output)
+        self.assertIn("Sao Paulo, SP@", joined)
+        self.assertIn("Manaus, AM@", joined)
+        self.assertIn("ports=Porto de Santos -> Porto de Manaus", joined)
+        self.assertIn("road_direct[source=cache km=3950.4 profile=driving-hgv cached=true]", joined)
+        self.assertIn("last_mile[source=ors km=12.6 profile=driving-hgv cached=false]", joined)
+        self.assertIn("status=timeout", joined)
+        self.assertIn("error=Request timed out", joined)
+
     def test_bulk_persistence_buffer_reconnects_before_flush(self) -> None:
         conn = SimpleNamespace(
             ping=unittest.mock.MagicMock(side_effect=RuntimeError("connection lost")),

@@ -168,7 +168,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
         self.assertEqual(surface.hull_vertex_count, 3)
 
-    def test_build_surface_3d_keeps_negative_values_above_floor(self) -> None:
+    def test_build_surface_3d_places_negative_values_below_zero_plane(self) -> None:
         dataset = self._dataset()
         mock_cells = (
             (
@@ -183,7 +183,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
 
         self.assertEqual(len(surface.cells), 1)
         self.assertAlmostEqual(surface.cells[0].absolute_value, -200.0, places=3)
-        self.assertGreater(surface.cells[0].elevation_m, 0.0)
+        self.assertLess(surface.cells[0].elevation_m, 0.0)
 
     def test_build_surface_3d_now_uses_much_stronger_relief_for_moderate_values(self) -> None:
         dataset = self._dataset()

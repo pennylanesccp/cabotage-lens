@@ -473,13 +473,16 @@ def _surface_geometry_cached(
 def _elevation_for_value(value: float, scale: float) -> float:
     floor_height = float(HEATMAP_SURFACE_MAX_ELEVATION_M) * float(HEATMAP_SURFACE_ELEVATION_FLOOR_RATIO)
     if scale <= 0.0:
-        return round(floor_height + ((float(HEATMAP_SURFACE_MAX_ELEVATION_M) - floor_height) * 0.5), 2)
+        return 0.0
+    magnitude = abs(float(value))
+    if magnitude <= 0.0:
+        return 0.0
     usable_height = max(float(HEATMAP_SURFACE_MAX_ELEVATION_M) - floor_height, 0.0)
     normalized = _clamp(float(value) / float(scale), -1.0, 1.0)
     curved = math.copysign(abs(normalized) ** float(HEATMAP_SURFACE_ELEVATION_GAMMA), normalized)
     curved = math.copysign(min(abs(curved) * float(HEATMAP_SURFACE_ELEVATION_BOOST), 1.0), curved)
-    shifted = (curved + 1.0) / 2.0
-    return round(floor_height + (shifted * usable_height), 2)
+    visible_height = floor_height + (min(abs(curved), 1.0) * usable_height)
+    return round(math.copysign(visible_height, float(value)), 2)
 
 
 @lru_cache(maxsize=24)

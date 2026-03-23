@@ -23,6 +23,7 @@ from app.heatmap.config import (
     HEATMAP_SURFACE_SIDE_WALL_NEUTRAL,
     HEATMAP_SURFACE_SIDE_WALL_TINT_RATIO,
     HEATMAP_SURFACE_TOP_CAP_LIFT_M,
+    HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M,
 )
 from app.heatmap.surface import build_surface
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
@@ -137,9 +138,10 @@ def _muted_side_fill_color(fill_color: tuple[int, int, int, int]) -> list[int]:
 
 
 def _surface_body_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, Any]]:
+    zero_plane = float(HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M)
     return [
         {
-            "polygon": [[lon, lat] for lon, lat in cell.polygon],
+            "polygon": [[lon, lat, zero_plane] for lon, lat in cell.polygon],
             "fill_color": _muted_side_fill_color(cell.fill_color),
             "elevation": float(cell.elevation_m),
             "tooltip_html": _surface_tooltip_html(cell, metric),
@@ -150,9 +152,10 @@ def _surface_body_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, A
 
 def _surface_cap_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, Any]]:
     cap_lift = float(HEATMAP_SURFACE_TOP_CAP_LIFT_M)
+    zero_plane = float(HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M)
     return [
         {
-            "polygon": [[lon, lat, float(cell.elevation_m) + cap_lift] for lon, lat in cell.polygon],
+            "polygon": [[lon, lat, zero_plane + float(cell.elevation_m) + cap_lift] for lon, lat in cell.polygon],
             "fill_color": list(cell.fill_color),
             "tooltip_html": _surface_tooltip_html(cell, metric),
         }
@@ -188,7 +191,7 @@ def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str]
     ]
     helper_lines = [
         "Color lives on the raised top surface and shows relative advantage across the interpolated terrain.",
-        "Height shows signed absolute magnitude, with lower terrain favoring road and higher terrain favoring multimodal.",
+        "Height shows signed magnitude around a zero plane, with road-favoring cells below it and multimodal-favoring cells above it.",
     ]
     return title, semantic_lines, helper_lines
 

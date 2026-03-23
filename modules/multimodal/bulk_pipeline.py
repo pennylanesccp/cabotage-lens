@@ -54,6 +54,76 @@ from modules.multimodal.scenario_keys import build_bulk_scenario_key
 _log = get_logger(__name__)
 
 
+def _format_point_coords(point: Optional[Dict[str, Any]]) -> str:
+    if not isinstance(point, dict):
+        return "<none>"
+    lat = point.get("lat")
+    lon = point.get("lon")
+    if lat is None or lon is None:
+        return "<none>"
+    return f"{float(lat):.5f},{float(lon):.5f}"
+
+
+def _format_port_name(port: Optional[Dict[str, Any]]) -> str:
+    if not isinstance(port, dict):
+        return "<none>"
+    return str(port.get("name") or port.get("label") or "<none>")
+
+
+def _format_leg_debug(geo: Optional[Dict[str, Any]], leg_name: str) -> str:
+    if not isinstance(geo, dict):
+        return f"{leg_name}[source=<none> km=<none> profile=<none> cached=?]"
+    leg = geo.get(leg_name)
+    if not isinstance(leg, dict):
+        return f"{leg_name}[source=<none> km=<none> profile=<none> cached=?]"
+    distance_km = leg.get("distance_km")
+    if distance_km is None:
+        distance_text = "<none>"
+    else:
+        distance_text = f"{float(distance_km):.1f}"
+    cached = leg.get("cached")
+    if cached is None:
+        cached_text = "?"
+    else:
+        cached_text = str(bool(cached)).lower()
+    return (
+        f"{leg_name}[source={leg.get('source') or '<none>'} km={distance_text} "
+        f"profile={leg.get('profile_used') or '<none>'} cached={cached_text}]"
+    )
+
+
+def _log_destination_failure_context(
+    *,
+    phase: str,
+    origin_pt: Dict[str, Any],
+    origin_port: Optional[Dict[str, Any]],
+    item: DestinationWorkItem,
+    status: str,
+    error_message: str,
+    geo: Optional[Dict[str, Any]] = None,
+) -> None:
+    destiny_point = item.point if isinstance(item.point, dict) else None
+    _log.warning(
+        (
+            "Bulk destination failure phase=%s route=%s@%s -> %s@%s input_destiny=%s status=%s "
+            "point_source=%s ports=%s -> %s %s %s error=%s"
+        ),
+        phase,
+        origin_pt.get("label") or "<origin>",
+        _format_point_coords(origin_pt),
+        item.destiny_name or item.destiny_input,
+        _format_point_coords(destiny_point),
+        item.destiny_input,
+        status,
+        item.point_source or "<none>",
+        _format_port_name(origin_port),
+        _format_port_name(item.port_destiny),
+        _format_leg_debug(geo, "road_direct"),
+        _format_leg_debug(geo, "last_mile"),
+        error_message,
+    )
+
+
 def _provider_operation_totals(provider_calls: Dict[str, Dict[str, Dict[str, float]]]) -> Dict[str, float]:
     totals: dict[str, float] = {
         "geocode_attempts": 0.0,
@@ -554,9 +624,25 @@ def run_bulk_evaluation_pipeline(
                             failure_status, failure_message, _ = _classify_failure(error)
                             item.failure_status = failure_status
                             item.error_message = failure_message
+                            _log_destination_failure_context(
+                                phase="resolution",
+                                origin_pt=origin_pt,
+                                origin_port=origin_port,
+                                item=item,
+                                status=failure_status,
+                                error_message=failure_message,
+                            )
                         elif point is None:
                             item.failure_status = "geocode_failed"
                             item.error_message = f"Failed to resolve destination: {item.destiny_input}"
+                            _log_destination_failure_context(
+                                phase="resolution",
+                                origin_pt=origin_pt,
+                                origin_port=origin_port,
+                                item=item,
+                                status=item.failure_status,
+                                error_message=item.error_message,
+                            )
                         else:
                             item.point = point
                             item.destiny_name = point["label"]
@@ -614,6 +700,14 @@ def run_bulk_evaluation_pipeline(
                 except Exception as exc:  # pragma: no cover - defensive worker isolation
                     item.failure_status = "nearest_port_failed"
                     item.error_message = str(exc).strip() or "Nearest-port lookup failed"
+                    _log_destination_failure_context(
+                        phase="nearest_port",
+                        origin_pt=origin_pt,
+                        origin_port=origin_port,
+                        item=item,
+                        status=item.failure_status,
+                        error_message=item.error_message,
+                    )
                     continue
                 route_specs.append(RouteRequestSpec("road_direct", origin_pt, item.point, profile))
                 route_specs.append(RouteRequestSpec("last_mile", build_port_node(item.port_destiny), item.point, profile))
@@ -663,9 +757,27 @@ def run_bulk_evaluation_pipeline(
                             failure_status, failure_message, _ = _classify_failure(error)
                             item.failure_status = failure_status
                             item.error_message = failure_message
+                            _log_destination_failure_context(
+                                phase="geometry",
+                                origin_pt=origin_pt,
+                                origin_port=origin_port,
+                                item=item,
+                                status=failure_status,
+                                error_message=failure_message,
+                                geo=geometry,
+                            )
                         elif not geometry or geometry.get("status") != "ok":
                             item.failure_status = "geometry_failed"
                             item.error_message = "Geometry build failed"
+                            _log_destination_failure_context(
+                                phase="geometry",
+                                origin_pt=origin_pt,
+                                origin_port=origin_port,
+                                item=item,
+                                status=item.failure_status,
+                                error_message=item.error_message,
+                                geo=geometry,
+                            )
                         else:
                             item.geo = geometry
                         _emit_progress(
@@ -848,8 +960,15 @@ def run_bulk_evaluation_pipeline(
                         failure_status, failure_message, log_trace = _classify_failure(exc)
                         if log_trace:
                             _log.error("Bulk destination failed: %s", failure_message, exc_info=True)
-                        else:
-                            _log.warning("Bulk destination skipped: %s (%s)", item.destiny_input, failure_message)
+                        _log_destination_failure_context(
+                            phase="exact",
+                            origin_pt=origin_pt,
+                            origin_port=origin_port,
+                            item=item,
+                            status=failure_status,
+                            error_message=failure_message,
+                            geo=geo,
+                        )
                         bulk_row, run_row = _build_bulk_outcome_rows(
                             run_id=str(run_id),
                             destination_set_id=destination_set_id,
@@ -999,6 +1118,26 @@ def run_bulk_evaluation_pipeline(
                         unresolved_fail_count += 1
                         approximation_failure = str(exc).strip() or "Approximation fallback failed"
                         combined_error = f"{pending.error_message}; {approximation_failure}"
+                        _log_destination_failure_context(
+                            phase="approximation",
+                            origin_pt=origin_pt,
+                            origin_port=origin_port,
+                            item=DestinationWorkItem(
+                                index=pending.index,
+                                destiny_input=pending.destiny_input,
+                                normalized_input=pending.destiny_input,
+                                scenario_key=pending.scenario_key,
+                                scenario_payload=pending.scenario_payload,
+                                destiny_name=pending.destiny_name,
+                                point=pending.geo.get("destiny"),
+                                point_source=pending.geo.get("destiny", {}).get("source"),
+                                port_destiny=pending.geo.get("port_destiny"),
+                                geo=pending.geo,
+                            ),
+                            status=pending.failure_status,
+                            error_message=combined_error,
+                            geo=pending.geo,
+                        )
                         bulk_row, run_row = _build_bulk_outcome_rows(
                             run_id=str(run_id),
                             destination_set_id=destination_set_id,
