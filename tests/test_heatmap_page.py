@@ -22,8 +22,9 @@ class HeatmapPageTests(unittest.TestCase):
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_ORIGIN_FIELD], DEFAULT_ORIGIN)
         self.assertEqual(fake_streamlit.session_state["heatmap_cargo"], 30.0)
         self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
+        self.assertEqual(fake_streamlit.session_state["heatmap_destination_set_id"], "city_dests_over50k.txt")
 
-    def test_clear_loaded_dataset_if_outdated_resets_cached_dataset(self) -> None:
+    def test_clear_loaded_dataset_if_stale_resets_cached_dataset_when_destination_set_changes(self) -> None:
         scenario = HeatmapScenario(
             origin_name="Pelotas, RS",
             cargo_t=30.0,
@@ -71,18 +72,10 @@ class HeatmapPageTests(unittest.TestCase):
                 skipped_missing_emissions=0,
             ),
         )
-        fresh_status = SimpleNamespace(
-            run_id="run-new",
-            destination_count=608,
-            found_count=96,
-            success_count=48,
-            fail_count=48,
-            updated_timestamp="2026-03-20 13:00:00",
-        )
         fake_streamlit = SimpleNamespace(session_state={"heatmap_dataset": cached_dataset})
 
         with patch.object(page, "st", fake_streamlit):
-            page._clear_loaded_dataset_if_outdated(scenario, fresh_status)
+            page._clear_loaded_dataset_if_stale(scenario, "city_dests_over350k.txt")
 
         self.assertIsNone(fake_streamlit.session_state["heatmap_dataset"])
 

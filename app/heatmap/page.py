@@ -11,7 +11,9 @@ from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops
 
 from app.heatmap.config import (
     HEATMAP_DEFAULT_METRIC,
-    HEATMAP_DESTINATION_LABEL,
+    HEATMAP_DESTINATION_SET_ID,
+    heatmap_destination_label,
+    list_heatmap_destination_sets,
     HEATMAP_METRICS,
     HEATMAP_PAGE_TITLE,
 )
@@ -42,6 +44,7 @@ def _init_page_state() -> None:
     st.session_state.setdefault("heatmap_metric", HEATMAP_DEFAULT_METRIC)
     st.session_state.setdefault("heatmap_show_points", False)
     st.session_state.setdefault("heatmap_dataset", None)
+    st.session_state.setdefault("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID)
 
 
 def _normalize_choice(session_key: str, valid_options: Iterable[str], default_value: str) -> None:
@@ -113,17 +116,22 @@ def _render_header() -> None:
     )
 
 
-def _clear_loaded_dataset_if_stale(scenario: HeatmapScenario) -> None:
+def _clear_loaded_dataset_if_stale(scenario: HeatmapScenario, destination_set_id: str) -> None:
     dataset = st.session_state.get("heatmap_dataset")
     if not isinstance(dataset, HeatmapDataset):
         return
-    if dataset.scenario != scenario:
+    if dataset.scenario != scenario or str(dataset.run.destination_set_id) != str(destination_set_id):
         _log.debug(
-            "Clearing stale heatmap dataset cached_origin=%s cached_cargo_t=%.3f selected_origin=%s selected_cargo_t=%.3f",
+            (
+                "Clearing stale heatmap dataset cached_origin=%s cached_cargo_t=%.3f cached_destination_set=%s "
+                "selected_origin=%s selected_cargo_t=%.3f selected_destination_set=%s"
+            ),
             dataset.scenario.origin_name,
             float(dataset.scenario.cargo_t),
+            dataset.run.destination_set_id,
             scenario.origin_name,
             float(scenario.cargo_t),
+            destination_set_id,
         )
         st.session_state.heatmap_dataset = None
 
@@ -167,14 +175,16 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
 
     surface = build_surface(dataset, metric)
     diagnostics = dataset.diagnostics
-    st.caption(f"{diagnostics.plottable_points} destination points currently shape the 3D surface.")
-    render_legend(metric, surface)
     render_heatmap_map(
         dataset,
         metric,
         show_points=bool(show_points),
         surface=surface,
     )
+    st.caption(
+        f"{diagnostics.plottable_points} destination points currently shape the 3D surface from {heatmap_destination_label(dataset.run.destination_set_id)}."
+    )
+    render_legend(metric, surface)
     _render_dataset_diagnostics(dataset, surface)
 
 
@@ -199,7 +209,7 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
 
         st.caption(
             (
-                f"{HEATMAP_DESTINATION_LABEL}: loaded {diagnostics.plottable_points} plottable points from "
+                f"{heatmap_destination_label(dataset.run.destination_set_id)}: loaded {diagnostics.plottable_points} plottable points from "
                 f"{diagnostics.successful_rows} successful latest rows. "
                 f"Robust scales: color +/- {surface.color_scale:,.1f}% and height +/- {_format_height_scale(surface)}."
             )
@@ -234,14 +244,14 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
         )
 
 
-def _render_unloaded_state(origin_name: str) -> None:
+def _render_unloaded_state(origin_name: str, destination_set_id: str) -> None:
     st.markdown(
         f"""
         <section style='padding: 1.05rem 1.15rem; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.12); background: rgba(248, 250, 252, 0.74);'>
             <p style='margin: 0 0 0.3rem 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.76rem; color: #64748b;'>3D surface</p>
             <h3 style='margin: 0; color: #0f172a;'>Surface not loaded</h3>
             <p style='margin: 0.55rem 0 0 0; color: #334155; max-width: 46rem;'>
-                Load the stored surface for <strong>{escape(origin_name)}</strong> from the sidebar, or run missing / rerun all if you want fresh comparison rows.
+                Load the stored surface for <strong>{escape(origin_name)}</strong> using <strong>{escape(heatmap_destination_label(destination_set_id))}</strong>, or run missing / rerun all if you want fresh comparison rows.
             </p>
         </section>
         """,
@@ -269,9 +279,17 @@ def render_page() -> None:
         archive_to_storage=bool(st.session_state.archive_logs),
     )
 
+    destination_set_id = str(st.session_state.get("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID))
+    destination_set_options = list(list_heatmap_destination_sets())
+    if destination_set_id not in destination_set_options:
+        destination_set_options = sorted(set(destination_set_options + [destination_set_id]))
+
     cargo_options = [float(st.session_state.get("heatmap_cargo", 30.0))]
     try:
-        cargo_options = list_cargo_options(str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip())
+        cargo_options = list_cargo_options(
+            str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
+            destination_set_id=destination_set_id,
+        )
     except Exception as exc:
         _log.exception("Failed to load heatmap cargo options origin=%s", st.session_state.get(_HEATMAP_ORIGIN_FIELD, ""))
         st.error(f"Failed to load available cargo values: {exc}")
@@ -283,6 +301,7 @@ def render_page() -> None:
     render_sidebar(
         origin_field_key=_HEATMAP_ORIGIN_FIELD,
         cargo_options=cargo_options,
+        destination_set_options=destination_set_options,
         class_options=class_options,
         port_ops_scenarios=port_ops_scenarios,
     )
@@ -290,7 +309,8 @@ def render_page() -> None:
     _render_header()
 
     scenario = _current_scenario()
-    _clear_loaded_dataset_if_stale(scenario)
+    destination_set_id = str(st.session_state.get("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID))
+    _clear_loaded_dataset_if_stale(scenario, destination_set_id)
 
     if location_is_loading(_HEATMAP_ORIGIN_FIELD):
         st.info("Resolving origin...")
@@ -308,7 +328,7 @@ def render_page() -> None:
 
     if load_clicked:
         try:
-            dataset = load_current_dataset(scenario)
+            dataset = load_current_dataset(scenario, destination_set_id=destination_set_id)
         except HeatmapConfigurationError as exc:
             _log.error(
                 "Heatmap surface load unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
@@ -356,6 +376,7 @@ def render_page() -> None:
                 scenario,
                 rerun=False,
                 progress_callback=_progress_callback(progress_bar, status_box),
+                destination_set_id=destination_set_id,
             )
         except Exception as exc:
             _log.exception(
@@ -384,6 +405,7 @@ def render_page() -> None:
             dataset = rerun_heatmap(
                 scenario,
                 progress_callback=_progress_callback(progress_bar, status_box),
+                destination_set_id=destination_set_id,
             )
         except Exception as exc:
             _log.exception(
@@ -404,4 +426,4 @@ def render_page() -> None:
         _render_dataset(dataset)
         return
 
-    _render_unloaded_state(scenario.origin_name)
+    _render_unloaded_state(scenario.origin_name, destination_set_id)

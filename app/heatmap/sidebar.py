@@ -5,6 +5,7 @@ from typing import Iterable, Tuple
 import streamlit as st
 
 from app.access import render_logout_control
+from app.heatmap.config import heatmap_destination_label
 from modules.fuel.truck_specs import list_truck_keys
 
 from app.main.sidebar.branding import render_sidebar_brand
@@ -26,6 +27,7 @@ def render_sidebar(
     *,
     origin_field_key: str,
     cargo_options: list[float],
+    destination_set_options: list[str],
     class_options: Iterable[str],
     port_ops_scenarios: Iterable[str],
 ) -> None:
@@ -41,7 +43,11 @@ def render_sidebar(
                 + ", ".join(f"{value:,.1f} t" for value in unique_cargo_values[:8])
             )
         with st.expander("Advanced", expanded=False):
-            _render_advanced(class_options=class_options, port_ops_scenarios=port_ops_scenarios)
+            _render_advanced(
+                destination_set_options=destination_set_options,
+                class_options=class_options,
+                port_ops_scenarios=port_ops_scenarios,
+            )
 
 
 def render_run_actions(*, has_origin: bool, has_loaded_dataset: bool) -> Tuple[bool, bool, bool]:
@@ -105,7 +111,20 @@ def _render_origin_field(field_name: str) -> None:
     _poll_origin_resolution()
 
 
-def _render_advanced(*, class_options: Iterable[str], port_ops_scenarios: Iterable[str]) -> None:
+def _render_advanced(
+    *,
+    destination_set_options: Iterable[str],
+    class_options: Iterable[str],
+    port_ops_scenarios: Iterable[str],
+) -> None:
+    st.markdown("##### Data")
+    st.selectbox(
+        "Destinations file",
+        options=list(destination_set_options),
+        key="heatmap_destination_set_id",
+        format_func=heatmap_destination_label,
+    )
+
     st.markdown("##### Routing")
     st.selectbox("ORS profile", options=["driving-hgv", "driving-car"], key="profile")
     st.caption("Routes cache is never overwritten from the heatmap page.")
