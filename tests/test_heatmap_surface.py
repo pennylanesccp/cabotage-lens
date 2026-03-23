@@ -185,7 +185,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertAlmostEqual(surface.cells[0].absolute_value, -200.0, places=3)
         self.assertLess(surface.cells[0].elevation_m, 0.0)
 
-    def test_color_for_value_uses_red_white_green_by_signed_delta(self) -> None:
+    def test_color_for_value_uses_red_yellow_green_by_signed_delta(self) -> None:
         self.assertEqual(
             heatmap_surface._color_for_value(-100.0, 100.0, 100.0),
             (*heatmap_surface.HEATMAP_COLOR_NEGATIVE, heatmap_surface.HEATMAP_SURFACE_ALPHA),
