@@ -1,3 +1,12 @@
-# Streamlit Community Cloud prefers requirements.txt over pyproject.toml when both exist.
-# Install the project itself so uv reads pyproject metadata and the `app` package is importable.
--e .
+# Streamlit Community Cloud prefers requirements.txt over pyproject.toml.
+# Keep the deploy environment explicit here instead of relying on editable install metadata.
+streamlit>=1.55,<2
+requests>=2.32,<3
+psycopg[binary]>=3.3,<4
+pandas>=2.3,<3
+pydeck>=0.9,<1
+openpyxl>=3.1,<4
+CurrencyConverter>=0.18,<1
+pyinstaller>=6,<7
+beautifulsoup4>=4.14,<5
+tomli>=2.0 ; python_version < "3.11"
