@@ -185,7 +185,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertAlmostEqual(surface.cells[0].absolute_value, -200.0, places=3)
         self.assertLess(surface.cells[0].elevation_m, 0.0)
 
-    def test_build_surface_3d_now_uses_much_stronger_relief_for_moderate_values(self) -> None:
+    def test_build_surface_3d_keeps_moderate_values_below_peak_relief(self) -> None:
         dataset = self._dataset()
         mock_cells = (
             (
@@ -198,7 +198,8 @@ class HeatmapSurfaceTests(unittest.TestCase):
         with patch("app.heatmap.surface._hull_cells", return_value=mock_cells):
             surface = build_surface(dataset, "cost")
 
-        self.assertGreater(surface.cells[0].elevation_m, 400000.0)
+        self.assertGreater(surface.cells[0].elevation_m, heatmap_surface.HEATMAP_SURFACE_MAX_ELEVATION_M * 0.6)
+        self.assertLess(surface.cells[0].elevation_m, heatmap_surface.HEATMAP_SURFACE_MAX_ELEVATION_M)
 
     def test_build_surface_aligns_quantitative_sign_with_percentage_direction(self) -> None:
         dataset = self._dataset()

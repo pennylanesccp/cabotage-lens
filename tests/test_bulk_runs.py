@@ -3,7 +3,7 @@ from collections import deque
 from unittest.mock import patch
 
 from modules.infra.db.bulk_results import BulkResultSummary, list_results, summarize_results, upsert_result as upsert_bulk_result
-from modules.infra.db.bulk_runs import BulkRunSelector, finish_run, insert_run_result, start_run
+from modules.infra.db.bulk_runs import BulkRunSelector, finish_run, insert_run_result, insert_run_results, start_run
 
 
 class _FakeCursor:
@@ -21,6 +21,7 @@ class _FakeCursor:
 class _RecordingConnection:
     def __init__(self, *, row=None, rows=None) -> None:
         self.statements = []
+        self.executemany_calls = []
         self._rows = deque([(row, rows or [])])
 
     def queue(self, *, row=None, rows=None) -> None:
@@ -30,6 +31,11 @@ class _RecordingConnection:
         self.statements.append((sql, params))
         row, rows = self._rows.popleft() if self._rows else (None, [])
         return _FakeCursor(row=row, rows=rows)
+
+    def executemany(self, sql, rows):
+        batch = [tuple(row) for row in rows]
+        self.executemany_calls.append((sql, batch))
+        return _FakeCursor()
 
 
 class BulkRunPersistenceTests(unittest.TestCase):
@@ -141,6 +147,57 @@ class BulkRunPersistenceTests(unittest.TestCase):
         self.assertEqual(params[8], 903)
         self.assertEqual(params[22], "nearest_exact_delta_straight_line")
         self.assertEqual(params[23], 904)
+
+    def test_insert_run_results_batches_remote_upserts(self) -> None:
+        conn = _RecordingConnection()
+        rows = [
+            {
+                "run_id": "run-123",
+                "scenario_key": "scenario-1",
+                "input_destiny": "Manaus, AM",
+                "destination_location_id": 201,
+                "port_origin_location_id": 301,
+                "port_destiny_location_id": 401,
+                "road_route_id": 901,
+                "first_mile_route_id": 902,
+                "last_mile_route_id": 903,
+                "status": "ok",
+                "road_cost_r": 15000.0,
+                "multimodal_cost_r": 11000.0,
+                "cost_delta_r": 4000.0,
+                "ors_profile": "driving-hgv",
+            },
+            {
+                "run_id": "run-123",
+                "scenario_key": "scenario-2",
+                "input_destiny": "Belem, PA",
+                "destination_location_id": 202,
+                "port_origin_location_id": 301,
+                "port_destiny_location_id": 402,
+                "road_route_id": 904,
+                "first_mile_route_id": 902,
+                "last_mile_route_id": 905,
+                "status": "timeout",
+                "error_message": "routing timed out",
+                "ors_profile": "driving-hgv",
+            },
+        ]
+
+        with patch("modules.infra.db.bulk_runs.ensure_run_results_table"), patch(
+            "modules.infra.db.bulk_runs._resolve_location_id",
+            side_effect=lambda conn, **kwargs: kwargs.get("location_id"),
+        ), patch("modules.infra.db.bulk_runs._run_origin_location_id") as origin_mock:
+            inserted = insert_run_results(conn, rows=rows)
+
+        self.assertEqual(inserted, 2)
+        self.assertEqual(len(conn.executemany_calls), 1)
+        statement, batch = conn.executemany_calls[0]
+        self.assertIn("INSERT INTO bulk_run_items", statement)
+        self.assertEqual(len(batch), 2)
+        self.assertEqual(batch[0][0], "run-123")
+        self.assertEqual(batch[0][1], "scenario-1")
+        self.assertEqual(batch[1][1], "scenario-2")
+        origin_mock.assert_not_called()
 
     def test_bulk_results_summary_and_listing_map_latest_normalized_rows(self) -> None:
         selector = self._selector()

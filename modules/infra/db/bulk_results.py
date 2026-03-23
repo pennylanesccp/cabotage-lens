@@ -9,6 +9,7 @@ from modules.infra.db.bulk_runs import (
     BulkRunSelector,
     ensure_run_results_table,
     insert_run_result,
+    insert_run_results,
     selector_hash,
 )
 from modules.infra.db.core import DBConnection, safe_table_name, to_float
@@ -561,15 +562,11 @@ def upsert_results(
     locations_table: str = DEFAULT_LOCATIONS_TABLE,
     route_table: str = DEFAULT_ROUTE_CACHE_TABLE,
 ) -> int:
-    count = 0
-    for row in rows:
-        upsert_result(
-            conn,
-            table_name=table_name,
-            runs_table=runs_table,
-            locations_table=locations_table,
-            route_table=route_table,
-            **row,
-        )
-        count += 1
-    return count
+    return insert_run_results(
+        conn,
+        rows=rows,
+        table_name=table_name,
+        runs_table=runs_table,
+        locations_table=locations_table,
+        route_table=route_table,
+    )

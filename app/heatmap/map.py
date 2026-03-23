@@ -192,7 +192,7 @@ def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str]
         "Orange-red favors road, golden sand marks parity, green favors multimodal.",
     ]
     helper_lines = [
-        "Color lives on the raised top surface and shows relative advantage across the interpolated terrain.",
+        "Only the raised top surface is colored; the cell body stays transparent to keep the comparison readable.",
         height_line,
     ]
     return title, semantic_lines, helper_lines
@@ -239,13 +239,13 @@ def render_heatmap_map(
             get_polygon="polygon",
             get_fill_color="fill_color",
             get_elevation="elevation",
-            pickable=True,
+            pickable=False,
             extruded=True,
             stroked=False,
             filled=True,
             wireframe=False,
             elevation_scale=1.0,
-            opacity=0.92,
+            opacity=1.0,
         ),
         pdk.Layer(
             "PolygonLayer",

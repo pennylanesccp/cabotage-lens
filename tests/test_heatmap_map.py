@@ -18,7 +18,7 @@ class HeatmapMapTests(unittest.TestCase):
         )
         return SimpleNamespace(cells=[cell])
 
-    def test_surface_body_rows_keep_side_walls_muted(self) -> None:
+    def test_surface_body_rows_keep_cell_bodies_transparent(self) -> None:
         surface = self._surface()
 
         rows = heatmap_map._surface_body_rows(surface, "cost")
@@ -32,7 +32,6 @@ class HeatmapMapTests(unittest.TestCase):
                 [0.0, 1.0, heatmap_map.HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M],
             ],
         )
-        self.assertNotEqual(rows[0]["fill_color"][:3], list(surface.cells[0].fill_color[:3]))
         self.assertEqual(rows[0]["fill_color"][3], heatmap_map.HEATMAP_SURFACE_SIDE_WALL_ALPHA)
         self.assertEqual(rows[0]["elevation"], surface.cells[0].elevation_m)
 

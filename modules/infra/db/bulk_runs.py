@@ -473,6 +473,254 @@ def _run_origin_location_id(
     return int(row[0])
 
 
+def _run_result_upsert_sql(table_name: str) -> str:
+    items = safe_table_name(table_name)
+    return f"""
+        INSERT INTO {items} (
+              run_id
+            , scenario_key
+            , input_destiny
+            , destination_location_id
+            , port_origin_location_id
+            , port_destiny_location_id
+            , road_route_id
+            , first_mile_route_id
+            , last_mile_route_id
+            , status
+            , error_message
+            , road_cost_r
+            , multimodal_cost_r
+            , cost_delta_r
+            , cost_savings_pct
+            , road_emissions_kg
+            , multimodal_emissions_kg
+            , emissions_delta_kg
+            , emissions_savings_pct
+            , road_distance_km
+            , sea_km
+            , is_approximation
+            , route_source
+            , approximation_reference_route_id
+            , approximation_delta_straight_line_km
+            , approximation_notes
+            , insertion_timestamp
+            , updated_timestamp
+        ) VALUES (
+              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+              COALESCE(?, {current_timestamp_sql()}),
+              COALESCE(?, {current_timestamp_sql()})
+        )
+        ON CONFLICT(run_id, scenario_key) DO UPDATE SET
+              input_destiny = excluded.input_destiny
+            , destination_location_id = excluded.destination_location_id
+            , port_origin_location_id = excluded.port_origin_location_id
+            , port_destiny_location_id = excluded.port_destiny_location_id
+            , road_route_id = excluded.road_route_id
+            , first_mile_route_id = excluded.first_mile_route_id
+            , last_mile_route_id = excluded.last_mile_route_id
+            , status = excluded.status
+            , error_message = excluded.error_message
+            , road_cost_r = excluded.road_cost_r
+            , multimodal_cost_r = excluded.multimodal_cost_r
+            , cost_delta_r = excluded.cost_delta_r
+            , cost_savings_pct = excluded.cost_savings_pct
+            , road_emissions_kg = excluded.road_emissions_kg
+            , multimodal_emissions_kg = excluded.multimodal_emissions_kg
+            , emissions_delta_kg = excluded.emissions_delta_kg
+            , emissions_savings_pct = excluded.emissions_savings_pct
+            , road_distance_km = excluded.road_distance_km
+            , sea_km = excluded.sea_km
+            , is_approximation = excluded.is_approximation
+            , route_source = excluded.route_source
+            , approximation_reference_route_id = excluded.approximation_reference_route_id
+            , approximation_delta_straight_line_km = excluded.approximation_delta_straight_line_km
+            , approximation_notes = excluded.approximation_notes
+            , updated_timestamp = COALESCE(excluded.updated_timestamp, {current_timestamp_sql()})
+        """
+
+
+def _prepare_run_result_upsert(
+    conn: DBConnection,
+    *,
+    run_id: str,
+    scenario_key: str,
+    input_destiny: str,
+    destination_location_id: Optional[int] = None,
+    destiny_name: Optional[str] = None,
+    destiny_lat: Optional[float] = None,
+    destiny_lon: Optional[float] = None,
+    destiny_uf: Optional[str] = None,
+    port_origin_location_id: Optional[int] = None,
+    port_origin_name: Optional[str] = None,
+    port_origin_lat: Optional[float] = None,
+    port_origin_lon: Optional[float] = None,
+    port_destiny_location_id: Optional[int] = None,
+    port_destiny_name: Optional[str] = None,
+    port_destiny_lat: Optional[float] = None,
+    port_destiny_lon: Optional[float] = None,
+    road_route_id: Optional[int] = None,
+    first_mile_route_id: Optional[int] = None,
+    last_mile_route_id: Optional[int] = None,
+    status: str = "ok",
+    error_message: Optional[str] = None,
+    road_cost_r: Optional[float] = None,
+    multimodal_cost_r: Optional[float] = None,
+    cost_delta_r: Optional[float] = None,
+    cost_savings_pct: Optional[float] = None,
+    road_emissions_kg: Optional[float] = None,
+    multimodal_emissions_kg: Optional[float] = None,
+    emissions_delta_kg: Optional[float] = None,
+    emissions_savings_pct: Optional[float] = None,
+    road_distance_km: Optional[float] = None,
+    sea_km: Optional[float] = None,
+    is_approximation: bool = False,
+    route_source: Optional[str] = None,
+    approximation_reference_route_id: Optional[int] = None,
+    approximation_reference_destiny: Optional[str] = None,
+    approximation_delta_straight_line_km: Optional[float] = None,
+    approximation_notes: Optional[str] = None,
+    ors_profile: str = "driving-hgv",
+    insertion_timestamp: Any = None,
+    updated_timestamp: Any = None,
+    runs_table: str = DEFAULT_RUNS_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+    route_table: str = DEFAULT_ROUTE_CACHE_TABLE,
+    aliases_table: str = DEFAULT_ALIASES_TABLE,
+    resolved_origin_location_id: Optional[int] = None,
+    **_ignored: Any,
+) -> tuple[tuple[Any, ...], Optional[int]]:
+    resolved_destination_id = _resolve_location_id(
+        conn,
+        location_id=destination_location_id,
+        label=destiny_name or input_destiny,
+        lat=destiny_lat,
+        lon=destiny_lon,
+        uf=destiny_uf,
+        source="bulk_result",
+        locations_table=locations_table,
+        aliases_table=aliases_table,
+    )
+    resolved_port_origin_id = _resolve_location_id(
+        conn,
+        location_id=port_origin_location_id,
+        label=port_origin_name,
+        lat=port_origin_lat,
+        lon=port_origin_lon,
+        source="port_origin",
+        locations_table=locations_table,
+        aliases_table=aliases_table,
+    )
+    resolved_port_destiny_id = _resolve_location_id(
+        conn,
+        location_id=port_destiny_location_id,
+        label=port_destiny_name,
+        lat=port_destiny_lat,
+        lon=port_destiny_lon,
+        source="port_destiny",
+        locations_table=locations_table,
+        aliases_table=aliases_table,
+    )
+
+    origin_location_id = resolved_origin_location_id
+    route_is_hgv = profile_is_hgv(ors_profile)
+
+    def ensure_origin_location_id() -> Optional[int]:
+        nonlocal origin_location_id
+        if origin_location_id is None:
+            origin_location_id = _run_origin_location_id(
+                conn,
+                run_id=run_id,
+                runs_table=runs_table,
+                locations_table=locations_table,
+            )
+        return origin_location_id
+
+    resolved_road_route_id = road_route_id
+    if resolved_road_route_id is None:
+        resolved_road_route_id = _resolve_route_id(
+            conn,
+            origin_location_id=ensure_origin_location_id(),
+            destiny_location_id=resolved_destination_id,
+            is_hgv=route_is_hgv,
+            route_table=route_table,
+            locations_table=locations_table,
+        )
+
+    resolved_first_mile_route_id = first_mile_route_id
+    if resolved_first_mile_route_id is None:
+        resolved_first_mile_route_id = _resolve_route_id(
+            conn,
+            origin_location_id=ensure_origin_location_id(),
+            destiny_location_id=resolved_port_origin_id,
+            is_hgv=route_is_hgv,
+            route_table=route_table,
+            locations_table=locations_table,
+        )
+
+    resolved_last_mile_route_id = last_mile_route_id
+    if resolved_last_mile_route_id is None:
+        resolved_last_mile_route_id = _resolve_route_id(
+            conn,
+            origin_location_id=resolved_port_destiny_id,
+            destiny_location_id=resolved_destination_id,
+            is_hgv=route_is_hgv,
+            route_table=route_table,
+            locations_table=locations_table,
+        )
+
+    resolved_approx_route_id = approximation_reference_route_id
+    if resolved_approx_route_id is None and approximation_reference_destiny:
+        approx_destiny_id = _resolve_location_id(
+            conn,
+            label=approximation_reference_destiny,
+            source="bulk_approx_reference",
+            locations_table=locations_table,
+            aliases_table=aliases_table,
+        )
+        resolved_approx_route_id = _resolve_route_id(
+            conn,
+            origin_location_id=ensure_origin_location_id(),
+            destiny_location_id=approx_destiny_id,
+            is_hgv=route_is_hgv,
+            route_table=route_table,
+            locations_table=locations_table,
+        )
+
+    return (
+        (
+            str(run_id),
+            str(scenario_key),
+            str(input_destiny),
+            resolved_destination_id,
+            resolved_port_origin_id,
+            resolved_port_destiny_id,
+            resolved_road_route_id,
+            resolved_first_mile_route_id,
+            resolved_last_mile_route_id,
+            str(status),
+            error_message,
+            to_float(road_cost_r),
+            to_float(multimodal_cost_r),
+            to_float(cost_delta_r),
+            to_float(cost_savings_pct),
+            to_float(road_emissions_kg),
+            to_float(multimodal_emissions_kg),
+            to_float(emissions_delta_kg),
+            to_float(emissions_savings_pct),
+            to_float(road_distance_km),
+            to_float(sea_km),
+            bool(is_approximation),
+            route_source,
+            resolved_approx_route_id,
+            to_float(approximation_delta_straight_line_km),
+            approximation_notes,
+            insertion_timestamp,
+            updated_timestamp,
+        ),
+        origin_location_id,
+    )
+
+
 def _origin_label_for_run(
     conn: DBConnection,
     *,
@@ -980,183 +1228,54 @@ def insert_run_result(
         locations_table=locations,
         route_table=routes,
     )
-
-    resolved_destination_id = _resolve_location_id(
-        conn,
-        location_id=destination_location_id,
-        label=destiny_name or input_destiny,
-        lat=destiny_lat,
-        lon=destiny_lon,
-        uf=destiny_uf,
-        source="bulk_result",
-        locations_table=locations,
-        aliases_table=aliases_table,
-    )
-    resolved_port_origin_id = _resolve_location_id(
-        conn,
-        location_id=port_origin_location_id,
-        label=port_origin_name,
-        lat=port_origin_lat,
-        lon=port_origin_lon,
-        source="port_origin",
-        locations_table=locations,
-        aliases_table=aliases_table,
-    )
-    resolved_port_destiny_id = _resolve_location_id(
-        conn,
-        location_id=port_destiny_location_id,
-        label=port_destiny_name,
-        lat=port_destiny_lat,
-        lon=port_destiny_lon,
-        source="port_destiny",
-        locations_table=locations,
-        aliases_table=aliases_table,
-    )
-
-    origin_location_id = _run_origin_location_id(
+    params, _ = _prepare_run_result_upsert(
         conn,
         run_id=run_id,
+        scenario_key=scenario_key,
+        input_destiny=input_destiny,
+        destination_location_id=destination_location_id,
+        destiny_name=destiny_name,
+        destiny_lat=destiny_lat,
+        destiny_lon=destiny_lon,
+        destiny_uf=destiny_uf,
+        port_origin_location_id=port_origin_location_id,
+        port_origin_name=port_origin_name,
+        port_origin_lat=port_origin_lat,
+        port_origin_lon=port_origin_lon,
+        port_destiny_location_id=port_destiny_location_id,
+        port_destiny_name=port_destiny_name,
+        port_destiny_lat=port_destiny_lat,
+        port_destiny_lon=port_destiny_lon,
+        road_route_id=road_route_id,
+        first_mile_route_id=first_mile_route_id,
+        last_mile_route_id=last_mile_route_id,
+        status=status,
+        error_message=error_message,
+        road_cost_r=road_cost_r,
+        multimodal_cost_r=multimodal_cost_r,
+        cost_delta_r=cost_delta_r,
+        cost_savings_pct=cost_savings_pct,
+        road_emissions_kg=road_emissions_kg,
+        multimodal_emissions_kg=multimodal_emissions_kg,
+        emissions_delta_kg=emissions_delta_kg,
+        emissions_savings_pct=emissions_savings_pct,
+        road_distance_km=road_distance_km,
+        sea_km=sea_km,
+        is_approximation=is_approximation,
+        route_source=route_source,
+        approximation_reference_route_id=approximation_reference_route_id,
+        approximation_reference_destiny=approximation_reference_destiny,
+        approximation_delta_straight_line_km=approximation_delta_straight_line_km,
+        ors_profile=ors_profile,
+        insertion_timestamp=insertion_timestamp,
+        updated_timestamp=updated_timestamp,
         runs_table=runs,
         locations_table=locations,
-    )
-    route_is_hgv = profile_is_hgv(ors_profile)
-
-    resolved_road_route_id = road_route_id or _resolve_route_id(
-        conn,
-        origin_location_id=origin_location_id,
-        destiny_location_id=resolved_destination_id,
-        is_hgv=route_is_hgv,
         route_table=routes,
-        locations_table=locations,
+        aliases_table=aliases_table,
+        approximation_notes=approximation_notes,
     )
-    resolved_first_mile_route_id = first_mile_route_id or _resolve_route_id(
-        conn,
-        origin_location_id=origin_location_id,
-        destiny_location_id=resolved_port_origin_id,
-        is_hgv=route_is_hgv,
-        route_table=routes,
-        locations_table=locations,
-    )
-    resolved_last_mile_route_id = last_mile_route_id or _resolve_route_id(
-        conn,
-        origin_location_id=resolved_port_destiny_id,
-        destiny_location_id=resolved_destination_id,
-        is_hgv=route_is_hgv,
-        route_table=routes,
-        locations_table=locations,
-    )
-    resolved_approx_route_id = approximation_reference_route_id
-    if resolved_approx_route_id is None and approximation_reference_destiny:
-        approx_destiny_id = _resolve_location_id(
-            conn,
-            label=approximation_reference_destiny,
-            source="bulk_approx_reference",
-            locations_table=locations,
-            aliases_table=aliases_table,
-        )
-        resolved_approx_route_id = _resolve_route_id(
-            conn,
-            origin_location_id=origin_location_id,
-            destiny_location_id=approx_destiny_id,
-            is_hgv=route_is_hgv,
-            route_table=routes,
-            locations_table=locations,
-        )
-
-    conn.execute(
-        f"""
-        INSERT INTO {items} (
-              run_id
-            , scenario_key
-            , input_destiny
-            , destination_location_id
-            , port_origin_location_id
-            , port_destiny_location_id
-            , road_route_id
-            , first_mile_route_id
-            , last_mile_route_id
-            , status
-            , error_message
-            , road_cost_r
-            , multimodal_cost_r
-            , cost_delta_r
-            , cost_savings_pct
-            , road_emissions_kg
-            , multimodal_emissions_kg
-            , emissions_delta_kg
-            , emissions_savings_pct
-            , road_distance_km
-            , sea_km
-            , is_approximation
-            , route_source
-            , approximation_reference_route_id
-            , approximation_delta_straight_line_km
-            , approximation_notes
-            , insertion_timestamp
-            , updated_timestamp
-        ) VALUES (
-              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-              COALESCE(?, {current_timestamp_sql()}),
-              COALESCE(?, {current_timestamp_sql()})
-        )
-        ON CONFLICT(run_id, scenario_key) DO UPDATE SET
-              input_destiny = excluded.input_destiny
-            , destination_location_id = excluded.destination_location_id
-            , port_origin_location_id = excluded.port_origin_location_id
-            , port_destiny_location_id = excluded.port_destiny_location_id
-            , road_route_id = excluded.road_route_id
-            , first_mile_route_id = excluded.first_mile_route_id
-            , last_mile_route_id = excluded.last_mile_route_id
-            , status = excluded.status
-            , error_message = excluded.error_message
-            , road_cost_r = excluded.road_cost_r
-            , multimodal_cost_r = excluded.multimodal_cost_r
-            , cost_delta_r = excluded.cost_delta_r
-            , cost_savings_pct = excluded.cost_savings_pct
-            , road_emissions_kg = excluded.road_emissions_kg
-            , multimodal_emissions_kg = excluded.multimodal_emissions_kg
-            , emissions_delta_kg = excluded.emissions_delta_kg
-            , emissions_savings_pct = excluded.emissions_savings_pct
-            , road_distance_km = excluded.road_distance_km
-            , sea_km = excluded.sea_km
-            , is_approximation = excluded.is_approximation
-            , route_source = excluded.route_source
-            , approximation_reference_route_id = excluded.approximation_reference_route_id
-            , approximation_delta_straight_line_km = excluded.approximation_delta_straight_line_km
-            , approximation_notes = excluded.approximation_notes
-            , updated_timestamp = COALESCE(excluded.updated_timestamp, {current_timestamp_sql()})
-        """,
-        (
-            str(run_id),
-            str(scenario_key),
-            str(input_destiny),
-            resolved_destination_id,
-            resolved_port_origin_id,
-            resolved_port_destiny_id,
-            resolved_road_route_id,
-            resolved_first_mile_route_id,
-            resolved_last_mile_route_id,
-            str(status),
-            error_message,
-            to_float(road_cost_r),
-            to_float(multimodal_cost_r),
-            to_float(cost_delta_r),
-            to_float(cost_savings_pct),
-            to_float(road_emissions_kg),
-            to_float(multimodal_emissions_kg),
-            to_float(emissions_delta_kg),
-            to_float(emissions_savings_pct),
-            to_float(road_distance_km),
-            to_float(sea_km),
-            bool(is_approximation),
-            route_source,
-            resolved_approx_route_id,
-            to_float(approximation_delta_straight_line_km),
-            approximation_notes,
-            insertion_timestamp,
-            updated_timestamp,
-        ),
-    )
+    conn.execute(_run_result_upsert_sql(items), params)
 
 
 def insert_run_results(
@@ -1168,15 +1287,37 @@ def insert_run_results(
     locations_table: str = DEFAULT_LOCATIONS_TABLE,
     route_table: str = DEFAULT_ROUTE_CACHE_TABLE,
 ) -> int:
-    count = 0
-    for row in rows:
-        insert_run_result(
+    batch_rows = list(rows)
+    if not batch_rows:
+        return 0
+
+    items = safe_table_name(table_name)
+    runs = safe_table_name(runs_table)
+    locations = safe_table_name(locations_table)
+    routes = safe_table_name(route_table)
+    ensure_run_results_table(
+        conn,
+        items,
+        runs_table=runs,
+        locations_table=locations,
+        route_table=routes,
+    )
+
+    origin_location_cache: dict[str, Optional[int]] = {}
+    params_rows: list[tuple[Any, ...]] = []
+    for row in batch_rows:
+        cached_origin_location_id = origin_location_cache.get(str(row.get("run_id")))
+        params, resolved_origin_location_id = _prepare_run_result_upsert(
             conn,
-            table_name=table_name,
-            runs_table=runs_table,
-            locations_table=locations_table,
-            route_table=route_table,
+            runs_table=runs,
+            locations_table=locations,
+            route_table=routes,
+            resolved_origin_location_id=cached_origin_location_id,
             **row,
         )
-        count += 1
-    return count
+        if row.get("run_id") is not None:
+            origin_location_cache[str(row["run_id"])] = resolved_origin_location_id
+        params_rows.append(params)
+
+    conn.executemany(_run_result_upsert_sql(items), params_rows)
+    return len(params_rows)
