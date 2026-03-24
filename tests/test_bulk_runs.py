@@ -199,6 +199,25 @@ class BulkRunPersistenceTests(unittest.TestCase):
         self.assertEqual(batch[1][1], "scenario-2")
         origin_mock.assert_not_called()
 
+    def test_ensure_run_results_table_applies_backfill_alters_even_when_schema_marked_ready(self) -> None:
+        conn = _RecordingConnection()
+
+        with patch("modules.infra.db.bulk_runs.schema_is_ready", return_value=True), patch(
+            "modules.infra.db.bulk_runs.ensure_runs_table"
+        ), patch(
+            "modules.infra.db.bulk_runs.ensure_route_cache_table"
+        ), patch(
+            "modules.infra.db.bulk_runs.mark_schema_ready"
+        ):
+            from modules.infra.db.bulk_runs import ensure_run_results_table
+
+            ensure_run_results_table(conn)
+
+        executed_sql = "\n".join(statement for statement, _ in conn.statements)
+        self.assertIn("ALTER TABLE bulk_run_items ADD COLUMN IF NOT EXISTS failed_step TEXT;", executed_sql)
+        self.assertIn("ALTER TABLE bulk_run_items ADD COLUMN IF NOT EXISTS retryable BOOLEAN NOT NULL DEFAULT FALSE;", executed_sql)
+        self.assertIn("CREATE INDEX IF NOT EXISTS idx_bulk_run_items_run_failure_diag", executed_sql)
+
     def test_bulk_results_summary_and_listing_map_latest_normalized_rows(self) -> None:
         selector = self._selector()
         conn = _RecordingConnection(row=(2, 1, 1, "2026-03-11 09:30:00", "run-2"))
@@ -278,6 +297,116 @@ class BulkRunPersistenceTests(unittest.TestCase):
         self.assertEqual(rows[0].route_source, "nearest_exact_delta_straight_line")
         self.assertIsNone(rows[0].failure_reason)
         self.assertAlmostEqual(float(rows[0].road_cost_r or 0.0), 15000.0)
+
+    def test_bulk_results_listing_falls_back_when_failure_columns_are_missing(self) -> None:
+        selector = self._selector()
+        conn = _RecordingConnection(
+            rows=[
+                (
+                    "scenario-1",
+                    "run-2",
+                    selector.destination_set_id,
+                    selector.origin_location_id,
+                    "Pelotas, RS",
+                    "Pelotas, RS",
+                    201,
+                    "Manaus, AM",
+                    "Manaus, AM",
+                    selector.cargo_t,
+                    selector.truck_key,
+                    selector.ors_profile,
+                    selector.vessel_class,
+                    True,
+                    selector.hoteling_hours_per_call,
+                    selector.port_calls,
+                    True,
+                    None,
+                    None,
+                    selector.t_per_teu_default,
+                    None,
+                    selector.allocation_load_factor,
+                    False,
+                    selector.port_ops_scenario,
+                    "ok",
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    False,
+                    None,
+                    None,
+                    -3.119,
+                    -60.0217,
+                    "AM",
+                    "Rio Grande",
+                    "Manaus",
+                    15000.0,
+                    11000.0,
+                    4000.0,
+                    26.6667,
+                    9000.0,
+                    5200.0,
+                    3800.0,
+                    42.2222,
+                    3900.0,
+                    3400.0,
+                    True,
+                    "nearest_exact_delta_straight_line",
+                    "Belem, PA",
+                    3650.0,
+                    250.0,
+                    "Approximate direct-road distance from the nearest exact destination in the same bulk run.",
+                    "2026-03-11 09:30:00",
+                )
+            ]
+        )
+
+        legacy_columns = {
+            "id",
+            "run_id",
+            "scenario_key",
+            "input_destiny",
+            "destination_location_id",
+            "port_origin_location_id",
+            "port_destiny_location_id",
+            "road_route_id",
+            "first_mile_route_id",
+            "last_mile_route_id",
+            "status",
+            "error_message",
+            "road_cost_r",
+            "multimodal_cost_r",
+            "cost_delta_r",
+            "cost_savings_pct",
+            "road_emissions_kg",
+            "multimodal_emissions_kg",
+            "emissions_delta_kg",
+            "emissions_savings_pct",
+            "road_distance_km",
+            "sea_km",
+            "is_approximation",
+            "route_source",
+            "approximation_reference_route_id",
+            "approximation_delta_straight_line_km",
+            "approximation_notes",
+            "insertion_timestamp",
+            "updated_timestamp",
+        }
+
+        with patch("modules.infra.db.bulk_results.ensure_results_table"), patch(
+            "modules.infra.db.bulk_results.table_columns",
+            return_value=legacy_columns,
+        ):
+            rows = list_results(conn, selector=selector, only_success=None)
+
+        statement, _ = conn.statements[0]
+        self.assertIn("NULL AS failed_step", statement)
+        self.assertIn("FALSE AS retryable", statement)
+        self.assertNotIn("i.failed_step", statement)
+        self.assertEqual(len(rows), 1)
+        self.assertIsNone(rows[0].failed_step)
+        self.assertFalse(rows[0].retryable)
 
     def test_upsert_bulk_result_uses_normalized_item_writer(self) -> None:
         conn = _RecordingConnection()

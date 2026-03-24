@@ -12,7 +12,7 @@ from modules.infra.db.bulk_runs import (
     insert_run_results,
     selector_hash,
 )
-from modules.infra.db.core import DBConnection, safe_table_name, to_float
+from modules.infra.db.core import DBConnection, safe_table_name, table_columns, to_float
 from modules.infra.db.locations import DEFAULT_LOCATIONS_TABLE
 from modules.infra.db.road_cache import DEFAULT_TABLE as DEFAULT_ROUTE_CACHE_TABLE
 
@@ -118,7 +118,29 @@ def ensure_results_table(
     )
 
 
-def _latest_results_cte(items_table: str, runs_table: str, locations_table: str, route_table: str) -> str:
+def _item_column_sql(
+    item_columns: set[str],
+    column_name: str,
+    *,
+    alias: str = "i",
+    default_sql: str = "NULL",
+) -> str:
+    if column_name not in item_columns:
+        return default_sql
+    qualified = f"{alias}.{column_name}"
+    if column_name == "retryable":
+        return f"COALESCE({qualified}, FALSE)"
+    return qualified
+
+
+def _latest_results_cte(
+    items_table: str,
+    runs_table: str,
+    locations_table: str,
+    route_table: str,
+    *,
+    item_columns: set[str],
+) -> str:
     return f"""
     WITH matching_runs AS (
         SELECT
@@ -176,13 +198,13 @@ def _latest_results_cte(items_table: str, runs_table: str, locations_table: str,
             , r.port_ops_scenario
             , i.status
             , i.error_message
-            , i.failed_step
-            , i.failed_leg
-            , i.failure_reason
-            , i.failure_detail
-            , COALESCE(i.retryable, FALSE)
-            , i.failure_provider
-            , i.failure_provider_operation
+            , {_item_column_sql(item_columns, "failed_step")} AS failed_step
+            , {_item_column_sql(item_columns, "failed_leg")} AS failed_leg
+            , {_item_column_sql(item_columns, "failure_reason")} AS failure_reason
+            , {_item_column_sql(item_columns, "failure_detail")} AS failure_detail
+            , {_item_column_sql(item_columns, "retryable", default_sql="FALSE")} AS retryable
+            , {_item_column_sql(item_columns, "failure_provider")} AS failure_provider
+            , {_item_column_sql(item_columns, "failure_provider_operation")} AS failure_provider_operation
             , dest.lat6
             , dest.lon6
             , dest.state
@@ -281,6 +303,7 @@ def _latest_results_for_selector_cte(
     route_table: str,
     *,
     include_destination_set: bool,
+    item_columns: set[str],
 ) -> str:
     return f"""
     WITH matching_runs AS (
@@ -339,13 +362,13 @@ def _latest_results_for_selector_cte(
             , r.port_ops_scenario
             , i.status
             , i.error_message
-            , i.failed_step
-            , i.failed_leg
-            , i.failure_reason
-            , i.failure_detail
-            , COALESCE(i.retryable, FALSE)
-            , i.failure_provider
-            , i.failure_provider_operation
+            , {_item_column_sql(item_columns, "failed_step")} AS failed_step
+            , {_item_column_sql(item_columns, "failed_leg")} AS failed_leg
+            , {_item_column_sql(item_columns, "failure_reason")} AS failure_reason
+            , {_item_column_sql(item_columns, "failure_detail")} AS failure_detail
+            , {_item_column_sql(item_columns, "retryable", default_sql="FALSE")} AS retryable
+            , {_item_column_sql(item_columns, "failure_provider")} AS failure_provider
+            , {_item_column_sql(item_columns, "failure_provider_operation")} AS failure_provider_operation
             , dest.lat6
             , dest.lon6
             , dest.state
@@ -469,9 +492,10 @@ def summarize_results(
         locations_table=locations,
         route_table=routes,
     )
+    item_cols = table_columns(conn, items)
 
     row = conn.execute(
-        _latest_results_cte(items, runs, locations, routes)
+        _latest_results_cte(items, runs, locations, routes, item_columns=item_cols)
         + """
         SELECT
               COUNT(*) AS row_count
@@ -522,6 +546,7 @@ def list_results(
         locations_table=locations,
         route_table=routes,
     )
+    item_cols = table_columns(conn, items)
 
     clauses = ["row_rank = 1"]
     if only_success is True:
@@ -530,7 +555,7 @@ def list_results(
         clauses.append("status <> 'ok'")
 
     rows = conn.execute(
-        _latest_results_cte(items, runs, locations, routes)
+        _latest_results_cte(items, runs, locations, routes, item_columns=item_cols)
         + f"""
         SELECT
               scenario_key
@@ -622,6 +647,7 @@ def list_results_for_origin_scenario(
         locations_table=locations,
         route_table=routes,
     )
+    item_cols = table_columns(conn, items)
 
     clauses = ["row_rank = 1"]
     if only_success is True:
@@ -636,6 +662,7 @@ def list_results_for_origin_scenario(
             locations,
             routes,
             include_destination_set=(not include_all_destination_sets),
+            item_columns=item_cols,
         )
         + f"""
         SELECT

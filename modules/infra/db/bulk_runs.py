@@ -12,6 +12,7 @@ from modules.infra.db.core import (
     mark_schema_ready,
     safe_table_name,
     schema_is_ready,
+    table_columns,
     to_float,
 )
 from modules.infra.db.locations import (
@@ -299,23 +300,37 @@ def ensure_run_results_table(
     runs = safe_table_name(runs_table)
     locations = safe_table_name(locations_table)
     routes = safe_table_name(route_table)
-    if schema_is_ready(conn, "bulk_run_items", table):
-        return
     ensure_runs_table(conn, runs, locations_table=locations)
     ensure_route_cache_table(conn, routes, locations_table=locations)
-    conn.execute(
-        _RUN_RESULTS_DDL_SQL.format(
-            table=table,
-            runs_table=runs,
-            locations_table=locations,
-            route_table=routes,
+    if not schema_is_ready(conn, "bulk_run_items", table):
+        conn.execute(
+            _RUN_RESULTS_DDL_SQL.format(
+                table=table,
+                runs_table=runs,
+                locations_table=locations,
+                route_table=routes,
+            )
         )
-    )
     for sql in _RUN_RESULTS_ALTER_SQL:
         conn.execute(sql.format(table=table))
     for sql in _RUN_RESULTS_INDEX_SQL:
         conn.execute(sql.format(table=table))
     mark_schema_ready(conn, "bulk_run_items", table)
+
+
+def _item_column_sql(
+    item_columns: set[str],
+    column_name: str,
+    *,
+    alias: str = "i",
+    default_sql: str = "NULL",
+) -> str:
+    if column_name not in item_columns:
+        return default_sql
+    qualified = f"{alias}.{column_name}"
+    if column_name == "retryable":
+        return f"COALESCE({qualified}, FALSE)"
+    return qualified
 
 
 def _row_to_run_record(row: Sequence[Any]) -> BulkRunRecord:
@@ -1134,7 +1149,14 @@ def list_available_cargo_values(
     return [float(row[0]) for row in rows if row and row[0] is not None]
 
 
-def _result_projection_sql(items_table: str, runs_table: str, locations_table: str, route_table: str) -> str:
+def _result_projection_sql(
+    items_table: str,
+    runs_table: str,
+    locations_table: str,
+    route_table: str,
+    *,
+    item_columns: set[str],
+) -> str:
     routes = safe_table_name(route_table)
     return f"""
     SELECT
@@ -1151,13 +1173,13 @@ def _result_projection_sql(items_table: str, runs_table: str, locations_table: s
         , COALESCE(NULLIF(TRIM(port_dest.label), ''), NULL)
         , i.status
         , i.error_message
-        , i.failed_step
-        , i.failed_leg
-        , i.failure_reason
-        , i.failure_detail
-        , COALESCE(i.retryable, FALSE)
-        , i.failure_provider
-        , i.failure_provider_operation
+        , {_item_column_sql(item_columns, "failed_step")}
+        , {_item_column_sql(item_columns, "failed_leg")}
+        , {_item_column_sql(item_columns, "failure_reason")}
+        , {_item_column_sql(item_columns, "failure_detail")}
+        , {_item_column_sql(item_columns, "retryable", default_sql="FALSE")}
+        , {_item_column_sql(item_columns, "failure_provider")}
+        , {_item_column_sql(item_columns, "failure_provider_operation")}
         , i.road_cost_r
         , i.multimodal_cost_r
         , i.cost_delta_r
@@ -1219,6 +1241,7 @@ def list_run_results(
         locations_table=locations,
         route_table=routes,
     )
+    item_cols = table_columns(conn, items)
 
     clauses = ["i.run_id = ?"]
     params: list[Any] = [str(run_id)]
@@ -1228,7 +1251,7 @@ def list_run_results(
         clauses.append("i.status <> 'ok'")
 
     rows = conn.execute(
-        _result_projection_sql(items, runs, locations, routes)
+        _result_projection_sql(items, runs, locations, routes, item_columns=item_cols)
         + f"""
         WHERE {' AND '.join(clauses)}
         ORDER BY i.input_destiny ASC, i.updated_timestamp DESC, i.id DESC
