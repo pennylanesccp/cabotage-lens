@@ -11,7 +11,7 @@ class DeckComponentTests(unittest.TestCase):
 
         self.assertIn("window.__ecoFreightDeck = createDeck({", injected_html)
         self.assertIn("enableModifierWheelZoom", injected_html)
-        self.assertIn("Hold Ctrl to interact with the map", injected_html)
+        self.assertIn("map.scrollZoom.disable()", injected_html)
         self.assertIn("<style>", injected_html)
 
 

@@ -10,7 +10,7 @@ from modules.infra.db.road_cache import (
     list_origin_names,
     list_runs_by_label_keys,
 )
-from modules.multimodal.builder import resolve_point_for_geometry
+from modules.multimodal.builder import build_path_geometry_from_resolved, resolve_point_for_geometry
 
 
 class _FakeCursor:
@@ -41,6 +41,55 @@ class _FakeConnection:
 
 
 class RouteCacheResolutionTests(unittest.TestCase):
+    def test_build_path_geometry_logs_leg_resolution_boundaries(self) -> None:
+        route_calls: list[tuple[str, str, str]] = []
+
+        def _fake_route_resolver(start, end, leg_name):
+            route_calls.append((leg_name, start["label"], end["label"]))
+            return {
+                "distance_km": 123.0,
+                "profile_used": "driving-car",
+                "source": "cache",
+                "cached": True,
+            }
+
+        sea_matrix = SimpleNamespace(km_with_source=lambda _origin, _destiny: (456.0, "sea_matrix"))
+
+        with self.assertLogs("modules.multimodal.builder", level="INFO") as captured:
+            geometry = build_path_geometry_from_resolved(
+                {"label": "Origin", "lat": -23.55, "lon": -46.63, "uf": "SP"},
+                {"label": "Destiny", "lat": -22.97, "lon": -44.31, "uf": "RJ"},
+                ors=object(),
+                ports=[],
+                sea_matrix=sea_matrix,
+                port_origin={"name": "Porto de Santos", "lat": -23.96, "lon": -46.33},
+                port_destiny={"name": "Porto de Angra dos Reis", "lat": -23.01, "lon": -44.32},
+                first_mile_leg={
+                    "distance_km": 78.0,
+                    "profile_used": "driving-car",
+                    "source": "cache",
+                    "cached": True,
+                },
+                route_resolver=_fake_route_resolver,
+            )
+
+        self.assertIsNotNone(geometry)
+        self.assertEqual(
+            route_calls,
+            [
+                ("road_direct", "Origin", "Destiny"),
+                ("last_mile", "Porto de Angra dos Reis", "Destiny"),
+            ],
+        )
+        joined = "\n".join(captured.output)
+        self.assertIn("Ports selected: Porto de Santos (origin) -> Porto de Angra dos Reis (destiny)", joined)
+        self.assertIn("Resolving route leg road_direct: Origin -> Destiny (cache first, provider on miss)", joined)
+        self.assertIn("Reusing pre-resolved route leg first_mile: Origin -> Porto de Santos", joined)
+        self.assertIn(
+            "Resolving route leg last_mile: Porto de Angra dos Reis -> Destiny (cache first, provider on miss)",
+            joined,
+        )
+
     def test_list_origin_names_returns_distinct_sorted_origins_only(self) -> None:
         conn = _FakeConnection(rows=[("Aracaju, SE",), ("Manaus, AM",)])
 

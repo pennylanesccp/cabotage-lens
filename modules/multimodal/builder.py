@@ -251,6 +251,25 @@ def build_port_node(port_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _point_label(point: Dict[str, Any]) -> str:
+    return str(point.get("label") or point.get("name") or "<unknown>")
+
+
+def _resolve_route_leg(
+    resolve_leg: Callable[[Dict[str, Any], Dict[str, Any], str], Dict[str, Any]],
+    start: Dict[str, Any],
+    end: Dict[str, Any],
+    leg_name: str,
+) -> Dict[str, Any]:
+    _log.info(
+        "Resolving route leg %s: %s -> %s (cache first, provider on miss)",
+        leg_name,
+        _point_label(start),
+        _point_label(end),
+    )
+    return resolve_leg(start, end, leg_name)
+
+
 def build_path_geometry_from_resolved(
     origin_pt: Point,
     destiny_pt: Point,
@@ -285,17 +304,28 @@ def build_path_geometry_from_resolved(
         )
     )
 
-    leg_direct = resolve_leg(
+    leg_direct = _resolve_route_leg(
+        resolve_leg,
         origin_pt,
         destiny_pt,
         "road_direct",
     )
-    leg_first = first_mile_leg or resolve_leg(
-        origin_pt,
-        po_node,
-        "first_mile",
-    )
-    leg_last = resolve_leg(
+    if first_mile_leg is not None:
+        _log.info(
+            "Reusing pre-resolved route leg first_mile: %s -> %s",
+            _point_label(origin_pt),
+            _point_label(po_node),
+        )
+        leg_first = first_mile_leg
+    else:
+        leg_first = _resolve_route_leg(
+            resolve_leg,
+            origin_pt,
+            po_node,
+            "first_mile",
+        )
+    leg_last = _resolve_route_leg(
+        resolve_leg,
         pd_node,
         destiny_pt,
         "last_mile",
