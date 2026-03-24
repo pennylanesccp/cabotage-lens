@@ -49,6 +49,19 @@ def apply_sidebar_styles(
     st.markdown(
         f"""
         <style>
+            section[data-testid="stSidebar"] .element-container {{
+                margin-bottom: 0.4rem;
+            }}
+            section[data-testid="stSidebar"] [data-testid="stExpander"] {{
+                margin-top: 0.5rem;
+                margin-bottom: 0.55rem;
+            }}
+            section[data-testid="stSidebar"] .stMarkdown {{
+                margin-bottom: 0.1rem;
+            }}
+            section[data-testid="stSidebar"] .stMarkdown p {{
+                margin-bottom: 0;
+            }}
             @keyframes sidebar-field-spinner {{
                 from {{ transform: rotate(0deg); }}
                 to {{ transform: rotate(360deg); }}

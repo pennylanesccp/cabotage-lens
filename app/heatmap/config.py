@@ -13,7 +13,12 @@ HEATMAP_DESTINATIONS_DIR = ROOT / "data" / "processed" / "destinies"
 HEATMAP_DEFAULT_DESTINATION_SET_ID = "city_dests_over50k.txt"
 HEATMAP_DESTINATIONS_PATH = HEATMAP_DESTINATIONS_DIR / HEATMAP_DEFAULT_DESTINATION_SET_ID
 HEATMAP_DESTINATION_SET_ID = HEATMAP_DESTINATIONS_PATH.name
-HEATMAP_DESTINATION_LABEL = "Cities with population over 50k"
+HEATMAP_DESTINATION_LABELS = {
+    "city_dests.txt": "All tracked cities",
+    "city_dests_borders.txt": "Border and remote cities",
+    "city_dests_over350k.txt": "Cities with population over 350k",
+    "city_dests_over50k.txt": "Cities with population over 50k",
+}
 HEATMAP_BRAZIL_BOUNDARY_PATH = ROOT / "data" / "processed" / "geo" / "brazil_boundary_simplified.geojson"
 HEATMAP_BRAZIL_CENTER_LAT = -14.2350
 HEATMAP_BRAZIL_CENTER_LON = -51.9253
@@ -67,6 +72,4 @@ def resolve_heatmap_destination_path(destination_set_id: str | None) -> Path:
 
 def heatmap_destination_label(destination_set_id: str | None) -> str:
     candidate = str(destination_set_id or HEATMAP_DESTINATION_SET_ID).strip() or HEATMAP_DESTINATION_SET_ID
-    if candidate == HEATMAP_DESTINATION_SET_ID:
-        return HEATMAP_DESTINATION_LABEL
-    return candidate
+    return str(HEATMAP_DESTINATION_LABELS.get(candidate) or candidate)

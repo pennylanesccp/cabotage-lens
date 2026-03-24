@@ -793,6 +793,11 @@ def run_bulk_evaluation_pipeline(
     ors, ports, sea_matrix, resolved_db_path = load_routing_assets(db_path=db_path)
     if hasattr(ors, "reset_metrics"):
         ors.reset_metrics()
+    previous_cooldown_callback = None
+    if progress_callback is not None and hasattr(ors, "set_cooldown_callback"):
+        previous_cooldown_callback = ors.set_cooldown_callback(
+            lambda payload: _emit_progress(progress_callback, **payload)
+        )
 
     perf.incr("destinations_requested", requested_destination_count)
     perf.incr("destinations_unique", len(shuffled_destinations))
@@ -1224,6 +1229,8 @@ def run_bulk_evaluation_pipeline(
                         shuffle_seed_used=shuffle_seed_used,
                         message="Phase 4/4 persistence complete",
                     )
+                    if hasattr(ors, "set_cooldown_callback"):
+                        ors.set_cooldown_callback(previous_cooldown_callback)
                     return _finalize_bulk_outcome(
                         ors=ors,
                         perf=perf,
@@ -1307,11 +1314,16 @@ def run_bulk_evaluation_pipeline(
                     timeout_s="5/5",
                     http_retries=0,
                 )
-                with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="bulk-geocode") as executor:
+                completed = 0
+                if workers == 1:
+                    geocode_results = (_resolve_destination(item) for item in unresolved_items)
+                    executor = None
+                else:
+                    executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="bulk-geocode")
                     futures = [executor.submit(_resolve_destination, item) for item in unresolved_items]
-                    completed = 0
-                    for future in as_completed(futures):
-                        item, point, error, duration_s = future.result()
+                    geocode_results = (future.result() for future in as_completed(futures))
+                try:
+                    for item, point, error, duration_s in geocode_results:
                         perf.add_duration("destination_geocode_s", duration_s)
                         completed += 1
                         if error is not None:
@@ -1371,6 +1383,9 @@ def run_bulk_evaluation_pipeline(
                             fail_count=fail_count,
                             message=f"Resolved {completed}/{len(unresolved_items)} uncached destinations",
                         )
+                finally:
+                    if executor is not None:
+                        executor.shutdown(wait=True)
 
             _flush_point_rows(conn, point_rows_to_persist)
             _log.info(
@@ -1486,11 +1501,16 @@ def run_bulk_evaluation_pipeline(
 
             if routable_items:
                 workers = max(1, min(int(max_route_workers), len(routable_items)))
-                with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="bulk-route") as executor:
+                completed = 0
+                if workers == 1:
+                    geometry_results = (_build_geometry(item) for item in routable_items)
+                    executor = None
+                else:
+                    executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="bulk-route")
                     futures = [executor.submit(_build_geometry, item) for item in routable_items]
-                    completed = 0
-                    for future in as_completed(futures):
-                        item, geometry, error, duration_s = future.result()
+                    geometry_results = (future.result() for future in as_completed(futures))
+                try:
+                    for item, geometry, error, duration_s in geometry_results:
                         perf.add_duration("geometry_acquisition_s", duration_s)
                         completed += 1
                         if error is not None:
@@ -1540,6 +1560,9 @@ def run_bulk_evaluation_pipeline(
                             fail_count=fail_count,
                             message=f"Built geometry {completed}/{len(routable_items)}",
                         )
+                finally:
+                    if executor is not None:
+                        executor.shutdown(wait=True)
 
             _flush_route_rows(conn, route_coordinator.drain_pending_rows())
             routing_provider_totals = _provider_operation_totals(
@@ -2143,6 +2166,8 @@ def run_bulk_evaluation_pipeline(
             approximated_success_count=approximated_success_count,
             message=str(exc),
         )
+        if hasattr(ors, "set_cooldown_callback"):
+            ors.set_cooldown_callback(previous_cooldown_callback)
         raise
 
     duration = time.perf_counter() - started_global
@@ -2162,6 +2187,8 @@ def run_bulk_evaluation_pipeline(
         shuffle_seed_used=shuffle_seed_used,
         message="Phase 4/4 persistence complete",
     )
+    if hasattr(ors, "set_cooldown_callback"):
+        ors.set_cooldown_callback(previous_cooldown_callback)
     return _finalize_bulk_outcome(
         ors=ors,
         perf=perf,

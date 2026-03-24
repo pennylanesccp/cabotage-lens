@@ -13,9 +13,6 @@ from app.heatmap.config import (
     HEATMAP_BRAZIL_CENTER_LAT,
     HEATMAP_BRAZIL_CENTER_LON,
     HEATMAP_BRAZIL_ZOOM,
-    HEATMAP_COLOR_MID,
-    HEATMAP_COLOR_NEGATIVE,
-    HEATMAP_COLOR_POSITIVE,
     HEATMAP_MAP_STYLE,
     HEATMAP_MAP_HEIGHT,
     HEATMAP_POINT_OVERLAY_RADIUS_M,
@@ -25,44 +22,7 @@ from app.heatmap.config import (
 from app.heatmap.surface import build_surface
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
 
-_HEATMAP_MAP_CSS = """
-<style>
-    .heatmap-legend-card {
-        padding: 0.7rem 0.9rem;
-        border: 1px solid rgba(255, 255, 255, 0.0);
-        border-radius: 16px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.92));
-        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
-        margin-bottom: 0.65rem;
-    }
-    .heatmap-legend-card__title {
-        color: #0f172a;
-        font-weight: 700;
-        margin-bottom: 0.3rem;
-    }
-    .heatmap-legend-card__gradient {
-        height: 14px;
-        border-radius: 999px;
-        margin-bottom: 0.45rem;
-        border: 1px solid rgba(148, 163, 184, 0.12);
-    }
-    .heatmap-legend-card__body {
-        font-size: 0.86rem;
-        line-height: 1.4;
-    }
-    .heatmap-legend-card__semantic {
-        color: #0f172a;
-        font-weight: 600;
-    }
-    .heatmap-legend-card__helper {
-        color: #334155;
-    }
-    .heatmap-legend-card__scale {
-        color: #0f172a;
-        font-weight: 600;
-    }
-</style>
-"""
+_HEATMAP_MAP_CSS = ""
 
 
 def _format_signed_currency(value: float) -> str:
@@ -152,47 +112,8 @@ def _point_rows(dataset: HeatmapDataset) -> List[dict[str, Any]]:
 
 
 def _inject_heatmap_map_css() -> None:
-    st.markdown(_HEATMAP_MAP_CSS, unsafe_allow_html=True)
-
-
-def _legend_labels(metric: str, surface: HeatmapSurface) -> tuple[str, list[str], list[str]]:
-    if metric == "cost":
-        title = "3D cost surface"
-        height_line = "Height shows signed cost difference around a zero plane, with negative cells below it and positive cells above it."
-    else:
-        title = "3D emissions surface"
-        height_line = "Height shows signed emissions difference around a zero plane, with negative cells below it and positive cells above it."
-
-    semantic_lines = [
-        "Negative delta stays in the red spectrum, zero is yellow, and positive delta moves from yellow to green.",
-    ]
-    helper_lines = [
-        "Only the raised top surface is drawn, so adjacent cells no longer get blocked by transparent side walls.",
-        height_line,
-    ]
-    return title, semantic_lines, helper_lines
-
-
-def render_legend(metric: str, surface: HeatmapSurface) -> None:
-    _inject_heatmap_map_css()
-    title, semantic_lines, helper_lines = _legend_labels(metric, surface)
-    gradient = (
-        f"linear-gradient(90deg, rgb{HEATMAP_COLOR_NEGATIVE}, "
-        f"rgb{HEATMAP_COLOR_MID}, rgb{HEATMAP_COLOR_POSITIVE})"
-    )
-    st.markdown(
-        f"""
-        <section class='heatmap-legend-card'>
-            <div class='heatmap-legend-card__title'>{escape(title)}</div>
-            <div class='heatmap-legend-card__gradient' style='background: {gradient};'></div>
-            <div class='heatmap-legend-card__body'>
-                {''.join(f"<div class='heatmap-legend-card__semantic'>{escape(line)}</div>" for line in semantic_lines)}
-                {''.join(f"<div class='heatmap-legend-card__helper'>{escape(line)}</div>" for line in helper_lines)}
-            </div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
+    if _HEATMAP_MAP_CSS.strip():
+        st.markdown(_HEATMAP_MAP_CSS, unsafe_allow_html=True)
 
 
 def render_heatmap_map(

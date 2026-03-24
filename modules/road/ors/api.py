@@ -47,6 +47,7 @@ from modules.road.provider_base import BaseRoadProvider
 
 _log = get_logger(__name__)
 _T = TypeVar("_T")
+_CooldownCallback = Callable[[Dict[str, Any]], None]
 _TIMEOUT_HINTS = (
     "timed out",
     "timeout",
@@ -262,6 +263,7 @@ class ORSClient:
         self._metrics_lock = threading.Lock()
         self._provider_metrics: dict[str, dict[str, dict[str, float]]] = {}
         self._provider_cooldowns: dict[str, tuple[float, str]] = {}
+        self._cooldown_callback: Optional[_CooldownCallback] = None
 
     def has_geocoding_provider(self) -> bool:
         return any(provider.is_enabled() for provider in self._provider_sequence())
@@ -366,6 +368,11 @@ class ORSClient:
             self._provider_metrics.clear()
             self._provider_cooldowns.clear()
 
+    def set_cooldown_callback(self, callback: Optional[_CooldownCallback]) -> Optional[_CooldownCallback]:
+        previous = self._cooldown_callback
+        self._cooldown_callback = callback
+        return previous
+
     def _build_configured_ors_providers(self) -> list[_ProviderProtocol]:
         providers: list[_ProviderProtocol] = []
         for index, api_key in enumerate(get_configured_ors_api_keys(explicit_api_key=self.cfg.api_key), start=1):
@@ -401,79 +408,96 @@ class ORSClient:
             raise ORSError(
                 f"No provider is configured for {operation}. Set ORS_API_KEYS (preferred), ORS_API_KEY/ORS_API_KEY_2, or LOCATIONIQ_PATS/LOCATIONIQ_PAT."
             )
+        while True:
+            failures: list[tuple[str, Exception]] = []
+            cooldown_skips: list[tuple[str, float, str]] = []
+            failure_categories: dict[str, str] = {}
+            previous_provider_name: str | None = None
 
-        failures: list[tuple[str, Exception]] = []
-        cooldown_skips: list[tuple[str, float, str]] = []
-        previous_provider_name: str | None = None
+            for index, (provider, call) in enumerate(enabled_calls, start=1):
+                has_next = index < len(enabled_calls)
+                remaining_cooldown_s, cooldown_reason = self._provider_cooldown_state(provider.name)
+                if remaining_cooldown_s > 0.0:
+                    self._record_metric(provider.name, operation, "skipped_cooldown", 1.0)
+                    cooldown_skips.append((provider.name, remaining_cooldown_s, cooldown_reason))
+                    _log.debug(
+                        "Provider cooldown skip operation=%s provider=%s reason=%s remaining_s=%.1f query=%s",
+                        operation,
+                        provider.name,
+                        cooldown_reason,
+                        remaining_cooldown_s,
+                        query,
+                    )
+                    continue
+                try:
+                    t0 = time.perf_counter()
+                    self._record_metric(provider.name, operation, "attempts", 1.0)
+                    _log.debug(
+                        "Provider attempt operation=%s provider=%s query=%s",
+                        operation,
+                        provider.name,
+                        query,
+                    )
+                    result = call()
+                    duration_s = time.perf_counter() - t0
+                    self._record_metric(provider.name, operation, "successes", 1.0, duration_s=duration_s)
+                    self._clear_provider_cooldown(provider.name)
+                    _log.debug(
+                        "Provider success operation=%s provider=%s query=%s fallback_from=%s",
+                        operation,
+                        provider.name,
+                        query,
+                        previous_provider_name or "<none>",
+                    )
+                    return result
+                except Exception as exc:
+                    duration_s = time.perf_counter() - t0
+                    self._record_metric(provider.name, operation, "failures", 1.0, duration_s=duration_s)
+                    failure_category = self._failure_category(exc)
+                    failure_categories[provider.name] = failure_category
+                    self._record_metric(provider.name, operation, failure_category, 1.0)
+                    cooldown_s = _PROVIDER_COOLDOWN_SECONDS.get(failure_category, 0.0)
+                    if cooldown_s > 0.0:
+                        self._set_provider_cooldown(provider.name, failure_category, cooldown_s)
+                    failures.append((provider.name, exc))
+                    _log.debug(
+                        "Provider failure operation=%s provider=%s category=%s has_next=%s query=%s reason=%s",
+                        operation,
+                        provider.name,
+                        failure_category,
+                        has_next,
+                        query,
+                        self._format_exception(exc),
+                    )
+                    previous_provider_name = provider.name
 
-        for index, (provider, call) in enumerate(enabled_calls, start=1):
-            has_next = index < len(enabled_calls)
-            remaining_cooldown_s, cooldown_reason = self._provider_cooldown_state(provider.name)
-            if remaining_cooldown_s > 0.0:
-                self._record_metric(provider.name, operation, "skipped_cooldown", 1.0)
-                cooldown_skips.append((provider.name, remaining_cooldown_s, cooldown_reason))
-                _log.debug(
-                    "Provider cooldown skip operation=%s provider=%s reason=%s remaining_s=%.1f query=%s",
-                    operation,
-                    provider.name,
-                    cooldown_reason,
-                    remaining_cooldown_s,
-                    query,
+            wait_candidate = self._rate_limit_wait_candidate(
+                failures=failures,
+                cooldown_skips=cooldown_skips,
+                failure_categories=failure_categories,
+            )
+            if wait_candidate is not None:
+                self._wait_for_rate_limit_retry(
+                    operation=operation,
+                    query=query,
+                    provider=wait_candidate[0],
+                    reason=wait_candidate[2],
+                    remaining_s=wait_candidate[1],
                 )
                 continue
-            try:
-                t0 = time.perf_counter()
-                self._record_metric(provider.name, operation, "attempts", 1.0)
-                _log.debug(
-                    "Provider attempt operation=%s provider=%s query=%s",
-                    operation,
-                    provider.name,
-                    query,
-                )
-                result = call()
-                duration_s = time.perf_counter() - t0
-                self._record_metric(provider.name, operation, "successes", 1.0, duration_s=duration_s)
-                self._clear_provider_cooldown(provider.name)
-                _log.debug(
-                    "Provider success operation=%s provider=%s query=%s fallback_from=%s",
-                    operation,
-                    provider.name,
-                    query,
-                    previous_provider_name or "<none>",
-                )
-                return result
-            except Exception as exc:
-                duration_s = time.perf_counter() - t0
-                self._record_metric(provider.name, operation, "failures", 1.0, duration_s=duration_s)
-                failure_category = self._failure_category(exc)
-                self._record_metric(provider.name, operation, failure_category, 1.0)
-                cooldown_s = _PROVIDER_COOLDOWN_SECONDS.get(failure_category, 0.0)
-                if cooldown_s > 0.0:
-                    self._set_provider_cooldown(provider.name, failure_category, cooldown_s)
-                failures.append((provider.name, exc))
-                _log.debug(
-                    "Provider failure operation=%s provider=%s category=%s has_next=%s query=%s reason=%s",
-                    operation,
-                    provider.name,
-                    failure_category,
-                    has_next,
-                    query,
-                    self._format_exception(exc),
-                )
-                previous_provider_name = provider.name
 
-        if not failures and cooldown_skips:
-            details = "; ".join(
-                f"{provider}={reason}({remaining_s:.1f}s)"
-                for provider, remaining_s, reason in cooldown_skips
-            )
-            message = f"{operation} is temporarily cooling down across all configured providers: {details}"
-            if any(reason == "rate_limited" for _, _, reason in cooldown_skips):
-                raise RateLimited(message)
-            raise ORSError(message)
-        if len(failures) == 1:
-            raise failures[0][1]
-        raise self._merge_failures(operation, failures)
+            if not failures and cooldown_skips:
+                details = "; ".join(
+                    f"{provider}={reason}({remaining_s:.1f}s)"
+                    for provider, remaining_s, reason in cooldown_skips
+                )
+                message = f"{operation} is temporarily cooling down across all configured providers: {details}"
+                if any(reason == "rate_limited" for _, _, reason in cooldown_skips):
+                    raise RateLimited(message)
+                raise ORSError(message)
+            if len(failures) == 1:
+                raise failures[0][1]
+            raise self._merge_failures(operation, failures)
 
     def _merge_failures(
         self,
@@ -570,6 +594,88 @@ class ORSClient:
     def _clear_provider_cooldown(self, provider: str) -> None:
         with self._metrics_lock:
             self._provider_cooldowns.pop(provider, None)
+
+    def _emit_cooldown_event(self, **payload: Any) -> None:
+        callback = self._cooldown_callback
+        if callback is None:
+            return
+        try:
+            callback(dict(payload))
+        except Exception as exc:
+            _log.debug("Provider cooldown callback failed: %s", exc)
+
+    def _rate_limit_wait_candidate(
+        self,
+        *,
+        failures: list[tuple[str, Exception]],
+        cooldown_skips: list[tuple[str, float, str]],
+        failure_categories: dict[str, str],
+    ) -> tuple[str, float, str] | None:
+        wait_candidates: list[tuple[str, float, str]] = []
+
+        for provider_name, remaining_s, reason in cooldown_skips:
+            if str(reason).strip() != "rate_limited":
+                return None
+            wait_candidates.append((provider_name, remaining_s, reason))
+
+        for provider_name, _exc in failures:
+            category = str(failure_categories.get(provider_name) or "").strip()
+            if category != "rate_limited":
+                return None
+            remaining_s, reason = self._provider_cooldown_state(provider_name)
+            if remaining_s > 0.0:
+                wait_candidates.append((provider_name, remaining_s, reason or category))
+
+        if not wait_candidates:
+            return None
+        return min(wait_candidates, key=lambda item: item[1])
+
+    def _wait_for_rate_limit_retry(
+        self,
+        *,
+        operation: str,
+        query: str,
+        provider: str,
+        reason: str,
+        remaining_s: float,
+    ) -> None:
+        wait_s = max(float(remaining_s) + 1.0, 1.0)
+        retry_epoch_s = time.time() + wait_s
+        _log.warning(
+            "All providers are cooling down for %s; waiting %.1fs before retrying provider=%s reason=%s query=%s",
+            operation,
+            wait_s,
+            provider,
+            reason,
+            query,
+        )
+        deadline = time.monotonic() + wait_s
+        while True:
+            seconds_left = max(deadline - time.monotonic(), 0.0)
+            self._emit_cooldown_event(
+                phase="cooldown_wait",
+                operation=operation,
+                provider=provider,
+                reason=reason,
+                query=query,
+                remaining_s=seconds_left,
+                retry_after_s=wait_s,
+                retry_epoch_s=retry_epoch_s,
+            )
+            if seconds_left <= 0.0:
+                break
+            time.sleep(min(1.0, seconds_left))
+        self._emit_cooldown_event(
+            phase="cooldown_wait",
+            operation=operation,
+            provider=provider,
+            reason=reason,
+            query=query,
+            remaining_s=0.0,
+            retry_after_s=wait_s,
+            retry_epoch_s=retry_epoch_s,
+            state="retrying",
+        )
 
 
 if __name__ == "__main__":

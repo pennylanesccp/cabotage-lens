@@ -33,9 +33,14 @@ def render_sidebar(
         st.subheader("Scenario")
         _render_origin_field(origin_field_key)
         st.number_input("Cargo (t)", min_value=0.0, step=0.5, format="%g", key="heatmap_cargo")
+        st.selectbox(
+            "Destination set",
+            options=list(destination_set_options),
+            key="heatmap_destination_set_id",
+            format_func=heatmap_destination_label,
+        )
         with st.expander("Advanced", expanded=False):
             _render_advanced(
-                destination_set_options=destination_set_options,
                 class_options=class_options,
                 port_ops_scenarios=port_ops_scenarios,
             )
@@ -104,17 +109,9 @@ def _render_origin_field(field_name: str) -> None:
 
 def _render_advanced(
     *,
-    destination_set_options: Iterable[str],
     class_options: Iterable[str],
     port_ops_scenarios: Iterable[str],
 ) -> None:
-    st.markdown("##### Data")
-    st.selectbox(
-        "Destinations file",
-        options=list(destination_set_options),
-        key="heatmap_destination_set_id",
-        format_func=heatmap_destination_label,
-    )
     st.checkbox(
         "Show destination points",
         key="heatmap_show_points",

@@ -892,7 +892,7 @@ def run_heatmap(
             destination_set_id=resolved_destination_set_id,
             progress_callback=progress_callback,
             max_geocode_workers=1,
-            max_route_workers=2,
+            max_route_workers=1,
         )
         _log.info(
             (

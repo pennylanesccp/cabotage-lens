@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from app.heatmap import page
+from app.heatmap.config import heatmap_destination_label
 from app.heatmap.types import (
     HeatmapDataset,
     HeatmapDatasetDiagnostics,
@@ -85,6 +86,12 @@ class HeatmapPageTests(unittest.TestCase):
 
         self.assertEqual(page._format_height_scale(cost_surface), "R$ 1,234.50")
         self.assertEqual(page._format_height_scale(emissions_surface), "678.9 kg CO2e")
+
+    def test_destination_set_aliases_cover_known_files(self) -> None:
+        self.assertEqual(heatmap_destination_label("city_dests.txt"), "All tracked cities")
+        self.assertEqual(heatmap_destination_label("city_dests_borders.txt"), "Border and remote cities")
+        self.assertEqual(heatmap_destination_label("city_dests_over350k.txt"), "Cities with population over 350k")
+        self.assertEqual(heatmap_destination_label("city_dests_over50k.txt"), "Cities with population over 50k")
 
 
 if __name__ == "__main__":

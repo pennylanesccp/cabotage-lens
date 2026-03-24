@@ -30,40 +30,64 @@ _CTRL_WHEEL_ZOOM_SCRIPT = """
 
       const mapContainer = map.getContainer ? map.getContainer() : container;
       let keyboardModifierPressed = false;
-      let disableTimer = null;
+      const blocker = document.createElement('div');
+      blocker.setAttribute('data-eco-freight-map-lock', 'true');
+      blocker.innerHTML = '<div style="padding:0.5rem 0.8rem;border-radius:999px;background:rgba(15,23,42,0.78);color:#fff;font:600 12px/1.2 sans-serif;box-shadow:0 10px 24px rgba(15,23,42,0.18);">Hold Ctrl to interact with the map</div>';
+      Object.assign(blocker.style, {
+        position: 'absolute',
+        inset: '0',
+        zIndex: '20',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: '14px',
+        background: 'transparent',
+        cursor: 'default'
+      });
+      if (mapContainer && getComputedStyle(mapContainer).position === 'static') {
+        mapContainer.style.position = 'relative';
+      }
+      mapContainer.appendChild(blocker);
 
-      const syncScrollZoom = (modifierActive = keyboardModifierPressed) => {
-        if (modifierActive) {
-          map.scrollZoom.enable();
-        } else {
-          map.scrollZoom.disable();
-        }
+      const setInteractionsEnabled = (enabled) => {
+        const toggle = (control, shouldEnable) => {
+          if (!control || typeof control.enable !== 'function' || typeof control.disable !== 'function') {
+            return;
+          }
+          if (shouldEnable) {
+            control.enable();
+          } else {
+            control.disable();
+          }
+        };
+
+        toggle(map.scrollZoom, enabled);
+        toggle(map.dragPan, enabled);
+        toggle(map.dragRotate, enabled);
+        toggle(map.doubleClickZoom, enabled);
+        toggle(map.touchZoomRotate, enabled);
+        toggle(map.boxZoom, enabled);
+        toggle(map.keyboard, enabled);
+        blocker.style.display = enabled ? 'none' : 'flex';
       };
 
       const handleKeyState = (event) => {
         keyboardModifierPressed = Boolean(event.ctrlKey || event.metaKey);
-        syncScrollZoom();
+        setInteractionsEnabled(keyboardModifierPressed);
       };
 
-      const handleWheel = (event) => {
-        const modifierActive = Boolean(event.ctrlKey || event.metaKey || keyboardModifierPressed);
-        syncScrollZoom(modifierActive);
-        window.clearTimeout(disableTimer);
-        disableTimer = window.setTimeout(() => {
-          if (!keyboardModifierPressed) {
-            map.scrollZoom.disable();
-          }
-        }, 180);
-      };
-
-      syncScrollZoom();
+      blocker.addEventListener('wheel', (event) => {
+        if (!(event.ctrlKey || event.metaKey || keyboardModifierPressed)) {
+          event.preventDefault();
+        }
+      }, {capture: true, passive: false});
+      setInteractionsEnabled(false);
       window.addEventListener('keydown', handleKeyState, true);
       window.addEventListener('keyup', handleKeyState, true);
       window.addEventListener('blur', () => {
         keyboardModifierPressed = false;
-        syncScrollZoom();
+        setInteractionsEnabled(false);
       }, true);
-      mapContainer.addEventListener('wheel', handleWheel, {capture: true, passive: true});
     })();
 """
 

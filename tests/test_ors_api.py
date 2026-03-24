@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from modules.road.locationiq.api import LocationIQClient
 from modules.road.locationiq.structures import LocationIQConfig, get_configured_locationiq_api_keys
@@ -195,6 +196,41 @@ class ORSClientFallbackTests(unittest.TestCase):
         self.assertEqual(secondary.geocode_calls, 2)
         metrics = client.metrics_snapshot()
         self.assertEqual(metrics["ors"]["geocode_text"]["skipped_cooldown"], 1.0)
+
+    def test_waits_and_retries_when_all_providers_are_rate_limited_or_cooling_down(self) -> None:
+        primary = _FakeProvider(
+            "ors",
+            geocode_result=[
+                {
+                    "geometry": {"coordinates": [-46.6333, -23.5505]},
+                    "properties": {"label": "Sao Paulo, SP", "provider": "ors"},
+                    "provider": "ors",
+                }
+            ],
+        )
+        fallback = _FakeProvider("locationiq", enabled=False)
+        client = ORSClient(primary_provider=primary, fallback_provider=fallback)
+        events: list[dict[str, object]] = []
+        client.set_cooldown_callback(lambda payload: events.append(payload))
+
+        with patch.object(
+            client,
+            "_provider_cooldown_state",
+            side_effect=[(4.0, "rate_limited"), (0.0, ""), (0.0, "")],
+        ), patch("modules.road.ors.api.time.sleep") as sleep_mock, patch(
+            "modules.road.ors.api.time.monotonic",
+            side_effect=[10.0, 10.2, 11.2, 12.2, 13.2, 14.5, 15.5],
+        ), patch(
+            "modules.road.ors.api.time.time",
+            return_value=1_700_000_000.0,
+        ):
+            features = client.geocode_text("Sao Paulo")
+
+        self.assertEqual(features[0]["provider"], "ors")
+        self.assertEqual(primary.geocode_calls, 1)
+        self.assertTrue(any(event.get("phase") == "cooldown_wait" for event in events))
+        self.assertTrue(any(event.get("state") == "retrying" for event in events))
+        self.assertGreaterEqual(sleep_mock.call_count, 1)
 
     def test_falls_back_to_locationiq_for_routing(self) -> None:
         primary = _FakeProvider("ors", route_exc=ORSError("timeout"))

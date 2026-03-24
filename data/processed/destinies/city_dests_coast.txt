@@ -1,0 +1,279 @@
+Rio de Janeiro, Rio de Janeiro
+Salvador, Bahia
+Fortaleza, Ceará
+Recife, Pernambuco
+São Luís, Maranhão
+São Gonçalo, Rio de Janeiro
+Maceió, Alagoas
+Duque de Caxias, Rio de Janeiro
+Natal, Rio Grande do Norte
+João Pessoa, Paraíba
+Jaboatão dos Guararapes, Pernambuco
+Aracaju, Sergipe
+Serra, Espírito Santo
+Niterói, Rio de Janeiro
+Campos dos Goytacazes, Rio de Janeiro
+Macapá, Amapá
+Florianópolis, Santa Catarina
+Vila Velha, Espírito Santo
+Santos, São Paulo
+Olinda, Pernambuco
+São Vicente, São Paulo
+Vitória, Espírito Santo
+Caucaia, Ceará
+Paulista, Pernambuco
+Praia Grande, São Paulo
+Guarujá, São Paulo
+Camaçari, Bahia
+Parnamirim, Rio Grande do Norte
+Macaé, Rio de Janeiro
+Magé, Rio de Janeiro
+Itaboraí, Rio de Janeiro
+Cabo Frio, Rio de Janeiro
+Itajaí, Santa Catarina
+Rio Grande, Rio Grande do Sul
+Cabo de Santo Agostinho, Pernambuco
+Angra dos Reis, Rio de Janeiro
+Lauro de Freitas, Bahia
+São José de Ribamar, Maranhão
+Linhares, Espírito Santo
+Palhoça, Santa Catarina
+Ilhéus, Bahia
+Maricá, Rio de Janeiro
+Paranaguá, Paraná
+Parnaíba, Piauí
+Rio das Ostras, Rio de Janeiro
+Porto Seguro, Bahia
+Balneário Camboriú, Santa Catarina
+Santa Rita, Paraíba
+Itaguaí, Rio de Janeiro
+Araruama, Rio de Janeiro
+São Mateus, Espírito Santo
+Itapipoca, Ceará
+Bragança, Pará
+Guarapari, Espírito Santo
+Paço do Lumiar, Maranhão
+Caraguatatuba, São Paulo
+Igarassu, Pernambuco
+Itanhaém, São Paulo
+Aracruz, Espírito Santo
+Valença, Bahia
+Ipojuca, Pernambuco
+Ubatuba, São Paulo
+Saquarema, Rio de Janeiro
+São Sebastião, São Paulo
+Navegantes, Santa Catarina
+Aquiraz, Ceará
+Goiana, Pernambuco
+Aracati, Ceará
+Ceará-Mirim, Rio Grande do Norte
+Cascavel, Ceará
+Estância, Sergipe
+Peruíbe, São Paulo
+Araranguá, Santa Catarina
+Cabedelo, Paraíba
+Itapema, Santa Catarina
+Camocim, Ceará
+Bertioga, São Paulo
+Acaraú, Ceará
+Barreirinhas, Maranhão
+Viseu, Pará
+Guapimirim, Rio de Janeiro
+Tutóia, Maranhão
+Coruripe, Alagoas
+Mongaguá, São Paulo
+Trairi, Ceará
+Vigia, Pará
+Beberibe, Ceará
+Capão da Canoa, Rio Grande do Sul
+São Francisco do Sul, Santa Catarina
+Marechal Deodoro, Alagoas
+Tramandaí, Rio Grande do Sul
+São Gonçalo do Amarante, Ceará
+Mata de São João, Bahia
+Araioses, Maranhão
+Augusto Corrêa, Pará
+Osório, Rio Grande do Sul
+Sirinhaém, Pernambuco
+Laguna, Santa Catarina
+Imbituba, Santa Catarina
+Mangaratiba, Rio de Janeiro
+Casimiro de Abreu, Rio de Janeiro
+Amontada, Ceará
+Nova Viçosa, Bahia
+Vera Cruz, Bahia
+Paraty, Rio de Janeiro
+Rosário, Maranhão
+Barreiros, Pernambuco
+São Francisco de Itabapoana, Rio de Janeiro
+Itarema, Ceará
+Entre Rios, Bahia
+Mucuri, Bahia
+Salinópolis, Pará
+Armação dos Búzios, Rio de Janeiro
+Curuçá, Pará
+Torres, Rio Grande do Sul
+Marataízes, Espírito Santo
+Tijucas, Santa Catarina
+Araquari, Santa Catarina
+Santa Rita, Maranhão
+Esplanada, Bahia
+Guaratuba, Paraná
+São João da Barra, Rio de Janeiro
+Turiaçu, Maranhão
+Camamu, Bahia
+Paracuru, Ceará
+Ilhabela, São Paulo
+Matinhos, Paraná
+Itaporanga d'Ajuda, Sergipe
+Itapemirim, Espírito Santo
+Canguaretama, Rio Grande do Norte
+Touros, Rio Grande do Norte
+Paraipaba, Ceará
+Maragogi, Alagoas
+Cururupu, Maranhão
+Penha, Santa Catarina
+Macau, Rio Grande do Norte
+Canavieiras, Bahia
+Conceição da Barra, Espírito Santo
+Tracuateua, Pará
+Iguape, São Paulo
+Raposa, Maranhão
+Barra dos Coqueiros, Sergipe
+Arraial do Cabo, Rio de Janeiro
+Luís Correia, Piauí
+Santa Vitória do Palmar, Rio Grande do Sul
+Maracanã, Pará
+Anchieta, Espírito Santo
+Barra Velha, Santa Catarina
+Humberto de Campos, Maranhão
+Ituberá, Bahia
+Extremoz, Rio Grande do Norte
+Marapanim, Pará
+Itacaré, Bahia
+Prado, Bahia
+Santa Cruz Cabrália, Bahia
+Areia Branca, Rio Grande do Norte
+Nísia Floresta, Rio Grande do Norte
+São José do Norte, Rio Grande do Sul
+Pontal do Paraná, Paraná
+Oiapoque, Amapá
+Icatu, Maranhão
+Ilha de Itamaracá, Pernambuco
+Conde, Bahia
+Soure, Pará
+Cruz, Ceará
+Quissamã, Rio de Janeiro
+Conde, Paraíba
+Rio Tinto, Paraíba
+Carutapera, Maranhão
+Salvaterra, Pará
+Chaves, Pará
+Tamandaré, Pernambuco
+Belmonte, Bahia
+Balneário Piçarras, Santa Catarina
+Garopaba, Santa Catarina
+São João de Pirabas, Pará
+Imbé, Rio Grande do Sul
+Alcobaça, Bahia
+Alcântara, Maranhão
+Caravelas, Bahia
+Piúma, Espírito Santo
+Fundão, Espírito Santo
+Porto Belo, Santa Catarina
+São José da Coroa Grande, Pernambuco
+Bequimão, Maranhão
+São João Batista, Maranhão
+Itapoá, Santa Catarina
+Maraú, Bahia
+Uruçuca, Bahia
+Cândido Mendes, Maranhão
+Jaguaruna, Santa Catarina
+Icapuí, Ceará
+Jijoca de Jericoacoara, Ceará
+Bombinhas, Santa Catarina
+Pitimbu, Paraíba
+Una, Bahia
+Jaguaripe, Bahia
+Bacuri, Maranhão
+Cairu, Bahia
+São Caetano de Odivelas, Pará
+Piaçabuçu, Alagoas
+Apicum-Açu, Maranhão
+Bacabeira, Maranhão
+Fortim, Ceará
+Xangri-lá, Rio Grande do Sul
+Carapebus, Rio de Janeiro
+Cidreira, Rio Grande do Sul
+Paulino Neves, Maranhão
+Barra de Santo Antônio, Alagoas
+Santo Amaro do Maranhão, Maranhão
+Guamaré, Rio Grande do Norte
+Primeira Cruz, Maranhão
+Passo de Camaragibe, Alagoas
+Barroquinha, Ceará
+Governador Celso Ramos, Santa Catarina
+Pacatuba, Sergipe
+Tibau do Sul, Rio Grande do Norte
+Balneário Pinhal, Rio Grande do Sul
+Nilo Peçanha, Bahia
+Quatipuru, Pará
+Igrapiúna, Bahia
+Paripueira, Alagoas
+Lucena, Paraíba
+Balneário Arroio do Silva, Santa Catarina
+Mostardas, Rio Grande do Sul
+Balneário Rincão, Santa Catarina
+Cananéia, São Paulo
+Maxaranguape, Rio Grande do Norte
+Axixá, Maranhão
+Colares, Pará
+Guimarães, Maranhão
+Godofredo Viana, Maranhão
+Jequiá da Praia, Alagoas
+Presidente Kennedy, Espírito Santo
+Palmares do Sul, Rio Grande do Sul
+Terra de Areia, Rio Grande do Sul
+Cajapió, Maranhão
+Ilha Comprida, São Paulo
+Calçoene, Amapá
+Balneário Gaivota, Santa Catarina
+Rio do Fogo, Rio Grande do Norte
+Balneário Barra do Sul, Santa Catarina
+Bandeira do município de Jandaíra-BA.Jandaíra, Bahia
+Cedral, Maranhão
+Grossos, Rio Grande do Norte
+São Miguel do Gostoso, Rio Grande do Norte
+Serrano do Maranhão, Maranhão
+Arroio do Sal, Rio Grande do Sul
+Ilha Grande, Piauí
+Pirambu, Sergipe
+Baía Formosa, Rio Grande do Norte
+Amapá, Amapá
+Baía da Traição, Paraíba
+Passo de Torres, Santa Catarina
+Marcação, Paraíba
+Magalhães Barata, Pará
+Mataraca, Paraíba
+Japaratinga, Alagoas
+Barra de São Miguel, Alagoas
+Brejo Grande, Sergipe
+São Miguel dos Milagres, Alagoas
+Porto de Pedras, Alagoas
+Cajueiro da Praia, Piauí
+Guaraqueçaba, Paraná
+Paulo Lopes, Santa Catarina
+Luís Domingues, Maranhão
+Roteiro, Alagoas
+Caiçara do Norte, Rio Grande do Norte
+Porto do Mangue, Rio Grande do Norte
+Porto Rico do Maranhão, Maranhão
+Bacurituba, Maranhão
+Tavares, Rio Grande do Sul
+Feliz Deserto, Alagoas
+Senador Georgino Avelino, Rio Grande do Norte
+Tibau, Rio Grande do Norte
+Pedra Grande, Rio Grande do Norte
+Fernando de Noronha, Pernambuco
+Galinhos, Rio Grande do Norte
+São Bento do Norte, Rio Grande do Norte
