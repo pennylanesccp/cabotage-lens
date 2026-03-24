@@ -6,7 +6,7 @@ from pathlib import Path
 from app.main.utils.constants import MAP_STYLES, ROOT
 
 HEATMAP_PAGE_TITLE = "Heatmap"
-HEATMAP_PAGE_ICON = "📍"
+HEATMAP_PAGE_ICON = "🗺️"
 HEATMAP_DEFAULT_METRIC = "cost"
 HEATMAP_METRICS = ("cost", "emissions")
 HEATMAP_DESTINATIONS_DIR = ROOT / "data" / "processed" / "destinies"

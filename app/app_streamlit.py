@@ -18,7 +18,7 @@ import streamlit as st
 from app.access import require_app_access
 from app.heatmap.config import HEATMAP_PAGE_ICON
 from app.main.styles import inject_css
-from app.main.utils.constants import APP_NAME, PAGE_ICON, PAGE_LAYOUT
+from app.main.utils.constants import APP_NAME, PAGE_ICON, PAGE_LAYOUT, WINDOW_ICON
 
 
 def _render_router_page() -> None:
@@ -34,7 +34,7 @@ def _render_heatmap_page() -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title=APP_NAME, page_icon=PAGE_ICON, layout=PAGE_LAYOUT)
+    st.set_page_config(page_title=APP_NAME, page_icon=WINDOW_ICON, layout=PAGE_LAYOUT)
     inject_css()
     require_app_access()
 
