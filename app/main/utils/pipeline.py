@@ -26,7 +26,7 @@ def build_scenario_payload(session_state: Mapping[str, Any]) -> Dict[str, Any]:
         "allocation_mode": None if allocation_mode == "auto" else allocation_mode,
         "allocation_load_factor": allocation_load_factor,
         "truck_key": str(session_state.get("truck_key", "")),
-        "ors_profile": "driving-hgv",
+        "ors_profile": "driving-car",
         "overwrite_road": bool(session_state.get("overwrite_road", False)),
         "vessel_class": str(session_state.get("vessel_class", "")),
         "include_hoteling": bool(session_state.get("include_hoteling", True)),

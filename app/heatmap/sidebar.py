@@ -126,8 +126,8 @@ def _render_advanced(
     )
 
     st.markdown("##### Routing")
-    st.session_state["profile"] = "driving-hgv"
-    st.caption("Heatmap routing always requests `driving-hgv` and falls back to `driving-car` automatically when HGV cannot be solved.")
+    st.session_state["profile"] = "driving-car"
+    st.caption("Heatmap routing is locked to `driving-car` with 5s provider timeouts and no HTTP retries.")
     st.caption("Routes cache is never overwritten from the heatmap page.")
 
     st.markdown("##### Road")

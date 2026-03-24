@@ -66,7 +66,7 @@ class Config:
     )
 
     # --- Routing Defaults ---
-    ors_profile: str = "driving-hgv"
+    ors_profile: str = "driving-car"
     ors_fallback_profile: str = "driving-car"
     
     # --- Project Context ---
@@ -102,9 +102,9 @@ class ProjectConfig:
 @dataclass(frozen=True)
 class RoutingDefaults:
     """Legacy: Generic routing-related defaults."""
-    primary_profile: str = "driving-hgv"
+    primary_profile: str = "driving-car"
     fallback_profile: str = "driving-car"
-    enable_fallback: bool = True
+    enable_fallback: bool = False
 
 # Global instances for modules that haven't migrated to 'Config' yet
 PROJECT_CONFIG = ProjectConfig()

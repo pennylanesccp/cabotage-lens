@@ -28,7 +28,7 @@ DEFAULTS: Dict[str, Any] = {
     "destiny": "Manaus, AM",
     "cargo_t": 30.0,
     "cargo_teu_input": 0.0,
-    "profile": "driving-hgv",
+    "profile": "driving-car",
     "overwrite_road": False,
     "truck_key": sorted(list_truck_keys())[0] if list_truck_keys() else "semi_27t",
     "vessel_class": DEFAULT_VESSEL_CLASS,

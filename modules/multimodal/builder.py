@@ -258,7 +258,7 @@ def build_path_geometry_from_resolved(
     ors: ORSClient,
     ports: list[Dict[str, Any]],
     sea_matrix: SeaMatrix,
-    ors_profile: str = "driving-hgv",
+    ors_profile: str = "driving-car",
     overwrite_road: bool = False,
     db_path: Optional[Path | str] = None,
     port_origin: Optional[Dict[str, Any]] = None,
@@ -323,7 +323,7 @@ def build_path_geometry(
     origin_input: Any,
     destiny_input: Any,
     *,
-    ors_profile: str = "driving-hgv",
+    ors_profile: str = "driving-car",
     overwrite_road: bool = False,
     ports_json_path: Optional[Path] = None,
     sea_matrix_path: Optional[Path] = None,
@@ -387,7 +387,7 @@ if __name__ == "__main__":
     result = build_path_geometry(
         "Avenida Professor Luciano Gualberto, Sao Paulo",
         "Manaus, AM",
-        ors_profile="driving-hgv",
+        ors_profile="driving-car",
     )
 
     if result:

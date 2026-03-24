@@ -101,7 +101,7 @@ def main() -> int:
     parser.add_argument("--cargo", type=float, default=27.0, help="Cargo mass in tonnes")
 
     parser.add_argument("--truck", default="semi_27t", help="Truck spec key")
-    parser.add_argument("--profile", default="driving-hgv", help="ORS routing profile")
+    parser.add_argument("--profile", default="driving-car", help="ORS routing profile")
     parser.add_argument("--overwrite", action="store_true", help="Force fresh routing")
     parser.add_argument(
         "--vessel-class",

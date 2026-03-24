@@ -53,6 +53,8 @@ ProgressCallback = Callable[[Dict[str, Any]], None]
 
 _APPROX_ROUTE_SOURCE = "nearest_exact_delta_straight_line"
 _MIN_APPROX_ROAD_DISTANCE_KM = 1.0
+_DEFAULT_RUNTIME_PROFILE = "driving-car"
+_HGV_PROFILE = "driving-hgv"
 _RETRYABLE_FAILURE_STATUSES = frozenset({"rate_limited", "timeout", "network_error"})
 _TERMINAL_FAILURE_STATUSES = frozenset(
     {
@@ -94,6 +96,9 @@ class PendingApproximation:
     geo: Dict[str, Any]
     failure_status: str
     error_message: str
+    failure_step: Optional[str] = None
+    failure_system: Optional[str] = None
+    failure_provider: Optional[str] = None
 
 
 @dataclass
@@ -110,6 +115,9 @@ class DestinationWorkItem:
     geo: Optional[Dict[str, Any]] = None
     failure_status: Optional[str] = None
     error_message: Optional[str] = None
+    failure_step: Optional[str] = None
+    failure_system: Optional[str] = None
+    failure_provider: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -124,7 +132,7 @@ class RouteRequestSpec:
         return (
             ascii_place_key(self.origin.get("label")),
             ascii_place_key(self.destiny.get("label")),
-            str(self.profile).strip().lower() or "driving-hgv",
+            str(self.profile).strip().lower() or _DEFAULT_RUNTIME_PROFILE,
         )
 
     @property
@@ -140,7 +148,7 @@ class RouteRequestSpec:
             float(origin_lon),
             float(destiny_lat),
             float(destiny_lon),
-            str(self.profile).strip().lower() or "driving-hgv",
+            str(self.profile).strip().lower() or _DEFAULT_RUNTIME_PROFILE,
         )
 
     @property
@@ -203,7 +211,7 @@ class NearestPortMemo:
 
 
 def _cache_leg_from_row(row: Dict[str, Any]) -> Dict[str, Any]:
-    requested_profile = str(row.get("profile_requested") or "driving-hgv")
+    requested_profile = str(row.get("profile_requested") or _DEFAULT_RUNTIME_PROFILE)
     return {
         "id": row.get("id"),
         "route_id": row.get("id"),
@@ -232,7 +240,7 @@ class RouteRequestCoordinator:
         perf: BulkPerformanceTracker,
     ) -> None:
         self._ors = ors
-        self._profile = str(profile).strip().lower() or "driving-hgv"
+        self._profile = str(profile).strip().lower() or _DEFAULT_RUNTIME_PROFILE
         self._overwrite = bool(overwrite)
         self._perf = perf
         self._label_cache: dict[tuple[str, str, str], Dict[str, Any]] = {}
@@ -251,7 +259,7 @@ class RouteRequestCoordinator:
         if origin_key is None or destiny_key is None:
             return None
         return (
-            str(coord_key[4]).strip().lower() or "driving-hgv",
+            str(coord_key[4]).strip().lower() or _DEFAULT_RUNTIME_PROFILE,
             f"{origin_key[0]},{origin_key[1]}",
             f"{destiny_key[0]},{destiny_key[1]}",
         )
@@ -304,13 +312,13 @@ class RouteRequestCoordinator:
                     spec.origin,
                     spec.destiny,
                     self._profile,
-                    True,
+                    False,
                 )
             leg = {
                 "origin_name": spec.origin.get("label"),
                 "destiny_name": spec.destiny.get("label"),
                 "distance_km": distance_km,
-                "is_hgv": (None if distance_km is None or profile_used is None else profile_used == "driving-hgv"),
+                "is_hgv": (None if distance_km is None or profile_used is None else profile_used == _HGV_PROFILE),
                 "profile_requested": self._profile,
                 "profile_used": profile_used,
                 "cached": False,
@@ -604,17 +612,24 @@ def _build_failure_summary_row(
     error_message: str,
     route_source: Optional[str] = None,
     approximation_notes: Optional[str] = None,
+    is_approximation: bool = False,
+    failure_step: Optional[str] = None,
+    failure_system: Optional[str] = None,
+    failure_provider: Optional[str] = None,
 ) -> Dict[str, Any]:
     return {
         "destiny_input": destiny_input,
         "destiny_name": destiny_name,
         "status": status,
-        "is_approximation": False,
+        "is_approximation": bool(is_approximation),
         "route_source": route_source,
         "approximation_reference_destiny": None,
         "approximation_reference_distance_km": None,
         "approximation_delta_straight_line_km": None,
         "approximation_notes": approximation_notes,
+        "failure_step": failure_step,
+        "failure_system": failure_system,
+        "failure_provider": failure_provider,
         "error_msg": error_message,
     }
 

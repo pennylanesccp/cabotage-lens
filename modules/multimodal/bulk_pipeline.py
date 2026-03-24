@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -53,6 +54,127 @@ from modules.multimodal.scenario_keys import build_bulk_scenario_key
 
 _log = get_logger(__name__)
 
+_STEP_LABELS: dict[str, str] = {
+    "bootstrap": "bootstrap",
+    "origin_alias_cache": "origin alias cache lookup",
+    "origin_geocoding": "origin geocoding",
+    "nearest_port_origin": "nearest port origin",
+    "routing_origin_to_port_origin": "routing origin to port origin",
+    "destination_alias_cache": "destination alias cache lookup",
+    "destination_geocoding": "destination geocoding",
+    "nearest_port_destiny": "nearest port destiny",
+    "routing_road_only": "routing road only",
+    "routing_port_destiny_to_destiny": "routing port destiny to destiny",
+    "geometry_acquisition": "geometry acquisition",
+    "calculating_costs_emissions": "calculating costs and emissions",
+    "approximation_fallback": "approximation fallback",
+    "persist_results": "database persistence",
+    "start_bulk_run": "bulk run registration",
+    "finish_bulk_run": "bulk run completion",
+}
+_LEG_FAILURE_STEPS: dict[str, str] = {
+    "road_direct": "routing_road_only",
+    "first_mile": "routing_origin_to_port_origin",
+    "last_mile": "routing_port_destiny_to_destiny",
+}
+
+
+class _BulkStepError(RuntimeError):
+    def __init__(
+        self,
+        *,
+        step: str,
+        system: str,
+        error: Exception,
+        provider: Optional[str] = None,
+    ) -> None:
+        message = str(error).strip() or error.__class__.__name__
+        super().__init__(message)
+        self.step = str(step).strip() or "bootstrap"
+        self.system = str(system).strip() or "application"
+        self.provider = (None if provider in (None, "") else str(provider).strip())
+        self.original = error
+
+
+def _step_label(step: Optional[str]) -> str:
+    key = str(step or "").strip()
+    if not key:
+        return "unknown"
+    return _STEP_LABELS.get(key, key.replace("_", " "))
+
+
+def _format_log_fields(**fields: Any) -> str:
+    parts: list[str] = []
+    for key, value in fields.items():
+        if value in (None, ""):
+            continue
+        parts.append(f"{key}={value}")
+    return " ".join(parts)
+
+
+def _log_step_banner(step: str, **fields: Any) -> None:
+    details = _format_log_fields(**fields)
+    if details:
+        _log.info("=== BULK STEP %s (%s) %s ===", step, _step_label(step), details)
+        return
+    _log.info("=== BULK STEP %s (%s) ===", step, _step_label(step))
+
+
+def _failure_step(exc: Exception, *, default: str) -> str:
+    return str(getattr(exc, "step", None) or default).strip() or default
+
+
+def _failure_system(exc: Exception, *, default: str) -> str:
+    return str(getattr(exc, "system", None) or default).strip() or default
+
+
+def _failure_provider(exc: Exception) -> Optional[str]:
+    provider = getattr(exc, "provider", None)
+    if provider not in (None, ""):
+        return str(provider).strip()
+    provider_name = getattr(exc, "provider_name", None)
+    if provider_name not in (None, ""):
+        return str(provider_name).strip()
+    provider_names = getattr(exc, "provider_names", None)
+    if isinstance(provider_names, (list, tuple)):
+        names = [str(name).strip() for name in provider_names if str(name).strip()]
+        if names:
+            return ",".join(names)
+    return None
+
+
+def _route_provider_for_step(geo: Optional[Dict[str, Any]], step: Optional[str]) -> Optional[str]:
+    if not isinstance(geo, dict):
+        return None
+    leg_name = {
+        "routing_origin_to_port_origin": "first_mile",
+        "routing_road_only": "road_direct",
+        "routing_port_destiny_to_destiny": "last_mile",
+    }.get(str(step or "").strip())
+    if leg_name is None:
+        return None
+    leg = geo.get(leg_name)
+    if not isinstance(leg, dict):
+        return None
+    provider = leg.get("provider") or leg.get("source")
+    return None if provider in (None, "") else str(provider).strip()
+
+
+def _assign_destination_failure(
+    item: DestinationWorkItem,
+    *,
+    status: str,
+    error_message: str,
+    step: str,
+    system: str,
+    provider: Optional[str] = None,
+) -> None:
+    item.failure_status = status
+    item.error_message = error_message
+    item.failure_step = step
+    item.failure_system = system
+    item.failure_provider = provider
+
 
 def _format_point_coords(point: Optional[Dict[str, Any]]) -> str:
     if not isinstance(point, dict):
@@ -105,10 +227,14 @@ def _log_destination_failure_context(
     destiny_point = item.point if isinstance(item.point, dict) else None
     _log.warning(
         (
-            "Bulk destination failure phase=%s route=%s@%s -> %s@%s input_destiny=%s status=%s "
-            "point_source=%s ports=%s -> %s %s %s error=%s"
+            "Bulk destination failure phase=%s step=%s step_label=%s system=%s provider=%s "
+            "route=%s@%s -> %s@%s input_destiny=%s status=%s point_source=%s ports=%s -> %s %s %s error=%s"
         ),
         phase,
+        item.failure_step or "<unknown>",
+        _step_label(item.failure_step),
+        item.failure_system or "<unknown>",
+        item.failure_provider or "<unknown>",
         origin_pt.get("label") or "<origin>",
         _format_point_coords(origin_pt),
         item.destiny_name or item.destiny_input,
@@ -189,8 +315,9 @@ def _format_failed_destinies(
         status = str(row.get("status") or "").strip().lower() or "unknown"
         if status == "ok":
             continue
+        step = _step_label(row.get("failure_step"))
         destiny = str(row.get("destiny_name") or row.get("input_destiny") or "").strip() or "<unknown>"
-        bucket = grouped.setdefault(status, [])
+        bucket = grouped.setdefault(f"{step}/{status}", [])
         if destiny not in bucket:
             bucket.append(destiny)
 
@@ -204,6 +331,39 @@ def _format_failed_destinies(
         if len(destinies) > len(shown):
             suffix = f" (+{len(destinies) - len(shown)} more)"
         segments.append(f"{status}=[{'; '.join(shown)}]{suffix}")
+    return "; ".join(segments)
+
+
+def _format_failure_breakdown(summary_rows: List[Dict[str, Any]], *, max_steps: int = 8) -> str:
+    breakdown: dict[str, dict[str, int]] = defaultdict(dict)
+    providers_by_step: dict[str, set[str]] = defaultdict(set)
+
+    for row in summary_rows:
+        status = str(row.get("status") or "").strip().lower() or "unknown"
+        if status == "ok":
+            continue
+        step = _step_label(row.get("failure_step"))
+        step_counts = breakdown.setdefault(step, {})
+        step_counts[status] = step_counts.get(status, 0) + 1
+        provider = str(row.get("failure_provider") or "").strip()
+        if provider:
+            providers_by_step.setdefault(step, set()).add(provider)
+
+    if not breakdown:
+        return "none"
+
+    segments: list[str] = []
+    ordered = sorted(
+        breakdown.items(),
+        key=lambda item: (-sum(item[1].values()), item[0]),
+    )[:max_steps]
+    for step, counts in ordered:
+        counts_text = ", ".join(f"{status}={count}" for status, count in sorted(counts.items()))
+        providers = sorted(providers_by_step.get(step, set()))
+        provider_text = ""
+        if providers:
+            provider_text = f" providers={','.join(providers)}"
+        segments.append(f"{step}[{counts_text}]{provider_text}")
     return "; ".join(segments)
 
 
@@ -233,7 +393,7 @@ def _apply_destination_point_reuse(
         if cached is not None:
             item.point = _point_from_cached_record(cached)
             item.destiny_name = item.point["label"]
-            item.point_source = "place_cache"
+            item.point_source = "location_alias_cache"
             perf.incr("destination_cache_hits")
             continue
 
@@ -338,6 +498,7 @@ def run_bulk_evaluation_pipeline(
     fail_count = 0
     run_id: Optional[str] = None
     selector_hash_value: Optional[str] = None
+    active_run_step = "bootstrap"
 
     started_global = time.perf_counter()
     ors, ports, sea_matrix, resolved_db_path = load_routing_assets(db_path=db_path)
@@ -358,7 +519,8 @@ def run_bulk_evaluation_pipeline(
     _log.info(
         (
             "Starting staged bulk evaluation origin=%r requested=%d unique=%d destination_set=%s "
-            "shuffle=%s shuffle_seed=%s approximation_fallback=%s geocode_workers=%d route_workers=%d batch_size=%d"
+            "shuffle=%s shuffle_seed=%s approximation_fallback=%s geocode_workers=%d route_workers=%d batch_size=%d "
+            "profile=%s timeout_s=%s http_retries=%d"
         ),
         origin,
         requested_destination_count,
@@ -370,6 +532,17 @@ def run_bulk_evaluation_pipeline(
         int(max_geocode_workers),
         int(max_route_workers),
         int(persist_batch_size),
+        profile,
+        getattr(getattr(ors, "cfg", None), "timeout", None),
+        int(getattr(getattr(ors, "cfg", None), "retry_limit", 0) or 0),
+    )
+    _log_step_banner(
+        "bootstrap",
+        origin=origin_input_norm or origin,
+        destination_set=destination_set_id,
+        requested=requested_destination_count,
+        unique=len(shuffled_destinations),
+        profile=profile,
     )
     _emit_progress(
         progress_callback,
@@ -393,32 +566,38 @@ def run_bulk_evaluation_pipeline(
     def _flush_point_rows(conn: Any, rows: List[Dict[str, Any]]) -> None:
         if not rows:
             return
-        _ensure_live_connection(conn, context="place-point flush")
-        deduped = {}
-        for row in rows:
-            place = str(row.get("place") or "").strip()
-            if not place:
-                continue
-            deduped[place.casefold()] = row
-        if not deduped:
-            return
-        perf.incr("db_write_ops")
-        with perf.measure("db_write_s"):
-            upsert_place_points(conn, rows=deduped.values())
-            conn.commit()
-        perf.incr("place_points_persisted", len(deduped))
-        rows.clear()
+        try:
+            _ensure_live_connection(conn, context="place-point flush")
+            deduped = {}
+            for row in rows:
+                place = str(row.get("place") or "").strip()
+                if not place:
+                    continue
+                deduped[place.casefold()] = row
+            if not deduped:
+                return
+            perf.incr("db_write_ops")
+            with perf.measure("db_write_s"):
+                upsert_place_points(conn, rows=deduped.values())
+                conn.commit()
+            perf.incr("place_points_persisted", len(deduped))
+            rows.clear()
+        except Exception as exc:
+            raise _BulkStepError(step="persist_results", system="database", provider="postgres", error=exc) from exc
 
     def _flush_route_rows(conn: Any, rows: List[Dict[str, Any]]) -> None:
         if not rows:
             return
-        _ensure_live_connection(conn, context="route-cache flush")
-        perf.incr("db_write_ops")
-        with perf.measure("db_write_s"):
-            upsert_runs(conn, rows=rows)
-            conn.commit()
-        perf.incr("route_cache_rows_persisted", len(rows))
-        rows.clear()
+        try:
+            _ensure_live_connection(conn, context="route-cache flush")
+            perf.incr("db_write_ops")
+            with perf.measure("db_write_s"):
+                upsert_runs(conn, rows=rows)
+                conn.commit()
+            perf.incr("route_cache_rows_persisted", len(rows))
+            rows.clear()
+        except Exception as exc:
+            raise _BulkStepError(step="persist_results", system="database", provider="postgres", error=exc) from exc
 
     try:
         with db_session(resolved_db_path) as conn:
@@ -426,18 +605,45 @@ def run_bulk_evaluation_pipeline(
             point_rows_to_persist: list[Dict[str, Any]] = []
 
             with perf.measure("bootstrap_s"):
+                active_run_step = "origin_alias_cache"
+                _log_step_banner("origin_alias_cache", origin=origin_input_norm)
                 perf.incr("db_read_ops")
                 with perf.measure("db_read_s"):
                     origin_cached = find_place_point(conn, place=origin_input_norm)
                 if origin_cached:
                     origin_pt = _point_from_cached_record(origin_cached)
                     perf.incr("origin_cache_hits")
+                    _log.info(
+                        "Bulk origin alias cache hit origin=%s canonical=%s coords=%s",
+                        origin_input_norm,
+                        origin_pt["label"],
+                        _format_point_coords(origin_pt),
+                    )
                 else:
                     perf.incr("origin_cache_misses")
-                    with perf.measure("origin_geocode_s"):
-                        origin_pt = _resolve_point_without_db(origin, ors)
+                    active_run_step = "origin_geocoding"
+                    _log_step_banner(
+                        "origin_geocoding",
+                        origin=origin_input_norm,
+                        timeout_s="5/5",
+                        http_retries=0,
+                    )
+                    try:
+                        with perf.measure("origin_geocode_s"):
+                            origin_pt = _resolve_point_without_db(origin, ors)
+                    except Exception as exc:
+                        raise _BulkStepError(
+                            step="origin_geocoding",
+                            system="geocoding",
+                            provider=_failure_provider(exc),
+                            error=exc,
+                        ) from exc
                     if not origin_pt:
-                        raise RuntimeError(f"Failed to resolve bulk origin: {origin}")
+                        raise _BulkStepError(
+                            step="origin_geocoding",
+                            system="geocoding",
+                            error=RuntimeError(f"Failed to resolve bulk origin: {origin}"),
+                        )
                     point_rows_to_persist.append(
                         {
                             "place": origin_input_norm,
@@ -449,7 +655,17 @@ def run_bulk_evaluation_pipeline(
                         }
                     )
 
-                origin_port = nearest_port_memo.resolve(origin_pt, perf)
+                active_run_step = "nearest_port_origin"
+                _log_step_banner("nearest_port_origin", origin=origin_pt["label"])
+                try:
+                    origin_port = nearest_port_memo.resolve(origin_pt, perf)
+                except Exception as exc:
+                    raise _BulkStepError(
+                        step="nearest_port_origin",
+                        system="ports",
+                        provider="nearest_port_lookup",
+                        error=exc,
+                    ) from exc
                 origin_port_node = build_port_node(origin_port)
                 route_coordinator = RouteRequestCoordinator(
                     ors,
@@ -463,9 +679,38 @@ def run_bulk_evaluation_pipeline(
                     destiny=origin_port_node,
                     profile=profile,
                 )
+                active_run_step = "routing_origin_to_port_origin"
+                _log_step_banner(
+                    "routing_origin_to_port_origin",
+                    origin=origin_pt["label"],
+                    port_origin=origin_port.get("name"),
+                    profile=profile,
+                )
                 route_coordinator.prime(conn, [first_mile_spec])
-                first_mile_leg = route_coordinator.resolve(first_mile_spec)
-                _require_distance(first_mile_leg, "first_mile")
+                try:
+                    first_mile_leg = route_coordinator.resolve(first_mile_spec)
+                    _require_distance(first_mile_leg, "first_mile")
+                except Exception as exc:
+                    raise _BulkStepError(
+                        step="routing_origin_to_port_origin",
+                        system="routing",
+                        provider=_failure_provider(exc),
+                        error=exc,
+                    ) from exc
+                _log.info(
+                    (
+                        "Bulk origin first-mile route origin=%s port_origin=%s km=%.1f source=%s "
+                        "profile_used=%s cached=%s"
+                    ),
+                    origin_pt["label"],
+                    origin_port.get("name"),
+                    float(first_mile_leg.get("distance_km") or 0.0),
+                    first_mile_leg.get("source") or "<none>",
+                    first_mile_leg.get("profile_used") or profile,
+                    first_mile_leg.get("cached"),
+                )
+                active_run_step = "persist_results"
+                _log_step_banner("persist_results", target="location_aliases+route_cache")
                 _flush_route_rows(conn, route_coordinator.drain_pending_rows())
                 _flush_point_rows(conn, point_rows_to_persist)
                 origin_cached_point = find_place_point(conn, place=origin_input_norm)
@@ -521,18 +766,33 @@ def run_bulk_evaluation_pipeline(
                     ),
                 }
 
-                perf.incr("db_write_ops")
-                with perf.measure("db_write_s"):
-                    run_id = start_bulk_run(
-                        conn,
-                        selector=run_selector,
-                        origin_name=origin_pt["label"],
-                        input_origin=origin_input_norm,
-                        destination_count=len(shuffled_destinations),
-                        origin_location_id=int(origin_location_id),
-                        table_name=runs_table,
-                    )
-                    conn.commit()
+                active_run_step = "start_bulk_run"
+                _log_step_banner(
+                    "start_bulk_run",
+                    origin=origin_pt["label"],
+                    destination_set=destination_set_id,
+                    cargo_t=f"{cargo_t:.3f}",
+                )
+                try:
+                    perf.incr("db_write_ops")
+                    with perf.measure("db_write_s"):
+                        run_id = start_bulk_run(
+                            conn,
+                            selector=run_selector,
+                            origin_name=origin_pt["label"],
+                            input_origin=origin_input_norm,
+                            destination_count=len(shuffled_destinations),
+                            origin_location_id=int(origin_location_id),
+                            table_name=runs_table,
+                        )
+                        conn.commit()
+                except Exception as exc:
+                    raise _BulkStepError(
+                        step="start_bulk_run",
+                        system="database",
+                        provider="postgres",
+                        error=exc,
+                    ) from exc
                 set_log_context(
                     run_id=str(run_id),
                     selector_hash=selector_hash_value,
@@ -596,6 +856,8 @@ def run_bulk_evaluation_pipeline(
                 message="Phase 1/4 destination normalization and resolution",
             )
 
+            active_run_step = "destination_alias_cache"
+            _log_step_banner("destination_alias_cache", destinations=len(work_items))
             perf.incr("db_read_ops")
             with perf.measure("db_read_s"):
                 cached_points = list_cached_place_points(conn, places=[item.normalized_input for item in work_items])
@@ -642,6 +904,14 @@ def run_bulk_evaluation_pipeline(
 
             if unresolved_items:
                 workers = max(1, min(int(max_geocode_workers), len(unresolved_items)))
+                active_run_step = "destination_geocoding"
+                _log_step_banner(
+                    "destination_geocoding",
+                    unresolved=len(unresolved_items),
+                    workers=workers,
+                    timeout_s="5/5",
+                    http_retries=0,
+                )
                 with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="bulk-geocode") as executor:
                     futures = [executor.submit(_resolve_destination, item) for item in unresolved_items]
                     completed = 0
@@ -651,8 +921,14 @@ def run_bulk_evaluation_pipeline(
                         completed += 1
                         if error is not None:
                             failure_status, failure_message, _ = _classify_failure(error)
-                            item.failure_status = failure_status
-                            item.error_message = failure_message
+                            _assign_destination_failure(
+                                item,
+                                status=failure_status,
+                                error_message=failure_message,
+                                step="destination_geocoding",
+                                system="geocoding",
+                                provider=_failure_provider(error),
+                            )
                             _log_destination_failure_context(
                                 phase="resolution",
                                 origin_pt=origin_pt,
@@ -662,15 +938,20 @@ def run_bulk_evaluation_pipeline(
                                 error_message=failure_message,
                             )
                         elif point is None:
-                            item.failure_status = "geocode_failed"
-                            item.error_message = f"Failed to resolve destination: {item.destiny_input}"
+                            _assign_destination_failure(
+                                item,
+                                status="geocode_failed",
+                                error_message=f"Failed to resolve destination: {item.destiny_input}",
+                                step="destination_geocoding",
+                                system="geocoding",
+                            )
                             _log_destination_failure_context(
                                 phase="resolution",
                                 origin_pt=origin_pt,
                                 origin_port=origin_port,
                                 item=item,
-                                status=item.failure_status,
-                                error_message=item.error_message,
+                                status=item.failure_status or "geocode_failed",
+                                error_message=item.error_message or f"Failed to resolve destination: {item.destiny_input}",
                             )
                         else:
                             item.point = point
@@ -699,7 +980,7 @@ def run_bulk_evaluation_pipeline(
             _flush_point_rows(conn, point_rows_to_persist)
             _log.info(
                 (
-                    "Bulk destination resolution summary run_id=%s total=%d cache_hits=%.0f cache_misses=%.0f "
+                    "Bulk destination resolution summary run_id=%s total=%d alias_cache_hits=%.0f alias_cache_misses=%.0f "
                     "latest_result_hits=%.0f historical_result_hits=%.0f geocode_attempts=%d failures=%d"
                 ),
                 run_id,
@@ -721,21 +1002,29 @@ def run_bulk_evaluation_pipeline(
                 message="Phase 2/4 geometry and routing acquisition",
             )
 
+            active_run_step = "nearest_port_destiny"
+            _log_step_banner("nearest_port_destiny", destinations=len(geometry_items))
             route_specs: list[RouteRequestSpec] = []
             for item in geometry_items:
                 assert item.point is not None
                 try:
                     item.port_destiny = nearest_port_memo.resolve(item.point, perf)
                 except Exception as exc:  # pragma: no cover - defensive worker isolation
-                    item.failure_status = "nearest_port_failed"
-                    item.error_message = str(exc).strip() or "Nearest-port lookup failed"
+                    _assign_destination_failure(
+                        item,
+                        status="nearest_port_failed",
+                        error_message=str(exc).strip() or "Nearest-port lookup failed",
+                        step="nearest_port_destiny",
+                        system="ports",
+                        provider="nearest_port_lookup",
+                    )
                     _log_destination_failure_context(
                         phase="nearest_port",
                         origin_pt=origin_pt,
                         origin_port=origin_port,
                         item=item,
-                        status=item.failure_status,
-                        error_message=item.error_message,
+                        status=item.failure_status or "nearest_port_failed",
+                        error_message=item.error_message or "Nearest-port lookup failed",
                     )
                     continue
                 route_specs.append(RouteRequestSpec("road_direct", origin_pt, item.point, profile))
@@ -743,6 +1032,19 @@ def run_bulk_evaluation_pipeline(
             routable_items = [
                 item for item in geometry_items if item.failure_status is None and item.port_destiny is not None
             ]
+            active_run_step = "routing_road_only"
+            _log_step_banner(
+                "routing_road_only",
+                destinations=len(routable_items),
+                workers=max(1, min(int(max_route_workers), len(routable_items))) if routable_items else 0,
+                profile=profile,
+            )
+            _log_step_banner(
+                "routing_port_destiny_to_destiny",
+                destinations=len(routable_items),
+                workers=max(1, min(int(max_route_workers), len(routable_items))) if routable_items else 0,
+                profile=profile,
+            )
             route_coordinator.prime(conn, route_specs)
             geometry_log_context = get_log_context()
 
@@ -753,6 +1055,21 @@ def run_bulk_evaluation_pipeline(
                 try:
                     assert item.point is not None
                     assert item.port_destiny is not None
+
+                    def _resolve_geometry_leg(start: Dict[str, Any], end: Dict[str, Any], leg_name: str):
+                        step = _LEG_FAILURE_STEPS.get(leg_name, "geometry_acquisition")
+                        try:
+                            return route_coordinator.resolve(
+                                RouteRequestSpec(leg_name=leg_name, origin=start, destiny=end, profile=profile)
+                            )
+                        except Exception as exc:
+                            raise _BulkStepError(
+                                step=step,
+                                system="routing",
+                                provider=_failure_provider(exc),
+                                error=exc,
+                            ) from exc
+
                     geometry = build_path_geometry_from_resolved(
                         origin_pt,
                         item.point,
@@ -765,9 +1082,7 @@ def run_bulk_evaluation_pipeline(
                         port_origin=origin_port,
                         port_destiny=item.port_destiny,
                         first_mile_leg=first_mile_leg,
-                        route_resolver=lambda start, end, leg_name: route_coordinator.resolve(
-                            RouteRequestSpec(leg_name=leg_name, origin=start, destiny=end, profile=profile)
-                        ),
+                        route_resolver=_resolve_geometry_leg,
                     )
                     return item, geometry, None, (time.perf_counter() - started)
                 except Exception as exc:  # pragma: no cover - defensive worker isolation
@@ -784,8 +1099,14 @@ def run_bulk_evaluation_pipeline(
                         completed += 1
                         if error is not None:
                             failure_status, failure_message, _ = _classify_failure(error)
-                            item.failure_status = failure_status
-                            item.error_message = failure_message
+                            _assign_destination_failure(
+                                item,
+                                status=failure_status,
+                                error_message=failure_message,
+                                step=_failure_step(error, default="geometry_acquisition"),
+                                system=_failure_system(error, default="routing"),
+                                provider=_failure_provider(error),
+                            )
                             _log_destination_failure_context(
                                 phase="geometry",
                                 origin_pt=origin_pt,
@@ -796,15 +1117,20 @@ def run_bulk_evaluation_pipeline(
                                 geo=geometry,
                             )
                         elif not geometry or geometry.get("status") != "ok":
-                            item.failure_status = "geometry_failed"
-                            item.error_message = "Geometry build failed"
+                            _assign_destination_failure(
+                                item,
+                                status="geometry_failed",
+                                error_message="Geometry build failed",
+                                step="geometry_acquisition",
+                                system="routing",
+                            )
                             _log_destination_failure_context(
                                 phase="geometry",
                                 origin_pt=origin_pt,
                                 origin_port=origin_port,
                                 item=item,
-                                status=item.failure_status,
-                                error_message=item.error_message,
+                                status=item.failure_status or "geometry_failed",
+                                error_message=item.error_message or "Geometry build failed",
                                 geo=geometry,
                             )
                         else:
@@ -846,6 +1172,8 @@ def run_bulk_evaluation_pipeline(
                 perf=perf,
             )
 
+            active_run_step = "calculating_costs_emissions"
+            _log_step_banner("calculating_costs_emissions", destinations=len(work_items))
             with perf.measure("exact_pass_s"):
                 for item in work_items:
                     geo = item.geo
@@ -903,14 +1231,29 @@ def run_bulk_evaluation_pipeline(
                                     item.destiny_name or item.destiny_input,
                                     status=failure_status,
                                     error_message=failure_message,
+                                    failure_step=item.failure_step,
+                                    failure_system=item.failure_system,
+                                    failure_provider=item.failure_provider,
                                 )
                             )
                             fail_count += 1
                             unresolved_fail_count += 1
                             continue
                         if not geo or geo.get("status") != "ok":
-                            raise RuntimeError("Geometry build failed")
-                        _require_distance(geo["last_mile"], "last_mile")
+                            raise _BulkStepError(
+                                step="geometry_acquisition",
+                                system="routing",
+                                error=RuntimeError("Geometry build failed"),
+                            )
+                        try:
+                            _require_distance(geo["last_mile"], "last_mile")
+                        except Exception as exc:
+                            raise _BulkStepError(
+                                step="routing_port_destiny_to_destiny",
+                                system="routing",
+                                provider=_route_provider_for_step(geo, "routing_port_destiny_to_destiny"),
+                                error=exc,
+                            ) from exc
                         if geo["road_direct"].get("distance_km") is None:
                             if approximation_fallback:
                                 pending_approximations.append(
@@ -923,28 +1266,43 @@ def run_bulk_evaluation_pipeline(
                                         geo=geo,
                                         failure_status="no_road_route",
                                         error_message="road_direct road distance is unavailable",
+                                        failure_step="routing_road_only",
+                                        failure_system="routing",
+                                        failure_provider=_route_provider_for_step(geo, "routing_road_only"),
                                     )
                                 )
                                 continue
-                            raise RuntimeError("road_direct road distance is unavailable")
-                        res, flat = _evaluate_and_flatten(
-                            geo,
-                            origin_name=origin_pt["label"],
-                            destiny_name=item.destiny_name,
-                            evaluation_kwargs=evaluation_kwargs,
-                        )
+                            raise _BulkStepError(
+                                step="routing_road_only",
+                                system="routing",
+                                provider=_route_provider_for_step(geo, "routing_road_only"),
+                                error=RuntimeError("road_direct road distance is unavailable"),
+                            )
+                        try:
+                            res, flat = _evaluate_and_flatten(
+                                geo,
+                                origin_name=origin_pt["label"],
+                                destiny_name=item.destiny_name,
+                                evaluation_kwargs=evaluation_kwargs,
+                            )
+                        except Exception as exc:
+                            raise _BulkStepError(
+                                step="calculating_costs_emissions",
+                                system="evaluation",
+                                error=exc,
+                            ) from exc
                         route_source = _route_source_for_result(geo, is_approximation=False)
                         bulk_row, run_row = _build_bulk_outcome_rows(
                             run_id=str(run_id),
                             destination_set_id=destination_set_id,
-                                scenario_key=item.scenario_key,
-                                input_origin=item.scenario_payload["input_origin"],
-                                input_destiny=item.scenario_payload["input_destiny"],
-                                origin_location_id=origin_pt.get("location_id"),
-                                destination_location_id=(None if item.point is None else item.point.get("location_id")),
-                                origin_name=origin_pt["label"],
-                                destiny_name=item.destiny_name,
-                                truck_key=truck_key,
+                            scenario_key=item.scenario_key,
+                            input_origin=item.scenario_payload["input_origin"],
+                            input_destiny=item.scenario_payload["input_destiny"],
+                            origin_location_id=origin_pt.get("location_id"),
+                            destination_location_id=(None if item.point is None else item.point.get("location_id")),
+                            origin_name=origin_pt["label"],
+                            destiny_name=item.destiny_name,
+                            truck_key=truck_key,
                             ors_profile=profile,
                             cargo_t=cargo_t,
                             vessel_class=vessel_class,
@@ -987,6 +1345,15 @@ def run_bulk_evaluation_pipeline(
                         fail_count += 1
                         unresolved_fail_count += 1
                         failure_status, failure_message, log_trace = _classify_failure(exc)
+                        failure_step = _failure_step(exc, default="calculating_costs_emissions")
+                        _assign_destination_failure(
+                            item,
+                            status=failure_status,
+                            error_message=failure_message,
+                            step=failure_step,
+                            system=_failure_system(exc, default="evaluation"),
+                            provider=(_failure_provider(exc) or _route_provider_for_step(geo, failure_step)),
+                        )
                         if log_trace:
                             _log.error("Bulk destination failed: %s", failure_message, exc_info=True)
                         _log_destination_failure_context(
@@ -1001,14 +1368,14 @@ def run_bulk_evaluation_pipeline(
                         bulk_row, run_row = _build_bulk_outcome_rows(
                             run_id=str(run_id),
                             destination_set_id=destination_set_id,
-                                scenario_key=item.scenario_key,
-                                input_origin=item.scenario_payload["input_origin"],
-                                input_destiny=item.scenario_payload["input_destiny"],
-                                origin_location_id=origin_pt.get("location_id"),
-                                destination_location_id=(None if item.point is None else item.point.get("location_id")),
-                                origin_name=origin_pt["label"],
-                                destiny_name=item.destiny_name or item.destiny_input,
-                                truck_key=truck_key,
+                            scenario_key=item.scenario_key,
+                            input_origin=item.scenario_payload["input_origin"],
+                            input_destiny=item.scenario_payload["input_destiny"],
+                            origin_location_id=origin_pt.get("location_id"),
+                            destination_location_id=(None if item.point is None else item.point.get("location_id")),
+                            origin_name=origin_pt["label"],
+                            destiny_name=item.destiny_name or item.destiny_input,
+                            truck_key=truck_key,
                             ors_profile=profile,
                             cargo_t=cargo_t,
                             vessel_class=vessel_class,
@@ -1035,6 +1402,9 @@ def run_bulk_evaluation_pipeline(
                                 item.destiny_name or item.destiny_input,
                                 status=failure_status,
                                 error_message=failure_message,
+                                failure_step=item.failure_step,
+                                failure_system=item.failure_system,
+                                failure_provider=item.failure_provider,
                             )
                         )
                     finally:
@@ -1052,9 +1422,12 @@ def run_bulk_evaluation_pipeline(
                             pending_approximations=len(pending_approximations),
                         )
 
+            active_run_step = "persist_results"
             persistence.flush()
 
             if pending_approximations:
+                active_run_step = "approximation_fallback"
+                _log_step_banner("approximation_fallback", pending=len(pending_approximations))
                 _emit_progress(
                     progress_callback,
                     phase="approximation_start",
@@ -1147,6 +1520,8 @@ def run_bulk_evaluation_pipeline(
                         unresolved_fail_count += 1
                         approximation_failure = str(exc).strip() or "Approximation fallback failed"
                         combined_error = f"{pending.error_message}; {approximation_failure}"
+                        failure_step = "approximation_fallback"
+                        failure_provider = _failure_provider(exc) or pending.failure_provider
                         _log_destination_failure_context(
                             phase="approximation",
                             origin_pt=origin_pt,
@@ -1162,6 +1537,9 @@ def run_bulk_evaluation_pipeline(
                                 point_source=pending.geo.get("destiny", {}).get("source"),
                                 port_destiny=pending.geo.get("port_destiny"),
                                 geo=pending.geo,
+                                failure_step=failure_step,
+                                failure_system="approximation",
+                                failure_provider=failure_provider,
                             ),
                             status=pending.failure_status,
                             error_message=combined_error,
@@ -1205,6 +1583,10 @@ def run_bulk_evaluation_pipeline(
                                 status=pending.failure_status,
                                 error_message=combined_error,
                                 approximation_notes=approximation_failure,
+                                is_approximation=True,
+                                failure_step=failure_step,
+                                failure_system="approximation",
+                                failure_provider=failure_provider,
                             )
                         )
                     finally:
@@ -1221,41 +1603,63 @@ def run_bulk_evaluation_pipeline(
                             approximated_success_count=approximated_success_count,
                         )
 
+            active_run_step = "persist_results"
             persistence.flush()
 
             duration = time.perf_counter() - started_global
             perf.add_duration("total_run_s", duration)
-            perf.incr("db_write_ops")
-            with perf.measure("db_write_s"):
-                finish_bulk_run(
-                    conn,
-                    run_id=str(run_id),
-                    status="completed",
-                    success_count=success_count,
-                    fail_count=fail_count,
-                    duration_s=duration,
-                    error_message=None,
-                    table_name=runs_table,
-                )
-                conn.commit()
-    except Exception as exc:
-        duration = time.perf_counter() - started_global
-        perf.add_duration("total_run_s", duration)
-        if run_id is not None:
-            with db_session(resolved_db_path) as conn:
+            active_run_step = "finish_bulk_run"
+            _log_step_banner("finish_bulk_run", run_id=run_id, status="completed")
+            try:
                 perf.incr("db_write_ops")
                 with perf.measure("db_write_s"):
                     finish_bulk_run(
                         conn,
                         run_id=str(run_id),
-                        status="failed",
+                        status="completed",
                         success_count=success_count,
                         fail_count=fail_count,
                         duration_s=duration,
-                        error_message=str(exc),
+                        error_message=None,
                         table_name=runs_table,
                     )
                     conn.commit()
+            except Exception as exc:
+                raise _BulkStepError(
+                    step="finish_bulk_run",
+                    system="database",
+                    provider="postgres",
+                    error=exc,
+                ) from exc
+    except Exception as exc:
+        duration = time.perf_counter() - started_global
+        perf.add_duration("total_run_s", duration)
+        _log.error(
+            "Bulk run failed step=%s step_label=%s system=%s provider=%s error=%s",
+            _failure_step(exc, default=active_run_step),
+            _step_label(_failure_step(exc, default=active_run_step)),
+            _failure_system(exc, default="application"),
+            _failure_provider(exc) or "<unknown>",
+            str(exc).strip() or exc.__class__.__name__,
+        )
+        if run_id is not None:
+            with db_session(resolved_db_path) as conn:
+                try:
+                    perf.incr("db_write_ops")
+                    with perf.measure("db_write_s"):
+                        finish_bulk_run(
+                            conn,
+                            run_id=str(run_id),
+                            status="failed",
+                            success_count=success_count,
+                            fail_count=fail_count,
+                            duration_s=duration,
+                            error_message=str(exc),
+                            table_name=runs_table,
+                        )
+                        conn.commit()
+                except Exception as finish_exc:
+                    _log.error("Bulk run failure status persistence failed: %s", finish_exc)
         _emit_progress(
             progress_callback,
             phase="error",
@@ -1277,6 +1681,7 @@ def run_bulk_evaluation_pipeline(
     performance["provider_calls"] = provider_calls
     status_counts = _status_counts(summary_rows)
     failed_destinies = _format_failed_destinies(summary_rows)
+    failure_breakdown = _format_failure_breakdown(summary_rows)
     top_failure_reasons = ", ".join(
         f"{status}={count}"
         for status, count in sorted(
@@ -1329,7 +1734,7 @@ def run_bulk_evaluation_pipeline(
     )
     _log.info(
         (
-            "Bulk evaluation summary run_id=%s requested=%d unique=%d address_cache_hits=%.0f address_cache_misses=%.0f "
+            "Bulk evaluation summary run_id=%s requested=%d unique=%d location_alias_cache_hits=%.0f location_alias_cache_misses=%.0f "
             "route_cache_hits=%.0f route_cache_misses=%.0f geocode_provider_calls=%.0f route_provider_calls=%.0f "
             "successes=%d failures=%d approximations=%d rows_persisted=%.0f workers=geocode:%d route:%d "
             "rate_limited=%.0f timeout=%.0f network_error=%.0f cooldown_skips=%.0f duration_s=%.2f"
@@ -1356,10 +1761,11 @@ def run_bulk_evaluation_pipeline(
         duration,
     )
     _log.info(
-        "Bulk failure summary run_id=%s top_failures=%s statuses=%s failed_destinies=%s",
+        "Bulk failure summary run_id=%s top_failures=%s statuses=%s by_step=%s failed_destinies=%s",
         run_id,
         top_failure_reasons,
         status_counts,
+        failure_breakdown,
         failed_destinies,
     )
     _log.info(
@@ -1379,5 +1785,6 @@ def run_bulk_evaluation_pipeline(
         "selector_hash": selector_hash_value,
         "shuffle_seed_used": shuffle_seed_used,
         "status_counts": status_counts,
+        "failure_breakdown": failure_breakdown,
         "performance": performance,
     }

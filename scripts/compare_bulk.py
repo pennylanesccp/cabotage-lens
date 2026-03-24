@@ -60,7 +60,7 @@ def main() -> int:
 
     parser.add_argument("--cargo", type=float, default=27.0, help="Cargo mass in tonnes")
     parser.add_argument("--truck", default="semi_27t", help="Truck profile")
-    parser.add_argument("--profile", default="driving-hgv", help="Routing profile")
+    parser.add_argument("--profile", default="driving-car", help="Routing profile")
     parser.add_argument("--overwrite", action="store_true", help="Force rerouting of road-distance cache")
     parser.add_argument(
         "--shuffle-destinations",

@@ -72,10 +72,10 @@ class LocationIQConfig:
     base_url: str = DEFAULT_BASE_URL
     cache_enabled: bool = True
     cache_ttl_s: int = 2_592_000
-    timeout: tuple[float, float] = (10.0, 12.0)
+    timeout: tuple[float, float] = (5.0, 5.0)
     retry_limit: int = 0
     default_country: str = "BR"
-    default_profile: str = "driving"
+    default_profile: str = "driving-car"
 
     def __post_init__(self) -> None:
         if not self.api_key:

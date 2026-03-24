@@ -70,7 +70,7 @@ def _current_scenario() -> HeatmapScenario:
         origin_name=str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
         cargo_t=float(st.session_state.get("heatmap_cargo", 30.0)),
         truck_key=str(st.session_state.get("truck_key", "")),
-        ors_profile="driving-hgv",
+        ors_profile="driving-car",
         vessel_class=str(st.session_state.get("vessel_class", "")),
         include_hoteling=bool(st.session_state.get("include_hoteling", True)),
         hoteling_hours_per_call=float(st.session_state.get("hoteling_hours_per_call", 14.0)),

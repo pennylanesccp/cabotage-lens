@@ -144,7 +144,7 @@ class ORSConfig:
     retry_limit : int
         Maximum number of retries for transient HTTP errors (500, 502, etc.).
     default_profile : str
-        Default routing profile (e.g., 'driving-hgv', 'driving-car').
+        Default routing profile (e.g., 'driving-car').
     default_country : str
         ISO-3166 alpha-2 country code for geocoding bias (default: 'BR').
     """
@@ -156,11 +156,11 @@ class ORSConfig:
     cache_ttl_s: int = 2_592_000  # 30 days (30 * 24 * 3600)
 
     # HTTP Behavior
-    timeout: tuple[float, float] = (10.0, 12.0)
+    timeout: tuple[float, float] = (5.0, 5.0)
     retry_limit: int = 0
     
     # Domain Defaults
-    default_profile: str = "driving-hgv"
+    default_profile: str = "driving-car"
     default_country: str = "BR"
 
     def __post_init__(self) -> None:

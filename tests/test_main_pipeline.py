@@ -4,7 +4,7 @@ from app.main.utils.pipeline import build_scenario_payload
 
 
 class MainPipelineTests(unittest.TestCase):
-    def test_build_scenario_payload_forces_hgv_profile(self) -> None:
+    def test_build_scenario_payload_forces_car_profile(self) -> None:
         payload = build_scenario_payload(
             {
                 "origin": "Sao Paulo, SP",
@@ -17,7 +17,7 @@ class MainPipelineTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(payload["ors_profile"], "driving-hgv")
+        self.assertEqual(payload["ors_profile"], "driving-car")
 
 
 if __name__ == "__main__":

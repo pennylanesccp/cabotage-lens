@@ -34,7 +34,7 @@ from modules.infra.db.locations import (
 )
 
 DEFAULT_TABLE = "route_cache_entries"
-DEFAULT_PROFILE = "driving-hgv"
+DEFAULT_PROFILE = "driving-car"
 
 _DDL_SQL = """
 CREATE TABLE IF NOT EXISTS {table} (

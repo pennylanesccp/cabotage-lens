@@ -62,8 +62,8 @@ def get_or_create_leg(
     , origin: Any
     , destiny: Any
     , *
-    , profile: str = "driving-hgv"
-    , fallback_to_car: bool = True
+    , profile: str = "driving-car"
+    , fallback_to_car: bool = False
     , overwrite: bool = False
     , db_path: Path | str | None = None
     , table_name: str = DEFAULT_TABLE
@@ -72,7 +72,7 @@ def get_or_create_leg(
     The "One Stop Shop" for road legs.
     
     1. Checks DB for cached leg (unless overwrite=True).
-    2. If missing, calls ORS API (with fallback strategy).
+    2. If missing, calls the road provider once.
     3. Saves result to DB.
     4. Returns standardized dictionary with leg info.
 
@@ -270,7 +270,7 @@ def _calculate_route(
     , primary_profile: str
     , fallback: bool
 ) -> Tuple[Optional[str], Optional[float], Optional[str]]:
-    """Try HGV first and fall back to car when HGV cannot be obtained."""
+    """Request a single road route and optionally fall back once to driving-car."""
     fallback_reason: Optional[str] = None
     try:
         res = ors.route_road(origin, destiny, profile=primary_profile)
@@ -282,7 +282,7 @@ def _calculate_route(
             return primary_profile, None, None
         fallback_reason = f"no_route:{exc}"
     except Exception as exc:
-        _log.debug("Route failed for profile=%s; trying car fallback: %s", primary_profile, exc)
+        _log.debug("Route failed for profile=%s: %s", primary_profile, exc)
         if not fallback or primary_profile == "driving-car":
             raise
         fallback_reason = f"{type(exc).__name__}:{exc}"
@@ -326,7 +326,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Road Router CLI")
     parser.add_argument("--origin", required=True)
     parser.add_argument("--destiny", required=True)
-    parser.add_argument("--ors-profile", default="driving-hgv")
+    parser.add_argument("--ors-profile", default="driving-car")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--pretty", action="store_true")
     parser.add_argument("--log-level", default="INFO")

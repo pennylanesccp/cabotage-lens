@@ -235,8 +235,11 @@ class BulkPipelineExecutionTests(unittest.TestCase):
             scenario_payload={"input_destiny": "Manaus, AM"},
             destiny_name="Manaus, AM",
             point={"label": "Manaus, AM", "lat": -3.1190, "lon": -60.0217},
-            point_source="place_cache",
+            point_source="location_alias_cache",
             port_destiny={"name": "Porto de Manaus"},
+            failure_step="routing_road_only",
+            failure_system="routing",
+            failure_provider="ors",
         )
         geo = {
             "road_direct": {
@@ -267,6 +270,9 @@ class BulkPipelineExecutionTests(unittest.TestCase):
         joined = "\n".join(captured.output)
         self.assertIn("Sao Paulo, SP@", joined)
         self.assertIn("Manaus, AM@", joined)
+        self.assertIn("step=routing_road_only", joined)
+        self.assertIn("system=routing", joined)
+        self.assertIn("provider=ors", joined)
         self.assertIn("ports=Porto de Santos -> Porto de Manaus", joined)
         self.assertIn("road_direct[source=cache km=3950.4 profile=driving-hgv cached=true]", joined)
         self.assertIn("last_mile[source=ors km=12.6 profile=driving-hgv cached=false]", joined)
@@ -275,16 +281,31 @@ class BulkPipelineExecutionTests(unittest.TestCase):
 
     def test_format_failed_destinies_includes_actual_destination_names(self) -> None:
         rows = [
-            {"status": "timeout", "destiny_name": "Manaus, AM", "input_destiny": "Manaus, AM"},
-            {"status": "timeout", "destiny_name": "Recife, PE", "input_destiny": "Recife, PE"},
-            {"status": "rate_limited", "destiny_name": "", "input_destiny": "Olinda, PE"},
+            {
+                "status": "timeout",
+                "failure_step": "routing_road_only",
+                "destiny_name": "Manaus, AM",
+                "input_destiny": "Manaus, AM",
+            },
+            {
+                "status": "timeout",
+                "failure_step": "routing_road_only",
+                "destiny_name": "Recife, PE",
+                "input_destiny": "Recife, PE",
+            },
+            {
+                "status": "rate_limited",
+                "failure_step": "destination_geocoding",
+                "destiny_name": "",
+                "input_destiny": "Olinda, PE",
+            },
             {"status": "ok", "destiny_name": "Curitiba, PR", "input_destiny": "Curitiba, PR"},
         ]
 
         summary = bulk_pipeline._format_failed_destinies(rows, max_statuses=5, max_destinies_per_status=5)
 
-        self.assertIn("timeout=[Manaus, AM; Recife, PE]", summary)
-        self.assertIn("rate_limited=[Olinda, PE]", summary)
+        self.assertIn("routing road only/timeout=[Manaus, AM; Recife, PE]", summary)
+        self.assertIn("destination geocoding/rate_limited=[Olinda, PE]", summary)
         self.assertNotIn("Curitiba, PR", summary)
 
     def test_bulk_persistence_buffer_reconnects_before_flush(self) -> None:
