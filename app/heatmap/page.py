@@ -201,7 +201,7 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
         surface=surface,
     )
     st.caption(
-        f"{diagnostics.plottable_points} destination points currently shape the 3D surface from {heatmap_destination_label(dataset.run.destination_set_id)}."
+        f"{diagnostics.plottable_points} destination points currently shape the 3D surface from all stored sources for this origin/cargo."
     )
     render_legend(metric, surface)
     _render_dataset_diagnostics(dataset, surface)
@@ -228,9 +228,15 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
 
         st.caption(
             (
-                f"{heatmap_destination_label(dataset.run.destination_set_id)}: loaded {diagnostics.plottable_points} plottable points from "
-                f"{diagnostics.successful_rows} successful latest rows. "
+                f"Loaded {diagnostics.plottable_points} plottable points from {diagnostics.successful_rows} latest stored rows "
+                f"for this origin/cargo across bulk runs, destination files, and single compares. "
                 f"Robust scales: color +/- {_format_color_scale(surface)} and height +/- {_format_height_scale(surface)}."
+            )
+        )
+        st.caption(
+            (
+                f"Selected run file {heatmap_destination_label(dataset.run.destination_set_id)} still controls Run missing / Rerun all. "
+                f"Loaded row sources: bulk={diagnostics.loaded_bulk_rows}, single_compare={diagnostics.loaded_single_compare_rows}."
             )
         )
 
@@ -270,7 +276,7 @@ def _render_unloaded_state(origin_name: str, destination_set_id: str) -> None:
             <p style='margin: 0 0 0.3rem 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.76rem; color: #64748b;'>3D surface</p>
             <h3 style='margin: 0; color: #0f172a;'>Surface not loaded</h3>
             <p style='margin: 0.55rem 0 0 0; color: #334155; max-width: 46rem;'>
-                Load the stored surface for <strong>{escape(origin_name)}</strong> using <strong>{escape(heatmap_destination_label(destination_set_id))}</strong>, or run missing / rerun all if you want fresh comparison rows.
+                Load the stored surface for <strong>{escape(origin_name)}</strong> to combine every stored origin/destiny row for the selected cargo across all sources. The selected file <strong>{escape(heatmap_destination_label(destination_set_id))}</strong> still controls run-missing and rerun actions.
             </p>
         </section>
         """,

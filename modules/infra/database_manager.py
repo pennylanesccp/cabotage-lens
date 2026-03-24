@@ -8,6 +8,7 @@ from modules.infra.db.bulk_results import (
     list_input_destiny_keys as list_bulk_result_input_destiny_keys,
     list_latest_successful_points_by_input_keys as list_bulk_result_points_by_input_keys,
     list_results as list_bulk_results,
+    list_results_for_origin_scenario as list_bulk_results_for_origin_scenario,
     summarize_results as summarize_bulk_results,
     upsert_result as upsert_bulk_result,
     upsert_results as upsert_bulk_results,
@@ -32,7 +33,9 @@ from modules.infra.db.bulk_runs import (
 )
 from modules.infra.db.core import connection_target_summary, connect, db_session
 from modules.infra.db.multimodal import (
+    MultimodalHeatmapRecord,
     ensure_results_table as ensure_multimodal_results_table,
+    list_heatmap_results as list_multimodal_heatmap_results,
     upsert_result as upsert_multimodal_result,
 )
 from modules.infra.db.place_points import (
@@ -70,6 +73,7 @@ __all__ = [
     "DEFAULT_BULK_RUN_RESULTS_TABLE",
     "BulkResultRecord",
     "BulkResultSummary",
+    "MultimodalHeatmapRecord",
     "BulkRunSelector",
     "BulkRunRecord",
     "BulkRunResultRecord",
@@ -98,9 +102,11 @@ __all__ = [
     "upsert_place_point",
     "upsert_place_points",
     "ensure_multimodal_results_table",
+    "list_multimodal_heatmap_results",
     "upsert_multimodal_result",
     "ensure_bulk_results_table",
     "list_bulk_results",
+    "list_bulk_results_for_origin_scenario",
     "list_bulk_result_input_destiny_keys",
     "list_bulk_result_points_by_input_keys",
     "summarize_bulk_results",

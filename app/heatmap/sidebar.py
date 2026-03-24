@@ -59,7 +59,7 @@ def render_run_actions(*, has_origin: bool, has_loaded_dataset: bool) -> Tuple[b
             width="stretch",
             disabled=(not has_origin),
             key="heatmap_load_surface_button",
-            help="Read the latest stored rows for the selected scenario without starting a new bulk run.",
+            help="Read the latest stored rows for the selected origin/cargo across bulk runs, destination files, and single compares without starting a new bulk run.",
         )
         run_missing_clicked = st.button(
             "Run missing",

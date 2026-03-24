@@ -122,6 +122,7 @@ class HeatmapServiceTests(unittest.TestCase):
         )
         rows = [
             SimpleNamespace(
+                source_kind="bulk",
                 destiny_name="Manaus, AM",
                 destiny_lat=-3.1190,
                 destiny_lon=-60.0217,
@@ -140,6 +141,7 @@ class HeatmapServiceTests(unittest.TestCase):
                 updated_timestamp="2026-03-10 12:00:00",
             ),
             SimpleNamespace(
+                source_kind="bulk",
                 destiny_name="Belem, PA",
                 destiny_lat=-1.4558,
                 destiny_lon=-48.4902,
@@ -165,10 +167,7 @@ class HeatmapServiceTests(unittest.TestCase):
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
         ), patch(
-            "app.heatmap.service._select_active_selector",
-            return_value=(object(), None, None),
-        ), patch(
-            "app.heatmap.service.list_bulk_results",
+            "app.heatmap.service._load_map_rows",
             return_value=rows,
         ):
             dataset = load_current_dataset(scenario)
@@ -182,6 +181,8 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertAlmostEqual(dataset.max_abs_emissions_delta, 3800.0)
         self.assertEqual(dataset.diagnostics.successful_rows, 2)
         self.assertEqual(dataset.diagnostics.plottable_points, 2)
+        self.assertEqual(dataset.diagnostics.loaded_bulk_rows, 2)
+        self.assertEqual(dataset.diagnostics.loaded_single_compare_rows, 0)
         self.assertEqual(dataset.diagnostics.skipped_total, 0)
 
     def test_load_current_dataset_raises_when_rows_cannot_be_mapped(self) -> None:
@@ -203,6 +204,7 @@ class HeatmapServiceTests(unittest.TestCase):
         )
         rows = [
             SimpleNamespace(
+                source_kind="bulk",
                 destiny_name="Manaus, AM",
                 destiny_lat=None,
                 destiny_lon=-60.0217,
@@ -228,10 +230,7 @@ class HeatmapServiceTests(unittest.TestCase):
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
         ), patch(
-            "app.heatmap.service._select_active_selector",
-            return_value=(object(), None, None),
-        ), patch(
-            "app.heatmap.service.list_bulk_results",
+            "app.heatmap.service._load_map_rows",
             return_value=rows,
         ):
             with self.assertRaises(HeatmapDataError):
@@ -256,6 +255,7 @@ class HeatmapServiceTests(unittest.TestCase):
         )
         rows = [
             SimpleNamespace(
+                source_kind="bulk",
                 destiny_name="Manaus, AM",
                 destiny_lat=-3.1190,
                 destiny_lon=-60.0217,
@@ -274,6 +274,7 @@ class HeatmapServiceTests(unittest.TestCase):
                 updated_timestamp="2026-03-10 12:00:00",
             ),
             SimpleNamespace(
+                source_kind="bulk",
                 destiny_name="Belem, PA",
                 destiny_lat=None,
                 destiny_lon=-48.4902,
@@ -292,6 +293,7 @@ class HeatmapServiceTests(unittest.TestCase):
                 updated_timestamp="2026-03-10 12:00:00",
             ),
             SimpleNamespace(
+                source_kind="bulk",
                 destiny_name="Sao Luis, MA",
                 destiny_lat=-2.5387,
                 destiny_lon=-44.2825,
@@ -312,10 +314,7 @@ class HeatmapServiceTests(unittest.TestCase):
         ]
 
         with patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
-            "app.heatmap.service._select_active_selector",
-            return_value=(object(), None, None),
-        ), patch(
-            "app.heatmap.service.list_bulk_results",
+            "app.heatmap.service._load_map_rows",
             return_value=rows,
         ):
             dataset = load_current_dataset(scenario, status=status)
@@ -325,6 +324,64 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(dataset.diagnostics.skipped_missing_coordinates, 1)
         self.assertEqual(dataset.diagnostics.skipped_missing_costs, 1)
         self.assertEqual(dataset.diagnostics.skipped_missing_emissions, 0)
+        self.assertEqual(dataset.diagnostics.loaded_bulk_rows, 3)
+        self.assertEqual(dataset.diagnostics.loaded_single_compare_rows, 0)
+
+    def test_load_current_dataset_returns_single_compare_rows_even_without_bulk_successes(self) -> None:
+        scenario = self._scenario()
+        status = SimpleNamespace(
+            run_id=None,
+            origin_name="Pelotas, RS",
+            cargo_t=30.0,
+            destination_count=608,
+            found_count=0,
+            success_count=0,
+            fail_count=0,
+            missing_count=608,
+            pending_count=608,
+            duration_s=None,
+            completed_timestamp=None,
+            updated_timestamp=None,
+            destination_set_id="city_dests_over50k.txt",
+        )
+        rows = [
+            SimpleNamespace(
+                source_kind="single_compare",
+                input_destiny="Rio Branco, AC",
+                destiny_name="Rio Branco, AC",
+                destiny_lat=-9.97499,
+                destiny_lon=-67.8243,
+                destiny_uf="AC",
+                port_destiny_name="Manaus",
+                road_cost_r=12000.0,
+                multimodal_cost_r=9500.0,
+                cost_delta_r=2500.0,
+                cost_savings_pct=20.8333,
+                road_emissions_kg=6400.0,
+                multimodal_emissions_kg=4100.0,
+                emissions_delta_kg=2300.0,
+                emissions_savings_pct=35.9375,
+                road_distance_km=3600.0,
+                sea_km=2900.0,
+                updated_timestamp="2026-03-24 08:00:00",
+            ),
+        ]
+
+        with patch("app.heatmap.service.get_heatmap_status", return_value=status), patch(
+            "app.heatmap.service.db_session",
+            return_value=contextlib.nullcontext(object()),
+        ), patch(
+            "app.heatmap.service._load_map_rows",
+            return_value=rows,
+        ):
+            dataset = load_current_dataset(scenario)
+
+        self.assertIsNotNone(dataset)
+        assert dataset is not None
+        self.assertEqual(len(dataset.points), 1)
+        self.assertEqual(dataset.points[0].destiny_name, "Rio Branco, AC")
+        self.assertEqual(dataset.diagnostics.loaded_bulk_rows, 0)
+        self.assertEqual(dataset.diagnostics.loaded_single_compare_rows, 1)
 
     def test_pending_destinations_retries_retryable_failures_and_absent_destinations(self) -> None:
         scenario = self._scenario()

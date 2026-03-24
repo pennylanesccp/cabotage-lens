@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional
+from dataclasses import dataclass
+from typing import Any, Iterable, List, Optional
 
 from modules.infra.db.core import DBConnection, mark_schema_ready, safe_table_name, schema_is_ready, to_float
 
@@ -35,6 +36,46 @@ _IDX_SQL = """
 CREATE UNIQUE INDEX IF NOT EXISTS uq_{table}_dest
     ON {table} (destiny_name);
 """
+
+
+@dataclass(frozen=True)
+class MultimodalHeatmapRecord:
+    origin_name: str
+    destiny_name: str
+    cargo_t: float
+    destiny_lat: Optional[float]
+    destiny_lon: Optional[float]
+    destiny_uf: Optional[str]
+    port_destiny_name: Optional[str]
+    road_cost_r: Optional[float]
+    multimodal_cost_r: Optional[float]
+    cost_delta_r: Optional[float]
+    cost_savings_pct: Optional[float]
+    road_emissions_kg: Optional[float]
+    multimodal_emissions_kg: Optional[float]
+    emissions_delta_kg: Optional[float]
+    emissions_savings_pct: Optional[float]
+    road_distance_km: Optional[float]
+    sea_km: Optional[float]
+    updated_timestamp: Any
+
+
+def _normalize_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _derive_delta_and_pct(baseline: Optional[float], alternative: Optional[float]) -> tuple[Optional[float], Optional[float]]:
+    baseline_value = to_float(baseline)
+    alternative_value = to_float(alternative)
+    if baseline_value is None or alternative_value is None:
+        return None, None
+    delta_value = float(baseline_value) - float(alternative_value)
+    if float(baseline_value) <= 0.0:
+        return delta_value, None
+    return delta_value, (delta_value / float(baseline_value)) * 100.0
 
 
 def ensure_results_table(conn: DBConnection, table_name: str) -> None:
@@ -146,3 +187,97 @@ def upsert_result(
             to_float(delta_co2e_kg),
         ),
     )
+
+
+def list_heatmap_results(
+    conn: DBConnection,
+    *,
+    origin_names: Iterable[str],
+    cargo_t: float,
+    table_name: str,
+) -> List[MultimodalHeatmapRecord]:
+    table = safe_table_name(table_name)
+    ensure_results_table(conn, table)
+
+    normalized_origins = sorted(
+        {
+            str(value).strip().lower()
+            for value in origin_names
+            if str(value).strip()
+        }
+    )
+    if not normalized_origins:
+        return []
+
+    placeholders = ", ".join(["?"] * len(normalized_origins))
+    rows = conn.execute(
+        f"""
+        WITH ranked AS (
+            SELECT
+                  origin_name
+                , destiny_name
+                , cargo_t
+                , road_distance_km
+                , road_fuel_cost_r
+                , total_fuel_cost_r
+                , road_co2e_kg
+                , total_co2e_kg
+                , sea_km
+                , insertion_timestamp
+                , ROW_NUMBER() OVER (
+                      PARTITION BY LOWER(TRIM(destiny_name))
+                      ORDER BY insertion_timestamp DESC, destiny_name ASC
+                  ) AS row_rank
+            FROM {table}
+            WHERE cargo_t = ?
+              AND LOWER(TRIM(origin_name)) IN ({placeholders})
+        )
+        SELECT
+              origin_name
+            , destiny_name
+            , cargo_t
+            , road_distance_km
+            , road_fuel_cost_r
+            , total_fuel_cost_r
+            , road_co2e_kg
+            , total_co2e_kg
+            , sea_km
+            , insertion_timestamp
+        FROM ranked
+        WHERE row_rank = 1
+        ORDER BY destiny_name ASC, insertion_timestamp DESC
+        """,
+        [to_float(cargo_t), *normalized_origins],
+    ).fetchall()
+
+    records: list[MultimodalHeatmapRecord] = []
+    for row in rows:
+        road_cost_r = to_float(row[4])
+        multimodal_cost_r = to_float(row[5])
+        road_emissions_kg = to_float(row[6])
+        multimodal_emissions_kg = to_float(row[7])
+        cost_delta_r, cost_savings_pct = _derive_delta_and_pct(road_cost_r, multimodal_cost_r)
+        emissions_delta_kg, emissions_savings_pct = _derive_delta_and_pct(road_emissions_kg, multimodal_emissions_kg)
+        records.append(
+            MultimodalHeatmapRecord(
+                origin_name=str(row[0]),
+                destiny_name=str(row[1]),
+                cargo_t=float(row[2]),
+                destiny_lat=None,
+                destiny_lon=None,
+                destiny_uf=None,
+                port_destiny_name=None,
+                road_cost_r=road_cost_r,
+                multimodal_cost_r=multimodal_cost_r,
+                cost_delta_r=cost_delta_r,
+                cost_savings_pct=cost_savings_pct,
+                road_emissions_kg=road_emissions_kg,
+                multimodal_emissions_kg=multimodal_emissions_kg,
+                emissions_delta_kg=emissions_delta_kg,
+                emissions_savings_pct=emissions_savings_pct,
+                road_distance_km=to_float(row[3]),
+                sea_km=to_float(row[8]),
+                updated_timestamp=row[9],
+            )
+        )
+    return records

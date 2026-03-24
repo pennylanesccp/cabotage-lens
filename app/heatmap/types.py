@@ -68,6 +68,8 @@ class HeatmapDatasetDiagnostics:
     skipped_missing_coordinates: int
     skipped_missing_costs: int
     skipped_missing_emissions: int
+    loaded_bulk_rows: int = 0
+    loaded_single_compare_rows: int = 0
 
     @property
     def skipped_total(self) -> int:

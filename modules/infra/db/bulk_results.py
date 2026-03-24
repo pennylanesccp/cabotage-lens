@@ -212,6 +212,166 @@ def _latest_results_cte(items_table: str, runs_table: str, locations_table: str,
     """
 
 
+def _selector_filters_sql(*, include_destination_set: bool) -> str:
+    clauses = [
+        "r.origin_location_id = ?",
+        "r.cargo_t = ?",
+        "r.truck_key = ?",
+        "r.ors_profile = ?",
+        "(r.vessel_class = ? OR (r.vessel_class IS NULL AND ? IS NULL))",
+        "r.include_hoteling = ?",
+        "r.hoteling_hours_per_call = ?",
+        "r.port_calls = ?",
+        "r.include_port_ops = ?",
+        "(r.port_moves_per_call = ? OR (r.port_moves_per_call IS NULL AND ? IS NULL))",
+        "(r.cargo_teu = ? OR (r.cargo_teu IS NULL AND ? IS NULL))",
+        "r.t_per_teu_default = ?",
+        "(r.allocation_mode = ? OR (r.allocation_mode IS NULL AND ? IS NULL))",
+        "r.allocation_load_factor = ?",
+        "r.full_call_mode = ?",
+        "r.port_ops_scenario = ?",
+    ]
+    if include_destination_set:
+        clauses.append("r.destination_set_id = ?")
+    return "\n          AND ".join(clauses)
+
+
+def _selector_filter_params(selector: BulkRunSelector, *, include_destination_set: bool) -> list[Any]:
+    params: list[Any] = [
+        int(selector.origin_location_id or 0),
+        float(selector.cargo_t),
+        str(selector.truck_key),
+        str(selector.ors_profile),
+        selector.vessel_class,
+        selector.vessel_class,
+        bool(selector.include_hoteling),
+        float(selector.hoteling_hours_per_call),
+        int(selector.port_calls),
+        bool(selector.include_port_ops),
+        to_float(selector.port_moves_per_call),
+        to_float(selector.port_moves_per_call),
+        to_float(selector.cargo_teu),
+        to_float(selector.cargo_teu),
+        float(selector.t_per_teu_default),
+        selector.allocation_mode,
+        selector.allocation_mode,
+        float(selector.allocation_load_factor),
+        bool(selector.full_call_mode),
+        str(selector.port_ops_scenario),
+    ]
+    if include_destination_set:
+        params.append(str(selector.destination_set_id))
+    return params
+
+
+def _latest_results_for_selector_cte(
+    items_table: str,
+    runs_table: str,
+    locations_table: str,
+    route_table: str,
+    *,
+    include_destination_set: bool,
+) -> str:
+    return f"""
+    WITH matching_runs AS (
+        SELECT
+              r.run_id
+            , r.origin_location_id
+            , COALESCE(NULLIF(TRIM(r.origin_label), ''), NULLIF(TRIM(origin_loc.label), ''), r.origin_location_id::text) AS origin_name
+            , r.input_origin
+            , r.cargo_t
+            , r.truck_key
+            , r.ors_profile
+            , r.vessel_class
+            , r.include_hoteling
+            , r.hoteling_hours_per_call
+            , r.port_calls
+            , r.include_port_ops
+            , r.port_moves_per_call
+            , r.cargo_teu
+            , r.t_per_teu_default
+            , r.allocation_mode
+            , r.allocation_load_factor
+            , r.full_call_mode
+            , r.port_ops_scenario
+            , r.destination_set_id
+            , COALESCE(r.completed_timestamp, r.updated_timestamp, r.started_timestamp) AS run_sort_timestamp
+        FROM {runs_table} AS r
+        LEFT JOIN {locations_table} AS origin_loc
+               ON origin_loc.id = r.origin_location_id
+        WHERE {_selector_filters_sql(include_destination_set=include_destination_set)}
+    ),
+    ranked AS (
+        SELECT
+              i.scenario_key
+            , i.run_id
+            , r.destination_set_id
+            , r.origin_location_id
+            , r.origin_name
+            , r.input_origin
+            , i.destination_location_id
+            , COALESCE(NULLIF(TRIM(dest.label), ''), i.input_destiny) AS destiny_name
+            , i.input_destiny
+            , r.cargo_t
+            , r.truck_key
+            , r.ors_profile
+            , r.vessel_class
+            , r.include_hoteling
+            , r.hoteling_hours_per_call
+            , r.port_calls
+            , r.include_port_ops
+            , r.port_moves_per_call
+            , r.cargo_teu
+            , r.t_per_teu_default
+            , r.allocation_mode
+            , r.allocation_load_factor
+            , r.full_call_mode
+            , r.port_ops_scenario
+            , i.status
+            , i.error_message
+            , dest.lat6
+            , dest.lon6
+            , dest.state
+            , port_origin.label AS port_origin_name
+            , port_dest.label AS port_destiny_name
+            , i.road_cost_r
+            , i.multimodal_cost_r
+            , i.cost_delta_r
+            , i.cost_savings_pct
+            , i.road_emissions_kg
+            , i.multimodal_emissions_kg
+            , i.emissions_delta_kg
+            , i.emissions_savings_pct
+            , i.road_distance_km
+            , i.sea_km
+            , i.is_approximation
+            , i.route_source
+            , approx_dest.label AS approximation_reference_destiny
+            , approx_route.distance_km AS approximation_reference_distance_km
+            , i.approximation_delta_straight_line_km
+            , i.approximation_notes
+            , i.updated_timestamp
+            , ROW_NUMBER() OVER (
+                  PARTITION BY LOWER(TRIM(i.input_destiny))
+                  ORDER BY r.run_sort_timestamp DESC NULLS LAST, i.updated_timestamp DESC, i.insertion_timestamp DESC, i.id DESC
+              ) AS row_rank
+        FROM {items_table} AS i
+        INNER JOIN matching_runs AS r
+                ON r.run_id = i.run_id
+        LEFT JOIN {locations_table} AS dest
+               ON dest.id = i.destination_location_id
+        LEFT JOIN {locations_table} AS port_origin
+               ON port_origin.id = i.port_origin_location_id
+        LEFT JOIN {locations_table} AS port_dest
+               ON port_dest.id = i.port_destiny_location_id
+        LEFT JOIN {route_table} AS approx_route
+               ON approx_route.id = i.approximation_reference_route_id
+        LEFT JOIN {locations_table} AS approx_dest
+               ON approx_dest.id = approx_route.destiny_location_id
+    )
+    """
+
+
 def _row_to_record(row: Sequence[Any]) -> BulkResultRecord:
     return BulkResultRecord(
         scenario_key=str(row[0]),
@@ -402,6 +562,108 @@ def list_results(
         ORDER BY destiny_name ASC, updated_timestamp DESC
         """,
         (selector_hash(selector),),
+    ).fetchall()
+    return [_row_to_record(row) for row in rows]
+
+
+def list_results_for_origin_scenario(
+    conn: DBConnection,
+    *,
+    selector: BulkRunSelector,
+    only_success: Optional[bool] = None,
+    include_all_destination_sets: bool = False,
+    table_name: str = DEFAULT_TABLE,
+    runs_table: str = DEFAULT_RUNS_TABLE,
+    locations_table: str = DEFAULT_LOCATIONS_TABLE,
+    route_table: str = DEFAULT_ROUTE_CACHE_TABLE,
+) -> List[BulkResultRecord]:
+    if selector.origin_location_id is None:
+        return []
+
+    items = safe_table_name(table_name)
+    runs = safe_table_name(runs_table)
+    locations = safe_table_name(locations_table)
+    routes = safe_table_name(route_table)
+    ensure_results_table(
+        conn,
+        items,
+        runs_table=runs,
+        locations_table=locations,
+        route_table=routes,
+    )
+
+    clauses = ["row_rank = 1"]
+    if only_success is True:
+        clauses.append("status = 'ok'")
+    elif only_success is False:
+        clauses.append("status <> 'ok'")
+
+    rows = conn.execute(
+        _latest_results_for_selector_cte(
+            items,
+            runs,
+            locations,
+            routes,
+            include_destination_set=(not include_all_destination_sets),
+        )
+        + f"""
+        SELECT
+              scenario_key
+            , run_id
+            , destination_set_id
+            , origin_location_id
+            , origin_name
+            , input_origin
+            , destination_location_id
+            , destiny_name
+            , input_destiny
+            , cargo_t
+            , truck_key
+            , ors_profile
+            , vessel_class
+            , include_hoteling
+            , hoteling_hours_per_call
+            , port_calls
+            , include_port_ops
+            , port_moves_per_call
+            , cargo_teu
+            , t_per_teu_default
+            , allocation_mode
+            , allocation_load_factor
+            , full_call_mode
+            , port_ops_scenario
+            , status
+            , error_message
+            , lat6
+            , lon6
+            , state
+            , port_origin_name
+            , port_destiny_name
+            , road_cost_r
+            , multimodal_cost_r
+            , cost_delta_r
+            , cost_savings_pct
+            , road_emissions_kg
+            , multimodal_emissions_kg
+            , emissions_delta_kg
+            , emissions_savings_pct
+            , road_distance_km
+            , sea_km
+            , is_approximation
+            , route_source
+            , approximation_reference_destiny
+            , approximation_reference_distance_km
+            , approximation_delta_straight_line_km
+            , approximation_notes
+            , updated_timestamp
+        FROM ranked
+        WHERE {' AND '.join(clauses)}
+        ORDER BY destiny_name ASC, updated_timestamp DESC
+        """,
+        _selector_filter_params(
+            selector,
+            include_destination_set=(not include_all_destination_sets),
+        ),
     ).fetchall()
     return [_row_to_record(row) for row in rows]
 

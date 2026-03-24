@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
-from modules.addressing.text import ascii_place_text
+from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.infra.database_manager import (
     BulkRunSelector,
     db_session,
     find_place_point,
     get_latest_completed_run,
+    list_bulk_results_for_origin_scenario,
     list_bulk_results,
     list_bulk_run_cargo_values,
     list_bulk_run_origins,
+    list_cached_place_points,
+    list_multimodal_heatmap_results,
     load_database_settings,
     summarize_bulk_results,
 )
@@ -36,6 +39,7 @@ from app.heatmap.types import (
 from app.main.utils.constants import DEFAULTS
 
 _log = get_logger(__name__)
+_COMPARE_SINGLE_RESULTS_TABLE = "analysis_results"
 
 
 class HeatmapConfigurationError(RuntimeError):
@@ -44,6 +48,29 @@ class HeatmapConfigurationError(RuntimeError):
 
 class HeatmapDataError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class _LoadedHeatmapRow:
+    source_kind: str
+    source_detail: Optional[str]
+    input_destiny: str
+    destiny_name: str
+    destiny_lat: Optional[float]
+    destiny_lon: Optional[float]
+    destiny_uf: Optional[str]
+    port_destiny_name: Optional[str]
+    road_cost_r: Optional[float]
+    multimodal_cost_r: Optional[float]
+    cost_delta_r: Optional[float]
+    cost_savings_pct: Optional[float]
+    road_emissions_kg: Optional[float]
+    multimodal_emissions_kg: Optional[float]
+    emissions_delta_kg: Optional[float]
+    emissions_savings_pct: Optional[float]
+    road_distance_km: Optional[float]
+    sea_km: Optional[float]
+    updated_timestamp: Any
 
 
 def _dedupe_preserve_order(values: List[str]) -> List[str]:
@@ -168,6 +195,96 @@ def _point_rejection_reason(record: Any) -> Optional[str]:
     return None
 
 
+def _origin_name_variants(origin_name: str) -> List[str]:
+    return _dedupe_preserve_order(
+        [
+            ascii_place_text(origin_name),
+            _canonical_origin_name(origin_name),
+        ]
+    )
+
+
+def _loaded_row_from_bulk(record: Any) -> _LoadedHeatmapRow:
+    return _LoadedHeatmapRow(
+        source_kind="bulk",
+        source_detail=str(getattr(record, "destination_set_id", "")).strip() or None,
+        input_destiny=str(getattr(record, "input_destiny", "") or getattr(record, "destiny_name", "")).strip(),
+        destiny_name=str(getattr(record, "destiny_name", "")).strip(),
+        destiny_lat=getattr(record, "destiny_lat", None),
+        destiny_lon=getattr(record, "destiny_lon", None),
+        destiny_uf=getattr(record, "destiny_uf", None),
+        port_destiny_name=getattr(record, "port_destiny_name", None),
+        road_cost_r=getattr(record, "road_cost_r", None),
+        multimodal_cost_r=getattr(record, "multimodal_cost_r", None),
+        cost_delta_r=getattr(record, "cost_delta_r", None),
+        cost_savings_pct=getattr(record, "cost_savings_pct", None),
+        road_emissions_kg=getattr(record, "road_emissions_kg", None),
+        multimodal_emissions_kg=getattr(record, "multimodal_emissions_kg", None),
+        emissions_delta_kg=getattr(record, "emissions_delta_kg", None),
+        emissions_savings_pct=getattr(record, "emissions_savings_pct", None),
+        road_distance_km=getattr(record, "road_distance_km", None),
+        sea_km=getattr(record, "sea_km", None),
+        updated_timestamp=getattr(record, "updated_timestamp", None),
+    )
+
+
+def _loaded_row_from_single_compare(record: Any, cached_point: Optional[Dict[str, Any]]) -> _LoadedHeatmapRow:
+    return _LoadedHeatmapRow(
+        source_kind="single_compare",
+        source_detail=_COMPARE_SINGLE_RESULTS_TABLE,
+        input_destiny=str(getattr(record, "destiny_name", "")).strip(),
+        destiny_name=ascii_place_text((cached_point or {}).get("label") or getattr(record, "destiny_name", "")),
+        destiny_lat=(None if cached_point is None else cached_point.get("lat")),
+        destiny_lon=(None if cached_point is None else cached_point.get("lon")),
+        destiny_uf=(None if cached_point is None else cached_point.get("uf")),
+        port_destiny_name=getattr(record, "port_destiny_name", None),
+        road_cost_r=getattr(record, "road_cost_r", None),
+        multimodal_cost_r=getattr(record, "multimodal_cost_r", None),
+        cost_delta_r=getattr(record, "cost_delta_r", None),
+        cost_savings_pct=getattr(record, "cost_savings_pct", None),
+        road_emissions_kg=getattr(record, "road_emissions_kg", None),
+        multimodal_emissions_kg=getattr(record, "multimodal_emissions_kg", None),
+        emissions_delta_kg=getattr(record, "emissions_delta_kg", None),
+        emissions_savings_pct=getattr(record, "emissions_savings_pct", None),
+        road_distance_km=getattr(record, "road_distance_km", None),
+        sea_km=getattr(record, "sea_km", None),
+        updated_timestamp=getattr(record, "updated_timestamp", None),
+    )
+
+
+def _loaded_row_key(record: _LoadedHeatmapRow) -> str:
+    return normalize_bulk_place_input(record.input_destiny or record.destiny_name).casefold()
+
+
+def _timestamp_sort_key(value: Any) -> tuple[int, str]:
+    text = str(value).strip() if value is not None else ""
+    return (1, text) if text else (0, "")
+
+
+def _row_preference_key(record: _LoadedHeatmapRow) -> tuple[Any, ...]:
+    rejection_reason = _point_rejection_reason(record)
+    return (
+        1 if rejection_reason is None else 0,
+        1 if record.destiny_lat is not None and record.destiny_lon is not None else 0,
+        1 if record.road_cost_r is not None and record.multimodal_cost_r is not None else 0,
+        1 if record.road_emissions_kg is not None and record.multimodal_emissions_kg is not None else 0,
+        _timestamp_sort_key(record.updated_timestamp),
+        1 if record.source_kind == "bulk" else 0,
+    )
+
+
+def _merge_loaded_rows(rows: List[_LoadedHeatmapRow]) -> List[_LoadedHeatmapRow]:
+    latest_by_destiny: dict[str, _LoadedHeatmapRow] = {}
+    for row in rows:
+        destiny_key = _loaded_row_key(row)
+        if not destiny_key:
+            continue
+        current = latest_by_destiny.get(destiny_key)
+        if current is None or _row_preference_key(row) > _row_preference_key(current):
+            latest_by_destiny[destiny_key] = row
+    return sorted(latest_by_destiny.values(), key=lambda item: (item.destiny_name.casefold(), item.destiny_name))
+
+
 def default_cargo_options() -> List[float]:
     return [float(DEFAULTS["cargo_t"])]
 
@@ -287,6 +404,70 @@ def _select_active_selector(
     summary = summarize_bulk_results(conn, selector=selector)
     latest_completed = get_latest_completed_run(conn, selector=selector)
     return selector, summary, latest_completed
+
+
+def _load_bulk_rows_for_map(
+    conn: Any,
+    scenario: HeatmapScenario,
+    destination_set_id: str,
+) -> List[_LoadedHeatmapRow]:
+    selector = _build_selector_for_origin_location(
+        scenario,
+        _origin_location_id(scenario.origin_name),
+        destination_set_id,
+    )
+    records = list_bulk_results_for_origin_scenario(
+        conn,
+        selector=selector,
+        only_success=True,
+        include_all_destination_sets=True,
+    )
+    return [_loaded_row_from_bulk(record) for record in records]
+
+
+def _load_single_compare_rows_for_map(conn: Any, scenario: HeatmapScenario) -> List[_LoadedHeatmapRow]:
+    origin_variants = _origin_name_variants(scenario.origin_name)
+    if not origin_variants:
+        return []
+
+    records = list_multimodal_heatmap_results(
+        conn,
+        origin_names=origin_variants,
+        cargo_t=float(scenario.cargo_t),
+        table_name=_COMPARE_SINGLE_RESULTS_TABLE,
+    )
+    if not records:
+        return []
+
+    cached_points = list_cached_place_points(conn, places=[record.destiny_name for record in records])
+    rows: list[_LoadedHeatmapRow] = []
+    for record in records:
+        cached_point = cached_points.get(ascii_place_key(record.destiny_name))
+        rows.append(_loaded_row_from_single_compare(record, cached_point))
+    return rows
+
+
+def _load_map_rows(
+    conn: Any,
+    scenario: HeatmapScenario,
+    destination_set_id: str,
+) -> List[_LoadedHeatmapRow]:
+    bulk_rows = _load_bulk_rows_for_map(conn, scenario, destination_set_id)
+    single_compare_rows = _load_single_compare_rows_for_map(conn, scenario)
+    merged_rows = _merge_loaded_rows([*bulk_rows, *single_compare_rows])
+    _log.info(
+        (
+            "Resolved aggregated heatmap rows origin=%s cargo_t=%.3f selected_destination_set=%s "
+            "bulk_rows=%d single_compare_rows=%d merged_rows=%d"
+        ),
+        scenario.origin_name,
+        scenario.cargo_t,
+        destination_set_id,
+        len(bulk_rows),
+        len(single_compare_rows),
+        len(merged_rows),
+    )
+    return merged_rows
 
 
 def list_origin_options(*, destination_set_id: str | None = None) -> List[str]:
@@ -451,43 +632,56 @@ def load_current_dataset(
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     status = status or get_heatmap_status(scenario, destination_set_id=resolved_destination_set_id)
     if status.found_count <= 0:
-        return None
+        with db_session() as conn:
+            aggregated_rows = _load_map_rows(conn, scenario, resolved_destination_set_id)
+        if not aggregated_rows:
+            return None
+    else:
+        aggregated_rows = []
 
-    _log.info("Loading heatmap comparison rows origin=%s cargo_t=%.3f", scenario.origin_name, scenario.cargo_t)
+    _log.info(
+        "Loading aggregated heatmap comparison rows origin=%s cargo_t=%.3f selected_destination_set=%s",
+        scenario.origin_name,
+        scenario.cargo_t,
+        resolved_destination_set_id,
+    )
     with db_session() as conn:
-        selector, _, _ = _select_active_selector(conn, scenario, resolved_destination_set_id)
-        rows = list_bulk_results(conn, selector=selector, only_success=True)
+        if not aggregated_rows:
+            aggregated_rows = _load_map_rows(conn, scenario, resolved_destination_set_id)
+
+    if not aggregated_rows:
+        return None
 
     _log.info(
         (
-            "Heatmap dataset row load origin=%s cargo_t=%.3f total_latest_rows=%d success_summary=%d "
-            "fail_summary=%d loaded_success_rows=%d %s"
+            "Heatmap dataset row load origin=%s cargo_t=%.3f selected_destination_set=%s "
+            "selected_found=%d selected_success=%d selected_fail=%d loaded_rows=%d"
         ),
         scenario.origin_name,
         scenario.cargo_t,
+        resolved_destination_set_id,
         status.found_count,
         status.success_count,
         status.fail_count,
-        len(rows),
-        _selector_log_details(selector),
+        len(aggregated_rows),
     )
-    if len(rows) != status.success_count:
-        _log.warning(
+    if len(aggregated_rows) != status.success_count:
+        _log.info(
             (
-                "Heatmap dataset success-row mismatch origin=%s cargo_t=%.3f success_summary=%d "
-                "loaded_success_rows=%d"
+                "Heatmap dataset selected-summary differs from aggregated load origin=%s cargo_t=%.3f "
+                "selected_success=%d loaded_rows=%d"
             ),
             scenario.origin_name,
             scenario.cargo_t,
             status.success_count,
-            len(rows),
+            len(aggregated_rows),
         )
 
     points: List[HeatmapPoint] = []
     skipped_missing_coordinates = 0
     skipped_missing_costs = 0
     skipped_missing_emissions = 0
-    for row in rows:
+    for row in aggregated_rows:
         rejection_reason = _point_rejection_reason(row)
         if rejection_reason == "missing_coordinates":
             skipped_missing_coordinates += 1
@@ -502,29 +696,36 @@ def load_current_dataset(
         if point is not None:
             points.append(point)
 
+    loaded_bulk_rows = sum(1 for row in aggregated_rows if row.source_kind == "bulk")
+    loaded_single_compare_rows = sum(1 for row in aggregated_rows if row.source_kind == "single_compare")
     if not points:
         _log.warning(
             (
-                "Heatmap comparison rows are not plottable origin=%s cargo_t=%.3f success_rows=%d "
-                "skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d"
+                "Aggregated heatmap comparison rows are not plottable origin=%s cargo_t=%.3f rows=%d "
+                "bulk_rows=%d single_compare_rows=%d skipped_missing_coordinates=%d "
+                "skipped_missing_costs=%d skipped_missing_emissions=%d"
             ),
             scenario.origin_name,
             scenario.cargo_t,
-            len(rows),
+            len(aggregated_rows),
+            loaded_bulk_rows,
+            loaded_single_compare_rows,
             skipped_missing_coordinates,
             skipped_missing_costs,
             skipped_missing_emissions,
         )
         raise HeatmapDataError(
-            "Stored comparison rows were found, but none of them have plottable map values. Use rerun to refresh the comparison table."
+            "Stored comparison rows were found across the available sources, but none of them have plottable map values. Use rerun to refresh the comparison table."
         )
 
     diagnostics = HeatmapDatasetDiagnostics(
-        successful_rows=len(rows),
+        successful_rows=len(aggregated_rows),
         plottable_points=len(points),
         skipped_missing_coordinates=skipped_missing_coordinates,
         skipped_missing_costs=skipped_missing_costs,
         skipped_missing_emissions=skipped_missing_emissions,
+        loaded_bulk_rows=loaded_bulk_rows,
+        loaded_single_compare_rows=loaded_single_compare_rows,
     )
     dataset = HeatmapDataset(
         scenario=scenario,
@@ -536,14 +737,17 @@ def load_current_dataset(
     )
     _log.info(
         (
-            "Loaded heatmap dataset origin=%s cargo_t=%.3f stored_rows=%d success_rows=%d "
-            "plottable_points=%d skipped_missing_coordinates=%d skipped_missing_costs=%d "
-            "skipped_missing_emissions=%d missing=%d"
+            "Loaded aggregated heatmap dataset origin=%s cargo_t=%.3f selected_destination_set=%s "
+            "loaded_rows=%d bulk_rows=%d single_compare_rows=%d plottable_points=%d "
+            "skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d "
+            "selected_missing=%d"
         ),
         scenario.origin_name,
         scenario.cargo_t,
-        status.found_count,
+        resolved_destination_set_id,
         diagnostics.successful_rows,
+        diagnostics.loaded_bulk_rows,
+        diagnostics.loaded_single_compare_rows,
         diagnostics.plottable_points,
         diagnostics.skipped_missing_coordinates,
         diagnostics.skipped_missing_costs,
