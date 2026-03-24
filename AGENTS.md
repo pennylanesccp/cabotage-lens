@@ -90,6 +90,7 @@ Local development conventions:
 - Prefer `pathlib` for filesystem operations.
 - Reuse `modules.infra.log_manager` for logging.
 - Add dependencies only when justified; keep the runtime lean.
+- In Streamlit code, do not use `use_container_width`; use the `width` parameter instead (for example `width="stretch"`).
 
 ---
 

@@ -278,7 +278,7 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
                 "Latest run failure counts by reason: "
                 + _format_failure_counts(diagnostics.failed_destinations, "failure_reason")
             )
-            st.dataframe(_failure_table(diagnostics.failed_destinations), hide_index=True, use_container_width=True)
+            st.dataframe(_failure_table(diagnostics.failed_destinations), hide_index=True, width="stretch")
         if diagnostics.skipped_total > 0:
             st.caption(
                 (
