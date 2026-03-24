@@ -22,7 +22,7 @@ from modules.infra.database_manager import (
 )
 from modules.infra.db.bulk_runs import selector_hash
 from modules.infra.log_manager import bind_log_context, get_logger
-from modules.multimodal.bulk import bulk_failure_is_retryable, load_destinations, run_bulk_evaluation
+from modules.multimodal.bulk import load_destinations, run_bulk_evaluation
 from modules.multimodal.scenario_keys import normalize_bulk_place_input
 
 from app.heatmap.config import (
@@ -131,7 +131,7 @@ def _to_run_info(
     row_count: int,
     success_count: int,
     fail_count: int,
-    retryable_fail_count: int,
+    failed_destination_count: int,
     latest_updated_timestamp: Any,
     latest_run_id: Optional[str],
     duration_s: Optional[float],
@@ -142,7 +142,8 @@ def _to_run_info(
     success_total = max(min(int(success_count), destination_count), 0)
     fail_total = max(min(int(fail_count), destination_count), 0)
     missing_count = max(destination_count - found_count, 0)
-    pending_count = max(missing_count + max(int(retryable_fail_count), 0), 0)
+    failed_total = max(min(int(failed_destination_count), destination_count), 0)
+    pending_count = max(min(missing_count + failed_total, destination_count), 0)
     return HeatmapRunInfo(
         run_id=latest_run_id,
         origin_name=scenario.origin_name,
@@ -393,8 +394,8 @@ def _selector_log_details(selector: BulkRunSelector) -> str:
     )
 
 
-def _retryable_failure_count(records: List[Any]) -> int:
-    return sum(1 for record in records if bulk_failure_is_retryable(getattr(record, "status", "")))
+def _failed_destination_count(records: List[Any]) -> int:
+    return sum(1 for record in records if str(getattr(record, "status", "")).strip().lower() != "ok")
 
 
 def _pending_destination_list(records: List[Any], *, destination_set_id: str) -> List[str]:
@@ -409,7 +410,7 @@ def _pending_destination_list(records: List[Any], *, destination_set_id: str) ->
     for destination in _heatmap_destinations(destination_set_id):
         normalized_input = normalize_bulk_place_input(destination).casefold()
         status = latest_statuses.get(normalized_input)
-        if status is None or bulk_failure_is_retryable(status):
+        if status is None or status != "ok":
             pending.append(destination)
     return pending
 
@@ -576,14 +577,14 @@ def get_heatmap_status(
             selector, summary, latest_completed = _select_active_selector(conn, scenario, resolved_destination_set_id)
             latest_rows = list_bulk_results(conn, selector=selector, only_success=None)
 
-        retryable_fail_count = _retryable_failure_count(latest_rows)
+        failed_destination_count = _failed_destination_count(latest_rows)
         status = _to_run_info(
             scenario,
             destination_set_id=resolved_destination_set_id,
             row_count=summary.row_count,
             success_count=summary.success_count,
             fail_count=summary.fail_count,
-            retryable_fail_count=retryable_fail_count,
+            failed_destination_count=failed_destination_count,
             latest_updated_timestamp=(
                 summary.latest_updated_timestamp
                 or (None if latest_completed is None else latest_completed.updated_timestamp)
@@ -595,7 +596,7 @@ def get_heatmap_status(
         _log.info(
             (
                 "Heatmap comparison status origin=%s cargo_t=%.3f found=%d success=%d fail=%d "
-                "missing=%d retryable_failures=%d pending=%d latest_run_id=%s selector_hash=%s"
+                "missing=%d failed_latest=%d pending=%d latest_run_id=%s selector_hash=%s"
             ),
             scenario.origin_name,
             scenario.cargo_t,
@@ -603,7 +604,7 @@ def get_heatmap_status(
             status.success_count,
             status.fail_count,
             status.missing_count,
-            retryable_fail_count,
+            failed_destination_count,
             status.pending_count,
             status.run_id or "<none>",
             selector_hash(selector),
@@ -635,18 +636,18 @@ def pending_destinations(
         latest_rows = list_bulk_results(conn, selector=selector, only_success=None)
 
     pending = _pending_destination_list(latest_rows, destination_set_id=resolved_destination_set_id)
-    retryable_failures = _retryable_failure_count(latest_rows)
+    failed_destinations = _failed_destination_count(latest_rows)
     missing_count = max(len(_heatmap_destinations(resolved_destination_set_id)) - len(latest_rows), 0)
     _log.info(
         (
             "Computed pending heatmap destinations origin=%s cargo_t=%.3f pending=%d missing=%d "
-            "retryable_failures=%d total=%d"
+            "failed=%d total=%d"
         ),
         scenario.origin_name,
         scenario.cargo_t,
         len(pending),
         missing_count,
-        retryable_failures,
+        failed_destinations,
         len(_heatmap_destinations(resolved_destination_set_id)),
     )
     return pending
@@ -843,11 +844,11 @@ def run_heatmap(
         mode_label = "rerun"
     else:
         destinations_to_process = pending_destinations(scenario, destination_set_id=resolved_destination_set_id)
-        mode_label = "pending run"
+        mode_label = "run-missing"
 
     if not destinations_to_process:
         _log.info(
-            "Heatmap %s skipped because no destinations need processing origin=%s cargo_t=%.3f",
+            "Heatmap %s skipped because no destinations are missing or failed origin=%s cargo_t=%.3f",
             mode_label,
             scenario.origin_name,
             scenario.cargo_t,

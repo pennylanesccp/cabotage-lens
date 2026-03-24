@@ -8,7 +8,6 @@ from app.access import render_logout_control
 from app.heatmap.config import heatmap_destination_label
 from modules.fuel.truck_specs import list_truck_keys
 
-from app.main.sidebar.branding import render_sidebar_brand
 from app.main.sidebar.filters import (
     LOCATION_RESOLUTION_POLL_SECONDS,
     apply_resolved_location_values,
@@ -26,22 +25,14 @@ from app.main.utils.formatters import clean_place_label
 def render_sidebar(
     *,
     origin_field_key: str,
-    cargo_options: list[float],
     destination_set_options: list[str],
     class_options: Iterable[str],
     port_ops_scenarios: Iterable[str],
 ) -> None:
     with st.sidebar:
-        render_sidebar_brand()
         st.subheader("Scenario")
         _render_origin_field(origin_field_key)
         st.number_input("Cargo (t)", min_value=0.0, step=0.5, format="%g", key="heatmap_cargo")
-        unique_cargo_values = sorted({float(value) for value in cargo_options if float(value) > 0.0})
-        if unique_cargo_values:
-            st.caption(
-                "Stored cargo values for this origin: "
-                + ", ".join(f"{value:,.1f} t" for value in unique_cargo_values[:8])
-            )
         with st.expander("Advanced", expanded=False):
             _render_advanced(
                 destination_set_options=destination_set_options,
@@ -66,7 +57,7 @@ def render_run_actions(*, has_origin: bool, has_loaded_dataset: bool) -> Tuple[b
             width="stretch",
             disabled=(not has_origin),
             key="heatmap_run_missing_button",
-            help="Compute only destinations that are still missing or marked retryable for this scenario.",
+            help="Compute destinations that are still missing or whose latest stored attempt failed for this scenario.",
         )
         rerun_clicked = st.button(
             "Rerun all",
@@ -123,6 +114,11 @@ def _render_advanced(
         options=list(destination_set_options),
         key="heatmap_destination_set_id",
         format_func=heatmap_destination_label,
+    )
+    st.checkbox(
+        "Show destination points",
+        key="heatmap_show_points",
+        help="Overlay the source destination-city points for hover inspection.",
     )
 
     st.markdown("##### Routing")

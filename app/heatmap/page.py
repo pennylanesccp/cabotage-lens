@@ -23,7 +23,6 @@ from app.heatmap.surface import build_surface
 from app.heatmap.service import (
     HeatmapConfigurationError,
     HeatmapDataError,
-    list_cargo_options,
     load_current_dataset,
     rerun_heatmap,
     run_heatmap,
@@ -207,22 +206,14 @@ def _progress_callback(progress_bar: Any, status_box: Any):
 
 
 def _render_dataset(dataset: HeatmapDataset) -> None:
-    control_cols = st.columns([1.35, 1.0])
-    with control_cols[0]:
-        metric = st.radio(
-            "Color metric",
-            options=list(HEATMAP_METRICS),
-            format_func=lambda value: "Cost" if value == "cost" else "Emissions",
-            horizontal=True,
-            key="heatmap_metric",
-        )
-    with control_cols[1]:
-        with st.expander("Display options", expanded=False):
-            show_points = st.toggle(
-                "Show destination points",
-                key="heatmap_show_points",
-                help="Overlay the source destination-city points for hover inspection.",
-            )
+    metric = st.radio(
+        "Color metric",
+        options=list(HEATMAP_METRICS),
+        format_func=lambda value: "Cost" if value == "cost" else "Emissions",
+        horizontal=True,
+        key="heatmap_metric",
+    )
+    show_points = bool(st.session_state.get("heatmap_show_points", False))
 
     surface = build_surface(dataset, metric)
     diagnostics = dataset.diagnostics
@@ -241,7 +232,7 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
 
 def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface) -> None:
     diagnostics = dataset.diagnostics
-    retryable_failures = max(dataset.run.pending_count - dataset.run.missing_count, 0)
+    latest_failed_destinations = max(dataset.run.pending_count - dataset.run.missing_count, 0)
 
     with st.expander("Diagnostics", expanded=False):
         diag_cols = st.columns(5)
@@ -272,8 +263,8 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
             )
         )
 
-        if retryable_failures > 0:
-            st.caption(f"Retryable latest failures: {retryable_failures}")
+        if latest_failed_destinations > 0:
+            st.caption(f"Latest failed destinations queued by Run missing: {latest_failed_destinations}")
         if diagnostics.failed_destinations:
             st.caption(
                 "Latest run failure counts by step: "
@@ -315,21 +306,6 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
         )
 
 
-def _render_unloaded_state(origin_name: str, destination_set_id: str) -> None:
-    st.markdown(
-        f"""
-        <section style='padding: 1.05rem 1.15rem; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.12); background: rgba(248, 250, 252, 0.74);'>
-            <p style='margin: 0 0 0.3rem 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.76rem; color: #64748b;'>3D surface</p>
-            <h3 style='margin: 0; color: #0f172a;'>Surface not loaded</h3>
-            <p style='margin: 0.55rem 0 0 0; color: #334155; max-width: 46rem;'>
-                Load the stored surface for <strong>{escape(origin_name)}</strong> to combine every stored origin/destiny row for the selected cargo across all sources. The selected file <strong>{escape(heatmap_destination_label(destination_set_id))}</strong> still controls run-missing and rerun actions.
-            </p>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def render_page() -> None:
     init_state()
     _init_page_state()
@@ -355,23 +331,8 @@ def render_page() -> None:
     if destination_set_id not in destination_set_options:
         destination_set_options = sorted(set(destination_set_options + [destination_set_id]))
 
-    cargo_options = [float(st.session_state.get("heatmap_cargo", 30.0))]
-    try:
-        cargo_options = list_cargo_options(
-            str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
-            destination_set_id=destination_set_id,
-        )
-    except Exception as exc:
-        _log.exception("Failed to load heatmap cargo options origin=%s", st.session_state.get(_HEATMAP_ORIGIN_FIELD, ""))
-        st.error(f"Failed to load available cargo values: {exc}")
-    finally:
-        current_cargo = float(st.session_state.get("heatmap_cargo", 30.0))
-        if current_cargo not in cargo_options:
-            cargo_options = sorted(set(cargo_options + [current_cargo]))
-
     render_sidebar(
         origin_field_key=_HEATMAP_ORIGIN_FIELD,
-        cargo_options=cargo_options,
         destination_set_options=destination_set_options,
         class_options=class_options,
         port_ops_scenarios=port_ops_scenarios,
@@ -435,13 +396,13 @@ def render_page() -> None:
 
     if run_missing_clicked:
         _log.info(
-            "Heatmap UI requested pending run origin=%s cargo_t=%.3f",
+            "Heatmap UI requested run-missing origin=%s cargo_t=%.3f",
             scenario.origin_name,
             scenario.cargo_t,
         )
         progress_bar = st.progress(0.0)
         status_box = st.empty()
-        status_box.markdown("Starting pending run...")
+        status_box.markdown("Starting run missing...")
         try:
             dataset = run_heatmap(
                 scenario,
@@ -451,7 +412,7 @@ def render_page() -> None:
             )
         except Exception as exc:
             _log.exception(
-                "Heatmap pending run failed origin=%s cargo_t=%.3f",
+                "Heatmap run-missing failed origin=%s cargo_t=%.3f",
                 scenario.origin_name,
                 scenario.cargo_t,
             )
@@ -460,7 +421,7 @@ def render_page() -> None:
             st.error(f"Heatmap run failed: {exc}")
         else:
             progress_bar.progress(1.0)
-            status_box.markdown("Pending run completed. Comparison table refreshed.")
+            status_box.markdown("Run missing completed. Comparison table refreshed.")
             st.session_state.heatmap_dataset = dataset
 
     if rerun_clicked:
@@ -495,6 +456,3 @@ def render_page() -> None:
     dataset = st.session_state.get("heatmap_dataset")
     if isinstance(dataset, HeatmapDataset):
         _render_dataset(dataset)
-        return
-
-    _render_unloaded_state(scenario.origin_name, destination_set_id)

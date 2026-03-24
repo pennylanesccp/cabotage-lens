@@ -100,7 +100,7 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(status.success_count, 380)
         self.assertEqual(status.fail_count, 20)
         self.assertEqual(status.missing_count, 208)
-        self.assertEqual(status.pending_count, 214)
+        self.assertEqual(status.pending_count, 228)
         self.assertEqual(summarize_mock.call_args.kwargs["selector"].origin_location_id, 17)
 
     def test_load_current_dataset_builds_map_points_from_normalized_rows(self) -> None:
@@ -435,7 +435,7 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(failures[0].failure_reason, "provider_timeout")
         self.assertTrue(failures[0].retryable)
 
-    def test_pending_destinations_retries_retryable_failures_and_absent_destinations(self) -> None:
+    def test_pending_destinations_retries_failed_and_absent_destinations(self) -> None:
         scenario = self._scenario()
         with patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
             "app.heatmap.service._origin_location_id",
@@ -453,7 +453,7 @@ class HeatmapServiceTests(unittest.TestCase):
         ):
             pending = pending_destinations(scenario)
 
-        self.assertEqual(pending, ["Rio Branco, AC", "Fortaleza, CE"])
+        self.assertEqual(pending, ["Belem, PA", "Rio Branco, AC", "Fortaleza, CE"])
 
     def test_run_heatmap_missing_only_processes_pending_destinations(self) -> None:
         scenario = self._scenario()
