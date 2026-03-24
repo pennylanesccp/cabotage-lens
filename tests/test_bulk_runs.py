@@ -145,8 +145,8 @@ class BulkRunPersistenceTests(unittest.TestCase):
         self.assertEqual(params[6], 901)
         self.assertEqual(params[7], 902)
         self.assertEqual(params[8], 903)
-        self.assertEqual(params[22], "nearest_exact_delta_straight_line")
-        self.assertEqual(params[23], 904)
+        self.assertEqual(params[29], "nearest_exact_delta_straight_line")
+        self.assertEqual(params[30], 904)
 
     def test_insert_run_results_batches_remote_upserts(self) -> None:
         conn = _RecordingConnection()
@@ -231,6 +231,13 @@ class BulkRunPersistenceTests(unittest.TestCase):
                     selector.port_ops_scenario,
                     "ok",
                     None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    False,
+                    None,
+                    None,
                     -3.119,
                     -60.0217,
                     "AM",
@@ -266,8 +273,10 @@ class BulkRunPersistenceTests(unittest.TestCase):
         self.assertEqual(summary.latest_run_id, "run-2")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].destiny_name, "Manaus, AM")
+        self.assertEqual(rows[0].origin_name, "Pelotas, RS")
         self.assertTrue(rows[0].is_approximation)
         self.assertEqual(rows[0].route_source, "nearest_exact_delta_straight_line")
+        self.assertIsNone(rows[0].failure_reason)
         self.assertAlmostEqual(float(rows[0].road_cost_r or 0.0), 15000.0)
 
     def test_upsert_bulk_result_uses_normalized_item_writer(self) -> None:

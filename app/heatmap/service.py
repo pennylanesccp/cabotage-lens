@@ -12,6 +12,7 @@ from modules.infra.database_manager import (
     get_latest_completed_run,
     list_bulk_results_for_origin_scenario,
     list_bulk_results,
+    list_bulk_run_results,
     list_bulk_run_cargo_values,
     list_bulk_run_origins,
     list_cached_place_points,
@@ -32,6 +33,7 @@ from app.heatmap.config import (
 from app.heatmap.types import (
     HeatmapDataset,
     HeatmapDatasetDiagnostics,
+    HeatmapFailureRecord,
     HeatmapPoint,
     HeatmapRunInfo,
     HeatmapScenario,
@@ -193,6 +195,33 @@ def _point_rejection_reason(record: Any) -> Optional[str]:
     if record.road_emissions_kg is None or record.multimodal_emissions_kg is None:
         return "missing_emissions"
     return None
+
+
+def _failure_record_from_run_result(record: Any) -> Optional[HeatmapFailureRecord]:
+    status = str(getattr(record, "status", "")).strip().lower()
+    if status == "ok":
+        return None
+    destination = str(getattr(record, "destiny_name", "") or getattr(record, "input_destiny", "")).strip()
+    return HeatmapFailureRecord(
+        destination=destination or str(getattr(record, "input_destiny", "")).strip() or "<unknown>",
+        failed_leg=getattr(record, "failed_leg", None),
+        failed_step=getattr(record, "failed_step", None),
+        failure_reason=getattr(record, "failure_reason", None),
+        failure_detail=getattr(record, "failure_detail", None) or getattr(record, "error_message", None),
+        port_origin=getattr(record, "port_origin_name", None),
+        port_destiny=getattr(record, "port_destiny_name", None),
+        retryable=bool(getattr(record, "retryable", False)),
+        provider=getattr(record, "failure_provider", None),
+        provider_operation=getattr(record, "failure_provider_operation", None),
+    )
+
+
+def _load_failed_destinations(conn: Any, *, run_id: Optional[str]) -> List[HeatmapFailureRecord]:
+    if not str(run_id or "").strip():
+        return []
+    records = list_bulk_run_results(conn, run_id=str(run_id), only_success=False)
+    failures = [failure for failure in (_failure_record_from_run_result(record) for record in records) if failure is not None]
+    return sorted(failures, key=lambda item: (item.destination.casefold(), item.destination))
 
 
 def _origin_name_variants(origin_name: str) -> List[str]:
@@ -623,6 +652,32 @@ def pending_destinations(
     return pending
 
 
+def list_failed_destinations(
+    scenario: HeatmapScenario,
+    *,
+    destination_set_id: str | None = None,
+    run_id: str | None = None,
+) -> List[HeatmapFailureRecord]:
+    _require_postgres()
+    resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
+    selected_run_id = str(run_id or "").strip() or None
+    with db_session() as conn:
+        if selected_run_id is None:
+            selector, summary, latest_completed = _select_active_selector(conn, scenario, resolved_destination_set_id)
+            del selector
+            selected_run_id = summary.latest_run_id or (None if latest_completed is None else latest_completed.run_id)
+        failures = _load_failed_destinations(conn, run_id=selected_run_id)
+    _log.info(
+        "Loaded heatmap failed destinations origin=%s cargo_t=%.3f destination_set=%s run_id=%s failures=%d",
+        scenario.origin_name,
+        scenario.cargo_t,
+        resolved_destination_set_id,
+        selected_run_id or "<none>",
+        len(failures),
+    )
+    return failures
+
+
 def load_current_dataset(
     scenario: HeatmapScenario,
     *,
@@ -648,6 +703,7 @@ def load_current_dataset(
     with db_session() as conn:
         if not aggregated_rows:
             aggregated_rows = _load_map_rows(conn, scenario, resolved_destination_set_id)
+        failed_destinations = _load_failed_destinations(conn, run_id=status.run_id)
 
     if not aggregated_rows:
         return None
@@ -726,6 +782,7 @@ def load_current_dataset(
         skipped_missing_emissions=skipped_missing_emissions,
         loaded_bulk_rows=loaded_bulk_rows,
         loaded_single_compare_rows=loaded_single_compare_rows,
+        failed_destinations=failed_destinations,
     )
     dataset = HeatmapDataset(
         scenario=scenario,
@@ -740,7 +797,7 @@ def load_current_dataset(
             "Loaded aggregated heatmap dataset origin=%s cargo_t=%.3f selected_destination_set=%s "
             "loaded_rows=%d bulk_rows=%d single_compare_rows=%d plottable_points=%d "
             "skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d "
-            "selected_missing=%d"
+            "failed_destinations=%d selected_missing=%d"
         ),
         scenario.origin_name,
         scenario.cargo_t,
@@ -752,6 +809,7 @@ def load_current_dataset(
         diagnostics.skipped_missing_coordinates,
         diagnostics.skipped_missing_costs,
         diagnostics.skipped_missing_emissions,
+        len(diagnostics.failed_destinations),
         status.missing_count,
     )
     return dataset

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import random
+import re
 import time
 import threading
 from collections import defaultdict
@@ -67,6 +68,38 @@ _TERMINAL_FAILURE_STATUSES = frozenset(
         "error",
     }
 )
+_RETRYABLE_FAILURE_REASONS = frozenset(
+    {
+        "provider_rate_limited",
+        "provider_timeout",
+        "provider_network_error",
+    }
+)
+_STEP_TO_FAILED_LEG = {
+    "destination_geocoding": "road_only",
+    "nearest_port_origin": "port_origin_selection",
+    "nearest_port_destiny": "port_destiny_selection",
+    "routing_origin_to_port_origin": "first_mile",
+    "routing_road_only": "road_only",
+    "routing_port_destiny_to_destiny": "last_mile",
+    "build_multimodal_route": "sea_leg",
+    "geometry_acquisition": "sea_leg",
+    "calculating_costs_emissions": "sea_leg",
+    "approximation_fallback": "road_only",
+}
+_STEP_TO_PROVIDER_OPERATION = {
+    "destination_geocoding": "geocode_text",
+    "nearest_port_origin": "nearest_port_lookup",
+    "nearest_port_destiny": "nearest_port_lookup",
+    "routing_origin_to_port_origin": "route_road",
+    "routing_road_only": "route_road",
+    "routing_port_destiny_to_destiny": "route_road",
+    "build_multimodal_route": "build_multimodal_route",
+    "geometry_acquisition": "build_multimodal_route",
+    "calculating_costs_emissions": "evaluate_path",
+    "approximation_fallback": "approximation_fallback",
+}
+_CEP_RE = re.compile(r"^\d{5}-?\d{3}$")
 
 
 @dataclass(frozen=True)
@@ -87,6 +120,17 @@ class ApproximationMetadata:
 
 
 @dataclass(frozen=True)
+class FailureDiagnostic:
+    failed_step: str
+    failed_leg: Optional[str]
+    failure_reason: str
+    failure_detail: str
+    retryable: bool
+    provider: Optional[str] = None
+    provider_operation: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class PendingApproximation:
     index: int
     destiny_input: str
@@ -99,6 +143,11 @@ class PendingApproximation:
     failure_step: Optional[str] = None
     failure_system: Optional[str] = None
     failure_provider: Optional[str] = None
+    failed_leg: Optional[str] = None
+    failure_reason: Optional[str] = None
+    failure_detail: Optional[str] = None
+    retryable: bool = False
+    failure_provider_operation: Optional[str] = None
 
 
 @dataclass
@@ -118,6 +167,11 @@ class DestinationWorkItem:
     failure_step: Optional[str] = None
     failure_system: Optional[str] = None
     failure_provider: Optional[str] = None
+    failed_leg: Optional[str] = None
+    failure_reason: Optional[str] = None
+    failure_detail: Optional[str] = None
+    retryable: bool = False
+    failure_provider_operation: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -533,6 +587,118 @@ def bulk_failure_is_retryable(status: str) -> bool:
     return str(status or "").strip().lower() in _RETRYABLE_FAILURE_STATUSES
 
 
+def failure_reason_is_retryable(reason: str) -> bool:
+    return str(reason or "").strip().lower() in _RETRYABLE_FAILURE_REASONS
+
+
+def _compact_failure_detail(detail: Any, *, max_length: int = 220) -> str:
+    text = " ".join(str(detail or "").split())
+    if not text:
+        return "Failure detail unavailable."
+    if len(text) <= max_length:
+        return text
+    return text[: max_length - 3].rstrip() + "..."
+
+
+def _provider_reason_for_status(status: str) -> Optional[str]:
+    normalized = str(status or "").strip().lower()
+    if normalized == "rate_limited":
+        return "provider_rate_limited"
+    if normalized == "timeout":
+        return "provider_timeout"
+    if normalized == "network_error":
+        return "provider_network_error"
+    return None
+
+
+def _failed_leg_for_step(
+    step: Optional[str],
+    *,
+    failure_reason: Optional[str] = None,
+    failure_detail: Optional[str] = None,
+) -> Optional[str]:
+    step_key = str(step or "").strip()
+    detail = str(failure_detail or "").lower()
+    if detail:
+        if "road_direct" in detail or "origin -> destination" in detail:
+            return "road_only"
+        if "first_mile" in detail or "origin -> port_origin" in detail:
+            return "first_mile"
+        if "last_mile" in detail or "port_destiny -> destination" in detail:
+            return "last_mile"
+    if str(failure_reason or "").strip().lower() == "no_valid_port_pair":
+        return "sea_leg"
+    return _STEP_TO_FAILED_LEG.get(step_key)
+
+
+def _provider_operation_for_step(step: Optional[str], *, raw_input: Optional[str] = None) -> Optional[str]:
+    step_key = str(step or "").strip()
+    if step_key == "destination_geocoding":
+        value = str(raw_input or "").strip()
+        if value and _CEP_RE.fullmatch(value):
+            return "geocode_structured"
+    return _STEP_TO_PROVIDER_OPERATION.get(step_key)
+
+
+def build_failure_diagnostic(
+    *,
+    status: str,
+    step: Optional[str],
+    failure_detail: Optional[str],
+    system: Optional[str] = None,
+    provider: Optional[str] = None,
+    provider_operation: Optional[str] = None,
+    raw_input: Optional[str] = None,
+) -> FailureDiagnostic:
+    step_key = str(step or "").strip() or "unknown"
+    normalized_status = str(status or "").strip().lower()
+    detail_text = _compact_failure_detail(failure_detail)
+    lowered_detail = detail_text.lower()
+
+    failure_reason = _provider_reason_for_status(normalized_status)
+    if failure_reason is None:
+        if step_key in {"nearest_port_origin", "nearest_port_destiny"} or normalized_status == "nearest_port_failed":
+            failure_reason = "no_nearest_port"
+        elif step_key == "destination_geocoding" or normalized_status == "geocode_failed":
+            failure_reason = "destination_not_found"
+        elif normalized_status in {"no_road_route", "last_mile_no_road_route"}:
+            failure_reason = "road_route_not_found"
+        elif "road distance is unavailable" in lowered_detail or "no route" in lowered_detail:
+            failure_reason = "road_route_not_found"
+        elif "no valid port pair" in lowered_detail:
+            failure_reason = "no_valid_port_pair"
+        elif step_key == "approximation_fallback":
+            failure_reason = "approximation_unavailable"
+        elif step_key in {"build_multimodal_route", "geometry_acquisition"} or normalized_status == "geometry_failed":
+            failure_reason = "multimodal_route_build_failed"
+        elif step_key == "calculating_costs_emissions" or normalized_status == "evaluation_failed":
+            failure_reason = "evaluation_failed"
+        elif system == "geocoding":
+            failure_reason = "destination_not_found"
+        else:
+            failure_reason = normalized_status or "unknown_failure"
+
+    retryable = bulk_failure_is_retryable(normalized_status) or failure_reason_is_retryable(failure_reason)
+    return FailureDiagnostic(
+        failed_step=step_key,
+        failed_leg=_failed_leg_for_step(
+            step_key,
+            failure_reason=failure_reason,
+            failure_detail=detail_text,
+        ),
+        failure_reason=failure_reason,
+        failure_detail=detail_text,
+        retryable=bool(retryable),
+        provider=(None if provider in (None, "") else str(provider).strip()),
+        provider_operation=(
+            None
+            if provider_operation in (None, "")
+            else str(provider_operation).strip()
+        )
+        or _provider_operation_for_step(step_key, raw_input=raw_input),
+    )
+
+
 def _route_source_for_result(
     geo: Optional[Dict[str, Any]],
     *,
@@ -558,6 +724,8 @@ def _route_source_for_result(
 
 
 def _build_success_summary_row(
+    run_id: Optional[str],
+    origin_name: str,
     destiny_input: str,
     geo: Dict[str, Any],
     res: Dict[str, Any],
@@ -569,10 +737,20 @@ def _build_success_summary_row(
 ) -> Dict[str, Any]:
     inputs = res.get("inputs", {})
     comparison = res.get("comparison", {})
+    destiny = geo.get("destiny", {})
+    port_origin = geo.get("port_origin", {})
+    port_destiny = geo.get("port_destiny", {})
 
     return {
+        "run_id": run_id,
         "destiny_input": destiny_input,
-        "destiny_name": geo["destiny"]["label"],
+        "destiny_name": destiny.get("label"),
+        "origin_label": origin_name,
+        "destination_label": destiny.get("label"),
+        "destination_lat": destiny.get("lat"),
+        "destination_lon": destiny.get("lon"),
+        "port_origin_name": port_origin.get("name"),
+        "port_destiny_name": port_destiny.get("name"),
         "status": "ok",
         "is_approximation": bool(is_approximation),
         "route_source": route_source,
@@ -586,6 +764,13 @@ def _build_success_summary_row(
             None if approximation_meta is None else approximation_meta.delta_straight_line_km
         ),
         "approximation_notes": None if approximation_meta is None else approximation_meta.notes,
+        "failed_step": None,
+        "failed_leg": None,
+        "failure_reason": None,
+        "failure_detail": None,
+        "retryable": False,
+        "provider": None,
+        "provider_operation": None,
         "road_direct_source": geo["road_direct"].get("source"),
         "first_mile_source": geo["first_mile"].get("source"),
         "last_mile_source": geo["last_mile"].get("source"),
@@ -605,9 +790,15 @@ def _build_success_summary_row(
 
 
 def _build_failure_summary_row(
+    run_id: Optional[str],
+    origin_name: str,
     destiny_input: str,
     destiny_name: str,
     *,
+    destination_lat: Optional[float] = None,
+    destination_lon: Optional[float] = None,
+    port_origin_name: Optional[str] = None,
+    port_destiny_name: Optional[str] = None,
     status: str,
     error_message: str,
     route_source: Optional[str] = None,
@@ -616,10 +807,31 @@ def _build_failure_summary_row(
     failure_step: Optional[str] = None,
     failure_system: Optional[str] = None,
     failure_provider: Optional[str] = None,
+    failed_leg: Optional[str] = None,
+    failure_reason: Optional[str] = None,
+    failure_detail: Optional[str] = None,
+    retryable: Optional[bool] = None,
+    failure_provider_operation: Optional[str] = None,
 ) -> Dict[str, Any]:
+    diagnostic = build_failure_diagnostic(
+        status=status,
+        step=failure_step,
+        failure_detail=failure_detail or error_message,
+        system=failure_system,
+        provider=failure_provider,
+        provider_operation=failure_provider_operation,
+        raw_input=destiny_input,
+    )
     return {
+        "run_id": run_id,
         "destiny_input": destiny_input,
         "destiny_name": destiny_name,
+        "origin_label": origin_name,
+        "destination_label": destiny_name,
+        "destination_lat": destination_lat,
+        "destination_lon": destination_lon,
+        "port_origin_name": port_origin_name,
+        "port_destiny_name": port_destiny_name,
         "status": status,
         "is_approximation": bool(is_approximation),
         "route_source": route_source,
@@ -627,9 +839,16 @@ def _build_failure_summary_row(
         "approximation_reference_distance_km": None,
         "approximation_delta_straight_line_km": None,
         "approximation_notes": approximation_notes,
-        "failure_step": failure_step,
+        "failed_step": failure_step or diagnostic.failed_step,
+        "failed_leg": failed_leg or diagnostic.failed_leg,
+        "failure_reason": failure_reason or diagnostic.failure_reason,
+        "failure_detail": failure_detail or diagnostic.failure_detail,
+        "retryable": bool(diagnostic.retryable if retryable is None else retryable),
+        "provider": failure_provider or diagnostic.provider,
+        "provider_operation": failure_provider_operation or diagnostic.provider_operation,
+        "failure_step": failure_step or diagnostic.failed_step,
         "failure_system": failure_system,
-        "failure_provider": failure_provider,
+        "failure_provider": failure_provider or diagnostic.provider,
         "error_msg": error_message,
     }
 
@@ -932,8 +1151,17 @@ def _build_bulk_outcome_rows(
     route_source: Optional[str] = None,
     origin_location_id: Optional[int] = None,
     destination_location_id: Optional[int] = None,
+    destination_lat: Optional[float] = None,
+    destination_lon: Optional[float] = None,
+    destination_uf: Optional[str] = None,
     port_origin_location_id: Optional[int] = None,
+    port_origin_name: Optional[str] = None,
+    port_origin_lat: Optional[float] = None,
+    port_origin_lon: Optional[float] = None,
     port_destiny_location_id: Optional[int] = None,
+    port_destiny_name: Optional[str] = None,
+    port_destiny_lat: Optional[float] = None,
+    port_destiny_lon: Optional[float] = None,
     road_route_id: Optional[int] = None,
     first_mile_route_id: Optional[int] = None,
     last_mile_route_id: Optional[int] = None,
@@ -942,6 +1170,13 @@ def _build_bulk_outcome_rows(
     approximation_reference_distance_km: Optional[float] = None,
     approximation_delta_straight_line_km: Optional[float] = None,
     approximation_notes: Optional[str] = None,
+    failure_step: Optional[str] = None,
+    failed_leg: Optional[str] = None,
+    failure_reason: Optional[str] = None,
+    failure_detail: Optional[str] = None,
+    retryable: Optional[bool] = None,
+    failure_provider: Optional[str] = None,
+    failure_provider_operation: Optional[str] = None,
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:
     inputs = res.get("inputs", {}) if isinstance(res, dict) else {}
     flat = flat or {}
@@ -949,6 +1184,16 @@ def _build_bulk_outcome_rows(
     destiny_point = geo.get("destiny", {}) if isinstance(geo, dict) else {}
     port_origin = geo.get("port_origin", {}) if isinstance(geo, dict) else {}
     port_destiny = geo.get("port_destiny", {}) if isinstance(geo, dict) else {}
+    diagnostic: Optional[FailureDiagnostic] = None
+    if str(status or "").strip().lower() != "ok":
+        diagnostic = build_failure_diagnostic(
+            status=status,
+            step=failure_step,
+            failure_detail=failure_detail or error_message,
+            provider=failure_provider,
+            provider_operation=failure_provider_operation,
+            raw_input=input_destiny,
+        )
 
     road_cost_r = flat.get("road_fuel_cost_r")
     multimodal_cost_r = flat.get("total_fuel_cost_r")
@@ -965,6 +1210,34 @@ def _build_bulk_outcome_rows(
     if road_emissions_kg is not None and multimodal_emissions_kg is not None:
         emissions_delta_kg = float(road_emissions_kg) - float(multimodal_emissions_kg)
 
+    resolved_destiny_lat = (None if not isinstance(destiny_point, dict) else destiny_point.get("lat"))
+    if resolved_destiny_lat is None:
+        resolved_destiny_lat = destination_lat
+    resolved_destiny_lon = (None if not isinstance(destiny_point, dict) else destiny_point.get("lon"))
+    if resolved_destiny_lon is None:
+        resolved_destiny_lon = destination_lon
+    resolved_destiny_uf = (None if not isinstance(destiny_point, dict) else destiny_point.get("uf"))
+    if resolved_destiny_uf is None:
+        resolved_destiny_uf = destination_uf
+    resolved_port_origin_name = (None if not isinstance(port_origin, dict) else port_origin.get("name"))
+    if resolved_port_origin_name is None:
+        resolved_port_origin_name = port_origin_name
+    resolved_port_origin_lat = (None if not isinstance(port_origin, dict) else port_origin.get("lat"))
+    if resolved_port_origin_lat is None:
+        resolved_port_origin_lat = port_origin_lat
+    resolved_port_origin_lon = (None if not isinstance(port_origin, dict) else port_origin.get("lon"))
+    if resolved_port_origin_lon is None:
+        resolved_port_origin_lon = port_origin_lon
+    resolved_port_destiny_name = (None if not isinstance(port_destiny, dict) else port_destiny.get("name"))
+    if resolved_port_destiny_name is None:
+        resolved_port_destiny_name = port_destiny_name
+    resolved_port_destiny_lat = (None if not isinstance(port_destiny, dict) else port_destiny.get("lat"))
+    if resolved_port_destiny_lat is None:
+        resolved_port_destiny_lat = port_destiny_lat
+    resolved_port_destiny_lon = (None if not isinstance(port_destiny, dict) else port_destiny.get("lon"))
+    if resolved_port_destiny_lon is None:
+        resolved_port_destiny_lon = port_destiny_lon
+
     shared = {
         "run_id": run_id,
         "scenario_key": scenario_key,
@@ -976,9 +1249,9 @@ def _build_bulk_outcome_rows(
         "origin_uf": origin_point.get("uf"),
         "destination_location_id": destination_location_id,
         "destiny_name": destiny_name,
-        "destiny_lat": destiny_point.get("lat"),
-        "destiny_lon": destiny_point.get("lon"),
-        "destiny_uf": destiny_point.get("uf"),
+        "destiny_lat": resolved_destiny_lat,
+        "destiny_lon": resolved_destiny_lon,
+        "destiny_uf": resolved_destiny_uf,
         "input_origin": input_origin,
         "input_destiny": input_destiny,
         "input_destiny_key": ascii_place_key(input_destiny),
@@ -998,15 +1271,32 @@ def _build_bulk_outcome_rows(
         "full_call_mode": full_call_mode,
         "port_ops_scenario": port_ops_scenario,
         "port_origin_location_id": port_origin_location_id,
-        "port_origin_name": (None if not isinstance(port_origin, dict) else port_origin.get("name")),
-        "port_origin_lat": (None if not isinstance(port_origin, dict) else port_origin.get("lat")),
-        "port_origin_lon": (None if not isinstance(port_origin, dict) else port_origin.get("lon")),
+        "port_origin_name": resolved_port_origin_name,
+        "port_origin_lat": resolved_port_origin_lat,
+        "port_origin_lon": resolved_port_origin_lon,
         "port_destiny_location_id": port_destiny_location_id,
-        "port_destiny_name": (None if not isinstance(port_destiny, dict) else port_destiny.get("name")),
-        "port_destiny_lat": (None if not isinstance(port_destiny, dict) else port_destiny.get("lat")),
-        "port_destiny_lon": (None if not isinstance(port_destiny, dict) else port_destiny.get("lon")),
+        "port_destiny_name": resolved_port_destiny_name,
+        "port_destiny_lat": resolved_port_destiny_lat,
+        "port_destiny_lon": resolved_port_destiny_lon,
         "status": status,
         "error_message": error_message,
+        "failed_step": (failure_step if failure_step is not None else (None if diagnostic is None else diagnostic.failed_step)),
+        "failed_leg": (failed_leg if failed_leg is not None else (None if diagnostic is None else diagnostic.failed_leg)),
+        "failure_reason": (
+            failure_reason if failure_reason is not None else (None if diagnostic is None else diagnostic.failure_reason)
+        ),
+        "failure_detail": (
+            failure_detail if failure_detail is not None else (None if diagnostic is None else diagnostic.failure_detail)
+        ),
+        "retryable": (False if diagnostic is None else bool(diagnostic.retryable if retryable is None else retryable)),
+        "failure_provider": (
+            failure_provider if failure_provider is not None else (None if diagnostic is None else diagnostic.provider)
+        ),
+        "failure_provider_operation": (
+            failure_provider_operation
+            if failure_provider_operation is not None
+            else (None if diagnostic is None else diagnostic.provider_operation)
+        ),
         "is_approximation": is_approximation,
         "route_source": resolved_route_source,
         "road_route_id": road_route_id,
@@ -1059,19 +1349,36 @@ def _build_bulk_outcome_rows(
         "input_destiny": input_destiny,
         "destination_location_id": destination_location_id,
         "destiny_name": destiny_name,
-        "destiny_lat": destiny_point.get("lat"),
-        "destiny_lon": destiny_point.get("lon"),
-        "destiny_uf": destiny_point.get("uf"),
+        "destiny_lat": shared["destiny_lat"],
+        "destiny_lon": shared["destiny_lon"],
+        "destiny_uf": shared["destiny_uf"],
         "port_origin_location_id": port_origin_location_id,
-        "port_origin_name": (None if not isinstance(port_origin, dict) else port_origin.get("name")),
-        "port_origin_lat": (None if not isinstance(port_origin, dict) else port_origin.get("lat")),
-        "port_origin_lon": (None if not isinstance(port_origin, dict) else port_origin.get("lon")),
+        "port_origin_name": shared["port_origin_name"],
+        "port_origin_lat": shared["port_origin_lat"],
+        "port_origin_lon": shared["port_origin_lon"],
         "port_destiny_location_id": port_destiny_location_id,
-        "port_destiny_name": (None if not isinstance(port_destiny, dict) else port_destiny.get("name")),
-        "port_destiny_lat": (None if not isinstance(port_destiny, dict) else port_destiny.get("lat")),
-        "port_destiny_lon": (None if not isinstance(port_destiny, dict) else port_destiny.get("lon")),
+        "port_destiny_name": shared["port_destiny_name"],
+        "port_destiny_lat": shared["port_destiny_lat"],
+        "port_destiny_lon": shared["port_destiny_lon"],
         "status": status,
         "error_message": error_message,
+        "failed_step": shared["failed_step"],
+        "failed_leg": (failed_leg if failed_leg is not None else (None if diagnostic is None else diagnostic.failed_leg)),
+        "failure_reason": (
+            failure_reason if failure_reason is not None else (None if diagnostic is None else diagnostic.failure_reason)
+        ),
+        "failure_detail": (
+            failure_detail if failure_detail is not None else (None if diagnostic is None else diagnostic.failure_detail)
+        ),
+        "retryable": (False if diagnostic is None else bool(diagnostic.retryable if retryable is None else retryable)),
+        "failure_provider": (
+            failure_provider if failure_provider is not None else (None if diagnostic is None else diagnostic.provider)
+        ),
+        "failure_provider_operation": (
+            failure_provider_operation
+            if failure_provider_operation is not None
+            else (None if diagnostic is None else diagnostic.provider_operation)
+        ),
         "road_cost_r": road_cost_r,
         "multimodal_cost_r": multimodal_cost_r,
         "cost_delta_r": cost_delta_r,

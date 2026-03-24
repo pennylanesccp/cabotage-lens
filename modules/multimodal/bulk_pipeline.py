@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -24,6 +23,7 @@ from modules.multimodal.bulk import (
     BulkPerformanceTracker,
     BulkPersistenceBuffer,
     DestinationWorkItem,
+    build_failure_diagnostic,
     NearestPortMemo,
     PendingApproximation,
     RouteRequestCoordinator,
@@ -65,6 +65,7 @@ _STEP_LABELS: dict[str, str] = {
     "nearest_port_destiny": "nearest port destiny",
     "routing_road_only": "routing road only",
     "routing_port_destiny_to_destiny": "routing port destiny to destiny",
+    "build_multimodal_route": "build multimodal route",
     "geometry_acquisition": "geometry acquisition",
     "calculating_costs_emissions": "calculating costs and emissions",
     "approximation_fallback": "approximation fallback",
@@ -168,12 +169,27 @@ def _assign_destination_failure(
     step: str,
     system: str,
     provider: Optional[str] = None,
+    provider_operation: Optional[str] = None,
 ) -> None:
+    diagnostic = build_failure_diagnostic(
+        status=status,
+        step=step,
+        failure_detail=error_message,
+        system=system,
+        provider=provider,
+        provider_operation=provider_operation,
+        raw_input=item.destiny_input,
+    )
     item.failure_status = status
     item.error_message = error_message
-    item.failure_step = step
+    item.failure_step = diagnostic.failed_step
     item.failure_system = system
-    item.failure_provider = provider
+    item.failure_provider = diagnostic.provider
+    item.failed_leg = diagnostic.failed_leg
+    item.failure_reason = diagnostic.failure_reason
+    item.failure_detail = diagnostic.failure_detail
+    item.retryable = diagnostic.retryable
+    item.failure_provider_operation = diagnostic.provider_operation
 
 
 def _format_point_coords(point: Optional[Dict[str, Any]]) -> str:
@@ -227,14 +243,19 @@ def _log_destination_failure_context(
     destiny_point = item.point if isinstance(item.point, dict) else None
     _log.warning(
         (
-            "Bulk destination failure phase=%s step=%s step_label=%s system=%s provider=%s "
-            "route=%s@%s -> %s@%s input_destiny=%s status=%s point_source=%s ports=%s -> %s %s %s error=%s"
+            "Bulk destination failure phase=%s step=%s step_label=%s leg=%s reason=%s retryable=%s "
+            "system=%s provider=%s provider_operation=%s route=%s@%s -> %s@%s "
+            "input_destiny=%s status=%s point_source=%s ports=%s -> %s %s %s error=%s"
         ),
         phase,
         item.failure_step or "<unknown>",
         _step_label(item.failure_step),
+        item.failed_leg or "<unknown>",
+        item.failure_reason or "<unknown>",
+        item.retryable,
         item.failure_system or "<unknown>",
         item.failure_provider or "<unknown>",
+        item.failure_provider_operation or "<unknown>",
         origin_pt.get("label") or "<origin>",
         _format_point_coords(origin_pt),
         item.destiny_name or item.destiny_input,
@@ -246,7 +267,7 @@ def _log_destination_failure_context(
         _format_port_name(item.port_destiny),
         _format_leg_debug(geo, "road_direct"),
         _format_leg_debug(geo, "last_mile"),
-        error_message,
+        item.failure_detail or error_message,
     )
 
 
@@ -304,67 +325,335 @@ def _status_counts(summary_rows: List[Dict[str, Any]]) -> Dict[str, int]:
     return counts
 
 
-def _format_failed_destinies(
-    summary_rows: List[Dict[str, Any]],
+def _failure_counts(summary_rows: List[Dict[str, Any]], *, field_name: str) -> Dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in summary_rows:
+        status = str(row.get("status") or "").strip().lower() or "unknown"
+        if status == "ok":
+            continue
+        key = str(row.get(field_name) or "").strip() or "unknown"
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def _top_failed_destinations(summary_rows: List[Dict[str, Any]], *, limit: int = 10) -> List[Dict[str, Any]]:
+    failures: list[Dict[str, Any]] = []
+    for row in summary_rows:
+        status = str(row.get("status") or "").strip().lower() or "unknown"
+        if status == "ok":
+            continue
+        failures.append(
+            {
+                "destination": str(
+                    row.get("destination_label")
+                    or row.get("destiny_name")
+                    or row.get("destiny_input")
+                    or "<unknown>"
+                ).strip()
+                or "<unknown>",
+                "port_origin": str(row.get("port_origin_name") or "").strip() or None,
+                "port_destiny": str(row.get("port_destiny_name") or "").strip() or None,
+                "failed_step": str(row.get("failed_step") or row.get("failure_step") or "").strip() or None,
+                "failed_leg": str(row.get("failed_leg") or "").strip() or None,
+                "failure_reason": str(row.get("failure_reason") or "").strip() or None,
+            }
+        )
+    return failures[:limit]
+
+
+def _format_counter_summary(counts: Dict[str, int], *, max_items: int = 8) -> str:
+    if not counts:
+        return "none"
+    return ", ".join(
+        f"{key}={count}"
+        for key, count in list(counts.items())[:max_items]
+    )
+
+
+def _format_top_failed_destinations(rows: List[Dict[str, Any]], *, max_items: int = 5) -> str:
+    if not rows:
+        return "none"
+    segments: list[str] = []
+    for row in rows[:max_items]:
+        segments.append(
+            (
+                f"{row.get('destination') or '<unknown>'} "
+                f"ports={row.get('port_origin') or '<none>'}->{row.get('port_destiny') or '<none>'} "
+                f"step={row.get('failed_step') or '<none>'} "
+                f"leg={row.get('failed_leg') or '<none>'} "
+                f"reason={row.get('failure_reason') or '<none>'}"
+            )
+        )
+    return "; ".join(segments)
+
+
+def _finalize_bulk_outcome(
     *,
-    max_statuses: int = 5,
-    max_destinies_per_status: int = 5,
-) -> str:
-    grouped: dict[str, list[str]] = {}
-    for row in summary_rows:
-        status = str(row.get("status") or "").strip().lower() or "unknown"
-        if status == "ok":
-            continue
-        step = _step_label(row.get("failure_step"))
-        destiny = str(row.get("destiny_name") or row.get("input_destiny") or "").strip() or "<unknown>"
-        bucket = grouped.setdefault(f"{step}/{status}", [])
-        if destiny not in bucket:
-            bucket.append(destiny)
+    ors: Any,
+    perf: BulkPerformanceTracker,
+    summary_rows: List[Dict[str, Any]],
+    success_count: int,
+    fail_count: int,
+    exact_success_count: int,
+    approximated_success_count: int,
+    unresolved_fail_count: int,
+    duration: float,
+    run_id: Optional[str],
+    selector_hash_value: Optional[str],
+    shuffle_seed_used: Optional[int],
+    requested_destination_count: int,
+    unique_destination_count: int,
+    max_geocode_workers: int,
+    max_route_workers: int,
+) -> Dict[str, Any]:
+    provider_calls = ors.metrics_snapshot() if hasattr(ors, "metrics_snapshot") else {}
+    provider_totals = _provider_operation_totals(provider_calls)
+    performance = perf.snapshot()
+    performance["provider_calls"] = provider_calls
+    status_counts = _status_counts(summary_rows)
+    failure_counts_by_step = _failure_counts(summary_rows, field_name="failed_step")
+    failure_counts_by_leg = _failure_counts(summary_rows, field_name="failed_leg")
+    failure_counts_by_reason = _failure_counts(summary_rows, field_name="failure_reason")
+    top_failed_destinations = _top_failed_destinations(summary_rows)
+    top_failure_reasons = ", ".join(
+        f"{reason}={count}"
+        for reason, count in list(failure_counts_by_reason.items())[:5]
+    ) or "none"
+    total_route_cache_hits = (
+        perf.counters.get("first_mile_cache_hits", 0.0)
+        + perf.counters.get("road_direct_cache_hits", 0.0)
+        + perf.counters.get("last_mile_cache_hits", 0.0)
+    )
+    total_route_cache_misses = (
+        perf.counters.get("first_mile_cache_misses", 0.0)
+        + perf.counters.get("road_direct_cache_misses", 0.0)
+        + perf.counters.get("last_mile_cache_misses", 0.0)
+    )
 
-    if not grouped:
-        return "none"
+    _log.info(
+        (
+            "Bulk performance summary run_id=%s selector_hash=%s bootstrap=%.2fs normalize=%.2fs geocode=%.2fs "
+            "geometry=%.2fs exact=%.2fs approx=%.2fs db_read=%.2fs db_write=%.2fs total_runtime=%.2fs"
+        ),
+        run_id,
+        selector_hash_value or "<none>",
+        performance["timings_s"].get("bootstrap_s", 0.0),
+        performance["timings_s"].get("destination_normalization_s", 0.0),
+        performance["timings_s"].get("destination_geocode_s", 0.0),
+        performance["timings_s"].get("geometry_acquisition_s", 0.0),
+        performance["timings_s"].get("exact_pass_s", 0.0),
+        performance["timings_s"].get("approximation_pass_s", 0.0),
+        performance["timings_s"].get("db_read_s", 0.0),
+        performance["timings_s"].get("db_write_s", 0.0),
+        duration,
+    )
+    _log.info(
+        (
+            "Bulk evaluation summary run_id=%s requested=%d unique=%d location_alias_cache_hits=%.0f location_alias_cache_misses=%.0f "
+            "route_cache_hits=%.0f route_cache_misses=%.0f geocode_provider_calls=%.0f route_provider_calls=%.0f "
+            "successes=%d failures=%d approximations=%d rows_persisted=%.0f workers=geocode:%d route:%d "
+            "rate_limited=%.0f timeout=%.0f network_error=%.0f cooldown_skips=%.0f duration_s=%.2f"
+        ),
+        run_id,
+        requested_destination_count,
+        unique_destination_count,
+        perf.counters.get("destination_cache_hits", 0.0),
+        perf.counters.get("destination_cache_misses", 0.0),
+        total_route_cache_hits,
+        total_route_cache_misses,
+        provider_totals["geocode_attempts"],
+        provider_totals["route_attempts"],
+        success_count,
+        fail_count,
+        approximated_success_count,
+        perf.counters.get("bulk_rows_persisted", 0.0),
+        int(max_geocode_workers),
+        int(max_route_workers),
+        provider_totals["rate_limited"],
+        provider_totals["timeout"],
+        provider_totals["network_error"],
+        provider_totals["cooldown_skips"],
+        duration,
+    )
+    _log.info(
+        "Bulk failure summary run_id=%s top_failures=%s statuses=%s by_step=%s by_leg=%s by_reason=%s top_failed_destinations=%s",
+        run_id,
+        top_failure_reasons,
+        status_counts,
+        _format_counter_summary(failure_counts_by_step),
+        _format_counter_summary(failure_counts_by_leg),
+        _format_counter_summary(failure_counts_by_reason),
+        _format_top_failed_destinations(top_failed_destinations),
+    )
+    _log.info(
+        "Bulk provider summary run_id=%s providers=%s",
+        run_id,
+        _format_provider_summary(provider_calls),
+    )
+    return {
+        "summary_rows": summary_rows,
+        "success_count": success_count,
+        "fail_count": fail_count,
+        "exact_success_count": exact_success_count,
+        "approximated_success_count": approximated_success_count,
+        "unresolved_fail_count": unresolved_fail_count,
+        "duration_s": duration,
+        "run_id": run_id,
+        "selector_hash": selector_hash_value,
+        "shuffle_seed_used": shuffle_seed_used,
+        "status_counts": status_counts,
+        "failure_counts_by_step": failure_counts_by_step,
+        "failure_counts_by_leg": failure_counts_by_leg,
+        "failure_counts_by_reason": failure_counts_by_reason,
+        "top_failed_destinations": top_failed_destinations,
+        "performance": performance,
+    }
 
-    segments: list[str] = []
-    for status, destinies in sorted(grouped.items(), key=lambda item: (-len(item[1]), item[0]))[:max_statuses]:
-        shown = destinies[:max_destinies_per_status]
-        suffix = ""
-        if len(destinies) > len(shown):
-            suffix = f" (+{len(destinies) - len(shown)} more)"
-        segments.append(f"{status}=[{'; '.join(shown)}]{suffix}")
-    return "; ".join(segments)
 
+def _materialize_run_wide_failure(
+    *,
+    persistence: BulkPersistenceBuffer,
+    summary_rows: List[Dict[str, Any]],
+    work_items: List[DestinationWorkItem],
+    run_id: str,
+    destination_set_id: str,
+    origin_input: str,
+    origin_pt: Dict[str, Any],
+    origin_port: Optional[Dict[str, Any]],
+    cargo_t: float,
+    truck_key: str,
+    profile: str,
+    vessel_class: str,
+    include_hoteling: bool,
+    hoteling_hours_per_call: float,
+    port_calls: int,
+    include_port_ops: bool,
+    port_moves_per_call: Optional[float],
+    cargo_teu: Optional[float],
+    t_per_teu_default: float,
+    allocation_mode: Optional[str],
+    allocation_load_factor: float,
+    full_call_mode: bool,
+    port_ops_scenario: str,
+    status: str,
+    error_message: str,
+    failure_step: str,
+    failure_system: str,
+    failure_provider: Optional[str] = None,
+    failure_provider_operation: Optional[str] = None,
+) -> int:
+    run_wide_diagnostic = build_failure_diagnostic(
+        status=status,
+        step=failure_step,
+        failure_detail=error_message,
+        system=failure_system,
+        provider=failure_provider,
+        provider_operation=failure_provider_operation,
+    )
+    _log.warning(
+        (
+            "Bulk run-wide failure materialized run_id=%s step=%s leg=%s reason=%s destinations=%d "
+            "provider=%s provider_operation=%s error=%s"
+        ),
+        run_id,
+        failure_step,
+        run_wide_diagnostic.failed_leg or "<unknown>",
+        run_wide_diagnostic.failure_reason,
+        len(work_items),
+        run_wide_diagnostic.provider or "<unknown>",
+        run_wide_diagnostic.provider_operation or "<unknown>",
+        error_message,
+    )
+    for item in work_items:
+        _assign_destination_failure(
+            item,
+            status=status,
+            error_message=error_message,
+            step=failure_step,
+            system=failure_system,
+            provider=failure_provider,
+            provider_operation=failure_provider_operation,
+        )
+        failure_geo: Dict[str, Any] = {"origin": origin_pt}
+        if origin_port is not None:
+            failure_geo["port_origin"] = origin_port
+        if item.point is not None:
+            failure_geo["destiny"] = item.point
+        if item.port_destiny is not None:
+            failure_geo["port_destiny"] = item.port_destiny
 
-def _format_failure_breakdown(summary_rows: List[Dict[str, Any]], *, max_steps: int = 8) -> str:
-    breakdown: dict[str, dict[str, int]] = defaultdict(dict)
-    providers_by_step: dict[str, set[str]] = defaultdict(set)
-
-    for row in summary_rows:
-        status = str(row.get("status") or "").strip().lower() or "unknown"
-        if status == "ok":
-            continue
-        step = _step_label(row.get("failure_step"))
-        step_counts = breakdown.setdefault(step, {})
-        step_counts[status] = step_counts.get(status, 0) + 1
-        provider = str(row.get("failure_provider") or "").strip()
-        if provider:
-            providers_by_step.setdefault(step, set()).add(provider)
-
-    if not breakdown:
-        return "none"
-
-    segments: list[str] = []
-    ordered = sorted(
-        breakdown.items(),
-        key=lambda item: (-sum(item[1].values()), item[0]),
-    )[:max_steps]
-    for step, counts in ordered:
-        counts_text = ", ".join(f"{status}={count}" for status, count in sorted(counts.items()))
-        providers = sorted(providers_by_step.get(step, set()))
-        provider_text = ""
-        if providers:
-            provider_text = f" providers={','.join(providers)}"
-        segments.append(f"{step}[{counts_text}]{provider_text}")
-    return "; ".join(segments)
+        bulk_row, run_row = _build_bulk_outcome_rows(
+            run_id=str(run_id),
+            destination_set_id=destination_set_id,
+            scenario_key=item.scenario_key,
+            input_origin=origin_input,
+            input_destiny=item.scenario_payload["input_destiny"],
+            origin_location_id=origin_pt.get("location_id"),
+            destination_location_id=(None if item.point is None else item.point.get("location_id")),
+            destination_lat=(None if item.point is None else item.point.get("lat")),
+            destination_lon=(None if item.point is None else item.point.get("lon")),
+            destination_uf=(None if item.point is None else item.point.get("uf")),
+            origin_name=origin_pt["label"],
+            destiny_name=item.destiny_name or item.destiny_input,
+            truck_key=truck_key,
+            ors_profile=profile,
+            cargo_t=cargo_t,
+            vessel_class=vessel_class,
+            include_hoteling=include_hoteling,
+            hoteling_hours_per_call=hoteling_hours_per_call,
+            port_calls=port_calls,
+            include_port_ops=include_port_ops,
+            port_moves_per_call=port_moves_per_call,
+            cargo_teu=cargo_teu,
+            t_per_teu_default=t_per_teu_default,
+            allocation_mode=allocation_mode,
+            allocation_load_factor=allocation_load_factor,
+            full_call_mode=full_call_mode,
+            port_ops_scenario=port_ops_scenario,
+            status=status,
+            error_message=error_message,
+            geo=failure_geo,
+            port_origin_location_id=(None if origin_port is None else origin_port.get("location_id")),
+            port_origin_name=(None if origin_port is None else origin_port.get("name")),
+            port_origin_lat=(None if origin_port is None else origin_port.get("lat")),
+            port_origin_lon=(None if origin_port is None else origin_port.get("lon")),
+            port_destiny_location_id=(None if item.port_destiny is None else item.port_destiny.get("location_id")),
+            port_destiny_name=(None if item.port_destiny is None else item.port_destiny.get("name")),
+            port_destiny_lat=(None if item.port_destiny is None else item.port_destiny.get("lat")),
+            port_destiny_lon=(None if item.port_destiny is None else item.port_destiny.get("lon")),
+            failure_step=item.failure_step,
+            failed_leg=item.failed_leg,
+            failure_reason=item.failure_reason,
+            failure_detail=item.failure_detail or error_message,
+            retryable=item.retryable,
+            failure_provider=item.failure_provider,
+            failure_provider_operation=item.failure_provider_operation,
+        )
+        persistence.add(bulk_row, run_row)
+        summary_rows.append(
+            _build_failure_summary_row(
+                str(run_id),
+                origin_pt["label"],
+                item.destiny_input,
+                item.destiny_name or item.destiny_input,
+                destination_lat=(None if item.point is None else item.point.get("lat")),
+                destination_lon=(None if item.point is None else item.point.get("lon")),
+                port_origin_name=(None if origin_port is None else origin_port.get("name")),
+                port_destiny_name=(None if item.port_destiny is None else item.port_destiny.get("name")),
+                status=status,
+                error_message=error_message,
+                failure_detail=item.failure_detail or error_message,
+                failure_step=item.failure_step,
+                failure_system=item.failure_system,
+                failure_provider=item.failure_provider,
+                failed_leg=item.failed_leg,
+                failure_reason=item.failure_reason,
+                retryable=item.retryable,
+                failure_provider_operation=item.failure_provider_operation,
+            )
+        )
+    persistence.flush()
+    return len(work_items)
 
 
 def _persistable_point_row(*, place: str, point: Dict[str, Any], source: str) -> Dict[str, Any]:
@@ -603,6 +892,38 @@ def run_bulk_evaluation_pipeline(
         with db_session(resolved_db_path) as conn:
             nearest_port_memo = NearestPortMemo(ports)
             point_rows_to_persist: list[Dict[str, Any]] = []
+            work_items: list[DestinationWorkItem] = []
+            with perf.measure("destination_normalization_s"):
+                for index, destiny_input in enumerate(shuffled_destinations, start=1):
+                    scenario_payload = _build_scenario_payload(
+                        origin_input=origin_input_norm,
+                        destiny_input=destiny_input,
+                        cargo_t=cargo_t,
+                        truck_key=truck_key,
+                        profile=profile,
+                        vessel_class=vessel_class,
+                        include_hoteling=include_hoteling,
+                        hoteling_hours_per_call=hoteling_hours_per_call,
+                        port_calls=port_calls,
+                        include_port_ops=include_port_ops,
+                        port_moves_per_call=port_moves_per_call,
+                        cargo_teu=cargo_teu,
+                        t_per_teu_default=t_per_teu_default,
+                        allocation_mode=allocation_mode,
+                        allocation_load_factor=allocation_load_factor,
+                        full_call_mode=full_call_mode,
+                        port_ops_scenario=port_ops_scenario,
+                    )
+                    work_items.append(
+                        DestinationWorkItem(
+                            index=index,
+                            destiny_input=str(destiny_input),
+                            normalized_input=str(scenario_payload["input_destiny"]),
+                            scenario_key=build_bulk_scenario_key(scenario_payload),
+                            scenario_payload=scenario_payload,
+                            destiny_name=str(destiny_input).strip(),
+                        )
+                    )
 
             with perf.measure("bootstrap_s"):
                 active_run_step = "origin_alias_cache"
@@ -655,63 +976,8 @@ def run_bulk_evaluation_pipeline(
                         }
                     )
 
-                active_run_step = "nearest_port_origin"
-                _log_step_banner("nearest_port_origin", origin=origin_pt["label"])
-                try:
-                    origin_port = nearest_port_memo.resolve(origin_pt, perf)
-                except Exception as exc:
-                    raise _BulkStepError(
-                        step="nearest_port_origin",
-                        system="ports",
-                        provider="nearest_port_lookup",
-                        error=exc,
-                    ) from exc
-                origin_port_node = build_port_node(origin_port)
-                route_coordinator = RouteRequestCoordinator(
-                    ors,
-                    profile=profile,
-                    overwrite=overwrite_road,
-                    perf=perf,
-                )
-                first_mile_spec = RouteRequestSpec(
-                    leg_name="first_mile",
-                    origin=origin_pt,
-                    destiny=origin_port_node,
-                    profile=profile,
-                )
-                active_run_step = "routing_origin_to_port_origin"
-                _log_step_banner(
-                    "routing_origin_to_port_origin",
-                    origin=origin_pt["label"],
-                    port_origin=origin_port.get("name"),
-                    profile=profile,
-                )
-                route_coordinator.prime(conn, [first_mile_spec])
-                try:
-                    first_mile_leg = route_coordinator.resolve(first_mile_spec)
-                    _require_distance(first_mile_leg, "first_mile")
-                except Exception as exc:
-                    raise _BulkStepError(
-                        step="routing_origin_to_port_origin",
-                        system="routing",
-                        provider=_failure_provider(exc),
-                        error=exc,
-                    ) from exc
-                _log.info(
-                    (
-                        "Bulk origin first-mile route origin=%s port_origin=%s km=%.1f source=%s "
-                        "profile_used=%s cached=%s"
-                    ),
-                    origin_pt["label"],
-                    origin_port.get("name"),
-                    float(first_mile_leg.get("distance_km") or 0.0),
-                    first_mile_leg.get("source") or "<none>",
-                    first_mile_leg.get("profile_used") or profile,
-                    first_mile_leg.get("cached"),
-                )
                 active_run_step = "persist_results"
-                _log_step_banner("persist_results", target="location_aliases+route_cache")
-                _flush_route_rows(conn, route_coordinator.drain_pending_rows())
+                _log_step_banner("persist_results", target="location_aliases")
                 _flush_point_rows(conn, point_rows_to_persist)
                 origin_cached_point = find_place_point(conn, place=origin_input_norm)
                 if origin_cached_point and origin_cached_point.get("location_id") is not None:
@@ -814,13 +1080,88 @@ def run_bulk_evaluation_pipeline(
                     truck_key,
                     profile,
                 )
-
-            work_items: list[DestinationWorkItem] = []
-            with perf.measure("destination_normalization_s"):
-                for index, destiny_input in enumerate(shuffled_destinations, start=1):
-                    scenario_payload = _build_scenario_payload(
+                persistence = BulkPersistenceBuffer(
+                    conn,
+                    results_table=results_table,
+                    run_results_table=run_results_table,
+                    batch_size=persist_batch_size,
+                    perf=perf,
+                )
+                route_coordinator = RouteRequestCoordinator(
+                    ors,
+                    profile=profile,
+                    overwrite=overwrite_road,
+                    perf=perf,
+                )
+                origin_port = None
+                try:
+                    active_run_step = "nearest_port_origin"
+                    _log_step_banner("nearest_port_origin", origin=origin_pt["label"])
+                    try:
+                        origin_port = nearest_port_memo.resolve(origin_pt, perf)
+                    except Exception as exc:
+                        raise _BulkStepError(
+                            step="nearest_port_origin",
+                            system="ports",
+                            provider="nearest_port_lookup",
+                            error=exc,
+                        ) from exc
+                    origin_port_node = build_port_node(origin_port)
+                    first_mile_spec = RouteRequestSpec(
+                        leg_name="first_mile",
+                        origin=origin_pt,
+                        destiny=origin_port_node,
+                        profile=profile,
+                    )
+                    active_run_step = "routing_origin_to_port_origin"
+                    _log_step_banner(
+                        "routing_origin_to_port_origin",
+                        origin=origin_pt["label"],
+                        port_origin=origin_port.get("name"),
+                        profile=profile,
+                    )
+                    route_coordinator.prime(conn, [first_mile_spec])
+                    try:
+                        first_mile_leg = route_coordinator.resolve(first_mile_spec)
+                        _require_distance(first_mile_leg, "first_mile")
+                    except Exception as exc:
+                        raise _BulkStepError(
+                            step="routing_origin_to_port_origin",
+                            system="routing",
+                            provider=_failure_provider(exc),
+                            error=exc,
+                        ) from exc
+                    _log.info(
+                        (
+                            "Bulk origin first-mile route origin=%s port_origin=%s km=%.1f source=%s "
+                            "profile_used=%s cached=%s"
+                        ),
+                        origin_pt["label"],
+                        origin_port.get("name"),
+                        float(first_mile_leg.get("distance_km") or 0.0),
+                        first_mile_leg.get("source") or "<none>",
+                        first_mile_leg.get("profile_used") or profile,
+                        first_mile_leg.get("cached"),
+                    )
+                    active_run_step = "persist_results"
+                    _log_step_banner("persist_results", target="route_cache")
+                    _flush_route_rows(conn, route_coordinator.drain_pending_rows())
+                except Exception as exc:
+                    failure_status, failure_message, log_trace = _classify_failure(exc)
+                    failure_step = _failure_step(exc, default=active_run_step)
+                    failure_system = _failure_system(exc, default="routing")
+                    failure_provider = _failure_provider(exc)
+                    if log_trace:
+                        _log.error("Bulk origin setup failed: %s", failure_message, exc_info=True)
+                    fail_count = _materialize_run_wide_failure(
+                        persistence=persistence,
+                        summary_rows=summary_rows,
+                        work_items=work_items,
+                        run_id=str(run_id),
+                        destination_set_id=destination_set_id,
                         origin_input=origin_input_norm,
-                        destiny_input=destiny_input,
+                        origin_pt=origin_pt,
+                        origin_port=origin_port,
                         cargo_t=cargo_t,
                         truck_key=truck_key,
                         profile=profile,
@@ -836,16 +1177,70 @@ def run_bulk_evaluation_pipeline(
                         allocation_load_factor=allocation_load_factor,
                         full_call_mode=full_call_mode,
                         port_ops_scenario=port_ops_scenario,
+                        status=failure_status,
+                        error_message=failure_message,
+                        failure_step=failure_step,
+                        failure_system=failure_system,
+                        failure_provider=failure_provider,
                     )
-                    work_items.append(
-                        DestinationWorkItem(
-                            index=index,
-                            destiny_input=str(destiny_input),
-                            normalized_input=str(scenario_payload["input_destiny"]),
-                            scenario_key=build_bulk_scenario_key(scenario_payload),
-                            scenario_payload=scenario_payload,
-                            destiny_name=str(destiny_input).strip(),
-                        )
+                    unresolved_fail_count += fail_count
+                    duration = time.perf_counter() - started_global
+                    perf.add_duration("total_run_s", duration)
+                    active_run_step = "finish_bulk_run"
+                    _log_step_banner("finish_bulk_run", run_id=run_id, status="completed")
+                    try:
+                        perf.incr("db_write_ops")
+                        with perf.measure("db_write_s"):
+                            finish_bulk_run(
+                                conn,
+                                run_id=str(run_id),
+                                status="completed",
+                                success_count=success_count,
+                                fail_count=fail_count,
+                                duration_s=duration,
+                                error_message=None,
+                                table_name=runs_table,
+                            )
+                            conn.commit()
+                    except Exception as finish_exc:
+                        raise _BulkStepError(
+                            step="finish_bulk_run",
+                            system="database",
+                            provider="postgres",
+                            error=finish_exc,
+                        ) from finish_exc
+                    _emit_progress(
+                        progress_callback,
+                        phase="complete",
+                        current=len(shuffled_destinations),
+                        total=len(shuffled_destinations),
+                        success_count=success_count,
+                        fail_count=fail_count,
+                        exact_success_count=exact_success_count,
+                        approximated_success_count=approximated_success_count,
+                        unresolved_fail_count=unresolved_fail_count,
+                        duration_s=duration,
+                        run_id=run_id,
+                        shuffle_seed_used=shuffle_seed_used,
+                        message="Phase 4/4 persistence complete",
+                    )
+                    return _finalize_bulk_outcome(
+                        ors=ors,
+                        perf=perf,
+                        summary_rows=summary_rows,
+                        success_count=success_count,
+                        fail_count=fail_count,
+                        exact_success_count=exact_success_count,
+                        approximated_success_count=approximated_success_count,
+                        unresolved_fail_count=unresolved_fail_count,
+                        duration=duration,
+                        run_id=run_id,
+                        selector_hash_value=selector_hash_value,
+                        shuffle_seed_used=shuffle_seed_used,
+                        requested_destination_count=requested_destination_count,
+                        unique_destination_count=len(shuffled_destinations),
+                        max_geocode_workers=max_geocode_workers,
+                        max_route_workers=max_route_workers,
                     )
 
             _emit_progress(
@@ -1017,6 +1412,7 @@ def run_bulk_evaluation_pipeline(
                         step="nearest_port_destiny",
                         system="ports",
                         provider="nearest_port_lookup",
+                        provider_operation="nearest_port_lookup",
                     )
                     _log_destination_failure_context(
                         phase="nearest_port",
@@ -1103,7 +1499,7 @@ def run_bulk_evaluation_pipeline(
                                 item,
                                 status=failure_status,
                                 error_message=failure_message,
-                                step=_failure_step(error, default="geometry_acquisition"),
+                                step=_failure_step(error, default="build_multimodal_route"),
                                 system=_failure_system(error, default="routing"),
                                 provider=_failure_provider(error),
                             )
@@ -1121,7 +1517,7 @@ def run_bulk_evaluation_pipeline(
                                 item,
                                 status="geometry_failed",
                                 error_message="Geometry build failed",
-                                step="geometry_acquisition",
+                                step="build_multimodal_route",
                                 system="routing",
                             )
                             _log_destination_failure_context(
@@ -1162,14 +1558,6 @@ def run_bulk_evaluation_pipeline(
                 perf.counters.get("last_mile_cache_misses", 0.0),
                 routing_provider_totals["route_attempts"],
                 sum(1 for item in work_items if item.failure_status is not None),
-            )
-
-            persistence = BulkPersistenceBuffer(
-                conn,
-                results_table=results_table,
-                run_results_table=run_results_table,
-                batch_size=persist_batch_size,
-                perf=perf,
             )
 
             active_run_step = "calculating_costs_emissions"
@@ -1223,17 +1611,35 @@ def run_bulk_evaluation_pipeline(
                                 error_message=failure_message,
                                 geo=geo,
                                 is_approximation=False,
+                                failure_step=item.failure_step,
+                                failed_leg=item.failed_leg,
+                                failure_reason=item.failure_reason,
+                                failure_detail=item.failure_detail or failure_message,
+                                retryable=item.retryable,
+                                failure_provider=item.failure_provider,
+                                failure_provider_operation=item.failure_provider_operation,
                             )
                             persistence.add(bulk_row, run_row)
                             summary_rows.append(
                                 _build_failure_summary_row(
+                                    str(run_id),
+                                    origin_pt["label"],
                                     item.destiny_input,
                                     item.destiny_name or item.destiny_input,
+                                    destination_lat=(None if item.point is None else item.point.get("lat")),
+                                    destination_lon=(None if item.point is None else item.point.get("lon")),
+                                    port_origin_name=(None if origin_port is None else origin_port.get("name")),
+                                    port_destiny_name=(None if item.port_destiny is None else item.port_destiny.get("name")),
                                     status=failure_status,
                                     error_message=failure_message,
+                                    failure_detail=item.failure_detail or failure_message,
                                     failure_step=item.failure_step,
                                     failure_system=item.failure_system,
                                     failure_provider=item.failure_provider,
+                                    failed_leg=item.failed_leg,
+                                    failure_reason=item.failure_reason,
+                                    retryable=item.retryable,
+                                    failure_provider_operation=item.failure_provider_operation,
                                 )
                             )
                             fail_count += 1
@@ -1241,7 +1647,7 @@ def run_bulk_evaluation_pipeline(
                             continue
                         if not geo or geo.get("status") != "ok":
                             raise _BulkStepError(
-                                step="geometry_acquisition",
+                                step="build_multimodal_route",
                                 system="routing",
                                 error=RuntimeError("Geometry build failed"),
                             )
@@ -1256,6 +1662,14 @@ def run_bulk_evaluation_pipeline(
                             ) from exc
                         if geo["road_direct"].get("distance_km") is None:
                             if approximation_fallback:
+                                approximation_diagnostic = build_failure_diagnostic(
+                                    status="no_road_route",
+                                    step="routing_road_only",
+                                    failure_detail="road_direct road distance is unavailable",
+                                    system="routing",
+                                    provider=_route_provider_for_step(geo, "routing_road_only"),
+                                    raw_input=item.destiny_input,
+                                )
                                 pending_approximations.append(
                                     PendingApproximation(
                                         index=item.index,
@@ -1266,9 +1680,14 @@ def run_bulk_evaluation_pipeline(
                                         geo=geo,
                                         failure_status="no_road_route",
                                         error_message="road_direct road distance is unavailable",
-                                        failure_step="routing_road_only",
+                                        failure_step=approximation_diagnostic.failed_step,
                                         failure_system="routing",
-                                        failure_provider=_route_provider_for_step(geo, "routing_road_only"),
+                                        failure_provider=approximation_diagnostic.provider,
+                                        failed_leg=approximation_diagnostic.failed_leg,
+                                        failure_reason=approximation_diagnostic.failure_reason,
+                                        failure_detail=approximation_diagnostic.failure_detail,
+                                        retryable=approximation_diagnostic.retryable,
+                                        failure_provider_operation=approximation_diagnostic.provider_operation,
                                     )
                                 )
                                 continue
@@ -1330,6 +1749,8 @@ def run_bulk_evaluation_pipeline(
                             exact_references.append(reference)
                         summary_rows.append(
                             _build_success_summary_row(
+                                str(run_id),
+                                origin_pt["label"],
                                 item.destiny_input,
                                 geo,
                                 res,
@@ -1394,17 +1815,35 @@ def run_bulk_evaluation_pipeline(
                             error_message=failure_message,
                             geo=geo,
                             is_approximation=False,
+                            failure_step=item.failure_step,
+                            failed_leg=item.failed_leg,
+                            failure_reason=item.failure_reason,
+                            failure_detail=item.failure_detail or failure_message,
+                            retryable=item.retryable,
+                            failure_provider=item.failure_provider,
+                            failure_provider_operation=item.failure_provider_operation,
                         )
                         persistence.add(bulk_row, run_row)
                         summary_rows.append(
                             _build_failure_summary_row(
+                                str(run_id),
+                                origin_pt["label"],
                                 item.destiny_input,
                                 item.destiny_name or item.destiny_input,
+                                destination_lat=(None if item.point is None else item.point.get("lat")),
+                                destination_lon=(None if item.point is None else item.point.get("lon")),
+                                port_origin_name=(None if origin_port is None else origin_port.get("name")),
+                                port_destiny_name=(None if item.port_destiny is None else item.port_destiny.get("name")),
                                 status=failure_status,
                                 error_message=failure_message,
+                                failure_detail=item.failure_detail or failure_message,
                                 failure_step=item.failure_step,
                                 failure_system=item.failure_system,
                                 failure_provider=item.failure_provider,
+                                failed_leg=item.failed_leg,
+                                failure_reason=item.failure_reason,
+                                retryable=item.retryable,
+                                failure_provider_operation=item.failure_provider_operation,
                             )
                         )
                     finally:
@@ -1504,6 +1943,8 @@ def run_bulk_evaluation_pipeline(
                         persistence.add(bulk_row, run_row)
                         summary_rows.append(
                             _build_success_summary_row(
+                                str(run_id),
+                                origin_pt["label"],
                                 pending.destiny_input,
                                 approx_geo,
                                 res,
@@ -1520,8 +1961,16 @@ def run_bulk_evaluation_pipeline(
                         unresolved_fail_count += 1
                         approximation_failure = str(exc).strip() or "Approximation fallback failed"
                         combined_error = f"{pending.error_message}; {approximation_failure}"
-                        failure_step = "approximation_fallback"
                         failure_provider = _failure_provider(exc) or pending.failure_provider
+                        approximation_diagnostic = build_failure_diagnostic(
+                            status=pending.failure_status,
+                            step="approximation_fallback",
+                            failure_detail=combined_error,
+                            system="approximation",
+                            provider=failure_provider,
+                            provider_operation="approximation_fallback",
+                            raw_input=pending.destiny_input,
+                        )
                         _log_destination_failure_context(
                             phase="approximation",
                             origin_pt=origin_pt,
@@ -1537,9 +1986,14 @@ def run_bulk_evaluation_pipeline(
                                 point_source=pending.geo.get("destiny", {}).get("source"),
                                 port_destiny=pending.geo.get("port_destiny"),
                                 geo=pending.geo,
-                                failure_step=failure_step,
+                                failure_step=approximation_diagnostic.failed_step,
                                 failure_system="approximation",
-                                failure_provider=failure_provider,
+                                failure_provider=approximation_diagnostic.provider,
+                                failed_leg=approximation_diagnostic.failed_leg,
+                                failure_reason=approximation_diagnostic.failure_reason,
+                                failure_detail=approximation_diagnostic.failure_detail,
+                                retryable=approximation_diagnostic.retryable,
+                                failure_provider_operation=approximation_diagnostic.provider_operation,
                             ),
                             status=pending.failure_status,
                             error_message=combined_error,
@@ -1574,19 +2028,37 @@ def run_bulk_evaluation_pipeline(
                             error_message=combined_error,
                             geo=pending.geo,
                             approximation_notes=approximation_failure,
+                            failure_step=approximation_diagnostic.failed_step,
+                            failed_leg=approximation_diagnostic.failed_leg,
+                            failure_reason=approximation_diagnostic.failure_reason,
+                            failure_detail=approximation_diagnostic.failure_detail,
+                            retryable=approximation_diagnostic.retryable,
+                            failure_provider=approximation_diagnostic.provider,
+                            failure_provider_operation=approximation_diagnostic.provider_operation,
                         )
                         persistence.add(bulk_row, run_row)
                         summary_rows.append(
                             _build_failure_summary_row(
+                                str(run_id),
+                                origin_pt["label"],
                                 pending.destiny_input,
                                 pending.destiny_name,
+                                destination_lat=pending.geo.get("destiny", {}).get("lat"),
+                                destination_lon=pending.geo.get("destiny", {}).get("lon"),
+                                port_origin_name=(None if origin_port is None else origin_port.get("name")),
+                                port_destiny_name=pending.geo.get("port_destiny", {}).get("name"),
                                 status=pending.failure_status,
                                 error_message=combined_error,
                                 approximation_notes=approximation_failure,
                                 is_approximation=True,
-                                failure_step=failure_step,
+                                failure_detail=approximation_diagnostic.failure_detail,
+                                failure_step=approximation_diagnostic.failed_step,
                                 failure_system="approximation",
-                                failure_provider=failure_provider,
+                                failure_provider=approximation_diagnostic.provider,
+                                failed_leg=approximation_diagnostic.failed_leg,
+                                failure_reason=approximation_diagnostic.failure_reason,
+                                retryable=approximation_diagnostic.retryable,
+                                failure_provider_operation=approximation_diagnostic.provider_operation,
                             )
                         )
                     finally:
@@ -1675,31 +2147,6 @@ def run_bulk_evaluation_pipeline(
 
     duration = time.perf_counter() - started_global
     perf.add_duration("total_run_s", duration)
-    provider_calls = ors.metrics_snapshot() if hasattr(ors, "metrics_snapshot") else {}
-    provider_totals = _provider_operation_totals(provider_calls)
-    performance = perf.snapshot()
-    performance["provider_calls"] = provider_calls
-    status_counts = _status_counts(summary_rows)
-    failed_destinies = _format_failed_destinies(summary_rows)
-    failure_breakdown = _format_failure_breakdown(summary_rows)
-    top_failure_reasons = ", ".join(
-        f"{status}={count}"
-        for status, count in sorted(
-            ((status, count) for status, count in status_counts.items() if status != "ok"),
-            key=lambda item: (-item[1], item[0]),
-        )[:5]
-    ) or "none"
-    total_route_cache_hits = (
-        perf.counters.get("first_mile_cache_hits", 0.0)
-        + perf.counters.get("road_direct_cache_hits", 0.0)
-        + perf.counters.get("last_mile_cache_hits", 0.0)
-    )
-    total_route_cache_misses = (
-        perf.counters.get("first_mile_cache_misses", 0.0)
-        + perf.counters.get("road_direct_cache_misses", 0.0)
-        + perf.counters.get("last_mile_cache_misses", 0.0)
-    )
-
     _emit_progress(
         progress_callback,
         phase="complete",
@@ -1715,76 +2162,21 @@ def run_bulk_evaluation_pipeline(
         shuffle_seed_used=shuffle_seed_used,
         message="Phase 4/4 persistence complete",
     )
-    _log.info(
-        (
-            "Bulk performance summary run_id=%s selector_hash=%s bootstrap=%.2fs normalize=%.2fs geocode=%.2fs "
-            "geometry=%.2fs exact=%.2fs approx=%.2fs db_read=%.2fs db_write=%.2fs total_runtime=%.2fs"
-        ),
-        run_id,
-        selector_hash_value or "<none>",
-        performance["timings_s"].get("bootstrap_s", 0.0),
-        performance["timings_s"].get("destination_normalization_s", 0.0),
-        performance["timings_s"].get("destination_geocode_s", 0.0),
-        performance["timings_s"].get("geometry_acquisition_s", 0.0),
-        performance["timings_s"].get("exact_pass_s", 0.0),
-        performance["timings_s"].get("approximation_pass_s", 0.0),
-        performance["timings_s"].get("db_read_s", 0.0),
-        performance["timings_s"].get("db_write_s", 0.0),
-        duration,
+    return _finalize_bulk_outcome(
+        ors=ors,
+        perf=perf,
+        summary_rows=summary_rows,
+        success_count=success_count,
+        fail_count=fail_count,
+        exact_success_count=exact_success_count,
+        approximated_success_count=approximated_success_count,
+        unresolved_fail_count=unresolved_fail_count,
+        duration=duration,
+        run_id=run_id,
+        selector_hash_value=selector_hash_value,
+        shuffle_seed_used=shuffle_seed_used,
+        requested_destination_count=requested_destination_count,
+        unique_destination_count=len(shuffled_destinations),
+        max_geocode_workers=max_geocode_workers,
+        max_route_workers=max_route_workers,
     )
-    _log.info(
-        (
-            "Bulk evaluation summary run_id=%s requested=%d unique=%d location_alias_cache_hits=%.0f location_alias_cache_misses=%.0f "
-            "route_cache_hits=%.0f route_cache_misses=%.0f geocode_provider_calls=%.0f route_provider_calls=%.0f "
-            "successes=%d failures=%d approximations=%d rows_persisted=%.0f workers=geocode:%d route:%d "
-            "rate_limited=%.0f timeout=%.0f network_error=%.0f cooldown_skips=%.0f duration_s=%.2f"
-        ),
-        run_id,
-        requested_destination_count,
-        len(shuffled_destinations),
-        perf.counters.get("destination_cache_hits", 0.0),
-        perf.counters.get("destination_cache_misses", 0.0),
-        total_route_cache_hits,
-        total_route_cache_misses,
-        provider_totals["geocode_attempts"],
-        provider_totals["route_attempts"],
-        success_count,
-        fail_count,
-        approximated_success_count,
-        perf.counters.get("bulk_rows_persisted", 0.0),
-        int(max_geocode_workers),
-        int(max_route_workers),
-        provider_totals["rate_limited"],
-        provider_totals["timeout"],
-        provider_totals["network_error"],
-        provider_totals["cooldown_skips"],
-        duration,
-    )
-    _log.info(
-        "Bulk failure summary run_id=%s top_failures=%s statuses=%s by_step=%s failed_destinies=%s",
-        run_id,
-        top_failure_reasons,
-        status_counts,
-        failure_breakdown,
-        failed_destinies,
-    )
-    _log.info(
-        "Bulk provider summary run_id=%s providers=%s",
-        run_id,
-        _format_provider_summary(provider_calls),
-    )
-    return {
-        "summary_rows": summary_rows,
-        "success_count": success_count,
-        "fail_count": fail_count,
-        "exact_success_count": exact_success_count,
-        "approximated_success_count": approximated_success_count,
-        "unresolved_fail_count": unresolved_fail_count,
-        "duration_s": duration,
-        "run_id": run_id,
-        "selector_hash": selector_hash_value,
-        "shuffle_seed_used": shuffle_seed_used,
-        "status_counts": status_counts,
-        "failure_breakdown": failure_breakdown,
-        "performance": performance,
-    }

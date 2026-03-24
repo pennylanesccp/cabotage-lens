@@ -79,6 +79,13 @@ CREATE TABLE IF NOT EXISTS {table} (
     , last_mile_route_id               BIGINT    REFERENCES {route_table}(id)
     , status                           TEXT      NOT NULL
     , error_message                    TEXT
+    , failed_step                      TEXT
+    , failed_leg                       TEXT
+    , failure_reason                   TEXT
+    , failure_detail                   TEXT
+    , retryable                        BOOLEAN   NOT NULL DEFAULT FALSE
+    , failure_provider                 TEXT
+    , failure_provider_operation       TEXT
     , road_cost_r                      DOUBLE PRECISION
     , multimodal_cost_r                DOUBLE PRECISION
     , cost_delta_r                     DOUBLE PRECISION
@@ -100,6 +107,16 @@ CREATE TABLE IF NOT EXISTS {table} (
 );
 """
 
+_RUN_RESULTS_ALTER_SQL = (
+    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS failed_step TEXT;",
+    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS failed_leg TEXT;",
+    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS failure_reason TEXT;",
+    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS failure_detail TEXT;",
+    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS retryable BOOLEAN NOT NULL DEFAULT FALSE;",
+    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS failure_provider TEXT;",
+    "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS failure_provider_operation TEXT;",
+)
+
 _RUNS_INDEX_SQL = (
     "CREATE INDEX IF NOT EXISTS idx_{table}_selector_status ON {table} (selector_hash, status, updated_timestamp DESC);",
     "CREATE INDEX IF NOT EXISTS idx_{table}_destination_origin ON {table} (destination_set_id, status, origin_location_id);",
@@ -110,6 +127,7 @@ _RUN_RESULTS_INDEX_SQL = (
     "CREATE INDEX IF NOT EXISTS idx_{table}_run_status ON {table} (run_id, status);",
     "CREATE INDEX IF NOT EXISTS idx_{table}_run_input_destiny ON {table} (run_id, input_destiny);",
     "CREATE INDEX IF NOT EXISTS idx_{table}_destination_location ON {table} (destination_location_id);",
+    "CREATE INDEX IF NOT EXISTS idx_{table}_run_failure_diag ON {table} (run_id, failed_step, failed_leg, failure_reason);",
 )
 
 
@@ -174,6 +192,7 @@ class BulkRunResultRecord:
     scenario_key: str
     input_destiny: str
     destination_location_id: Optional[int]
+    origin_name: str
     destiny_name: str
     destiny_lat: Optional[float]
     destiny_lon: Optional[float]
@@ -182,6 +201,13 @@ class BulkRunResultRecord:
     port_destiny_name: Optional[str]
     status: str
     error_message: Optional[str]
+    failed_step: Optional[str]
+    failed_leg: Optional[str]
+    failure_reason: Optional[str]
+    failure_detail: Optional[str]
+    retryable: bool
+    failure_provider: Optional[str]
+    failure_provider_operation: Optional[str]
     road_cost_r: Optional[float]
     multimodal_cost_r: Optional[float]
     cost_delta_r: Optional[float]
@@ -285,6 +311,8 @@ def ensure_run_results_table(
             route_table=routes,
         )
     )
+    for sql in _RUN_RESULTS_ALTER_SQL:
+        conn.execute(sql.format(table=table))
     for sql in _RUN_RESULTS_INDEX_SQL:
         conn.execute(sql.format(table=table))
     mark_schema_ready(conn, "bulk_run_items", table)
@@ -331,36 +359,44 @@ def _row_to_run_result_record(row: Sequence[Any]) -> BulkRunResultRecord:
         scenario_key=str(row[1]),
         input_destiny=str(row[2]),
         destination_location_id=(None if row[3] is None else int(row[3])),
-        destiny_name=str(row[4]),
-        destiny_lat=to_float(row[5]),
-        destiny_lon=to_float(row[6]),
-        destiny_uf=_normalize_text(row[7]),
-        port_origin_name=_normalize_text(row[8]),
-        port_destiny_name=_normalize_text(row[9]),
-        status=str(row[10]),
-        error_message=_normalize_text(row[11]),
-        road_cost_r=to_float(row[12]),
-        multimodal_cost_r=to_float(row[13]),
-        cost_delta_r=to_float(row[14]),
-        cost_savings_pct=to_float(row[15]),
-        road_emissions_kg=to_float(row[16]),
-        multimodal_emissions_kg=to_float(row[17]),
-        emissions_delta_kg=to_float(row[18]),
-        emissions_savings_pct=to_float(row[19]),
-        road_distance_km=to_float(row[20]),
-        sea_km=to_float(row[21]),
-        is_approximation=bool(row[22]),
-        route_source=_normalize_text(row[23]),
-        approximation_reference_route_id=(None if row[24] is None else int(row[24])),
-        approximation_reference_destiny=_normalize_text(row[25]),
-        approximation_reference_distance_km=to_float(row[26]),
-        approximation_delta_straight_line_km=to_float(row[27]),
-        approximation_notes=_normalize_text(row[28]),
-        road_route_id=(None if row[29] is None else int(row[29])),
-        first_mile_route_id=(None if row[30] is None else int(row[30])),
-        last_mile_route_id=(None if row[31] is None else int(row[31])),
-        insertion_timestamp=row[32],
-        updated_timestamp=row[33],
+        origin_name=str(row[4]),
+        destiny_name=str(row[5]),
+        destiny_lat=to_float(row[6]),
+        destiny_lon=to_float(row[7]),
+        destiny_uf=_normalize_text(row[8]),
+        port_origin_name=_normalize_text(row[9]),
+        port_destiny_name=_normalize_text(row[10]),
+        status=str(row[11]),
+        error_message=_normalize_text(row[12]),
+        failed_step=_normalize_text(row[13]),
+        failed_leg=_normalize_text(row[14]),
+        failure_reason=_normalize_text(row[15]),
+        failure_detail=_normalize_text(row[16]),
+        retryable=bool(row[17]),
+        failure_provider=_normalize_text(row[18]),
+        failure_provider_operation=_normalize_text(row[19]),
+        road_cost_r=to_float(row[20]),
+        multimodal_cost_r=to_float(row[21]),
+        cost_delta_r=to_float(row[22]),
+        cost_savings_pct=to_float(row[23]),
+        road_emissions_kg=to_float(row[24]),
+        multimodal_emissions_kg=to_float(row[25]),
+        emissions_delta_kg=to_float(row[26]),
+        emissions_savings_pct=to_float(row[27]),
+        road_distance_km=to_float(row[28]),
+        sea_km=to_float(row[29]),
+        is_approximation=bool(row[30]),
+        route_source=_normalize_text(row[31]),
+        approximation_reference_route_id=(None if row[32] is None else int(row[32])),
+        approximation_reference_destiny=_normalize_text(row[33]),
+        approximation_reference_distance_km=to_float(row[34]),
+        approximation_delta_straight_line_km=to_float(row[35]),
+        approximation_notes=_normalize_text(row[36]),
+        road_route_id=(None if row[37] is None else int(row[37])),
+        first_mile_route_id=(None if row[38] is None else int(row[38])),
+        last_mile_route_id=(None if row[39] is None else int(row[39])),
+        insertion_timestamp=row[40],
+        updated_timestamp=row[41],
     )
 
 
@@ -488,6 +524,13 @@ def _run_result_upsert_sql(table_name: str) -> str:
             , last_mile_route_id
             , status
             , error_message
+            , failed_step
+            , failed_leg
+            , failure_reason
+            , failure_detail
+            , retryable
+            , failure_provider
+            , failure_provider_operation
             , road_cost_r
             , multimodal_cost_r
             , cost_delta_r
@@ -506,7 +549,7 @@ def _run_result_upsert_sql(table_name: str) -> str:
             , insertion_timestamp
             , updated_timestamp
         ) VALUES (
-              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
               COALESCE(?, {current_timestamp_sql()}),
               COALESCE(?, {current_timestamp_sql()})
         )
@@ -520,6 +563,13 @@ def _run_result_upsert_sql(table_name: str) -> str:
             , last_mile_route_id = excluded.last_mile_route_id
             , status = excluded.status
             , error_message = excluded.error_message
+            , failed_step = excluded.failed_step
+            , failed_leg = excluded.failed_leg
+            , failure_reason = excluded.failure_reason
+            , failure_detail = excluded.failure_detail
+            , retryable = excluded.retryable
+            , failure_provider = excluded.failure_provider
+            , failure_provider_operation = excluded.failure_provider_operation
             , road_cost_r = excluded.road_cost_r
             , multimodal_cost_r = excluded.multimodal_cost_r
             , cost_delta_r = excluded.cost_delta_r
@@ -563,6 +613,13 @@ def _prepare_run_result_upsert(
     last_mile_route_id: Optional[int] = None,
     status: str = "ok",
     error_message: Optional[str] = None,
+    failed_step: Optional[str] = None,
+    failed_leg: Optional[str] = None,
+    failure_reason: Optional[str] = None,
+    failure_detail: Optional[str] = None,
+    retryable: bool = False,
+    failure_provider: Optional[str] = None,
+    failure_provider_operation: Optional[str] = None,
     road_cost_r: Optional[float] = None,
     multimodal_cost_r: Optional[float] = None,
     cost_delta_r: Optional[float] = None,
@@ -699,6 +756,13 @@ def _prepare_run_result_upsert(
             resolved_last_mile_route_id,
             str(status),
             error_message,
+            failed_step,
+            failed_leg,
+            failure_reason,
+            failure_detail,
+            bool(retryable),
+            failure_provider,
+            failure_provider_operation,
             to_float(road_cost_r),
             to_float(multimodal_cost_r),
             to_float(cost_delta_r),
@@ -1078,6 +1142,7 @@ def _result_projection_sql(items_table: str, runs_table: str, locations_table: s
         , i.scenario_key
         , i.input_destiny
         , i.destination_location_id
+        , COALESCE(NULLIF(TRIM(r.origin_label), ''), NULLIF(TRIM(origin_loc.label), ''), r.input_origin)
         , COALESCE(NULLIF(TRIM(dest.label), ''), i.input_destiny)
         , dest.lat6
         , dest.lon6
@@ -1086,6 +1151,13 @@ def _result_projection_sql(items_table: str, runs_table: str, locations_table: s
         , COALESCE(NULLIF(TRIM(port_dest.label), ''), NULL)
         , i.status
         , i.error_message
+        , i.failed_step
+        , i.failed_leg
+        , i.failure_reason
+        , i.failure_detail
+        , COALESCE(i.retryable, FALSE)
+        , i.failure_provider
+        , i.failure_provider_operation
         , i.road_cost_r
         , i.multimodal_cost_r
         , i.cost_delta_r
@@ -1111,6 +1183,8 @@ def _result_projection_sql(items_table: str, runs_table: str, locations_table: s
     FROM {items_table} AS i
     INNER JOIN {runs_table} AS r
             ON r.run_id = i.run_id
+    LEFT JOIN {locations_table} AS origin_loc
+           ON origin_loc.id = r.origin_location_id
     LEFT JOIN {locations_table} AS dest
            ON dest.id = i.destination_location_id
     LEFT JOIN {locations_table} AS port_origin
@@ -1188,6 +1262,13 @@ def insert_run_result(
     last_mile_route_id: Optional[int] = None,
     status: str = "ok",
     error_message: Optional[str] = None,
+    failed_step: Optional[str] = None,
+    failed_leg: Optional[str] = None,
+    failure_reason: Optional[str] = None,
+    failure_detail: Optional[str] = None,
+    retryable: bool = False,
+    failure_provider: Optional[str] = None,
+    failure_provider_operation: Optional[str] = None,
     road_cost_r: Optional[float] = None,
     multimodal_cost_r: Optional[float] = None,
     cost_delta_r: Optional[float] = None,
@@ -1251,6 +1332,13 @@ def insert_run_result(
         last_mile_route_id=last_mile_route_id,
         status=status,
         error_message=error_message,
+        failed_step=failed_step,
+        failed_leg=failed_leg,
+        failure_reason=failure_reason,
+        failure_detail=failure_detail,
+        retryable=retryable,
+        failure_provider=failure_provider,
+        failure_provider_operation=failure_provider_operation,
         road_cost_r=road_cost_r,
         multimodal_cost_r=multimodal_cost_r,
         cost_delta_r=cost_delta_r,

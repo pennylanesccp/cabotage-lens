@@ -239,6 +239,13 @@ def main() -> int:
         outcome.get("run_id"),
         outcome.get("shuffle_seed_used"),
     )
+    _log.info(
+        "Bulk failure diagnostics: by_step=%s by_leg=%s by_reason=%s top_failed_destinations=%s",
+        outcome.get("failure_counts_by_step") or {},
+        outcome.get("failure_counts_by_leg") or {},
+        outcome.get("failure_counts_by_reason") or {},
+        outcome.get("top_failed_destinations") or [],
+    )
     perf = outcome.get("performance") or {}
     timings = perf.get("timings_s") or {}
     counts = perf.get("counts") or {}

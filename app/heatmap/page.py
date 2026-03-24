@@ -3,6 +3,7 @@ from __future__ import annotations
 from html import escape
 from typing import Any, Iterable
 
+import pandas as pd
 import streamlit as st
 
 from modules.infra.log_manager import get_logger
@@ -118,6 +119,37 @@ def _format_color_scale(surface: HeatmapSurface) -> str:
     if positive_scale > 0.0:
         return f"green={_format_metric_scale(surface.metric, positive_scale)}"
     return _format_metric_scale(surface.metric, surface.color_scale)
+
+
+def _format_failure_counts(records: Iterable[Any], attr_name: str, *, max_items: int = 8) -> str:
+    counts: dict[str, int] = {}
+    for record in records:
+        key = str(getattr(record, attr_name, None) or "").strip() or "unknown"
+        counts[key] = counts.get(key, 0) + 1
+    if not counts:
+        return "none"
+    ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    return ", ".join(f"{key}={count}" for key, count in ordered[:max_items])
+
+
+def _failure_table(records: Iterable[Any]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "destination": record.destination,
+                "failed_leg": record.failed_leg,
+                "failed_step": record.failed_step,
+                "failure_reason": record.failure_reason,
+                "failure_detail": record.failure_detail,
+                "port_origin": record.port_origin,
+                "port_destiny": record.port_destiny,
+                "retryable": record.retryable,
+                "provider": record.provider,
+                "provider_operation": record.provider_operation,
+            }
+            for record in records
+        ]
+    )
 
 
 def _render_header() -> None:
@@ -242,6 +274,20 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
 
         if retryable_failures > 0:
             st.caption(f"Retryable latest failures: {retryable_failures}")
+        if diagnostics.failed_destinations:
+            st.caption(
+                "Latest run failure counts by step: "
+                + _format_failure_counts(diagnostics.failed_destinations, "failed_step")
+            )
+            st.caption(
+                "Latest run failure counts by leg: "
+                + _format_failure_counts(diagnostics.failed_destinations, "failed_leg")
+            )
+            st.caption(
+                "Latest run failure counts by reason: "
+                + _format_failure_counts(diagnostics.failed_destinations, "failure_reason")
+            )
+            st.dataframe(_failure_table(diagnostics.failed_destinations), hide_index=True, use_container_width=True)
         if diagnostics.skipped_total > 0:
             st.caption(
                 (

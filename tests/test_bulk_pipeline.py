@@ -240,6 +240,11 @@ class BulkPipelineExecutionTests(unittest.TestCase):
             failure_step="routing_road_only",
             failure_system="routing",
             failure_provider="ors",
+            failed_leg="road_only",
+            failure_reason="provider_timeout",
+            failure_detail="Request timed out",
+            retryable=True,
+            failure_provider_operation="route_road",
         )
         geo = {
             "road_direct": {
@@ -271,42 +276,154 @@ class BulkPipelineExecutionTests(unittest.TestCase):
         self.assertIn("Sao Paulo, SP@", joined)
         self.assertIn("Manaus, AM@", joined)
         self.assertIn("step=routing_road_only", joined)
+        self.assertIn("leg=road_only", joined)
+        self.assertIn("reason=provider_timeout", joined)
         self.assertIn("system=routing", joined)
         self.assertIn("provider=ors", joined)
+        self.assertIn("provider_operation=route_road", joined)
         self.assertIn("ports=Porto de Santos -> Porto de Manaus", joined)
         self.assertIn("road_direct[source=cache km=3950.4 profile=driving-hgv cached=true]", joined)
         self.assertIn("last_mile[source=ors km=12.6 profile=driving-hgv cached=false]", joined)
         self.assertIn("status=timeout", joined)
         self.assertIn("error=Request timed out", joined)
 
-    def test_format_failed_destinies_includes_actual_destination_names(self) -> None:
+    def test_build_failure_diagnostic_maps_first_mile_provider_timeout(self) -> None:
+        diagnostic = bulk.build_failure_diagnostic(
+            status="timeout",
+            step="routing_origin_to_port_origin",
+            failure_detail="Request timed out",
+            provider="ors",
+        )
+
+        self.assertEqual(diagnostic.failed_step, "routing_origin_to_port_origin")
+        self.assertEqual(diagnostic.failed_leg, "first_mile")
+        self.assertEqual(diagnostic.failure_reason, "provider_timeout")
+        self.assertEqual(diagnostic.provider_operation, "route_road")
+        self.assertTrue(diagnostic.retryable)
+
+    def test_top_failed_destinations_include_actual_destination_and_failure_shape(self) -> None:
         rows = [
             {
                 "status": "timeout",
-                "failure_step": "routing_road_only",
-                "destiny_name": "Manaus, AM",
-                "input_destiny": "Manaus, AM",
+                "failed_step": "routing_road_only",
+                "failed_leg": "road_only",
+                "failure_reason": "provider_timeout",
+                "destination_label": "Manaus, AM",
+                "port_origin_name": "Porto de Santos",
+                "port_destiny_name": "Porto de Manaus",
             },
             {
                 "status": "timeout",
-                "failure_step": "routing_road_only",
-                "destiny_name": "Recife, PE",
-                "input_destiny": "Recife, PE",
+                "failed_step": "routing_road_only",
+                "failed_leg": "road_only",
+                "failure_reason": "provider_timeout",
+                "destination_label": "Recife, PE",
+                "port_origin_name": "Porto de Santos",
+                "port_destiny_name": "Porto do Recife",
             },
             {
-                "status": "rate_limited",
-                "failure_step": "destination_geocoding",
-                "destiny_name": "",
-                "input_destiny": "Olinda, PE",
+                "status": "nearest_port_failed",
+                "failed_step": "nearest_port_destiny",
+                "failed_leg": "port_destiny_selection",
+                "failure_reason": "no_nearest_port",
+                "destination_label": "Olinda, PE",
+                "port_origin_name": "Porto de Santos",
+                "port_destiny_name": None,
             },
-            {"status": "ok", "destiny_name": "Curitiba, PR", "input_destiny": "Curitiba, PR"},
+            {"status": "ok", "destination_label": "Curitiba, PR"},
         ]
 
-        summary = bulk_pipeline._format_failed_destinies(rows, max_statuses=5, max_destinies_per_status=5)
+        top_failures = bulk_pipeline._top_failed_destinations(rows, limit=5)
+        summary = bulk_pipeline._format_top_failed_destinations(top_failures, max_items=5)
+        reason_counts = bulk_pipeline._failure_counts(rows, field_name="failure_reason")
 
-        self.assertIn("routing road only/timeout=[Manaus, AM; Recife, PE]", summary)
-        self.assertIn("destination geocoding/rate_limited=[Olinda, PE]", summary)
-        self.assertNotIn("Curitiba, PR", summary)
+        self.assertEqual(top_failures[0]["destination"], "Manaus, AM")
+        self.assertEqual(top_failures[0]["failed_leg"], "road_only")
+        self.assertEqual(top_failures[0]["failure_reason"], "provider_timeout")
+        self.assertIn("Manaus, AM ports=Porto de Santos->Porto de Manaus", summary)
+        self.assertIn("Olinda, PE ports=Porto de Santos-><none>", summary)
+        self.assertEqual(reason_counts["provider_timeout"], 2)
+        self.assertEqual(reason_counts["no_nearest_port"], 1)
+
+    def test_materialize_run_wide_failure_persists_per_destination_origin_diagnostics(self) -> None:
+        class _FakePersistence:
+            def __init__(self) -> None:
+                self.bulk_rows: list[dict[str, object]] = []
+                self.run_rows: list[dict[str, object]] = []
+                self.flushed = False
+
+            def add(self, bulk_row, run_row) -> None:
+                self.bulk_rows.append(bulk_row)
+                self.run_rows.append(run_row)
+
+            def flush(self) -> None:
+                self.flushed = True
+
+        persistence = _FakePersistence()
+        summary_rows: list[dict[str, object]] = []
+        work_items = [
+            bulk.DestinationWorkItem(
+                index=1,
+                destiny_input="Manaus, AM",
+                normalized_input="Manaus, AM",
+                scenario_key="scenario-1",
+                scenario_payload={"input_destiny": "Manaus, AM"},
+                destiny_name="Manaus, AM",
+            ),
+            bulk.DestinationWorkItem(
+                index=2,
+                destiny_input="Belem, PA",
+                normalized_input="Belem, PA",
+                scenario_key="scenario-2",
+                scenario_payload={"input_destiny": "Belem, PA"},
+                destiny_name="Belem, PA",
+            ),
+        ]
+
+        persisted = bulk_pipeline._materialize_run_wide_failure(
+            persistence=persistence,
+            summary_rows=summary_rows,
+            work_items=work_items,
+            run_id="run-123",
+            destination_set_id="city_dests_over50k.txt",
+            origin_input="Pelotas, RS",
+            origin_pt={"label": "Pelotas, RS", "lat": -31.7654, "lon": -52.3376, "location_id": 17},
+            origin_port={"name": "Porto de Rio Grande", "lat": -32.035, "lon": -52.098, "location_id": 31},
+            cargo_t=30.0,
+            truck_key="semi_27t",
+            profile="driving-hgv",
+            vessel_class="container_small",
+            include_hoteling=True,
+            hoteling_hours_per_call=14.0,
+            port_calls=2,
+            include_port_ops=True,
+            port_moves_per_call=None,
+            cargo_teu=None,
+            t_per_teu_default=14.0,
+            allocation_mode=None,
+            allocation_load_factor=0.8,
+            full_call_mode=False,
+            port_ops_scenario="baseline",
+            status="nearest_port_failed",
+            error_message="Nearest-port lookup failed",
+            failure_step="nearest_port_origin",
+            failure_system="ports",
+            failure_provider="nearest_port_lookup",
+        )
+
+        self.assertEqual(persisted, 2)
+        self.assertTrue(persistence.flushed)
+        self.assertEqual(len(persistence.run_rows), 2)
+        self.assertEqual(persistence.run_rows[0]["failed_step"], "nearest_port_origin")
+        self.assertEqual(persistence.run_rows[0]["failed_leg"], "port_origin_selection")
+        self.assertEqual(persistence.run_rows[0]["failure_reason"], "no_nearest_port")
+        self.assertEqual(persistence.run_rows[0]["failure_provider_operation"], "nearest_port_lookup")
+        self.assertEqual(persistence.run_rows[0]["port_origin_name"], "Porto de Rio Grande")
+        self.assertEqual(summary_rows[0]["failed_step"], "nearest_port_origin")
+        self.assertEqual(summary_rows[0]["failed_leg"], "port_origin_selection")
+        self.assertEqual(summary_rows[0]["failure_reason"], "no_nearest_port")
+        self.assertEqual(summary_rows[0]["destination_label"], "Manaus, AM")
+        self.assertEqual(summary_rows[1]["destination_label"], "Belem, PA")
 
     def test_bulk_persistence_buffer_reconnects_before_flush(self) -> None:
         conn = SimpleNamespace(

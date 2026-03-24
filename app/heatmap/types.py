@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, List, Optional, Tuple
 
 
@@ -62,6 +62,20 @@ class HeatmapPoint:
 
 
 @dataclass(frozen=True)
+class HeatmapFailureRecord:
+    destination: str
+    failed_leg: Optional[str]
+    failed_step: Optional[str]
+    failure_reason: Optional[str]
+    failure_detail: Optional[str]
+    port_origin: Optional[str]
+    port_destiny: Optional[str]
+    retryable: bool = False
+    provider: Optional[str] = None
+    provider_operation: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class HeatmapDatasetDiagnostics:
     successful_rows: int
     plottable_points: int
@@ -70,6 +84,7 @@ class HeatmapDatasetDiagnostics:
     skipped_missing_emissions: int
     loaded_bulk_rows: int = 0
     loaded_single_compare_rows: int = 0
+    failed_destinations: List[HeatmapFailureRecord] = field(default_factory=list)
 
     @property
     def skipped_total(self) -> int:

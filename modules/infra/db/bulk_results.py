@@ -47,6 +47,13 @@ class BulkResultRecord:
     port_ops_scenario: Optional[str]
     status: str
     error_message: Optional[str]
+    failed_step: Optional[str]
+    failed_leg: Optional[str]
+    failure_reason: Optional[str]
+    failure_detail: Optional[str]
+    retryable: bool
+    failure_provider: Optional[str]
+    failure_provider_operation: Optional[str]
     destiny_lat: Optional[float]
     destiny_lon: Optional[float]
     destiny_uf: Optional[str]
@@ -169,6 +176,13 @@ def _latest_results_cte(items_table: str, runs_table: str, locations_table: str,
             , r.port_ops_scenario
             , i.status
             , i.error_message
+            , i.failed_step
+            , i.failed_leg
+            , i.failure_reason
+            , i.failure_detail
+            , COALESCE(i.retryable, FALSE)
+            , i.failure_provider
+            , i.failure_provider_operation
             , dest.lat6
             , dest.lon6
             , dest.state
@@ -325,6 +339,13 @@ def _latest_results_for_selector_cte(
             , r.port_ops_scenario
             , i.status
             , i.error_message
+            , i.failed_step
+            , i.failed_leg
+            , i.failure_reason
+            , i.failure_detail
+            , COALESCE(i.retryable, FALSE)
+            , i.failure_provider
+            , i.failure_provider_operation
             , dest.lat6
             , dest.lon6
             , dest.state
@@ -396,28 +417,35 @@ def _row_to_record(row: Sequence[Any]) -> BulkResultRecord:
         port_ops_scenario=_normalize_text(row[23]),
         status=str(row[24]),
         error_message=_normalize_text(row[25]),
-        destiny_lat=to_float(row[26]),
-        destiny_lon=to_float(row[27]),
-        destiny_uf=_normalize_text(row[28]),
-        port_origin_name=_normalize_text(row[29]),
-        port_destiny_name=_normalize_text(row[30]),
-        road_cost_r=to_float(row[31]),
-        multimodal_cost_r=to_float(row[32]),
-        cost_delta_r=to_float(row[33]),
-        cost_savings_pct=to_float(row[34]),
-        road_emissions_kg=to_float(row[35]),
-        multimodal_emissions_kg=to_float(row[36]),
-        emissions_delta_kg=to_float(row[37]),
-        emissions_savings_pct=to_float(row[38]),
-        road_distance_km=to_float(row[39]),
-        sea_km=to_float(row[40]),
-        is_approximation=bool(row[41]),
-        route_source=_normalize_text(row[42]),
-        approximation_reference_destiny=_normalize_text(row[43]),
-        approximation_reference_distance_km=to_float(row[44]),
-        approximation_delta_straight_line_km=to_float(row[45]),
-        approximation_notes=_normalize_text(row[46]),
-        updated_timestamp=row[47],
+        failed_step=_normalize_text(row[26]),
+        failed_leg=_normalize_text(row[27]),
+        failure_reason=_normalize_text(row[28]),
+        failure_detail=_normalize_text(row[29]),
+        retryable=bool(row[30]),
+        failure_provider=_normalize_text(row[31]),
+        failure_provider_operation=_normalize_text(row[32]),
+        destiny_lat=to_float(row[33]),
+        destiny_lon=to_float(row[34]),
+        destiny_uf=_normalize_text(row[35]),
+        port_origin_name=_normalize_text(row[36]),
+        port_destiny_name=_normalize_text(row[37]),
+        road_cost_r=to_float(row[38]),
+        multimodal_cost_r=to_float(row[39]),
+        cost_delta_r=to_float(row[40]),
+        cost_savings_pct=to_float(row[41]),
+        road_emissions_kg=to_float(row[42]),
+        multimodal_emissions_kg=to_float(row[43]),
+        emissions_delta_kg=to_float(row[44]),
+        emissions_savings_pct=to_float(row[45]),
+        road_distance_km=to_float(row[46]),
+        sea_km=to_float(row[47]),
+        is_approximation=bool(row[48]),
+        route_source=_normalize_text(row[49]),
+        approximation_reference_destiny=_normalize_text(row[50]),
+        approximation_reference_distance_km=to_float(row[51]),
+        approximation_delta_straight_line_km=to_float(row[52]),
+        approximation_notes=_normalize_text(row[53]),
+        updated_timestamp=row[54],
     )
 
 
@@ -531,6 +559,13 @@ def list_results(
             , port_ops_scenario
             , status
             , error_message
+            , failed_step
+            , failed_leg
+            , failure_reason
+            , failure_detail
+            , retryable
+            , failure_provider
+            , failure_provider_operation
             , lat6
             , lon6
             , state
@@ -630,6 +665,13 @@ def list_results_for_origin_scenario(
             , port_ops_scenario
             , status
             , error_message
+            , failed_step
+            , failed_leg
+            , failure_reason
+            , failure_detail
+            , retryable
+            , failure_provider
+            , failure_provider_operation
             , lat6
             , lon6
             , state

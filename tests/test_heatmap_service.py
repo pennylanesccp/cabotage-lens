@@ -167,6 +167,9 @@ class HeatmapServiceTests(unittest.TestCase):
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
         ), patch(
+            "app.heatmap.service.list_bulk_run_results",
+            return_value=[],
+        ), patch(
             "app.heatmap.service._load_map_rows",
             return_value=rows,
         ):
@@ -184,6 +187,7 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(dataset.diagnostics.loaded_bulk_rows, 2)
         self.assertEqual(dataset.diagnostics.loaded_single_compare_rows, 0)
         self.assertEqual(dataset.diagnostics.skipped_total, 0)
+        self.assertEqual(dataset.diagnostics.failed_destinations, [])
 
     def test_load_current_dataset_raises_when_rows_cannot_be_mapped(self) -> None:
         scenario = self._scenario()
@@ -229,6 +233,9 @@ class HeatmapServiceTests(unittest.TestCase):
         ), patch(
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
+        ), patch(
+            "app.heatmap.service.list_bulk_run_results",
+            return_value=[],
         ), patch(
             "app.heatmap.service._load_map_rows",
             return_value=rows,
@@ -314,6 +321,9 @@ class HeatmapServiceTests(unittest.TestCase):
         ]
 
         with patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
+            "app.heatmap.service.list_bulk_run_results",
+            return_value=[],
+        ), patch(
             "app.heatmap.service._load_map_rows",
             return_value=rows,
         ):
@@ -371,6 +381,9 @@ class HeatmapServiceTests(unittest.TestCase):
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
         ), patch(
+            "app.heatmap.service.list_bulk_run_results",
+            return_value=[],
+        ), patch(
             "app.heatmap.service._load_map_rows",
             return_value=rows,
         ):
@@ -382,6 +395,45 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(dataset.points[0].destiny_name, "Rio Branco, AC")
         self.assertEqual(dataset.diagnostics.loaded_bulk_rows, 0)
         self.assertEqual(dataset.diagnostics.loaded_single_compare_rows, 1)
+
+    def test_list_failed_destinations_returns_selected_run_diagnostics(self) -> None:
+        scenario = self._scenario()
+        failure_rows = [
+            SimpleNamespace(
+                status="timeout",
+                destiny_name="Manaus, AM",
+                input_destiny="Manaus, AM",
+                failed_leg="road_only",
+                failed_step="routing_road_only",
+                failure_reason="provider_timeout",
+                failure_detail="Request timed out",
+                port_origin_name="Rio Grande",
+                port_destiny_name="Manaus",
+                retryable=True,
+                failure_provider="ors",
+                failure_provider_operation="route_road",
+            ),
+            SimpleNamespace(status="ok", destiny_name="Belem, PA", input_destiny="Belem, PA"),
+        ]
+
+        with patch("app.heatmap.service._require_postgres"), patch(
+            "app.heatmap.service.db_session",
+            return_value=contextlib.nullcontext(object()),
+        ), patch(
+            "app.heatmap.service._select_active_selector",
+            return_value=(object(), SimpleNamespace(latest_run_id="run-123"), None),
+        ), patch(
+            "app.heatmap.service.list_bulk_run_results",
+            return_value=failure_rows,
+        ):
+            failures = heatmap_service.list_failed_destinations(scenario)
+
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(failures[0].destination, "Manaus, AM")
+        self.assertEqual(failures[0].failed_leg, "road_only")
+        self.assertEqual(failures[0].failed_step, "routing_road_only")
+        self.assertEqual(failures[0].failure_reason, "provider_timeout")
+        self.assertTrue(failures[0].retryable)
 
     def test_pending_destinations_retries_retryable_failures_and_absent_destinations(self) -> None:
         scenario = self._scenario()
