@@ -12,6 +12,7 @@ from app.main.map.routing.marine_waypoints import (
     point_names_to_latlon,
     resolve_port_approach_point_names,
 )
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -40,17 +41,18 @@ def _parse_waypoint_line(line: str) -> tuple[float, float] | None:
 @lru_cache(maxsize=1)
 def load_reference_water_lane() -> list[tuple[float, float]]:
     points: list[tuple[float, float]] = []
+    resolved_path = resolve_data_asset_path(_FIXED_WAYPOINTS_PATH)
 
-    if _FIXED_WAYPOINTS_PATH.exists():
+    if resolved_path.exists():
         try:
-            for raw_line in _FIXED_WAYPOINTS_PATH.read_text(encoding="utf-8").splitlines():
+            for raw_line in resolved_path.read_text(encoding="utf-8").splitlines():
                 point = _parse_waypoint_line(raw_line)
                 if point is not None:
                     points.append(point)
         except OSError as exc:
-            _log.warning("Failed to read fixed maritime waypoints from '%s': %s", _FIXED_WAYPOINTS_PATH, exc)
+            _log.warning("Failed to read fixed maritime waypoints from '%s': %s", resolved_path, exc)
     else:
-        _log.warning("Fixed maritime waypoints file not found at '%s'.", _FIXED_WAYPOINTS_PATH)
+        _log.warning("Fixed maritime waypoints file not found at '%s'.", resolved_path)
 
     points.extend(NAMED_MARINE_POINTS.values())
     points.sort(key=lambda point: (_coastal_score(point[0], point[1]), point[0], point[1]))

@@ -115,7 +115,7 @@ def run_analysis(
         return (
             geo,
             None,
-            "Failed to evaluate route. Ensure processed artifacts exist in data/processed/cabotage_data.",
+            "Failed to evaluate route. Ensure the required cabotage data assets are available locally or in Supabase Storage.",
             str(db_target),
         )
 

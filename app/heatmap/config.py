@@ -4,6 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from app.main.utils.constants import MAP_STYLES, ROOT
+from modules.infra.data_assets import build_data_assets_client, load_data_assets_settings, resolve_data_asset_path
 
 HEATMAP_PAGE_TITLE = "Heatmap"
 HEATMAP_PAGE_ICON = "🗺️"
@@ -46,30 +47,66 @@ HEATMAP_SURFACE_ELEVATION_BOOST = 0.85
 HEATMAP_POINT_OVERLAY_RADIUS_M = 22_000.0
 
 
+def _normalize_destination_set_id(destination_set_id: str | None) -> str:
+    candidate = str(destination_set_id or HEATMAP_DESTINATION_SET_ID).strip() or HEATMAP_DESTINATION_SET_ID
+    candidate_path = Path(candidate)
+    if candidate_path.name != candidate or candidate_path.suffix.lower() != ".txt":
+        raise FileNotFoundError(f"Destination set must be a .txt filename under {HEATMAP_DESTINATIONS_DIR}: {candidate}")
+    return candidate
+
+
+def _remote_destination_set_names() -> tuple[str, ...]:
+    settings = load_data_assets_settings()
+    if settings is None:
+        return ()
+
+    try:
+        client = build_data_assets_client(settings)
+        items = client.list_objects(
+            bucket=settings.data_bucket,
+            prefix="data/processed/destinies",
+        )
+    except Exception:
+        return ()
+
+    names = sorted(
+        {
+            str(item.get("name") or "").strip()
+            for item in items
+            if str(item.get("name") or "").strip().lower().endswith(".txt")
+        }
+    )
+    return tuple(names)
+
+
 @lru_cache(maxsize=1)
 def list_heatmap_destination_sets() -> tuple[str, ...]:
-    if not HEATMAP_DESTINATIONS_DIR.exists():
-        return (HEATMAP_DESTINATION_SET_ID,)
+    options: set[str] = set()
 
-    options = sorted(
-        path.name
-        for path in HEATMAP_DESTINATIONS_DIR.iterdir()
-        if path.is_file() and path.suffix.lower() == ".txt"
-    )
-    if HEATMAP_DESTINATION_SET_ID not in options:
-        options.insert(0, HEATMAP_DESTINATION_SET_ID)
-    return tuple(options)
+    if HEATMAP_DESTINATIONS_DIR.exists():
+        options.update(
+            path.name
+            for path in HEATMAP_DESTINATIONS_DIR.iterdir()
+            if path.is_file() and path.suffix.lower() == ".txt"
+        )
+
+    options.update(_remote_destination_set_names())
+    ordered = sorted(options)
+    if HEATMAP_DESTINATION_SET_ID in ordered:
+        ordered.remove(HEATMAP_DESTINATION_SET_ID)
+    ordered.insert(0, HEATMAP_DESTINATION_SET_ID)
+    return tuple(ordered)
 
 
 def resolve_heatmap_destination_path(destination_set_id: str | None) -> Path:
-    candidate = str(destination_set_id or HEATMAP_DESTINATION_SET_ID).strip() or HEATMAP_DESTINATION_SET_ID
-    path = (HEATMAP_DESTINATIONS_DIR / candidate).resolve()
-    expected_root = HEATMAP_DESTINATIONS_DIR.resolve()
-    if path.parent != expected_root or not path.is_file():
-        raise FileNotFoundError(f"Destination file not found under {expected_root}: {candidate}")
+    candidate = _normalize_destination_set_id(destination_set_id)
+    path = resolve_data_asset_path(HEATMAP_DESTINATIONS_DIR / candidate)
+    if not path.is_file():
+        raise FileNotFoundError(f"Destination file not found under {HEATMAP_DESTINATIONS_DIR}: {candidate}")
     return path
 
 
 def heatmap_destination_label(destination_set_id: str | None) -> str:
-    candidate = str(destination_set_id or HEATMAP_DESTINATION_SET_ID).strip() or HEATMAP_DESTINATION_SET_ID
-    return str(HEATMAP_DESTINATION_LABELS.get(candidate) or candidate)
+    candidate = _normalize_destination_set_id(destination_set_id)
+    fallback = Path(candidate).stem.replace("_", " ").strip().title()
+    return str(HEATMAP_DESTINATION_LABELS.get(candidate) or fallback or candidate)

@@ -40,7 +40,7 @@ _log = get_logger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_PORTS_JSON = _REPO_ROOT / "data" / "processed" / "cabotage_data" / "ports_br.json"
-_DEFAULT_SEA_MATRIX_JSON = _REPO_ROOT / "data" / "processed" / "cabotage_data" / "sea_matrix.json"
+_DEFAULT_SEA_MATRIX_JSON = _REPO_ROOT / "data" / "sea_matrix.json"
 
 
 class Point(TypedDict):

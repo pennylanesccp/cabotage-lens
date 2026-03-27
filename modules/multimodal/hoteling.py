@@ -16,6 +16,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS
 
@@ -52,7 +53,7 @@ def _load_payload_cached(path_str: str) -> dict[str, Any]:
 
 
 def _resolve_payload(hoteling_rate_path: Path | None = None) -> tuple[Path, dict[str, Any]]:
-    path = Path(hoteling_rate_path or DEFAULT_HOTELING_RATE_PATH).resolve()
+    path = resolve_data_asset_path(hoteling_rate_path or DEFAULT_HOTELING_RATE_PATH)
     payload = _load_payload_cached(str(path))
     return path, payload
 

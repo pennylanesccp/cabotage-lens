@@ -43,6 +43,7 @@ import json
 import os
 import re
 
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger, init_logging
 from modules.cabotage.sea_matrix import SeaMatrix
 from modules.ports.ports_index import load_ports
@@ -70,7 +71,7 @@ _DEFAULT_K_BY_FUEL: Dict[str, float] = {
 }
 
 DEFAULT_PORTS_JSON       = Path("data/processed/cabotage_data/ports_br.json")
-DEFAULT_SEA_MATRIX_JSON  = Path("data/processed/cabotage_data/sea_matrix.json")
+DEFAULT_SEA_MATRIX_JSON  = Path("data/sea_matrix.json")
 DEFAULT_HOTEL_JSON       = Path("data/processed/cabotage_data/hotel.json")
 
 
@@ -134,7 +135,7 @@ def _norm_city(s: str) -> str:
 
 def load_hotel_entries(
     *,
-    path: str = os.path.join("data", "cabotage_data", "hotel.json"),
+    path: str = os.path.join("data", "processed", "cabotage_data", "hotel.json"),
 ) -> dict:
     """
     Load hotel.json payload.
@@ -150,7 +151,8 @@ def load_hotel_entries(
         ]
       }
     """
-    with open(path, "r", encoding="utf-8") as f:
+    resolved_path = resolve_data_asset_path(path)
+    with open(resolved_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     unit = data.get("unit")
@@ -160,7 +162,7 @@ def load_hotel_entries(
     if not isinstance(data.get("entries"), list):
         raise ValueError("hotel.json missing 'entries' list.")
 
-    _log.info("load_hotel_entries: loaded %d entries from '%s'.", len(data.get("entries", [])), path)
+    _log.info("load_hotel_entries: loaded %d entries from '%s'.", len(data.get("entries", [])), resolved_path)
     return data
 
 

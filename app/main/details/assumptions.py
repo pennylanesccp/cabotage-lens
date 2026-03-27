@@ -10,6 +10,14 @@ from app.main.utils.formatters import safe_float
 
 def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -> pd.DataFrame:
     inputs = results.get("inputs", {})
+    hoteling_reason = str(inputs.get("hoteling_exclusion_reason") or "").strip()
+    if bool(inputs.get("include_hoteling")):
+        hoteling_value = "enabled"
+    elif hoteling_reason == "included_in_transport_work_intensity":
+        hoteling_value = "skipped (already covered by MRV transport-work intensity)"
+    else:
+        hoteling_value = "disabled"
+
     rows = [
         (
             "Truck preset",
@@ -18,7 +26,7 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
         ),
         (
             "Vessel class",
-            "Container vessel class used to select maritime fuel intensity, hoteling, and other sea-leg factors.",
+            "Container vessel class used to select maritime fuel intensity, fallback hoteling, and other sea-leg factors.",
             str(inputs.get("vessel_class") or payload.get("vessel_class") or "n/a"),
         ),
         (
@@ -54,7 +62,7 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
         (
             "Hoteling",
             "Whether berth-side auxiliary fuel use and emissions are included while the vessel is in port.",
-            "enabled" if payload.get("include_hoteling") else "disabled",
+            hoteling_value,
         ),
     ]
     return pd.DataFrame(rows, columns=["Parameter", "Description", "Value"])

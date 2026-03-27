@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional, Tuple
 import pandas as pd
 
 from modules.infra.log_manager import get_logger
+from modules.infra.data_assets import resolve_data_asset_path
 
 _log = get_logger(__name__)
 
@@ -132,8 +133,8 @@ def _load_latest_diesel_price_cached(path_str: str, mtime_ns: int) -> pd.DataFra
 
 def load_latest_diesel_price(csv_path: str | Path | None = None) -> pd.DataFrame:
     """Load normalized diesel prices with a small in-process cache."""
-    path = Path(csv_path) if csv_path is not None else DEFAULT_DIESEL_PRICES_CSV
-    path = path.resolve()
+    requested_path = Path(csv_path) if csv_path is not None else DEFAULT_DIESEL_PRICES_CSV
+    path = resolve_data_asset_path(requested_path).resolve()
 
     if not path.is_file():
         _log.warning(
@@ -213,7 +214,8 @@ def build_price_lookup(
     csv_path: str | Path | None = None,
 ) -> DieselPriceLookup:
     """Load the diesel table once and prepare a reusable UF lookup map."""
-    source_csv = str(Path(csv_path).resolve()) if csv_path is not None else str(DEFAULT_DIESEL_PRICES_CSV.resolve())
+    requested_path = Path(csv_path) if csv_path is not None else DEFAULT_DIESEL_PRICES_CSV
+    source_csv = str(resolve_data_asset_path(requested_path).resolve())
     table = load_latest_diesel_price(csv_path=csv_path)
     uf_to_price: Dict[str, float] = {}
     if not table.empty:

@@ -26,6 +26,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - optional runtime dependency
     CurrencyConverter = None  # type: ignore[assignment]
 
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -80,7 +81,7 @@ def get_bunker_price(default_price_brl_mt: float = 3500.0) -> float:
     Get the latest VLSFO price in BRL/mt from the local text file.
     If file is missing or malformed, returns the provided default.
     """
-    path = Path(DEFAULT_OUTPUT_TXT).resolve()
+    path = resolve_data_asset_path(Path(DEFAULT_OUTPUT_TXT)).resolve()
 
     if not path.exists():
         _log.warning(

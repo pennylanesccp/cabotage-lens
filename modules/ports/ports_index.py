@@ -40,6 +40,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -203,14 +204,15 @@ def load_ports(
     raw: List[Dict[str, Any]]
 
     if path:
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"ports JSON not found: {path}")
-        with open(path, "r", encoding="utf-8") as f:
+        resolved_path = resolve_data_asset_path(path)
+        if not os.path.exists(resolved_path):
+            raise FileNotFoundError(f"ports JSON not found: {resolved_path}")
+        with open(resolved_path, "r", encoding="utf-8") as f:
             raw_loaded = json.load(f)
         if not isinstance(raw_loaded, list):
-            raise ValueError(f"ports JSON at '{path}' must be a list of records.")
+            raise ValueError(f"ports JSON at '{resolved_path}' must be a list of records.")
         raw = raw_loaded  # type: ignore[assignment]
-        _log.debug("load_ports: loaded %d raw records from '%s'.", len(raw), path)
+        _log.debug("load_ports: loaded %d raw records from '%s'.", len(raw), resolved_path)
     else:
         if fallback is None:
             raise ValueError("No JSON path provided and no fallback data.")

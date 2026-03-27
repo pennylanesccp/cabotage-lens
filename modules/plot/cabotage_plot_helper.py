@@ -21,6 +21,7 @@ import math
 from pathlib import Path
 from typing import List, Tuple, Any
 
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -61,17 +62,13 @@ def _get_coastal_score(lat: float, lon: float) -> float:
 def _load_waypoints_from_file(path: Path) -> List[Tuple[float, float]]:
     """Parse 'lat, lon' lines from text file."""
     points = []
-    if not path.exists():
-        # Try stepping up one level if running from subfolder
-        alt = Path("..") / path
-        if alt.exists():
-            path = alt
-        else:
-            _log.warning(f"Waypoints file not found at {path}")
-            return []
+    resolved_path = resolve_data_asset_path(path)
+    if not resolved_path.exists():
+        _log.warning(f"Waypoints file not found at {resolved_path}")
+        return []
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(resolved_path, "r", encoding="utf-8") as f:
             for line in f:
                 parts = line.strip().split(",")
                 if len(parts) >= 2:
@@ -82,7 +79,7 @@ def _load_waypoints_from_file(path: Path) -> List[Tuple[float, float]]:
                     except ValueError:
                         continue
     except Exception as e:
-        _log.error(f"Failed to load waypoints from {path}: {e}")
+        _log.error(f"Failed to load waypoints from {resolved_path}: {e}")
         
     return points
 
@@ -90,27 +87,18 @@ def _load_waypoints_from_file(path: Path) -> List[Tuple[float, float]]:
 def _load_ports_from_json(path: Path) -> List[Tuple[float, float]]:
     """Extract lat/lon from ports JSON."""
     points = []
-    if not path.exists():
-        # Try stepping up
-        alt = Path("..") / path
-        if alt.exists():
-            path = alt
-        else:
-            # Fallback check for repo root structure
-            alt2 = Path("data/processed/cabotage_data/ports_br.json")
-            if alt2.exists():
-                path = alt2
-            else:
-                _log.warning(f"Ports file not found at {path}")
-                return []
+    resolved_path = resolve_data_asset_path(path)
+    if not resolved_path.exists():
+        _log.warning(f"Ports file not found at {resolved_path}")
+        return []
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(resolved_path, "r", encoding="utf-8") as f:
             ports = json.load(f)
             for p in ports:
                 points.append((float(p["lat"]), float(p["lon"])))
     except Exception as e:
-        _log.error(f"Failed to load ports from {path}: {e}")
+        _log.error(f"Failed to load ports from {resolved_path}: {e}")
         
     return points
 

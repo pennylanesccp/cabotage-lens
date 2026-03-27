@@ -42,6 +42,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Tuple, Optional, Any
 
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 __all__ = ["SeaMatrix"]
@@ -183,7 +184,7 @@ class SeaMatrix:
         """
         Build from a JSON file on disk.
         """
-        p = Path(path)
+        p = resolve_data_asset_path(path)
         with p.open("r", encoding="utf-8") as f:
             payload = json.load(f)
         _log.debug("SeaMatrix.from_json_path: loaded JSON from '%s'.", p)

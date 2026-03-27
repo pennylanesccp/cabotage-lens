@@ -43,6 +43,7 @@ Supabase Postgres stores:
 Supabase Storage optionally stores:
 
 - compressed JSONL log archives under `logs/{environment}/{yyyy}/{mm}/{dd}/{run_id}.jsonl.gz`
+- runtime data assets under `data/...` when the data bucket is configured
 
 Runtime logs are not written to a local persistent file by default.
 
@@ -72,6 +73,9 @@ SUPABASE_URL = "https://your-project-ref.supabase.co"
 SUPABASE_KEY = "your-anon-or-service-role-key"
 # SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
 SUPABASE_STORAGE_LOGS_BUCKET = "carbon-logs"
+SUPABASE_STORAGE_DATA_BUCKET = "cabotage-lens"
+SUPABASE_STORAGE_DATA_ENABLED = true
+SUPABASE_STORAGE_DATA_PREFER_REMOTE = true
 LOG_LEVEL = "INFO"
 LOG_ARCHIVE_ENABLED = false
 ```
@@ -108,6 +112,8 @@ python -m venv venv
 
 The app reads `.streamlit/secrets.toml`, shows the Router and Heatmap pages after the access gate succeeds, connects to Supabase Postgres, and keeps runtime logs on stdout/stderr. If `LOG_ARCHIVE_ENABLED=true` and Storage credentials are configured, it also archives compressed JSONL logs to Supabase Storage.
 
+When `SUPABASE_STORAGE_DATA_BUCKET` is configured, runtime loaders prefer the bucket copy of processed cabotage artifacts and cache them locally under `.cache/supabase_data/`.
+
 ## Run the CLIs
 
 Single comparison:
@@ -127,6 +133,37 @@ Bulk comparison:
   --dests-file .\data\processed\destinies\city_dests_over50k.txt `
   --cargo 30
 ```
+
+Upload `data/` to the Supabase Storage data bucket:
+
+```powershell
+.\venv\Scripts\python.exe .\scripts\sync_data_to_supabase_storage.py `
+  --bucket cabotage-lens `
+  --dry-run
+```
+
+The uploader preserves the `data/...` object layout in Storage and filters ANTAQ `YYYYCarga.txt` files down to the rows and columns used by the codebase before upload.
+
+Materialize the observed ANTAQ voyages JSON into flat tables:
+
+```powershell
+.\venv\Scripts\python.exe .\scripts\materialize_antaq_voyage_tables.py `
+  --input-json .\data\processed\cabotage_data\antaq_cabotage_observed_voyages.json `
+  --output-dir .\data\processed\cabotage_data\tabular
+```
+
+This writes `antaq_voyages.csv`, `antaq_voyage_stops.csv`, and `antaq_voyage_stop_calls.csv`, and can optionally upsert the same rows into Supabase Postgres after the corresponding migration is applied.
+
+Enrich the repository sea matrix with directional MRV fuel-per-transport-work averages derived from observed ANTAQ voyage legs:
+
+```powershell
+.\venv\Scripts\python.exe .\scripts\enrich_sea_matrix_with_voyage_efficiency.py `
+  --sea-matrix-json .\data\sea_matrix.json `
+  --output-json .\data\sea_matrix.json
+```
+
+The enricher preserves the existing `matrix` block and appends directional KPI stats under a new top-level section. When the ANTAQ tabular CSVs or MRV lookup JSON are missing locally, it can resolve them from the configured Supabase Storage data bucket.
+By default it also prunes the `matrix` down to port pairs observed in ANTAQ with at least one usable MRV KPI match; pass `--keep-unmatched-pairs` to keep ANTAQ-observed pairs without MRV coverage, or `--keep-all-matrix-pairs` to retain the full original matrix.
 
 ## Logging
 

@@ -16,6 +16,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -60,7 +61,7 @@ def _load_payload_cached(path_str: str) -> dict[str, Any]:
 
 
 def _resolve_payload(efficiency_json_path: Path | None = None) -> tuple[Path, dict[str, Any]]:
-    path = Path(efficiency_json_path or DEFAULT_CONTAINER_EFFICIENCY_PATH).resolve()
+    path = resolve_data_asset_path(efficiency_json_path or DEFAULT_CONTAINER_EFFICIENCY_PATH)
     payload = _load_payload_cached(str(path))
     return path, payload
 

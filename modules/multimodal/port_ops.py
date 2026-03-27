@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from modules.fuel.emissions import estimate_fuel_emissions
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -63,7 +64,7 @@ def _load_payload_cached(path_str: str) -> dict[str, Any]:
 
 
 def _resolve_payload(params_path: Path | None = None) -> tuple[Path, dict[str, Any]]:
-    path = Path(params_path or DEFAULT_PORT_OPS_PARAMS_PATH).resolve()
+    path = resolve_data_asset_path(params_path or DEFAULT_PORT_OPS_PARAMS_PATH)
     payload = _load_payload_cached(str(path))
     return path, payload
 

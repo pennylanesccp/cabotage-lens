@@ -42,13 +42,13 @@ def _snapshot_runtime_secrets() -> dict[str, Any] | None:
         return None
 
     try:
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
     except Exception:
         get_script_run_ctx = None
 
     if get_script_run_ctx is not None:
         try:
-            if get_script_run_ctx() is None:
+            if get_script_run_ctx(suppress_warning=True) is None:
                 return None
         except Exception:
             return None

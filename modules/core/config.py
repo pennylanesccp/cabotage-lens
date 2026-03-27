@@ -59,7 +59,7 @@ class Config:
         default_factory=lambda: Path("data/processed/cabotage_data/ports_br.json")
     )
     sea_matrix_path: Path = field(
-        default_factory=lambda: Path("data/processed/cabotage_data/sea_matrix.json")
+        default_factory=lambda: Path("data/sea_matrix.json")
     )
     hotel_prices_path: Path = field(
         default_factory=lambda: Path("data/processed/cabotage_data/hotel.json")

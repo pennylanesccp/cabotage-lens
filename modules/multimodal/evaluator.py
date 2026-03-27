@@ -244,9 +244,12 @@ def prepare_evaluation_context(
         vessel_class=vessel_class,
         efficiency_json_path=vessel_efficiency_path,
     )
+    uses_transport_work_intensity = bool(
+        isinstance(vessel_eff.fuel_g_per_tnm, (int, float)) and float(vessel_eff.fuel_g_per_tnm) > 0.0
+    )
 
     hoteling_sel = None
-    if bool(include_hoteling) and hoteling_hours_total > 0:
+    if bool(include_hoteling) and hoteling_hours_total > 0 and not uses_transport_work_intensity:
         hoteling_sel = resolve_hoteling_rate(
             vessel_class=vessel_eff.vessel_class,
             hoteling_rate_path=hoteling_rate_path,
@@ -327,7 +330,7 @@ def evaluate_path(
     include_port_ops = bool(include_port_ops)
     hoteling_hours_per_call = max(float(hoteling_hours_per_call), 0.0)
     port_calls = max(int(port_calls), 0)
-    hoteling_hours_total = hoteling_hours_per_call * float(port_calls) if include_hoteling else 0.0
+    hoteling_hours_total_requested = hoteling_hours_per_call * float(port_calls) if include_hoteling else 0.0
 
     try:
         context = prepared_context or prepare_evaluation_context(
@@ -465,6 +468,12 @@ def evaluate_path(
 
     sailing_fuel_mode = "transport_work_intensity"
     fuel_g_per_tnm = vessel_eff.fuel_g_per_tnm
+    hoteling_disabled_for_transport_work = bool(
+        include_hoteling
+        and hoteling_hours_total_requested > 0
+        and isinstance(fuel_g_per_tnm, (int, float))
+        and float(fuel_g_per_tnm) > 0.0
+    )
     if isinstance(fuel_g_per_tnm, (int, float)) and fuel_g_per_tnm > 0:
         # Preferred MRV metric: g fuel/(t*nm) allocated directly to cargo and distance.
         sea_fuel_sailing_kg = (float(fuel_g_per_tnm) * cargo_t * sea_dist_nm) / _KG_PER_TONNE
@@ -474,6 +483,18 @@ def evaluate_path(
         sea_fuel_sailing_kg = ship_fuel_kg * cargo_share
         sailing_fuel_mode = "vessel_fuel_share_fallback"
 
+    hoteling_effective = bool(include_hoteling) and not hoteling_disabled_for_transport_work
+    hoteling_hours_total = hoteling_hours_total_requested if hoteling_effective else 0.0
+    hoteling_exclusion_reason: str | None = None
+    if hoteling_disabled_for_transport_work:
+        hoteling_exclusion_reason = "included_in_transport_work_intensity"
+        _log.info(
+            "Skipping separate hoteling because MRV transport-work intensity is available for vessel class '%s'.",
+            vessel_eff.vessel_class,
+        )
+    elif not include_hoteling:
+        hoteling_exclusion_reason = "disabled_by_user"
+
     hoteling_rate_t_per_h = 0.0
     hoteling_ratio_used = 0.0
     hoteling_aux_main_ratio = 0.0
@@ -482,7 +503,7 @@ def evaluate_path(
     hoteling_source_path: str | None = None
     hoteling_vessel_class = vessel_eff.vessel_class
 
-    if include_hoteling and hoteling_hours_total > 0 and hoteling_sel is not None:
+    if hoteling_effective and hoteling_hours_total > 0 and hoteling_sel is not None:
         hoteling_rate_t_per_h = float(hoteling_sel.fuel_rate_hoteling_t_per_h)
         hoteling_ratio_used = float(hoteling_sel.ratio_used)
         hoteling_aux_main_ratio = float(hoteling_sel.aux_main_ratio)
@@ -554,10 +575,13 @@ def evaluate_path(
         "cargo_allocation_share": float(cargo_share),
         "sailing_fuel_calc_mode": sailing_fuel_mode,
         "fuel_kg_sailing": float(sea_fuel_sailing_kg),
-        "hoteling_included": bool(include_hoteling),
+        "hoteling_requested": bool(include_hoteling),
+        "hoteling_included": bool(hoteling_effective),
+        "hoteling_exclusion_reason": hoteling_exclusion_reason,
         "hoteling_hours_per_call": float(hoteling_hours_per_call),
         "port_calls": int(port_calls),
         "hoteling_hours_total": float(hoteling_hours_total),
+        "hoteling_hours_total_requested": float(hoteling_hours_total_requested),
         "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
         "hoteling_fuel_ship_kg": float(hoteling_fuel_ship_kg),
         "hoteling_fuel_kg": float(hoteling_fuel_kg),
@@ -623,10 +647,13 @@ def evaluate_path(
             "sailing_fuel_calc_mode": sailing_fuel_mode,
             "vessel_sample_size": int(vessel_eff.sample_size),
             "vessel_efficiency_source": str(vessel_eff.source_path),
-            "include_hoteling": bool(include_hoteling),
+            "include_hoteling": bool(hoteling_effective),
+            "hoteling_requested": bool(include_hoteling),
+            "hoteling_exclusion_reason": hoteling_exclusion_reason,
             "hoteling_hours_per_call": float(hoteling_hours_per_call),
             "port_calls": int(port_calls),
             "hoteling_hours_total": float(hoteling_hours_total),
+            "hoteling_hours_total_requested": float(hoteling_hours_total_requested),
             "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
             "hoteling_vessel_class": hoteling_vessel_class,
             "hoteling_ratio_used": float(hoteling_ratio_used),

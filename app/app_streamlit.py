@@ -33,6 +33,12 @@ def _render_heatmap_page() -> None:
     render_page()
 
 
+def _render_cabotage_dashboard_page() -> None:
+    from app.cabotage_dashboard.page import render_page
+
+    render_page()
+
+
 def main() -> None:
     st.set_page_config(page_title=APP_NAME, page_icon=WINDOW_ICON, layout=PAGE_LAYOUT)
     inject_css()
@@ -42,6 +48,7 @@ def main() -> None:
         [
             st.Page(_render_router_page, title="Router", icon=PAGE_ICON, default=True),
             st.Page(_render_heatmap_page, title="Heatmap", icon=HEATMAP_PAGE_ICON),
+            st.Page(_render_cabotage_dashboard_page, title="Dashboard", icon="📊"),
         ],
         position="sidebar",
     )
