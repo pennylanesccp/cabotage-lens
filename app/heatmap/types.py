@@ -135,3 +135,5 @@ class HeatmapSurface:
     source_point_count: int
     unique_source_coordinate_count: int
     hull_vertex_count: int
+    interpolation_radius_km: float
+    skipped_far_cells: int = 0

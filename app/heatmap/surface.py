@@ -19,6 +19,10 @@ from app.heatmap.config import (
     HEATMAP_SURFACE_ELEVATION_FLOOR_RATIO,
     HEATMAP_SURFACE_ELEVATION_GAMMA,
     HEATMAP_SURFACE_ELEVATION_QUANTILE,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_FACTOR,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_MIN_KM,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_QUANTILE,
     HEATMAP_SURFACE_MAX_ELEVATION_M,
 )
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
@@ -83,6 +87,14 @@ def _robust_side_scale(values: Sequence[float], quantile: float, *, positive: bo
     index = min(max(int(round((len(ordered) - 1) * quantile)), 0), len(ordered) - 1)
     candidate = ordered[index]
     return candidate if candidate > 0.0 else 0.0
+
+
+def _quantile(values: Sequence[float], quantile: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(float(value) for value in values)
+    index = min(max(int(round((len(ordered) - 1) * quantile)), 0), len(ordered) - 1)
+    return float(ordered[index])
 
 
 def _metric_percentage(point: HeatmapPoint, metric: str) -> float:
@@ -244,6 +256,34 @@ def _distance_km(lat_a: float, lon_a: float, lat_b: float, lon_b: float) -> floa
     x = math.radians(lon_b - lon_a) * math.cos(math.radians((lat_a + lat_b) / 2.0))
     y = math.radians(lat_b - lat_a)
     return math.hypot(x, y) * _EARTH_RADIUS_KM
+
+
+def _interpolation_radius_km(samples: Sequence[_Sample]) -> float:
+    if len(samples) <= 1:
+        return float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM)
+
+    nearest_neighbor_distances: list[float] = []
+    for index, sample in enumerate(samples):
+        nearest_distance = float("inf")
+        for other_index, other in enumerate(samples):
+            if index == other_index:
+                continue
+            distance = _distance_km(float(sample[2]), float(sample[3]), float(other[2]), float(other[3]))
+            if distance < nearest_distance:
+                nearest_distance = distance
+        if math.isfinite(nearest_distance):
+            nearest_neighbor_distances.append(float(nearest_distance))
+
+    if not nearest_neighbor_distances:
+        return float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM)
+
+    baseline = _quantile(nearest_neighbor_distances, float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_QUANTILE))
+    radius = baseline * float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_FACTOR)
+    return _clamp(
+        radius,
+        float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MIN_KM),
+        float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM),
+    )
 
 
 def _geometry_signature(points_signature: tuple[_Sample, ...]) -> tuple[_GeometrySample, ...]:
@@ -524,6 +564,8 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
             source_point_count=0,
             unique_source_coordinate_count=0,
             hull_vertex_count=0,
+            interpolation_radius_km=float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM),
+            skipped_far_cells=0,
         )
 
     geometry_samples, hull_polygon, prepared_triangles, hull_cells = _surface_geometry_cached(
@@ -535,6 +577,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
     positive_color_scale = _robust_side_scale(signed_values, HEATMAP_SURFACE_COLOR_QUANTILE, positive=True)
     color_scale = max(negative_color_scale, positive_color_scale, 1.0)
     elevation_scale = _robust_abs_scale([float(sample[5]) for sample in value_samples], HEATMAP_SURFACE_ELEVATION_QUANTILE)
+    interpolation_radius_km = _interpolation_radius_km(value_samples)
 
     if len(value_samples) < 3 or len(hull_polygon) < 3 or not prepared_triangles or not hull_cells:
         return HeatmapSurface(
@@ -548,14 +591,20 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
             source_point_count=len(points_signature),
             unique_source_coordinate_count=len(value_samples),
             hull_vertex_count=len(hull_polygon),
+            interpolation_radius_km=interpolation_radius_km,
+            skipped_far_cells=0,
         )
 
     cells: list[HeatmapSurfaceCell] = []
+    skipped_far_cells = 0
     for polygon, center_lat, center_lon in hull_cells:
         interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, prepared_triangles)
         if interpolated is None:
             continue
         percentage_value, absolute_value, nearest_name, nearest_uf, nearest_distance = interpolated
+        if nearest_distance > interpolation_radius_km:
+            skipped_far_cells += 1
+            continue
         signed_quantitative_value = _align_quantitative_sign(percentage_value, absolute_value)
         cells.append(
             HeatmapSurfaceCell(
@@ -587,6 +636,8 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         source_point_count=len(points_signature),
         unique_source_coordinate_count=len(value_samples),
         hull_vertex_count=len(hull_polygon),
+        interpolation_radius_km=interpolation_radius_km,
+        skipped_far_cells=skipped_far_cells,
     )
 
 
@@ -597,7 +648,7 @@ def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
     _log.info(
         (
             "Heatmap surface built origin=%s cargo_t=%.3f metric=%s mode=3d source_points=%d "
-            "unique_coordinates=%d hull_vertices=%d cells=%d"
+            "unique_coordinates=%d hull_vertices=%d cells=%d interpolation_radius_km=%.1f skipped_far_cells=%d"
         ),
         dataset.scenario.origin_name,
         dataset.scenario.cargo_t,
@@ -606,5 +657,7 @@ def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
         surface.unique_source_coordinate_count,
         surface.hull_vertex_count,
         len(surface.cells),
+        surface.interpolation_radius_km,
+        surface.skipped_far_cells,
     )
     return surface
