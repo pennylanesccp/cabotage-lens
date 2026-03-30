@@ -34,6 +34,15 @@ _CITY_QUERY_MAP = {
     "Sao Paulo": "São Paulo, SP",
 }
 
+_CITY_POINT_MAP = {
+    "Manaus, AM": {"label": "Manaus, AM", "lat": -3.119028, "lon": -60.021731, "uf": "AM"},
+    "Fortaleza, CE": {"label": "Fortaleza, CE", "lat": -3.731862, "lon": -38.526670, "uf": "CE"},
+    "Recife, PE": {"label": "Recife, PE", "lat": -8.047562, "lon": -34.877002, "uf": "PE"},
+    "Salvador, BA": {"label": "Salvador, BA", "lat": -12.977750, "lon": -38.501630, "uf": "BA"},
+    "Rio de Janeiro, RJ": {"label": "Rio de Janeiro, RJ", "lat": -22.906847, "lon": -43.172897, "uf": "RJ"},
+    "São Paulo, SP": {"label": "São Paulo, SP", "lat": -23.550520, "lon": -46.633308, "uf": "SP"},
+}
+
 
 @dataclass(frozen=True)
 class WorkbookBenchmarkPair:
@@ -272,8 +281,18 @@ def _evaluate_pair(
     port_ops_scenario: str,
     vessel_class: str,
 ) -> dict[str, Any]:
-    origin_pt = resolve_point_for_geometry(pair.origin_query, ors, db_path=db_path, point_cache=point_cache)
-    destiny_pt = resolve_point_for_geometry(pair.destiny_query, ors, db_path=db_path, point_cache=point_cache)
+    origin_pt = _resolve_benchmark_point(
+        pair.origin_query,
+        ors=ors,
+        db_path=db_path,
+        point_cache=point_cache,
+    )
+    destiny_pt = _resolve_benchmark_point(
+        pair.destiny_query,
+        ors=ors,
+        db_path=db_path,
+        point_cache=point_cache,
+    )
     if not origin_pt or not destiny_pt:
         raise RuntimeError("Failed to resolve origin or destiny coordinates.")
 
@@ -336,6 +355,20 @@ def _evaluate_pair(
         "sea_sailing_fuel_kg": float(sea_result.get("fuel_kg_sailing") or 0.0),
         "sea_total_fuel_kg": float(sea_result.get("fuel_kg") or 0.0),
     }
+
+
+def _resolve_benchmark_point(
+    query: str,
+    *,
+    ors: Any,
+    db_path: Path | str | None,
+    point_cache: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    static_point = _CITY_POINT_MAP.get(str(query or "").strip())
+    if static_point:
+        point_cache.setdefault(static_point["label"], dict(static_point))
+        return dict(static_point)
+    return resolve_point_for_geometry(query, ors, db_path=db_path, point_cache=point_cache)
 
 
 def _normalize_selected_pairs(selected_pairs: Iterable[str] | None) -> set[str]:

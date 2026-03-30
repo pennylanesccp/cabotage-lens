@@ -184,7 +184,7 @@ def resolve_data_asset_path(
             settings=settings,
             relative_path=relative,
         )
-    except requests.HTTPError:
+    except requests.RequestException:
         if local_path.exists():
             return local_path
         raise
