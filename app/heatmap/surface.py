@@ -20,6 +20,10 @@ from app.heatmap.config import (
     HEATMAP_SURFACE_ELEVATION_FLOOR_RATIO,
     HEATMAP_SURFACE_ELEVATION_GAMMA,
     HEATMAP_SURFACE_ELEVATION_QUANTILE,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_FACTOR,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_MIN_KM,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_QUANTILE,
     HEATMAP_SURFACE_MAX_ELEVATION_M,
 )
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
@@ -32,7 +36,7 @@ _GeometrySample = tuple[str, str, float, float]
 _Coordinate = tuple[float, float]
 _HullPolygon = tuple[_Coordinate, ...]
 _Cell = tuple[_HullPolygon, float, float]
-_PreparedTriangle = tuple[int, int, int, float, float, float, float, float]
+_PreparedTriangle = tuple[int, int, int, float, float, float, float, float, float]
 
 _log = get_logger(__name__)
 
@@ -281,6 +285,14 @@ def _distance_km(lat_a: float, lon_a: float, lat_b: float, lon_b: float) -> floa
     return math.hypot(x, y) * _EARTH_RADIUS_KM
 
 
+def _triangle_max_edge_km(a: _Coordinate, b: _Coordinate, c: _Coordinate) -> float:
+    return max(
+        _distance_km(a[1], a[0], b[1], b[0]),
+        _distance_km(a[1], a[0], c[1], c[0]),
+        _distance_km(b[1], b[0], c[1], c[0]),
+    )
+
+
 def _geometry_signature(points_signature: tuple[_Sample, ...]) -> tuple[_GeometrySample, ...]:
     return tuple((sample[0], sample[1], sample[2], sample[3]) for sample in points_signature)
 
@@ -424,9 +436,25 @@ def _prepare_triangles(geometry_samples: Sequence[_GeometrySample]) -> tuple[_Pr
                 min(a[1], b[1], c[1]),
                 max(a[1], b[1], c[1]),
                 denominator,
+                _triangle_max_edge_km(a, b, c),
             )
         )
     return tuple(prepared)
+
+
+def _triangle_edge_limit_km(triangles: Sequence[_PreparedTriangle]) -> float:
+    if not triangles:
+        return 0.0
+    max_edges = [float(triangle[8]) for triangle in triangles if float(triangle[8]) > 0.0]
+    if not max_edges:
+        return 0.0
+    candidate = _quantile(max_edges, HEATMAP_SURFACE_INTERPOLATION_RADIUS_QUANTILE)
+    candidate *= float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_FACTOR)
+    return _clamp(
+        candidate,
+        float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MIN_KM),
+        float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM),
+    )
 
 
 def _triangle_weights(
@@ -435,7 +463,7 @@ def _triangle_weights(
     triangle: _PreparedTriangle,
     samples: Sequence[_Sample],
 ) -> tuple[float, float, float] | None:
-    i, j, k, min_lon, max_lon, min_lat, max_lat, denominator = triangle
+    i, j, k, min_lon, max_lon, min_lat, max_lat, denominator, _ = triangle
     if (
         lon < (min_lon - _TRIANGLE_EDGE_TOLERANCE)
         or lon > (max_lon + _TRIANGLE_EDGE_TOLERANCE)
@@ -496,9 +524,6 @@ def _triangulated_interpolate(
     samples: Sequence[_Sample],
     triangles: Sequence[_PreparedTriangle],
 ) -> tuple[float, float, str, str | None, float] | None:
-    best_match: tuple[_PreparedTriangle, tuple[float, float, float]] | None = None
-    best_gap = float("inf")
-
     for triangle in triangles:
         weights = _triangle_weights(lon, lat, triangle, samples)
         if weights is None:
@@ -508,16 +533,7 @@ def _triangulated_interpolate(
             percentage_value, absolute_value = _interpolate_triangle_values(triangle, weights, samples)
             nearest_name, nearest_uf, nearest_distance = _nearest_sample_reference(lat, lon, samples)
             return percentage_value, absolute_value, nearest_name, nearest_uf, nearest_distance
-        if gap < best_gap:
-            best_gap = gap
-            best_match = (triangle, weights)
-
-    if best_match is None or best_gap > (_TRIANGLE_EDGE_TOLERANCE * 8.0):
-        return None
-
-    percentage_value, absolute_value = _interpolate_triangle_values(best_match[0], best_match[1], samples)
-    nearest_name, nearest_uf, nearest_distance = _nearest_sample_reference(lat, lon, samples)
-    return percentage_value, absolute_value, nearest_name, nearest_uf, nearest_distance
+    return None
 
 
 @lru_cache(maxsize=24)
@@ -574,6 +590,14 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
     color_scale = max(negative_color_scale, positive_color_scale, 1.0)
     elevation_scale = _robust_abs_scale([float(sample[5]) for sample in value_samples], HEATMAP_SURFACE_ELEVATION_QUANTILE)
     brazil_boundary_rings = _brazil_boundary_rings()
+    triangle_edge_limit_km = _triangle_edge_limit_km(prepared_triangles)
+    accepted_triangles = tuple(
+        triangle
+        for triangle in prepared_triangles
+        if triangle_edge_limit_km <= 0.0 or float(triangle[8]) <= triangle_edge_limit_km
+    )
+    if not accepted_triangles:
+        accepted_triangles = prepared_triangles
 
     if len(value_samples) < 3 or len(hull_polygon) < 3 or not prepared_triangles or not hull_cells:
         return HeatmapSurface(
@@ -587,7 +611,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
             source_point_count=len(points_signature),
             unique_source_coordinate_count=len(value_samples),
             hull_vertex_count=len(hull_polygon),
-            interpolation_radius_km=0.0,
+            interpolation_radius_km=triangle_edge_limit_km,
             skipped_far_cells=0,
             skipped_outside_boundary_cells=0,
         )
@@ -599,8 +623,9 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         if brazil_boundary_rings and not _point_in_any_ring(center_lon, center_lat, brazil_boundary_rings):
             skipped_outside_boundary_cells += 1
             continue
-        interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, prepared_triangles)
+        interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, accepted_triangles)
         if interpolated is None:
+            skipped_far_cells += 1
             continue
         percentage_value, absolute_value, nearest_name, nearest_uf, nearest_distance = interpolated
         signed_quantitative_value = _align_quantitative_sign(percentage_value, absolute_value)
@@ -634,7 +659,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         source_point_count=len(points_signature),
         unique_source_coordinate_count=len(value_samples),
         hull_vertex_count=len(hull_polygon),
-        interpolation_radius_km=0.0,
+        interpolation_radius_km=triangle_edge_limit_km,
         skipped_far_cells=skipped_far_cells,
         skipped_outside_boundary_cells=skipped_outside_boundary_cells,
     )
@@ -647,7 +672,7 @@ def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
     _log.info(
         (
             "Heatmap surface built origin=%s cargo_t=%.3f metric=%s mode=3d source_points=%d "
-            "unique_coordinates=%d hull_vertices=%d cells=%d boundary_clip=%s skipped_far_cells=%d "
+            "unique_coordinates=%d hull_vertices=%d cells=%d boundary_clip=%s triangle_edge_limit_km=%.1f skipped_far_cells=%d "
             "skipped_outside_boundary_cells=%d"
         ),
         dataset.scenario.origin_name,
@@ -658,6 +683,7 @@ def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
         surface.hull_vertex_count,
         len(surface.cells),
         "brazil",
+        surface.interpolation_radius_km,
         surface.skipped_far_cells,
         surface.skipped_outside_boundary_cells,
     )

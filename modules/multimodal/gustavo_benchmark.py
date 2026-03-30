@@ -215,7 +215,7 @@ def summarize_gustavo_comparison(
             "directional_route_metric_rows": sum(
                 1
                 for row in successful
-                if str(row.get("sea_fuel_g_per_tnm_source") or "") == "sea_matrix_directional_weighted_mean"
+                if str(row.get("sea_fuel_g_per_tnm_source") or "").startswith("sea_matrix_directional")
             ),
             "mean_abs_pct_diff_road": _safe_mean(road_abs_pct_diff),
             "median_abs_pct_diff_road": _safe_median(road_abs_pct_diff),
@@ -350,6 +350,8 @@ def _evaluate_pair(
         "sea_route_matched_segment_count": sea_inputs.get("sea_route_matched_segment_count"),
         "sea_route_voyage_count": sea_inputs.get("sea_route_voyage_count"),
         "sea_route_matched_imo_count": sea_inputs.get("sea_route_matched_imo_count"),
+        "sea_route_corridor_leg_count": sea_inputs.get("sea_route_corridor_leg_count"),
+        "sea_route_corridor_port_path": sea_inputs.get("sea_route_corridor_port_path"),
         "road_cost_brl": float(result["road_only"]["cost"]),
         "multimodal_cost_brl": float(result["multimodal"]["total_cost"]),
         "sea_sailing_fuel_kg": float(sea_result.get("fuel_kg_sailing") or 0.0),

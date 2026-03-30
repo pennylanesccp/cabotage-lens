@@ -591,6 +591,8 @@ def evaluate_path(
         "route_matched_voyage_count": int(sea_leg_data.get("matched_voyage_count") or 0),
         "route_unique_imo_count": int(sea_leg_data.get("unique_imo_count") or 0),
         "route_matched_imo_count": int(sea_leg_data.get("matched_imo_count") or 0),
+        "route_corridor_leg_count": int(sea_leg_data.get("corridor_leg_count") or 0),
+        "route_corridor_port_path": list(sea_leg_data.get("corridor_port_path") or []),
         "size_proxy_t_median": (
             None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
         ),
@@ -677,6 +679,8 @@ def evaluate_path(
             "sea_route_matched_voyage_count": int(sea_leg_data.get("matched_voyage_count") or 0),
             "sea_route_unique_imo_count": int(sea_leg_data.get("unique_imo_count") or 0),
             "sea_route_matched_imo_count": int(sea_leg_data.get("matched_imo_count") or 0),
+            "sea_route_corridor_leg_count": int(sea_leg_data.get("corridor_leg_count") or 0),
+            "sea_route_corridor_port_path": list(sea_leg_data.get("corridor_port_path") or []),
             "size_proxy_t_median": (
                 None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
             ),

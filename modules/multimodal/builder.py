@@ -66,6 +66,8 @@ class SeaResult(TypedDict, total=False):
     source: str
     fuel_g_per_tnm: float
     fuel_g_per_tnm_source: str
+    corridor_leg_count: int
+    corridor_port_path: list[str]
     fuel_g_per_tnm_mean: float
     fuel_g_per_tnm_median: float
     segment_count: int
@@ -349,12 +351,26 @@ def build_path_geometry_from_resolved(
     )
 
     sea_leg: SeaResult = {"distance_km": float(sea_dist), "source": sea_src}
-    directional_stats = sea_matrix.directional_stats(po_data["name"], pd_data["name"])
+    directional_stats = sea_matrix.best_directional_stats(po_data["name"], pd_data["name"])
     if directional_stats:
+        corridor_leg_count = int(directional_stats.get("corridor_leg_count") or 0)
+        route_distance_km = directional_stats.get("distance_km")
+        if isinstance(route_distance_km, (int, float)) and float(route_distance_km) > 0.0:
+            sea_leg["distance_km"] = float(route_distance_km)
+            sea_leg["source"] = str(directional_stats.get("distance_source") or sea_src)
         weighted_mean = directional_stats.get("fuel_g_per_tnm_weighted_mean")
         if isinstance(weighted_mean, (int, float)) and float(weighted_mean) > 0.0:
             sea_leg["fuel_g_per_tnm"] = float(weighted_mean)
-            sea_leg["fuel_g_per_tnm_source"] = "sea_matrix_directional_weighted_mean"
+            sea_leg["fuel_g_per_tnm_source"] = (
+                "sea_matrix_directional_corridor_weighted_mean"
+                if corridor_leg_count > 1
+                else "sea_matrix_directional_weighted_mean"
+            )
+        if corridor_leg_count > 0:
+            sea_leg["corridor_leg_count"] = corridor_leg_count
+        corridor_port_path = directional_stats.get("corridor_port_path")
+        if isinstance(corridor_port_path, list) and corridor_port_path:
+            sea_leg["corridor_port_path"] = [str(item) for item in corridor_port_path]
         for key in (
             "fuel_g_per_tnm_mean",
             "fuel_g_per_tnm_median",
@@ -372,12 +388,14 @@ def build_path_geometry_from_resolved(
                 sea_leg[key] = float(value) if "rate" in key or "fuel" in key else int(value)
         _log.info(
             (
-                "Sea leg matched directional KPI %s -> %s fuel_g_per_tnm=%.4f "
-                "matched_segments=%s match_rate_tonne_nm=%s"
+                "Sea leg matched route KPI %s -> %s fuel_g_per_tnm=%.4f source=%s "
+                "corridor_legs=%s matched_segments=%s match_rate_tonne_nm=%s"
             ),
             po_data["name"],
             pd_data["name"],
             float(sea_leg.get("fuel_g_per_tnm") or 0.0),
+            sea_leg.get("fuel_g_per_tnm_source"),
+            sea_leg.get("corridor_leg_count"),
             sea_leg.get("matched_segment_count"),
             sea_leg.get("match_rate_tonne_nm"),
         )
