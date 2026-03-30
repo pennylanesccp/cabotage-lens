@@ -91,6 +91,14 @@ def _clamp(value: float, lo: float, hi: float) -> float:
     return min(max(value, lo), hi)
 
 
+def _positive_float_or_none(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0.0 else None
+
+
 def _resolve_cargo_teu(cargo_t: float, cargo_teu: float | None, t_per_teu_default: float) -> int:
     if cargo_teu is not None:
         try:
@@ -446,7 +454,8 @@ def evaluate_path(
     res_first = _calc_road(path_data.get("first_mile", {}))
     res_last = _calc_road(path_data.get("last_mile", {}))
 
-    sea_dist_km = float(path_data.get("sea_leg", {}).get("distance_km") or 0.0)
+    sea_leg_data = path_data.get("sea_leg", {}) if isinstance(path_data.get("sea_leg"), dict) else {}
+    sea_dist_km = float(sea_leg_data.get("distance_km") or 0.0)
     sea_dist_nm = sea_dist_km / _NM_TO_KM if sea_dist_km > 0 else 0.0
     bunker_price_ton = float(context.bunker_price_ton)
 
@@ -466,8 +475,19 @@ def evaluate_path(
         },
     )
 
-    sailing_fuel_mode = "transport_work_intensity"
-    fuel_g_per_tnm = vessel_eff.fuel_g_per_tnm
+    sea_leg_fuel_g_per_tnm = _positive_float_or_none(sea_leg_data.get("fuel_g_per_tnm"))
+    vessel_fuel_g_per_tnm = _positive_float_or_none(vessel_eff.fuel_g_per_tnm)
+    fuel_g_per_tnm = sea_leg_fuel_g_per_tnm if sea_leg_fuel_g_per_tnm is not None else vessel_fuel_g_per_tnm
+    sea_fuel_g_per_tnm_source = (
+        str(sea_leg_data.get("fuel_g_per_tnm_source") or "").strip()
+        if sea_leg_fuel_g_per_tnm is not None
+        else ("vessel_class_transport_work_intensity" if vessel_fuel_g_per_tnm is not None else "")
+    ) or None
+    sailing_fuel_mode = (
+        "sea_matrix_directional_transport_work_intensity"
+        if sea_leg_fuel_g_per_tnm is not None
+        else "transport_work_intensity"
+    )
     hoteling_disabled_for_transport_work = bool(
         include_hoteling
         and hoteling_hours_total_requested > 0
@@ -559,7 +579,18 @@ def evaluate_path(
         "distance_nm": float(sea_dist_nm),
         "vessel_class": vessel_eff.vessel_class,
         "fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
-        "fuel_g_per_tnm": (None if vessel_eff.fuel_g_per_tnm is None else float(vessel_eff.fuel_g_per_tnm)),
+        "fuel_g_per_tnm": (None if fuel_g_per_tnm is None else float(fuel_g_per_tnm)),
+        "fuel_g_per_tnm_source": sea_fuel_g_per_tnm_source,
+        "route_fuel_g_per_tnm": (None if sea_leg_fuel_g_per_tnm is None else float(sea_leg_fuel_g_per_tnm)),
+        "vessel_class_fuel_g_per_tnm": (None if vessel_fuel_g_per_tnm is None else float(vessel_fuel_g_per_tnm)),
+        "route_match_rate_segments": _positive_float_or_none(sea_leg_data.get("match_rate_segments")),
+        "route_match_rate_tonne_nm": _positive_float_or_none(sea_leg_data.get("match_rate_tonne_nm")),
+        "route_segment_count": int(sea_leg_data.get("segment_count") or 0),
+        "route_matched_segment_count": int(sea_leg_data.get("matched_segment_count") or 0),
+        "route_voyage_count": int(sea_leg_data.get("voyage_count") or 0),
+        "route_matched_voyage_count": int(sea_leg_data.get("matched_voyage_count") or 0),
+        "route_unique_imo_count": int(sea_leg_data.get("unique_imo_count") or 0),
+        "route_matched_imo_count": int(sea_leg_data.get("matched_imo_count") or 0),
         "size_proxy_t_median": (
             None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
         ),
@@ -630,7 +661,22 @@ def evaluate_path(
             "vessel_class_requested": vessel_eff.requested_class,
             "vessel_class": vessel_eff.vessel_class,
             "sea_fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
-            "sea_fuel_g_per_tnm": (None if vessel_eff.fuel_g_per_tnm is None else float(vessel_eff.fuel_g_per_tnm)),
+            "sea_fuel_g_per_tnm": (None if fuel_g_per_tnm is None else float(fuel_g_per_tnm)),
+            "sea_fuel_g_per_tnm_source": sea_fuel_g_per_tnm_source,
+            "sea_route_fuel_g_per_tnm": (
+                None if sea_leg_fuel_g_per_tnm is None else float(sea_leg_fuel_g_per_tnm)
+            ),
+            "sea_vessel_class_fuel_g_per_tnm": (
+                None if vessel_fuel_g_per_tnm is None else float(vessel_fuel_g_per_tnm)
+            ),
+            "sea_route_match_rate_segments": _positive_float_or_none(sea_leg_data.get("match_rate_segments")),
+            "sea_route_match_rate_tonne_nm": _positive_float_or_none(sea_leg_data.get("match_rate_tonne_nm")),
+            "sea_route_segment_count": int(sea_leg_data.get("segment_count") or 0),
+            "sea_route_matched_segment_count": int(sea_leg_data.get("matched_segment_count") or 0),
+            "sea_route_voyage_count": int(sea_leg_data.get("voyage_count") or 0),
+            "sea_route_matched_voyage_count": int(sea_leg_data.get("matched_voyage_count") or 0),
+            "sea_route_unique_imo_count": int(sea_leg_data.get("unique_imo_count") or 0),
+            "sea_route_matched_imo_count": int(sea_leg_data.get("matched_imo_count") or 0),
             "size_proxy_t_median": (
                 None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
             ),

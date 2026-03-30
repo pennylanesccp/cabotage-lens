@@ -5,6 +5,7 @@ import math
 from functools import lru_cache
 from typing import Any, Iterable, Sequence
 
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 from app.heatmap.config import (
@@ -19,10 +20,6 @@ from app.heatmap.config import (
     HEATMAP_SURFACE_ELEVATION_FLOOR_RATIO,
     HEATMAP_SURFACE_ELEVATION_GAMMA,
     HEATMAP_SURFACE_ELEVATION_QUANTILE,
-    HEATMAP_SURFACE_INTERPOLATION_RADIUS_FACTOR,
-    HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM,
-    HEATMAP_SURFACE_INTERPOLATION_RADIUS_MIN_KM,
-    HEATMAP_SURFACE_INTERPOLATION_RADIUS_QUANTILE,
     HEATMAP_SURFACE_MAX_ELEVATION_M,
 )
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
@@ -144,8 +141,30 @@ def _dataset_signature(dataset: HeatmapDataset, metric: str) -> tuple[_Sample, .
 
 @lru_cache(maxsize=1)
 def load_brazil_boundary_geojson() -> dict[str, Any]:
-    with HEATMAP_BRAZIL_BOUNDARY_PATH.open("r", encoding="utf-8") as handle:
+    boundary_path = resolve_data_asset_path(HEATMAP_BRAZIL_BOUNDARY_PATH)
+    with boundary_path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+@lru_cache(maxsize=1)
+def _brazil_boundary_rings() -> tuple[tuple[tuple[float, float], ...], ...]:
+    try:
+        payload = load_brazil_boundary_geojson()
+    except Exception as exc:
+        _log.warning("Heatmap boundary clip unavailable: %s", exc)
+        return tuple()
+    if str(payload.get("type") or "").strip() == "FeatureCollection":
+        features = payload.get("features") or []
+        rings: list[tuple[tuple[float, float], ...]] = []
+        for feature in features:
+            geometry = feature.get("geometry") if isinstance(feature, dict) else None
+            if isinstance(geometry, dict):
+                rings.extend(_extract_rings(geometry))
+        return tuple(rings)
+    if str(payload.get("type") or "").strip() == "Feature":
+        geometry = payload.get("geometry")
+        return tuple(_extract_rings(geometry if isinstance(geometry, dict) else {}))
+    return tuple(_extract_rings(payload))
 
 
 def _extract_rings(geometry: dict[str, Any]) -> list[tuple[tuple[float, float], ...]]:
@@ -195,6 +214,10 @@ def _point_in_ring(lon: float, lat: float, ring: Sequence[_Coordinate]) -> bool:
             inside = not inside
         prev_lon, prev_lat = curr_lon, curr_lat
     return inside
+
+
+def _point_in_any_ring(lon: float, lat: float, rings: Sequence[Sequence[_Coordinate]]) -> bool:
+    return any(_point_in_ring(lon, lat, ring) for ring in rings)
 
 
 def _coordinate_cross(origin: _Coordinate, a: _Coordinate, b: _Coordinate) -> float:
@@ -256,34 +279,6 @@ def _distance_km(lat_a: float, lon_a: float, lat_b: float, lon_b: float) -> floa
     x = math.radians(lon_b - lon_a) * math.cos(math.radians((lat_a + lat_b) / 2.0))
     y = math.radians(lat_b - lat_a)
     return math.hypot(x, y) * _EARTH_RADIUS_KM
-
-
-def _interpolation_radius_km(samples: Sequence[_Sample]) -> float:
-    if len(samples) <= 1:
-        return float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM)
-
-    nearest_neighbor_distances: list[float] = []
-    for index, sample in enumerate(samples):
-        nearest_distance = float("inf")
-        for other_index, other in enumerate(samples):
-            if index == other_index:
-                continue
-            distance = _distance_km(float(sample[2]), float(sample[3]), float(other[2]), float(other[3]))
-            if distance < nearest_distance:
-                nearest_distance = distance
-        if math.isfinite(nearest_distance):
-            nearest_neighbor_distances.append(float(nearest_distance))
-
-    if not nearest_neighbor_distances:
-        return float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM)
-
-    baseline = _quantile(nearest_neighbor_distances, float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_QUANTILE))
-    radius = baseline * float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_FACTOR)
-    return _clamp(
-        radius,
-        float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MIN_KM),
-        float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM),
-    )
 
 
 def _geometry_signature(points_signature: tuple[_Sample, ...]) -> tuple[_GeometrySample, ...]:
@@ -564,8 +559,9 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
             source_point_count=0,
             unique_source_coordinate_count=0,
             hull_vertex_count=0,
-            interpolation_radius_km=float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM),
+            interpolation_radius_km=0.0,
             skipped_far_cells=0,
+            skipped_outside_boundary_cells=0,
         )
 
     geometry_samples, hull_polygon, prepared_triangles, hull_cells = _surface_geometry_cached(
@@ -577,7 +573,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
     positive_color_scale = _robust_side_scale(signed_values, HEATMAP_SURFACE_COLOR_QUANTILE, positive=True)
     color_scale = max(negative_color_scale, positive_color_scale, 1.0)
     elevation_scale = _robust_abs_scale([float(sample[5]) for sample in value_samples], HEATMAP_SURFACE_ELEVATION_QUANTILE)
-    interpolation_radius_km = _interpolation_radius_km(value_samples)
+    brazil_boundary_rings = _brazil_boundary_rings()
 
     if len(value_samples) < 3 or len(hull_polygon) < 3 or not prepared_triangles or not hull_cells:
         return HeatmapSurface(
@@ -591,20 +587,22 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
             source_point_count=len(points_signature),
             unique_source_coordinate_count=len(value_samples),
             hull_vertex_count=len(hull_polygon),
-            interpolation_radius_km=interpolation_radius_km,
+            interpolation_radius_km=0.0,
             skipped_far_cells=0,
+            skipped_outside_boundary_cells=0,
         )
 
     cells: list[HeatmapSurfaceCell] = []
     skipped_far_cells = 0
+    skipped_outside_boundary_cells = 0
     for polygon, center_lat, center_lon in hull_cells:
+        if brazil_boundary_rings and not _point_in_any_ring(center_lon, center_lat, brazil_boundary_rings):
+            skipped_outside_boundary_cells += 1
+            continue
         interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, prepared_triangles)
         if interpolated is None:
             continue
         percentage_value, absolute_value, nearest_name, nearest_uf, nearest_distance = interpolated
-        if nearest_distance > interpolation_radius_km:
-            skipped_far_cells += 1
-            continue
         signed_quantitative_value = _align_quantitative_sign(percentage_value, absolute_value)
         cells.append(
             HeatmapSurfaceCell(
@@ -636,8 +634,9 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         source_point_count=len(points_signature),
         unique_source_coordinate_count=len(value_samples),
         hull_vertex_count=len(hull_polygon),
-        interpolation_radius_km=interpolation_radius_km,
+        interpolation_radius_km=0.0,
         skipped_far_cells=skipped_far_cells,
+        skipped_outside_boundary_cells=skipped_outside_boundary_cells,
     )
 
 
@@ -648,7 +647,8 @@ def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
     _log.info(
         (
             "Heatmap surface built origin=%s cargo_t=%.3f metric=%s mode=3d source_points=%d "
-            "unique_coordinates=%d hull_vertices=%d cells=%d interpolation_radius_km=%.1f skipped_far_cells=%d"
+            "unique_coordinates=%d hull_vertices=%d cells=%d boundary_clip=%s skipped_far_cells=%d "
+            "skipped_outside_boundary_cells=%d"
         ),
         dataset.scenario.origin_name,
         dataset.scenario.cargo_t,
@@ -657,7 +657,8 @@ def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
         surface.unique_source_coordinate_count,
         surface.hull_vertex_count,
         len(surface.cells),
-        surface.interpolation_radius_km,
+        "brazil",
         surface.skipped_far_cells,
+        surface.skipped_outside_boundary_cells,
     )
     return surface

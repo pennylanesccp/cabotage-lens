@@ -50,6 +50,7 @@ def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
 
     vessel = results.get("inputs", {}).get("vessel_class")
     fuel_nm = results.get("inputs", {}).get("sea_fuel_per_nm_kg")
+    fuel_source = results.get("inputs", {}).get("sea_fuel_g_per_tnm_source")
     if vessel and fuel_nm:
         print(f"SEA VESSEL CLASS: {vessel} ({float(fuel_nm):.2f} kg/nm)")
 
@@ -68,6 +69,7 @@ def _print_summary(geo: Dict[str, Any], results: Dict[str, Any]) -> None:
         f"new_teu={(f'{float(new_teu):.4f}' if isinstance(new_teu, (int, float)) else 'n/a')}, "
         f"ratio={(f'{float(ratio):.3f}' if isinstance(ratio, (int, float)) else 'n/a')}, "
         f"fuel_g_per_tnm={(f'{float(fuel_twork):.3f}' if isinstance(fuel_twork, (int, float)) else 'n/a')}, "
+        f"source={fuel_source or 'n/a'}, "
         f"mode={mode}"
     )
 
@@ -98,7 +100,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Single route comparison")
     parser.add_argument("--origin", required=True, help="Origin (city/address/coords)")
     parser.add_argument("--destiny", required=True, help="Destiny (city/address/coords)")
-    parser.add_argument("--cargo", type=float, default=27.0, help="Cargo mass in tonnes")
+    parser.add_argument("--cargo", type=float, default=14.0, help="Cargo mass in tonnes (benchmark default: 1 TEU ~= 14 t)")
 
     parser.add_argument("--truck", default="semi_27t", help="Truck spec key")
     parser.add_argument("--profile", default="driving-car", help="ORS routing profile")
@@ -130,8 +132,8 @@ def main() -> int:
     parser.add_argument(
         "--cargo-teu",
         type=float,
-        default=None,
-        help="Optional cargo amount in TEU (if omitted, derived from cargo_t / t_per_teu_default)",
+        default=1.0,
+        help="Cargo amount in TEU (benchmark default: 1 TEU)",
     )
     parser.add_argument(
         "--t-per-teu-default",

@@ -27,8 +27,8 @@ MAP_STYLES: dict[str, str] = {
 DEFAULTS: Dict[str, Any] = {
     "origin": DEFAULT_ORIGIN,
     "destiny": "Manaus, AM",
-    "cargo_t": 30.0,
-    "cargo_teu_input": 0.0,
+    "cargo_t": 14.0,
+    "cargo_teu_input": 1.0,
     "profile": "driving-car",
     "overwrite_road": False,
     "truck_key": sorted(list_truck_keys())[0] if list_truck_keys() else "semi_27t",

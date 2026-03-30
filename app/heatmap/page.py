@@ -31,7 +31,7 @@ from app.heatmap.sidebar import render_run_actions, render_sidebar
 from app.heatmap.types import HeatmapDataset, HeatmapScenario, HeatmapSurface
 from app.main.sidebar.filters import location_is_loading
 from app.main.styles import inject_css
-from app.main.utils.constants import DEFAULT_ORIGIN
+from app.main.utils.constants import DEFAULT_ORIGIN, DEFAULTS
 from app.main.utils.state import attach_streamlit_logging, init_state
 
 _log = get_logger(__name__)
@@ -41,7 +41,7 @@ _RUN_LOG_HEIGHT_PX = 260
 
 def _init_page_state() -> None:
     st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, str(DEFAULT_ORIGIN))
-    st.session_state.setdefault("heatmap_cargo", 30.0)
+    st.session_state.setdefault("heatmap_cargo", float(DEFAULTS["cargo_t"]))
     st.session_state.setdefault("heatmap_metric", HEATMAP_DEFAULT_METRIC)
     st.session_state.setdefault("heatmap_show_points", False)
     st.session_state.setdefault("heatmap_dataset", None)
@@ -69,7 +69,7 @@ def _current_scenario() -> HeatmapScenario:
     allocation_mode = str(st.session_state.get("allocation_mode", "auto")).strip().lower()
     return HeatmapScenario(
         origin_name=str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
-        cargo_t=float(st.session_state.get("heatmap_cargo", 30.0)),
+        cargo_t=float(st.session_state.get("heatmap_cargo", float(DEFAULTS["cargo_t"]))),
         truck_key=str(st.session_state.get("truck_key", "")),
         ors_profile="driving-car",
         vessel_class=str(st.session_state.get("vessel_class", "")),

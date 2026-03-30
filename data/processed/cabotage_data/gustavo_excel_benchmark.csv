@@ -1,0 +1,22 @@
+cargo_t,cargo_teu,destiny_city,destiny_query,error,origin_city,origin_query,status,workbook_cabotage_kg_co2e_per_container,workbook_road_kg_co2e_per_container,workbook_savings_pct
+14.0,1.0,Fortaleza,"Fortaleza, CE",,Manaus,"Manaus, AM",skipped_model,751.5774461270836,1733.8881764795542,56.653637972601636
+14.0,1.0,Recife,"Recife, PE",,Manaus,"Manaus, AM",skipped_model,960.1509118045019,2113.1124622690277,54.56224271312533
+14.0,1.0,Rio de Janeiro,"Rio de Janeiro, RJ",,Manaus,"Manaus, AM",skipped_model,1705.8306504046473,2902.2497043742915,41.22384962832084
+14.0,1.0,Sao Paulo,"São Paulo, SP",,Manaus,"Manaus, AM",skipped_model,1639.412281399328,2744.4222559532386,40.263846868203586
+14.0,1.0,Manaus,"Manaus, AM",,Fortaleza,"Fortaleza, CE",skipped_model,1019.4830524615143,1982.3115879134816,48.57099869276404
+14.0,1.0,Rio de Janeiro,"Rio de Janeiro, RJ",,Fortaleza,"Fortaleza, CE",skipped_model,1151.7538910805808,1886.6225547368424,38.95154660433737
+14.0,1.0,Sao Paulo,"São Paulo, SP",,Fortaleza,"Fortaleza, CE",skipped_model,1085.335522075262,2254.155918421053,51.851799016835685
+14.0,1.0,Manaus,"Manaus, AM",,Recife,"Recife, PE",skipped_model,1255.8618729820155,2361.5358737029555,46.820122998479455
+14.0,1.0,Rio de Janeiro,"Rio de Janeiro, RJ",,Recife,"Recife, PE",skipped_model,943.5677872166768,1695.1837052631583,44.33831659146355
+14.0,1.0,Sao Paulo,"São Paulo, SP",,Recife,"Recife, PE",skipped_model,877.1494182113579,1934.847608421053,54.665710395292464
+14.0,1.0,Manaus,"Manaus, AM",,Salvador,"Salvador, BA",skipped_model,1387.6722931261136,2381.2643047555866,41.725398127590694
+14.0,1.0,Fortaleza,"Fortaleza, CE",,Salvador,"Salvador, BA",skipped_model,567.2713110917044,864.3975531578949,34.373794902669744
+14.0,1.0,Recife,"Recife, PE",,Salvador,"Salvador, BA",skipped_model,334.5494751437106,618.8881889473686,45.943470707895294
+14.0,1.0,Manaus,"Manaus, AM",,Rio de Janeiro,"Rio de Janeiro, RJ",skipped_model,1863.490093045465,3150.6731158082184,40.85422306441212
+14.0,1.0,Fortaleza,"Fortaleza, CE",,Rio de Janeiro,"Rio de Janeiro, RJ",skipped_model,1043.0891110110558,1886.6225547368424,44.711298590588925
+14.0,1.0,Recife,"Recife, PE",,Rio de Janeiro,"Rio de Janeiro, RJ",skipped_model,810.3672750630619,1695.1837052631581,52.19590227613345
+14.0,1.0,Salvador,"Salvador, BA",,Rio de Janeiro,"Rio de Janeiro, RJ",skipped_model,560.7352187711595,1193.2047373684213,53.00595101492432
+14.0,1.0,Manaus,"Manaus, AM",,Sao Paulo,"São Paulo, SP",skipped_model,1959.068025919541,2992.845667387165,34.54162881610062
+14.0,1.0,Fortaleza,"Fortaleza, CE",,Sao Paulo,"São Paulo, SP",skipped_model,1138.667043885132,2254.1559184210532,49.48587918963817
+14.0,1.0,Recife,"Recife, PE",,Sao Paulo,"São Paulo, SP",skipped_model,905.9452079371381,1934.847608421053,53.177438678158154
+14.0,1.0,Salvador,"Salvador, BA",,Sao Paulo,"São Paulo, SP",skipped_model,656.3131516452355,1409.4867963157897,53.4360198789552

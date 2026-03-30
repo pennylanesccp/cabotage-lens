@@ -137,3 +137,4 @@ class HeatmapSurface:
     hull_vertex_count: int
     interpolation_radius_km: float
     skipped_far_cells: int = 0
+    skipped_outside_boundary_cells: int = 0
