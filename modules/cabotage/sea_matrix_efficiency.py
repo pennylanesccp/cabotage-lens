@@ -47,11 +47,16 @@ def enrich_sea_matrix_with_efficiency(
     mrv_json_path: Path | str = DEFAULT_MRV_JSON_PATH,
     possible_pairs_only: bool = True,
     matched_pairs_only: bool = True,
+    prefer_local_voyage_inputs: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     sea_matrix_resolved = resolve_data_asset_path(sea_matrix_path)
-    voyages_resolved = resolve_data_asset_path(voyages_csv_path)
-    stops_resolved = resolve_data_asset_path(stops_csv_path)
     mrv_resolved = resolve_data_asset_path(mrv_json_path)
+    if prefer_local_voyage_inputs:
+        voyages_resolved = Path(voyages_csv_path).resolve()
+        stops_resolved = Path(stops_csv_path).resolve()
+    else:
+        voyages_resolved = resolve_data_asset_path(voyages_csv_path)
+        stops_resolved = resolve_data_asset_path(stops_csv_path)
 
     payload = json.loads(Path(sea_matrix_resolved).read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict) or not isinstance(payload.get("matrix"), dict):
