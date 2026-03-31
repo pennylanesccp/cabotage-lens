@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, Mapping, Tuple
+from typing import Any, Callable, Dict, Mapping, Tuple
 
 from modules.infra.log_manager import get_logger
 from modules.multimodal import build_path_geometry, evaluate_path
@@ -9,6 +9,7 @@ from modules.multimodal import build_path_geometry, evaluate_path
 from app.main.utils.state import resolve_runtime_db_target
 
 _log = get_logger("streamlit_app")
+_ProgressCallback = Callable[[dict[str, Any]], None]
 
 
 def build_scenario_payload(session_state: Mapping[str, Any]) -> Dict[str, Any]:
@@ -54,7 +55,23 @@ def resolve_cargo_teu(payload: Mapping[str, Any]) -> int:
 
 def run_analysis(
     payload: Mapping[str, Any],
+    *,
+    progress_callback: _ProgressCallback | None = None,
 ) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None, str]:
+    total_steps = 3
+
+    def _emit_progress(message: str, *, current: int, phase: str = "working") -> None:
+        if progress_callback is None:
+            return
+        progress_callback(
+            {
+                "phase": phase,
+                "message": message,
+                "current": current,
+                "total": total_steps,
+            }
+        )
+
     _log.info(
         (
             "Single analysis start origin=%s destiny=%s cargo_t=%.3f truck=%s profile=%s "
@@ -67,18 +84,23 @@ def run_analysis(
         payload["ors_profile"],
         payload["allocation_mode"] or "auto",
     )
+    _emit_progress("Preparing router analysis...", current=0)
 
     db_target = resolve_runtime_db_target()
 
+    _emit_progress("Building route geometry...", current=0)
     geo = build_path_geometry(
         payload["origin"],
         payload["destiny"],
         ors_profile=payload["ors_profile"],
         overwrite_road=payload["overwrite_road"],
+        cooldown_callback=progress_callback,
     )
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")
+        _emit_progress("Failed to build route geometry.", current=0, phase="error")
         return None, None, "Failed to build route geometry. Check inputs and API key.", str(db_target)
+    _emit_progress("Route geometry ready.", current=1)
 
     _log.info(
         (
@@ -93,6 +115,7 @@ def run_analysis(
     )
 
     _log.info("Calculating costs and emissions...")
+    _emit_progress("Calculating costs and emissions...", current=1)
     results = evaluate_path(
         geo,
         cargo_t=payload["cargo_t"],
@@ -112,12 +135,14 @@ def run_analysis(
     )
     if not results:
         _log.error("Failed to evaluate route.")
+        _emit_progress("Failed to evaluate route.", current=1, phase="error")
         return (
             geo,
             None,
             "Failed to evaluate route. Ensure the required cabotage data assets are available locally or in Supabase Storage.",
             str(db_target),
         )
+    _emit_progress("Route evaluation completed.", current=2)
 
     comparison = results.get("comparison", {})
     road_only = results.get("road_only", {})
@@ -141,4 +166,5 @@ def run_analysis(
         emissions_savings_pct,
         db_target,
     )
+    _emit_progress("Router analysis completed.", current=3, phase="complete")
     return geo, results, None, str(db_target)

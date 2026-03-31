@@ -60,6 +60,7 @@ DEFAULTS: Dict[str, Any] = {
     "map_center_lon": None,
     "log_level": "INFO",
     "archive_logs": False,
+    "refresh_antaq_before_run": False,
     "db_target_str": "postgresql://***",
     "log_last_n": 300,
 }

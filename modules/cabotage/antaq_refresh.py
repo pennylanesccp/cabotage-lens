@@ -7,7 +7,7 @@ import tempfile
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from urllib.parse import urljoin
 
 import requests
@@ -42,6 +42,7 @@ DEFAULT_REQUIRED_TABLES = ("Atracacao", "Carga", "TemposAtracacao")
 DEFAULT_DB_MIGRATION_PATH = Path("supabase/migrations/20260327_000006_antaq_voyage_tables.sql")
 _URL_REGEX = re.compile(r"""(?P<url>(?:https?:)?//[^\s"'<>]+|/[^\s"'<>]+|[A-Za-z0-9._/\-]+?\.(?:zip|txt))""")
 _ZIP_MAGIC = b"PK\x03\x04"
+_ProgressCallback = Callable[[dict[str, Any]], None]
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,7 @@ def refresh_antaq_pipeline(
     keep_all_matrix_pairs: bool = False,
     keep_unmatched_pairs: bool = False,
     timeout_s: float = 120.0,
+    progress_callback: _ProgressCallback | None = None,
 ) -> dict[str, Any]:
     ordered_years = _normalize_years(years)
     raw_root = Path(raw_dir).resolve()
@@ -86,8 +88,53 @@ def refresh_antaq_pipeline(
     sea_matrix_output = Path(sea_matrix_path).resolve()
     mrv_path = Path(mrv_json_path).resolve()
 
+    steps: list[str] = []
+    if not skip_download:
+        steps.append("download")
+    steps.append("build_voyages")
+    if ensure_db_schema:
+        steps.append("ensure_db_schema")
+    steps.append("materialize_tables")
+    steps.append("update_sea_matrix")
+    if sync_bucket:
+        steps.append("sync_bucket")
+    total_steps = max(len(steps), 1)
+    completed_steps = 0
+
+    def _emit_progress(message: str, *, phase: str = "working") -> None:
+        if progress_callback is None:
+            return
+        progress_callback(
+            {
+                "phase": phase,
+                "message": message,
+                "current": completed_steps,
+                "total": total_steps,
+            }
+        )
+
+    def _complete_step(message: str) -> None:
+        nonlocal completed_steps
+        completed_steps = min(completed_steps + 1, total_steps)
+        if progress_callback is None:
+            return
+        progress_callback(
+            {
+                "phase": "working",
+                "message": message,
+                "current": completed_steps,
+                "total": total_steps,
+            }
+        )
+
     download_results: list[AntaqDownloadResult] = []
     if not skip_download:
+        _log.info(
+            "Refreshing ANTAQ raw files for years=%s into %s",
+            ",".join(ordered_years),
+            raw_root,
+        )
+        _emit_progress(f"Downloading ANTAQ raw files for {ordered_years[0]}-{ordered_years[-1]}...")
         download_results = download_antaq_txt_tables(
             years=ordered_years,
             raw_dir=raw_root,
@@ -97,17 +144,26 @@ def refresh_antaq_pipeline(
             force=force_download,
             timeout_s=timeout_s,
         )
+        _complete_step(f"ANTAQ raw files ready ({len(download_results)} files).")
 
+    _log.info("Rebuilding observed cabotage voyages into %s", voyages_output)
+    _emit_progress("Rebuilding observed ANTAQ voyages...")
     build_summary = run_antaq_voyage_builder(
         years=ordered_years,
         output_path=voyages_output,
         max_gap_hours=max_gap_hours,
     )
+    _complete_step("Observed voyages rebuilt.")
 
     db_schema_summary: dict[str, Any] | None = None
     if ensure_db_schema:
+        _log.info("Ensuring ANTAQ voyage schema in Postgres")
+        _emit_progress("Ensuring ANTAQ voyage tables exist in Postgres...")
         db_schema_summary = ensure_antaq_voyage_schema()
+        _complete_step("Postgres schema ready.")
 
+    _log.info("Materializing ANTAQ voyage tables into %s", tabular_output)
+    _emit_progress("Materializing ANTAQ voyage tables...")
     source_path, payload = load_observed_voyages_payload(voyages_output)
     tables = materialize_voyage_tables(payload, source_path=source_path)
     materialized_outputs = write_tables_to_disk(
@@ -126,10 +182,14 @@ def refresh_antaq_pipeline(
         "outputs": materialized_outputs,
     }
     if load_db:
+        _log.info("Upserting ANTAQ voyage tables into %s", connection_target_summary())
         with db_session() as conn:
             materialize_summary["db_target"] = connection_target_summary()
             materialize_summary["db_upsert"] = upsert_tables_to_db(conn, tables)
+    _complete_step("ANTAQ voyage tables materialized.")
 
+    _log.info("Updating sea matrix with observed ANTAQ plus MRV directional efficiency")
+    _emit_progress("Updating sea matrix with ANTAQ and MRV data...")
     enriched_payload, sea_matrix_summary = enrich_sea_matrix_with_efficiency(
         sea_matrix_path=sea_matrix_output,
         voyages_csv_path=Path(materialized_outputs["voyages_csv"]),
@@ -143,9 +203,12 @@ def refresh_antaq_pipeline(
         enriched_payload,
         output_path=sea_matrix_output,
     )
+    _complete_step("Sea matrix updated.")
 
     bucket_summary: dict[str, Any] | None = None
     if sync_bucket:
+        _log.info("Syncing refreshed data assets to bucket=%s", bucket)
+        _emit_progress(f"Syncing refreshed data assets to bucket `{bucket}`...")
         plan = build_upload_plan(
             data_root=(_REPO_ROOT / "data").resolve(),
             max_file_size_bytes=int(max_file_mb * 1024 * 1024),
@@ -154,6 +217,17 @@ def refresh_antaq_pipeline(
             plan=plan,
             bucket=bucket,
             dry_run=False,
+        )
+        _complete_step("Supabase Storage data sync completed.")
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "phase": "complete",
+                "message": "ANTAQ refresh completed.",
+                "current": total_steps,
+                "total": total_steps,
+            }
         )
 
     return {
@@ -196,6 +270,7 @@ def download_antaq_txt_tables(
         results: list[AntaqDownloadResult] = []
         for year in _normalize_years(years):
             for table in required_tables:
+                _log.info("Downloading ANTAQ table year=%s table=%s", year, table)
                 results.append(
                     _download_year_table(
                         session=session,
@@ -208,6 +283,7 @@ def download_antaq_txt_tables(
                         timeout_s=timeout_s,
                     )
                 )
+                _log.info("ANTAQ table ready year=%s table=%s target=%s", year, table, results[-1].target_path)
         return results
     finally:
         session.close()

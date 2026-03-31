@@ -19,6 +19,7 @@ from app.main.sidebar.filters import (
     sync_location_resolution,
 )
 from app.main.sidebar.styles import apply_sidebar_styles
+from app.main.utils.antaq import antaq_refresh_label
 from app.main.utils.formatters import clean_place_label
 
 
@@ -155,6 +156,14 @@ def _render_advanced(
     st.selectbox("Port ops scenario", options=list(port_ops_scenarios), key="port_ops_scenario")
 
     st.markdown("##### App")
+    st.checkbox(
+        antaq_refresh_label(),
+        key="refresh_antaq_before_run",
+        help=(
+            "Before running the heatmap pipeline, refresh ANTAQ raw files from 2020 through the latest year, "
+            "rebuild voyage tables, update the sea matrix, and sync the data bucket when configured."
+        ),
+    )
     st.text_input(
         "Database target",
         key="db_target_str",

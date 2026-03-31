@@ -6,6 +6,12 @@ from typing import Any, Iterable
 import streamlit as st
 
 from app.main.cards import render_summary_cards
+from app.main.run_feedback import (
+    inject_run_feedback_css,
+    make_progress_callback,
+    render_live_run_logs,
+    status_card,
+)
 from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
     list_vessel_classes,
@@ -16,6 +22,7 @@ from app.main.details import render_details
 from app.main.map import fit_view, map_points, render_map, render_map_placeholder
 from app.main.sidebar import render_sidebar
 from app.main.styles import inject_css
+from app.main.utils.antaq import run_antaq_refresh_for_app
 from app.main.utils.constants import PAGE_TITLE
 from app.main.utils.formatters import clean_place_label, safe_float
 from app.main.utils.pipeline import build_scenario_payload, run_analysis
@@ -50,6 +57,7 @@ def _normalize_choice(session_key: str, valid_options: Iterable[str], default_va
 def render_page() -> None:
     init_state()
     inject_css()
+    inject_run_feedback_css()
 
     class_options = list(list_vessel_classes())
     _normalize_choice("vessel_class", class_options, DEFAULT_VESSEL_CLASS)
@@ -75,17 +83,63 @@ def render_page() -> None:
 
     if run_clicked:
         st.session_state.ui_logs = []
-        with st.spinner("Running route analysis..."):
-            geo, results, err, resolved_db_target = run_analysis(payload=payload)
+        progress_bar = st.progress(0.0)
+        status_box = st.empty()
+        cooldown_box = st.empty()
+        log_box = st.empty()
+        geo = None
+        results = None
+        err = None
+        run_failed = False
+        resolved_db_target = str(st.session_state.db_target_str)
+        progress_callback = make_progress_callback(
+            progress_bar,
+            status_box,
+            cooldown_box,
+            log_box,
+            default_working_message="Running router analysis...",
+            log_title="Live router log",
+        )
+        status_box.markdown(status_card("Starting router analysis...", tone="info"), unsafe_allow_html=True)
+        render_live_run_logs(log_box, title="Live router log")
+
+        refresh_requested = bool(st.session_state.get("refresh_antaq_before_run", False))
+        try:
+            if refresh_requested:
+                run_antaq_refresh_for_app(progress_callback=progress_callback)
+            geo, results, err, resolved_db_target = run_analysis(
+                payload=payload,
+                progress_callback=progress_callback,
+            )
+        except Exception as exc:
+            progress_bar.empty()
+            cooldown_box.empty()
+            render_live_run_logs(log_box, title="Live router log")
+            status_box.markdown(status_card("Router analysis failed.", tone="error"), unsafe_allow_html=True)
+            st.error(f"Router analysis failed: {exc}")
+            run_failed = True
 
         if resolved_db_target != str(st.session_state.db_target_str):
             st.session_state.db_target_str = resolved_db_target
 
-        if err:
+        if run_failed:
+            pass
+        elif err:
+            progress_bar.empty()
+            cooldown_box.empty()
+            render_live_run_logs(log_box, title="Live router log")
+            status_box.markdown(status_card("Router analysis failed.", tone="error"), unsafe_allow_html=True)
             st.error(err)
             st.session_state.last_geo = geo
             st.session_state.last_results = results
         else:
+            progress_bar.progress(1.0)
+            cooldown_box.empty()
+            log_box.empty()
+            status_box.markdown(
+                status_card("Router analysis completed.", tone="success"),
+                unsafe_allow_html=True,
+            )
             st.session_state.last_geo = geo
             st.session_state.last_results = results
             if geo:

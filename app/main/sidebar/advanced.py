@@ -6,6 +6,8 @@ import streamlit as st
 
 from modules.fuel.truck_specs import list_truck_keys
 
+from app.main.utils.antaq import antaq_refresh_label
+
 
 def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[str]) -> None:
     st.markdown("##### Routing")
@@ -52,6 +54,14 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.slider("Bearing", min_value=-180, max_value=180, key="map_bearing")
 
     st.markdown("##### App")
+    st.checkbox(
+        antaq_refresh_label(),
+        key="refresh_antaq_before_run",
+        help=(
+            "Before running the router, refresh ANTAQ raw files from 2020 through the latest year, "
+            "rebuild voyage tables, update the sea matrix, and sync the data bucket when configured."
+        ),
+    )
     st.text_input(
         "Database target",
         key="db_target_str",

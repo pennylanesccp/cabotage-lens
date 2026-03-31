@@ -30,7 +30,15 @@ from app.heatmap.service import (
 from app.heatmap.sidebar import render_run_actions, render_sidebar
 from app.heatmap.types import HeatmapDataset, HeatmapScenario, HeatmapSurface
 from app.main.sidebar.filters import location_is_loading
+from app.main.run_feedback import (
+    format_countdown as _shared_format_countdown,
+    inject_run_feedback_css as _shared_inject_run_feedback_css,
+    make_progress_callback as _shared_make_progress_callback,
+    render_live_run_logs as _shared_render_live_run_logs,
+    status_card as _shared_status_card,
+)
 from app.main.styles import inject_css
+from app.main.utils.antaq import run_antaq_refresh_for_app
 from app.main.utils.constants import DEFAULT_ORIGIN, DEFAULTS
 from app.main.utils.state import attach_streamlit_logging, init_state
 
@@ -188,32 +196,11 @@ def _clear_loaded_dataset_if_stale(scenario: HeatmapScenario, destination_set_id
 
 
 def _format_countdown(value: Any) -> str:
-    try:
-        total_seconds = max(int(round(float(value))), 0)
-    except (TypeError, ValueError):
-        total_seconds = 0
-    minutes, seconds = divmod(total_seconds, 60)
-    hours, minutes = divmod(minutes, 60)
-    if hours > 0:
-        return f"{hours:d}h {minutes:02d}m {seconds:02d}s"
-    if minutes > 0:
-        return f"{minutes:d}m {seconds:02d}s"
-    return f"{seconds:d}s"
+    return _shared_format_countdown(value)
 
 
 def _status_card(message: str, *, tone: str = "info") -> str:
-    palette = {
-        "info": ("#eff6ff", "#1d4ed8", "#1e3a8a"),
-        "success": ("#ecfdf5", "#047857", "#064e3b"),
-        "warning": ("#fff7ed", "#c2410c", "#7c2d12"),
-        "error": ("#fef2f2", "#dc2626", "#7f1d1d"),
-    }
-    background, border, text = palette.get(tone, palette["info"])
-    return (
-        f"<section style='padding:0.75rem 0.95rem;border-radius:16px;border:1px solid {border};"
-        f"background:{background};color:{text};font-weight:600;margin:0.4rem 0 0.55rem 0;'>"
-        f"{escape(message)}</section>"
-    )
+    return _shared_status_card(message, tone=tone)
 
 
 def _log_level_class(line: str) -> str:
@@ -227,106 +214,15 @@ def _log_level_class(line: str) -> str:
 
 
 def _render_live_run_logs(log_box: Any) -> None:
-    shown = list(st.session_state.get("ui_logs", []))[-int(st.session_state.get("log_last_n", 300)) :]
-    lines = [
-        (
-            f"<div class='heatmap-run-log__line heatmap-run-log__line--{_log_level_class(line)}'>"
-            f"{escape(line)}</div>"
-        )
-        for line in shown
-    ]
-    if not lines:
-        lines = ["<div class='heatmap-run-log__empty'>Waiting for live logs...</div>"]
-    log_box.markdown(
-        (
-            "<section class='heatmap-run-log'>"
-            "<div class='heatmap-run-log__title'>Live evaluation log</div>"
-            f"<div class='heatmap-run-log__body' style='max-height:{_RUN_LOG_HEIGHT_PX}px;'>"
-            + "".join(lines)
-            + "</div></section>"
-        ),
-        unsafe_allow_html=True,
-    )
+    _shared_render_live_run_logs(log_box)
 
 
 def _inject_run_feedback_css() -> None:
-    st.markdown(
-        """
-        <style>
-            .heatmap-run-log {
-                margin: 0.55rem 0 1rem 0;
-                border: 1px solid rgba(15, 23, 42, 0.12);
-                border-radius: 18px;
-                background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96));
-                overflow: hidden;
-                box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14);
-            }
-            .heatmap-run-log__title {
-                padding: 0.7rem 0.95rem;
-                border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-                color: #e2e8f0;
-                font: 700 0.9rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
-            }
-            .heatmap-run-log__body {
-                overflow-y: auto;
-                padding: 0.65rem 0.95rem 0.8rem 0.95rem;
-            }
-            .heatmap-run-log__line,
-            .heatmap-run-log__empty {
-                white-space: pre-wrap;
-                word-break: break-word;
-                font: 500 0.79rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
-                margin-bottom: 0.2rem;
-            }
-            .heatmap-run-log__line--info { color: #bfdbfe; }
-            .heatmap-run-log__line--debug { color: #94a3b8; }
-            .heatmap-run-log__line--warning { color: #fdba74; }
-            .heatmap-run-log__line--error { color: #fca5a5; }
-            .heatmap-run-log__empty { color: #94a3b8; }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    _shared_inject_run_feedback_css()
 
 
 def _progress_callback(progress_bar: Any, status_box: Any, cooldown_box: Any, log_box: Any):
-    def _callback(payload: dict[str, Any]) -> None:
-        if "current" in payload or "total" in payload:
-            total = max(int(payload.get("total") or 0), 1)
-            current = min(max(int(payload.get("current") or 0), 0), total)
-            progress_bar.progress(current / total)
-        phase = str(payload.get("phase") or "").strip().lower()
-        success_count = payload.get("success_count")
-        fail_count = payload.get("fail_count")
-        destination = str(payload.get("destination") or "").strip()
-        message = str(payload.get("message") or "")
-        if not message:
-            message = "Waiting for provider cooldown to expire" if phase == "cooldown_wait" else "Working..."
-        parts = [message]
-        if destination:
-            parts.append(destination)
-        if success_count is not None or fail_count is not None:
-            parts.append(f"ok={int(success_count or 0)} fail={int(fail_count or 0)}")
-        tone = "error" if phase == "error" else "success" if phase == "complete" else "info"
-        status_box.markdown(_status_card("  ".join(parts), tone=tone), unsafe_allow_html=True)
-
-        if phase == "cooldown_wait" and str(payload.get("state") or "").strip().lower() != "retrying":
-            provider = str(payload.get("provider") or "provider").strip()
-            reason = str(payload.get("reason") or "rate_limited").strip().replace("_", " ")
-            retry_in = _format_countdown(payload.get("remaining_s"))
-            cooldown_box.markdown(
-                _status_card(
-                    f"Provider cooldown active for {provider} ({reason}). Retrying automatically in {retry_in}.",
-                    tone="warning",
-                ),
-                unsafe_allow_html=True,
-            )
-        else:
-            cooldown_box.empty()
-
-        _render_live_run_logs(log_box)
-
-    return _callback
+    return _shared_make_progress_callback(progress_bar, status_box, cooldown_box, log_box)
 
 
 def _render_dataset(dataset: HeatmapDataset) -> None:
@@ -529,13 +425,16 @@ def render_page() -> None:
         status_box = st.empty()
         cooldown_box = st.empty()
         log_box = st.empty()
+        progress_callback = _progress_callback(progress_bar, status_box, cooldown_box, log_box)
         status_box.markdown(_status_card("Starting run missing...", tone="info"), unsafe_allow_html=True)
         _render_live_run_logs(log_box)
         try:
+            if bool(st.session_state.get("refresh_antaq_before_run", False)):
+                run_antaq_refresh_for_app(progress_callback=progress_callback)
             dataset = run_heatmap(
                 scenario,
                 rerun=False,
-                progress_callback=_progress_callback(progress_bar, status_box, cooldown_box, log_box),
+                progress_callback=progress_callback,
                 destination_set_id=destination_set_id,
             )
         except Exception as exc:
@@ -570,12 +469,15 @@ def render_page() -> None:
         status_box = st.empty()
         cooldown_box = st.empty()
         log_box = st.empty()
+        progress_callback = _progress_callback(progress_bar, status_box, cooldown_box, log_box)
         status_box.markdown(_status_card("Starting rerun...", tone="info"), unsafe_allow_html=True)
         _render_live_run_logs(log_box)
         try:
+            if bool(st.session_state.get("refresh_antaq_before_run", False)):
+                run_antaq_refresh_for_app(progress_callback=progress_callback)
             dataset = rerun_heatmap(
                 scenario,
-                progress_callback=_progress_callback(progress_bar, status_box, cooldown_box, log_box),
+                progress_callback=progress_callback,
                 destination_set_id=destination_set_id,
             )
         except Exception as exc:

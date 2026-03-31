@@ -110,6 +110,27 @@ def _cache_path(settings: DataAssetsSettings, relative_path: Path) -> Path:
     return (settings.cache_dir / relative_path).resolve()
 
 
+def cache_data_asset_from_local(candidate: Path | str) -> Path | None:
+    relative = _repo_relative_data_path(candidate)
+    path = Path(candidate)
+
+    if relative is None:
+        return None
+
+    local_path = _local_repo_path(relative)
+    if not local_path.exists():
+        raise FileNotFoundError(f"Local data asset not found: {local_path}")
+
+    settings = load_data_assets_settings()
+    if settings is None:
+        return None
+
+    cache_path = _cache_path(settings, relative)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_bytes(local_path.read_bytes())
+    return cache_path
+
+
 def _is_not_found(exc: requests.HTTPError) -> bool:
     response = getattr(exc, "response", None)
     return bool(response is not None and response.status_code == 404)

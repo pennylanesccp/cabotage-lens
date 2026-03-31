@@ -41,6 +41,7 @@ _log = get_logger(__name__)
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_PORTS_JSON = _REPO_ROOT / "data" / "processed" / "cabotage_data" / "ports_br.json"
 _DEFAULT_SEA_MATRIX_JSON = _REPO_ROOT / "data" / "sea_matrix.json"
+_CooldownCallback = Callable[[Dict[str, Any]], None]
 
 
 class Point(TypedDict):
@@ -130,6 +131,11 @@ def load_routing_assets(
     ports = _cached_ports(str(p_json))
     sea_matrix = _cached_sea_matrix(str(s_json))
     return ors, ports, sea_matrix, db_path
+
+
+def invalidate_routing_asset_caches() -> None:
+    _cached_ports.cache_clear()
+    _cached_sea_matrix.cache_clear()
 
 
 def _cached_point_for_geometry(value: Any, *, db_path: Optional[Path | str] = None) -> Optional[Point]:
@@ -422,6 +428,7 @@ def build_path_geometry(
     ports_json_path: Optional[Path] = None,
     sea_matrix_path: Optional[Path] = None,
     db_path: Optional[Path | str] = None,
+    cooldown_callback: Optional[_CooldownCallback] = None,
 ) -> Optional[PathGeometry]:
     """Resolve and compute all legs needed for multimodal comparison."""
     ors, ports, sea_matrix, _ = load_routing_assets(
@@ -429,6 +436,9 @@ def build_path_geometry(
         sea_matrix_path=sea_matrix_path,
         db_path=db_path,
     )
+    previous_cooldown_callback = None
+    if hasattr(ors, "set_cooldown_callback"):
+        previous_cooldown_callback = ors.set_cooldown_callback(cooldown_callback)
     if hasattr(ors, "reset_metrics"):
         ors.reset_metrics()
 
@@ -454,6 +464,9 @@ def build_path_geometry(
     except Exception as exc:
         _log.error("Failed to build route geometry for %r -> %r: %s", origin_input, destiny_input, exc)
         return None
+    finally:
+        if hasattr(ors, "set_cooldown_callback"):
+            ors.set_cooldown_callback(previous_cooldown_callback)
 
     if geometry and geometry.get("status") == "ok":
         provider_calls = ors.metrics_snapshot() if hasattr(ors, "metrics_snapshot") else {}
