@@ -44,14 +44,12 @@ def main() -> None:
     inject_css()
     require_app_access()
 
-    navigation = st.navigation(
-        [
-            st.Page(_render_router_page, title="Router", icon=PAGE_ICON, default=True),
-            st.Page(_render_heatmap_page, title="Heatmap", icon=HEATMAP_PAGE_ICON),
-            st.Page(_render_cabotage_dashboard_page, title="Dashboard", icon="📊"),
-        ],
-        position="sidebar",
-    )
+    pages = [
+        st.Page(_render_router_page, title="Router", icon=PAGE_ICON, url_path="router", default=True),
+        st.Page(_render_heatmap_page, title="Heatmap", icon=HEATMAP_PAGE_ICON, url_path="heatmap"),
+        st.Page(_render_cabotage_dashboard_page, title="Dashboard", icon="📊", url_path="dashboard"),
+    ]
+    navigation = st.navigation(pages, position="sidebar")
     navigation.run()
 
 
