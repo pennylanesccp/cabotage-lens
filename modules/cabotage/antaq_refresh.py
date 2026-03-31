@@ -13,6 +13,7 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
+from modules.cabotage.antaq_observed_voyages import build_and_write_observed_voyages
 from modules.cabotage.antaq_voyage_tables import (
     DEFAULT_OUTPUT_DIR,
     DEFAULT_VOYAGES_JSON_PATH,
@@ -295,11 +296,20 @@ def run_antaq_voyage_builder(
     output_path: Path,
     max_gap_hours: float,
 ) -> dict[str, Any]:
+    normalized_years = list(_normalize_years(years))
     script_path = (_REPO_ROOT / "calcs" / "build_antaq_cabotage_voyages.ps1").resolve()
     if not script_path.exists():
         raise FileNotFoundError(f"Missing ANTAQ voyage builder script: {script_path}")
 
     ps_executable = _resolve_powershell_executable()
+    if not ps_executable:
+        return _run_python_antaq_voyage_builder(
+            years=normalized_years,
+            output_path=output_path,
+            max_gap_hours=max_gap_hours,
+            fallback_reason="PowerShell unavailable on this platform.",
+        )
+
     command = [
         ps_executable,
         "-NoProfile",
@@ -312,7 +322,7 @@ def run_antaq_voyage_builder(
         "-MaxGapHours",
         str(max_gap_hours),
         "-Years",
-        *list(_normalize_years(years)),
+        *normalized_years,
     ]
     _log.info("Running ANTAQ voyage builder: %s", " ".join(command))
     completed = subprocess.run(
@@ -335,6 +345,7 @@ def run_antaq_voyage_builder(
     _, payload = load_observed_voyages_payload(output_path)
     stats = payload.get("stats") if isinstance(payload.get("stats"), dict) else {}
     return {
+        "builder": "powershell",
         "output_json": str(output_path),
         "stdout": [line for line in stdout.splitlines() if line.strip()],
         "stderr": [line for line in stderr.splitlines() if line.strip()],
@@ -343,6 +354,38 @@ def run_antaq_voyage_builder(
         "unique_imos": stats.get("unique_imos"),
         "joined_calls": stats.get("joined_calls"),
         "source_files": payload.get("source_files"),
+    }
+
+
+def _run_python_antaq_voyage_builder(
+    *,
+    years: list[str],
+    output_path: Path,
+    max_gap_hours: float,
+    fallback_reason: str,
+) -> dict[str, Any]:
+    _log.info(
+        "Running native Python ANTAQ voyage builder for years=%s (%s)",
+        ",".join(years),
+        fallback_reason,
+    )
+    written_path, payload = build_and_write_observed_voyages(
+        years=years,
+        output_path=output_path,
+        max_gap_hours=max_gap_hours,
+    )
+    stats = payload.get("stats") if isinstance(payload.get("stats"), dict) else {}
+    return {
+        "builder": "python",
+        "output_json": str(written_path),
+        "stdout": [],
+        "stderr": [],
+        "generated_at": payload.get("generated_at"),
+        "voyages": stats.get("voyages"),
+        "unique_imos": stats.get("unique_imos"),
+        "joined_calls": stats.get("joined_calls"),
+        "source_files": payload.get("source_files"),
+        "fallback_reason": fallback_reason,
     }
 
 
@@ -619,9 +662,9 @@ def _extract_matching_txt_from_zip(
     return chosen
 
 
-def _resolve_powershell_executable() -> str:
+def _resolve_powershell_executable() -> str | None:
     for candidate in ("powershell.exe", "powershell", "pwsh.exe", "pwsh"):
         resolved = shutil.which(candidate)
         if resolved:
             return resolved
-    raise RuntimeError("PowerShell executable not found. Install PowerShell or run the pipeline on Windows.")
+    return None
