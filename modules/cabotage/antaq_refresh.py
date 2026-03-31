@@ -74,6 +74,7 @@ def refresh_antaq_pipeline(
     download_page_url: str = DEFAULT_DOWNLOAD_PAGE_URL,
     txt_base_url: str = DEFAULT_TXT_BASE_URL,
     force_download: bool = False,
+    skip_download: bool = False,
     keep_all_matrix_pairs: bool = False,
     keep_unmatched_pairs: bool = False,
     timeout_s: float = 120.0,
@@ -85,15 +86,17 @@ def refresh_antaq_pipeline(
     sea_matrix_output = Path(sea_matrix_path).resolve()
     mrv_path = Path(mrv_json_path).resolve()
 
-    download_results = download_antaq_txt_tables(
-        years=ordered_years,
-        raw_dir=raw_root,
-        required_tables=DEFAULT_REQUIRED_TABLES,
-        download_page_url=download_page_url,
-        txt_base_url=txt_base_url,
-        force=force_download,
-        timeout_s=timeout_s,
-    )
+    download_results: list[AntaqDownloadResult] = []
+    if not skip_download:
+        download_results = download_antaq_txt_tables(
+            years=ordered_years,
+            raw_dir=raw_root,
+            required_tables=DEFAULT_REQUIRED_TABLES,
+            download_page_url=download_page_url,
+            txt_base_url=txt_base_url,
+            force=force_download,
+            timeout_s=timeout_s,
+        )
 
     build_summary = run_antaq_voyage_builder(
         years=ordered_years,
@@ -158,6 +161,7 @@ def refresh_antaq_pipeline(
         "download": {
             "files_requested": len(ordered_years) * len(DEFAULT_REQUIRED_TABLES),
             "files_downloaded": len(download_results),
+            "skipped": bool(skip_download),
             "results": [asdict(item) for item in download_results],
         },
         "voyages_build": build_summary,
@@ -306,8 +310,14 @@ def _load_portal_sources(
     download_page_url: str,
     timeout_s: float,
 ) -> list[tuple[str, str]]:
-    response = session.get(download_page_url, timeout=timeout_s)
-    response.raise_for_status()
+    try:
+        response = session.get(download_page_url, timeout=timeout_s)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            "Failed to reach the ANTAQ download portal. "
+            "Check internet access or rerun with --skip-download if the raw TXT files are already present locally."
+        ) from exc
     html = response.text
     soup = BeautifulSoup(html, "html.parser")
 

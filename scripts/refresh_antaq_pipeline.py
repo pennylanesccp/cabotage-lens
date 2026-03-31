@@ -84,6 +84,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Re-download raw TXT files even when the target TXT already exists locally.",
     )
     parser.add_argument(
+        "--skip-download",
+        action="store_true",
+        help="Skip the ANTAQ portal download step and reuse the raw TXT files already present in data/raw/cabotage_data.",
+    )
+    parser.add_argument(
         "--include-raw-jsonl",
         action="store_true",
         help="Also emit antaq_voyages_raw.jsonl during materialization.",
@@ -154,27 +159,32 @@ def main() -> int:
     args = _build_parser().parse_args()
     init_logging(level=args.log_level, archive_to_storage=False, force_clean=True)
 
-    summary = refresh_antaq_pipeline(
-        years=args.years,
-        raw_dir=args.raw_dir,
-        voyages_output_path=args.voyages_output_json,
-        output_dir=args.output_dir,
-        sea_matrix_path=args.sea_matrix_json,
-        mrv_json_path=args.mrv_json,
-        include_raw_jsonl=bool(args.include_raw_jsonl),
-        max_gap_hours=float(args.max_gap_hours),
-        ensure_db_schema=bool(args.ensure_db_schema),
-        load_db=bool(args.load_db),
-        sync_bucket=bool(args.sync_bucket),
-        bucket=str(args.bucket),
-        max_file_mb=float(args.max_file_mb),
-        download_page_url=str(args.download_page_url),
-        txt_base_url=str(args.txt_base_url),
-        force_download=bool(args.force_download),
-        keep_all_matrix_pairs=bool(args.keep_all_matrix_pairs),
-        keep_unmatched_pairs=bool(args.keep_unmatched_pairs),
-        timeout_s=float(args.timeout_s),
-    )
+    try:
+        summary = refresh_antaq_pipeline(
+            years=args.years,
+            raw_dir=args.raw_dir,
+            voyages_output_path=args.voyages_output_json,
+            output_dir=args.output_dir,
+            sea_matrix_path=args.sea_matrix_json,
+            mrv_json_path=args.mrv_json,
+            include_raw_jsonl=bool(args.include_raw_jsonl),
+            max_gap_hours=float(args.max_gap_hours),
+            ensure_db_schema=bool(args.ensure_db_schema),
+            load_db=bool(args.load_db),
+            sync_bucket=bool(args.sync_bucket),
+            bucket=str(args.bucket),
+            max_file_mb=float(args.max_file_mb),
+            download_page_url=str(args.download_page_url),
+            txt_base_url=str(args.txt_base_url),
+            force_download=bool(args.force_download),
+            skip_download=bool(args.skip_download),
+            keep_all_matrix_pairs=bool(args.keep_all_matrix_pairs),
+            keep_unmatched_pairs=bool(args.keep_unmatched_pairs),
+            timeout_s=float(args.timeout_s),
+        )
+    except Exception as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
     print(json.dumps(summary, ensure_ascii=False, indent=2 if args.pretty else None))
     return 0
 
