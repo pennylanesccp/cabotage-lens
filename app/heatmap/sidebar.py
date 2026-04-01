@@ -34,14 +34,9 @@ def render_sidebar(
         st.subheader("Scenario")
         _render_origin_field(origin_field_key)
         st.number_input("Cargo (t)", min_value=0.0, step=0.5, format="%g", key="heatmap_cargo")
-        st.selectbox(
-            "Destination set",
-            options=list(destination_set_options),
-            key="heatmap_destination_set_id",
-            format_func=heatmap_destination_label,
-        )
         with st.expander("Advanced", expanded=False):
             _render_advanced(
+                destination_set_options=destination_set_options,
                 class_options=class_options,
                 port_ops_scenarios=port_ops_scenarios,
             )
@@ -110,6 +105,7 @@ def _render_origin_field(field_name: str) -> None:
 
 def _render_advanced(
     *,
+    destination_set_options: Iterable[str],
     class_options: Iterable[str],
     port_ops_scenarios: Iterable[str],
 ) -> None:
@@ -156,6 +152,13 @@ def _render_advanced(
     st.selectbox("Port ops scenario", options=list(port_ops_scenarios), key="port_ops_scenario")
 
     st.markdown("##### App")
+    st.selectbox(
+        "Run scope destination set",
+        options=list(destination_set_options),
+        key="heatmap_destination_set_id",
+        format_func=heatmap_destination_label,
+        help="This file only scopes Run missing and Rerun all. The rendered heatmap surface still uses all stored points for the selected origin and cargo.",
+    )
     st.checkbox(
         antaq_refresh_label(),
         key="refresh_antaq_before_run",
