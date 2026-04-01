@@ -46,12 +46,12 @@ def render_run_actions(*, has_origin: bool, has_loaded_dataset: bool) -> Tuple[b
     with st.sidebar:
         st.markdown("##### Actions")
         load_clicked = st.button(
-            "Load stored surface",
+            "Load from route cache",
             type="primary",
             width="stretch",
             disabled=(not has_origin),
             key="heatmap_load_surface_button",
-            help="Read the latest stored rows for the selected origin/cargo across bulk runs, destination files, and single compares without starting a new bulk run.",
+            help="Reuse all cached road routes already traced for this origin, then recalculate multimodal costs and emissions without calling ORS or LocationIQ.",
         )
         run_missing_clicked = st.button(
             "Run missing",

@@ -16,18 +16,30 @@ from modules.infra.database_manager import (
     list_bulk_run_cargo_values,
     list_bulk_run_origins,
     list_cached_place_points,
+    list_runs,
     list_multimodal_heatmap_results,
     load_database_settings,
     summarize_bulk_results,
 )
 from modules.infra.db.bulk_runs import selector_hash
 from modules.infra.log_manager import bind_log_context, get_logger
-from modules.multimodal.bulk import load_destinations, run_bulk_evaluation
+from modules.multimodal.builder import build_path_geometry_from_resolved, build_port_node, load_routing_assets
+from modules.multimodal.bulk import (
+    BulkPerformanceTracker,
+    NearestPortMemo,
+    RouteRequestCoordinator,
+    RouteRequestSpec,
+    load_destinations,
+    run_bulk_evaluation,
+)
+from modules.multimodal.evaluator import evaluate_path, prepare_evaluation_context
+from modules.multimodal.persistence import flatten_evaluation_for_db
 from modules.multimodal.scenario_keys import normalize_bulk_place_input
 
 from app.heatmap.config import (
     HEATMAP_DESTINATION_SET_ID,
     heatmap_destination_label,
+    list_heatmap_destination_sets,
     resolve_heatmap_destination_path,
 )
 from app.heatmap.types import (
@@ -103,6 +115,21 @@ def _heatmap_destinations(destination_set_id: str = HEATMAP_DESTINATION_SET_ID) 
     destination_path = resolve_heatmap_destination_path(destination_set_id)
     destinations = _dedupe_preserve_order(load_destinations(destination_path))
     return tuple(destinations)
+
+
+@lru_cache(maxsize=1)
+def _all_heatmap_destination_keys() -> frozenset[str]:
+    keys: set[str] = set()
+    for destination_set_id in list_heatmap_destination_sets():
+        try:
+            destinations = _heatmap_destinations(destination_set_id)
+        except FileNotFoundError:
+            continue
+        for destination in destinations:
+            normalized = normalize_bulk_place_input(destination).casefold()
+            if normalized:
+                keys.add(normalized)
+    return frozenset(keys)
 
 
 def _require_postgres() -> None:
@@ -651,6 +678,412 @@ def pending_destinations(
         len(_heatmap_destinations(resolved_destination_set_id)),
     )
     return pending
+
+
+def _emit_progress(progress_callback: Optional[Any], **payload: Any) -> None:
+    if progress_callback is None:
+        return
+    try:
+        progress_callback(payload)
+    except Exception as exc:
+        _log.warning("Heatmap cache-load progress callback failed: %s", exc)
+
+
+def _route_cache_point(row: Dict[str, Any], *, role: str) -> Dict[str, Any]:
+    prefix = "origin" if role == "origin" else "destiny"
+    point: dict[str, Any] = {
+        "label": ascii_place_text(row.get(prefix) or ""),
+        "lat": float(row[f"{prefix}_lat"]),
+        "lon": float(row[f"{prefix}_lon"]),
+        "uf": None,
+    }
+    location_id = row.get(f"{prefix}_location_id")
+    if location_id is not None:
+        point["location_id"] = int(location_id)
+    return point
+
+
+def _load_cached_route_rows_for_surface(conn: Any, scenario: HeatmapScenario) -> List[Dict[str, Any]]:
+    origin_variants = _origin_name_variants(scenario.origin_name)
+    rows: list[dict[str, Any]] = []
+    origin_query_used = ""
+    for origin_variant in origin_variants:
+        rows = list_runs(
+            conn,
+            origin=origin_variant,
+            profile_requested=scenario.ors_profile,
+            limit=50_000,
+        )
+        if rows:
+            origin_query_used = origin_variant
+            break
+
+    allowed_destinations = _all_heatmap_destination_keys()
+    origin_key = normalize_bulk_place_input(scenario.origin_name).casefold()
+    latest_by_destiny: dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        destiny_label = ascii_place_text(row.get("destiny") or "")
+        destiny_key = normalize_bulk_place_input(destiny_label).casefold()
+        if not destiny_key or destiny_key not in allowed_destinations or destiny_key == origin_key:
+            continue
+        latest_by_destiny.setdefault(destiny_key, row)
+
+    filtered = sorted(
+        latest_by_destiny.values(),
+        key=lambda item: ascii_place_text(item.get("destiny") or "").casefold(),
+    )
+    _log.info(
+        (
+            "Resolved route-cache heatmap candidates origin=%s cargo_t=%.3f origin_query=%s "
+            "route_rows=%d eligible_destinations=%d"
+        ),
+        scenario.origin_name,
+        scenario.cargo_t,
+        origin_query_used or "<none>",
+        len(rows),
+        len(filtered),
+    )
+    return filtered
+
+
+def _emissions_savings_pct(road_co2e: Optional[float], multimodal_co2e: Optional[float]) -> Optional[float]:
+    road_value = float(road_co2e or 0.0)
+    multimodal_value = float(multimodal_co2e or 0.0)
+    if road_value <= 0.0:
+        return None
+    return float((1.0 - (multimodal_value / road_value)) * 100.0)
+
+
+def load_cached_surface_dataset(
+    scenario: HeatmapScenario,
+    *,
+    destination_set_id: str | None = None,
+    progress_callback: Optional[Any] = None,
+) -> Optional[HeatmapDataset]:
+    _require_postgres()
+    resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
+    with bind_log_context(
+        origin=scenario.origin_name,
+        destination_set_id=resolved_destination_set_id,
+        ors_profile=scenario.ors_profile,
+        entrypoint="heatmap_cached_surface",
+    ):
+        _log.info(
+            "Loading heatmap surface from route cache origin=%s cargo_t=%.3f",
+            scenario.origin_name,
+            scenario.cargo_t,
+        )
+        _emit_progress(
+            progress_callback,
+            phase="working",
+            message="Loading cached route rows...",
+            current=0,
+            total=1,
+        )
+        with db_session() as conn:
+            cached_rows = _load_cached_route_rows_for_surface(conn, scenario)
+            if not cached_rows:
+                return None
+
+            origin_pt = _route_cache_point(cached_rows[0], role="origin")
+            ors, ports, sea_matrix, _ = load_routing_assets()
+            perf = BulkPerformanceTracker()
+            port_memo = NearestPortMemo(ports)
+            prepared_context = prepare_evaluation_context(
+                truck_key=str(scenario.truck_key),
+                vessel_class=str(scenario.vessel_class),
+                include_hoteling=bool(scenario.include_hoteling),
+                hoteling_hours_per_call=float(scenario.hoteling_hours_per_call),
+                port_calls=int(scenario.port_calls),
+                include_port_ops=bool(scenario.include_port_ops),
+                port_ops_scenario=str(scenario.port_ops_scenario),
+            )
+
+            try:
+                origin_port = port_memo.resolve(origin_pt, perf)
+            except Exception as exc:
+                raise HeatmapDataError(f"Could not resolve the nearest port for the cached origin: {exc}") from exc
+
+            first_mile_spec = RouteRequestSpec(
+                leg_name="first_mile",
+                origin=origin_pt,
+                destiny=build_port_node(origin_port),
+                profile=scenario.ors_profile,
+            )
+
+            work_items: list[dict[str, Any]] = []
+            failures: list[HeatmapFailureRecord] = []
+            route_specs: list[RouteRequestSpec] = [first_mile_spec]
+            for row in cached_rows:
+                try:
+                    destiny_pt = _route_cache_point(row, role="destiny")
+                    port_destiny = port_memo.resolve(destiny_pt, perf)
+                except Exception as exc:
+                    failures.append(
+                        HeatmapFailureRecord(
+                            destination=ascii_place_text(row.get("destiny") or "<unknown>"),
+                            failed_leg="port_destiny_selection",
+                            failed_step="nearest_port_destiny",
+                            failure_reason="no_nearest_port",
+                            failure_detail=str(exc),
+                            port_origin=origin_port.get("name"),
+                            port_destiny=None,
+                            retryable=False,
+                        )
+                    )
+                    continue
+
+                work_items.append(
+                    {
+                        "row": row,
+                        "destiny_pt": destiny_pt,
+                        "port_destiny": port_destiny,
+                    }
+                )
+                route_specs.append(
+                    RouteRequestSpec(
+                        leg_name="road_direct",
+                        origin=origin_pt,
+                        destiny=destiny_pt,
+                        profile=scenario.ors_profile,
+                    )
+                )
+                route_specs.append(
+                    RouteRequestSpec(
+                        leg_name="last_mile",
+                        origin=build_port_node(port_destiny),
+                        destiny=destiny_pt,
+                        profile=scenario.ors_profile,
+                    )
+                )
+
+            if not work_items and not failures:
+                return None
+
+            route_coordinator = RouteRequestCoordinator(
+                ors,
+                profile=scenario.ors_profile,
+                overwrite=False,
+                perf=perf,
+                cache_only=True,
+            )
+            route_coordinator.prime(conn, route_specs)
+
+        def _resolve_cached_leg(start: Dict[str, Any], end: Dict[str, Any], leg_name: str) -> Dict[str, Any]:
+            return route_coordinator.resolve(
+                RouteRequestSpec(
+                    leg_name=leg_name,
+                    origin=start,
+                    destiny=end,
+                    profile=scenario.ors_profile,
+                )
+            )
+
+        try:
+            first_mile_leg = _resolve_cached_leg(origin_pt, build_port_node(origin_port), "first_mile")
+        except Exception as exc:
+            raise HeatmapDataError(
+                f"Cached heatmap load could not reuse the origin-to-port route from the routes cache: {exc}"
+            ) from exc
+
+        points: list[HeatmapPoint] = []
+        skipped_missing_coordinates = 0
+        skipped_missing_costs = 0
+        skipped_missing_emissions = 0
+        latest_updated_timestamp: Any = None
+        success_count = 0
+        total = max(len(work_items), 1)
+        for index, item in enumerate(work_items, start=1):
+            row = item["row"]
+            destiny_pt = item["destiny_pt"]
+            port_destiny = item["port_destiny"]
+            destination_name = str(destiny_pt.get("label") or row.get("destiny") or "").strip() or "<unknown>"
+            _emit_progress(
+                progress_callback,
+                phase="working",
+                message="Recomputing cached-route heatmap rows...",
+                current=index,
+                total=total,
+                destination=destination_name,
+                success_count=success_count,
+                fail_count=len(failures),
+            )
+            try:
+                geometry = build_path_geometry_from_resolved(
+                    origin_pt,
+                    destiny_pt,
+                    ors=ors,
+                    ports=ports,
+                    sea_matrix=sea_matrix,
+                    ors_profile=scenario.ors_profile,
+                    overwrite_road=False,
+                    port_origin=origin_port,
+                    port_destiny=port_destiny,
+                    first_mile_leg=first_mile_leg,
+                    route_resolver=_resolve_cached_leg,
+                )
+                if not geometry:
+                    raise RuntimeError("Multimodal geometry build returned no data")
+                evaluation = evaluate_path(
+                    geometry,
+                    cargo_t=float(scenario.cargo_t),
+                    truck_key=str(scenario.truck_key),
+                    vessel_class=str(scenario.vessel_class),
+                    include_hoteling=bool(scenario.include_hoteling),
+                    hoteling_hours_per_call=float(scenario.hoteling_hours_per_call),
+                    port_calls=int(scenario.port_calls),
+                    include_port_ops=bool(scenario.include_port_ops),
+                    port_moves_per_call=scenario.port_moves_per_call,
+                    cargo_teu=scenario.cargo_teu,
+                    t_per_teu_default=float(scenario.t_per_teu_default),
+                    allocation_mode=scenario.allocation_mode,
+                    allocation_load_factor=float(scenario.allocation_load_factor),
+                    full_call_mode=bool(scenario.full_call_mode),
+                    port_ops_scenario=str(scenario.port_ops_scenario),
+                    prepared_context=prepared_context,
+                )
+                if not evaluation:
+                    raise RuntimeError("Path evaluation returned no result")
+                flat = flatten_evaluation_for_db(origin_pt["label"], destination_name, evaluation)
+
+                point = HeatmapPoint(
+                    destiny_name=destination_name,
+                    destiny_lat=float(destiny_pt["lat"]),
+                    destiny_lon=float(destiny_pt["lon"]),
+                    destiny_uf=destiny_pt.get("uf"),
+                    port_destiny_name=str(port_destiny.get("name") or "") or None,
+                    road_cost_r=float(flat.get("road_fuel_cost_r") or 0.0),
+                    multimodal_cost_r=float(flat.get("total_fuel_cost_r") or 0.0),
+                    cost_delta_r=float(flat.get("delta_cost_r") or 0.0),
+                    cost_savings_pct=evaluation.get("comparison", {}).get("savings_pct"),
+                    road_emissions_kg=float(flat.get("road_co2e_kg") or 0.0),
+                    multimodal_emissions_kg=float(flat.get("total_co2e_kg") or 0.0),
+                    emissions_delta_kg=float(flat.get("delta_co2e_kg") or 0.0),
+                    emissions_savings_pct=_emissions_savings_pct(
+                        flat.get("road_co2e_kg"),
+                        flat.get("total_co2e_kg"),
+                    ),
+                    road_distance_km=flat.get("road_distance_km"),
+                    sea_km=flat.get("sea_km"),
+                    updated_timestamp=row.get("updated_timestamp"),
+                )
+            except Exception as exc:
+                detail = str(exc).strip() or exc.__class__.__name__
+                detail_lower = detail.lower()
+                if "route cache miss for first_mile" in detail_lower:
+                    failed_leg = "first_mile"
+                    failed_step = "routing_origin_to_port_origin"
+                    failure_reason = "route_cache_miss"
+                elif "route cache miss for last_mile" in detail_lower:
+                    failed_leg = "last_mile"
+                    failed_step = "routing_port_destiny_to_destiny"
+                    failure_reason = "route_cache_miss"
+                elif "route cache miss for road_direct" in detail_lower:
+                    failed_leg = "road_only"
+                    failed_step = "routing_road_only"
+                    failure_reason = "route_cache_miss"
+                elif "nearest port" in detail_lower:
+                    failed_leg = "port_destiny_selection"
+                    failed_step = "nearest_port_destiny"
+                    failure_reason = "no_nearest_port"
+                else:
+                    failed_leg = "sea_leg"
+                    failed_step = "calculating_costs_emissions"
+                    failure_reason = "evaluation_failed"
+                failures.append(
+                    HeatmapFailureRecord(
+                        destination=destination_name,
+                        failed_leg=failed_leg,
+                        failed_step=failed_step,
+                        failure_reason=failure_reason,
+                        failure_detail=detail,
+                        port_origin=origin_port.get("name"),
+                        port_destiny=port_destiny.get("name"),
+                        retryable=False,
+                    )
+                )
+                continue
+
+            rejection_reason = _point_rejection_reason(point)
+            if rejection_reason == "missing_coordinates":
+                skipped_missing_coordinates += 1
+                continue
+            if rejection_reason == "missing_costs":
+                skipped_missing_costs += 1
+                continue
+            if rejection_reason == "missing_emissions":
+                skipped_missing_emissions += 1
+                continue
+            points.append(point)
+            success_count += 1
+            if latest_updated_timestamp is None or _timestamp_sort_key(row.get("updated_timestamp")) > _timestamp_sort_key(latest_updated_timestamp):
+                latest_updated_timestamp = row.get("updated_timestamp")
+
+        _emit_progress(
+            progress_callback,
+            phase="complete",
+            message="Cached-route heatmap surface ready.",
+            current=total,
+            total=total,
+            success_count=success_count,
+            fail_count=len(failures),
+        )
+
+        if not points:
+            if failures:
+                raise HeatmapDataError(
+                    "Cached routes were found for this origin, but none of them could be re-evaluated into plottable heatmap rows."
+                )
+            return None
+
+        diagnostics = HeatmapDatasetDiagnostics(
+            successful_rows=success_count,
+            plottable_points=len(points),
+            skipped_missing_coordinates=skipped_missing_coordinates,
+            skipped_missing_costs=skipped_missing_costs,
+            skipped_missing_emissions=skipped_missing_emissions,
+            loaded_route_cache_rows=len(cached_rows),
+            failed_destinations=failures,
+        )
+        dataset = HeatmapDataset(
+            scenario=scenario,
+            run=HeatmapRunInfo(
+                run_id=None,
+                origin_name=scenario.origin_name,
+                cargo_t=float(scenario.cargo_t),
+                destination_count=len(cached_rows),
+                found_count=len(cached_rows),
+                success_count=success_count,
+                fail_count=len(failures),
+                missing_count=0,
+                pending_count=0,
+                duration_s=None,
+                completed_timestamp=None,
+                updated_timestamp=latest_updated_timestamp,
+                destination_set_id=resolved_destination_set_id,
+            ),
+            points=points,
+            max_abs_cost_delta=_max_abs([point.cost_delta_r for point in points]),
+            max_abs_emissions_delta=_max_abs([point.emissions_delta_kg for point in points]),
+            diagnostics=diagnostics,
+        )
+        _log.info(
+            (
+                "Loaded heatmap dataset from route cache origin=%s cargo_t=%.3f selected_destination_set=%s "
+                "cached_rows=%d plottable_points=%d failures=%d skipped_missing_coordinates=%d "
+                "skipped_missing_costs=%d skipped_missing_emissions=%d"
+            ),
+            scenario.origin_name,
+            scenario.cargo_t,
+            resolved_destination_set_id,
+            len(cached_rows),
+            len(points),
+            len(failures),
+            skipped_missing_coordinates,
+            skipped_missing_costs,
+            skipped_missing_emissions,
+        )
+        return dataset
 
 
 def list_failed_destinations(

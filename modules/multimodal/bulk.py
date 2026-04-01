@@ -292,11 +292,13 @@ class RouteRequestCoordinator:
         profile: str,
         overwrite: bool,
         perf: BulkPerformanceTracker,
+        cache_only: bool = False,
     ) -> None:
         self._ors = ors
         self._profile = str(profile).strip().lower() or _DEFAULT_RUNTIME_PROFILE
         self._overwrite = bool(overwrite)
         self._perf = perf
+        self._cache_only = bool(cache_only)
         self._label_cache: dict[tuple[str, str, str], Dict[str, Any]] = {}
         self._coord_cache: dict[tuple[str, str, str], Dict[str, Any]] = {}
         self._pending_rows: list[Dict[str, Any]] = []
@@ -360,6 +362,11 @@ class RouteRequestCoordinator:
             return future.result()
 
         try:
+            if self._cache_only:
+                raise RuntimeError(
+                    f"Route cache miss for {spec.leg_name}: "
+                    f"{spec.origin.get('label') or '<unknown>'} -> {spec.destiny.get('label') or '<unknown>'}"
+                )
             with self._perf.measure(f"{spec.leg_name}_provider_s"):
                 profile_used, distance_km, route_source = _calculate_route(
                     self._ors,

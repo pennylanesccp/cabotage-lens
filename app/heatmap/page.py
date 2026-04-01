@@ -23,7 +23,7 @@ from app.heatmap.surface import build_surface
 from app.heatmap.service import (
     HeatmapConfigurationError,
     HeatmapDataError,
-    load_current_dataset,
+    load_cached_surface_dataset,
     rerun_heatmap,
     run_heatmap,
 )
@@ -252,6 +252,7 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
 def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface) -> None:
     diagnostics = dataset.diagnostics
     latest_failed_destinations = max(dataset.run.pending_count - dataset.run.missing_count, 0)
+    loaded_from_route_cache = diagnostics.loaded_route_cache_rows > 0
 
     with st.expander("Diagnostics", expanded=False):
         diag_cols = st.columns(5)
@@ -268,19 +269,36 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
         if dataset.run.duration_s is not None:
             st.caption(f"Run duration: {float(dataset.run.duration_s):,.1f} s")
 
-        st.caption(
-            (
-                f"Loaded {diagnostics.plottable_points} plottable points from {diagnostics.successful_rows} latest stored rows "
-                f"for this origin/cargo across bulk runs, destination files, and single compares. "
-                f"Robust scales: color +/- {_format_color_scale(surface)} and height +/- {_format_height_scale(surface)}."
+        if loaded_from_route_cache:
+            st.caption(
+                (
+                    f"Loaded {diagnostics.plottable_points} plottable points from {diagnostics.loaded_route_cache_rows} "
+                    f"cached direct-road routes for this origin/cargo, recalculating multimodal costs and emissions "
+                    f"without calling routing providers. Robust scales: color +/- {_format_color_scale(surface)} "
+                    f"and height +/- {_format_height_scale(surface)}."
+                )
             )
-        )
-        st.caption(
-            (
-                f"Selected run file {heatmap_destination_label(dataset.run.destination_set_id)} still controls Run missing / Rerun all. "
-                f"Loaded row sources: bulk={diagnostics.loaded_bulk_rows}, single_compare={diagnostics.loaded_single_compare_rows}."
+            st.caption(
+                (
+                    f"Selected run file {heatmap_destination_label(dataset.run.destination_set_id)} still controls "
+                    f"Run missing / Rerun all. Loaded row sources: route_cache={diagnostics.loaded_route_cache_rows}, "
+                    f"bulk={diagnostics.loaded_bulk_rows}, single_compare={diagnostics.loaded_single_compare_rows}."
+                )
             )
-        )
+        else:
+            st.caption(
+                (
+                    f"Loaded {diagnostics.plottable_points} plottable points from {diagnostics.successful_rows} latest stored rows "
+                    f"for this origin/cargo across bulk runs, destination files, and single compares. "
+                    f"Robust scales: color +/- {_format_color_scale(surface)} and height +/- {_format_height_scale(surface)}."
+                )
+            )
+            st.caption(
+                (
+                    f"Selected run file {heatmap_destination_label(dataset.run.destination_set_id)} still controls Run missing / Rerun all. "
+                    f"Loaded row sources: bulk={diagnostics.loaded_bulk_rows}, single_compare={diagnostics.loaded_single_compare_rows}."
+                )
+            )
 
         if latest_failed_destinations > 0:
             st.caption(f"Latest failed destinations queued by Run missing: {latest_failed_destinations}")
@@ -320,9 +338,14 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
                     "coordinates, so the interpolated surface uses fewer unique vertices."
                 )
             )
-        st.caption(
-            "This page reads the normalized bulk comparison tables only; it does not overwrite the canonical routes cache."
-        )
+        if loaded_from_route_cache:
+            st.caption(
+                "This page reused the normalized routes cache and recalculated evaluation outputs in memory; it did not call routing providers or overwrite the routes cache."
+            )
+        else:
+            st.caption(
+                "This page reads the normalized bulk comparison tables only; it does not overwrite the canonical routes cache."
+            )
 
 
 def render_page() -> None:
@@ -379,39 +402,88 @@ def render_page() -> None:
     )
 
     if load_clicked:
+        _log.info(
+            "Heatmap UI requested cache-backed surface load origin=%s cargo_t=%.3f",
+            scenario.origin_name,
+            scenario.cargo_t,
+        )
+        st.session_state.ui_logs = []
+        progress_bar = st.progress(0.0)
+        status_box = st.empty()
+        cooldown_box = st.empty()
+        log_box = st.empty()
+        progress_callback = _progress_callback(progress_bar, status_box, cooldown_box, log_box)
+        status_box.markdown(
+            _status_card("Loading cached-route surface...", tone="info"),
+            unsafe_allow_html=True,
+        )
+        _render_live_run_logs(log_box)
         try:
-            dataset = load_current_dataset(scenario, destination_set_id=destination_set_id)
+            dataset = load_cached_surface_dataset(
+                scenario,
+                destination_set_id=destination_set_id,
+                progress_callback=progress_callback,
+            )
         except HeatmapConfigurationError as exc:
             _log.error(
-                "Heatmap surface load unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
+                "Heatmap route-cache surface load unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
                 exc,
             )
+            progress_bar.empty()
+            cooldown_box.empty()
+            _render_live_run_logs(log_box)
+            status_box.markdown(_status_card("Cached-route load failed.", tone="error"), unsafe_allow_html=True)
             st.error(str(exc))
             st.session_state.heatmap_dataset = None
         except HeatmapDataError as exc:
             _log.warning(
-                "Stored heatmap rows are not plottable origin=%s cargo_t=%.3f error=%s",
+                "Cached-route heatmap load produced no plottable surface origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
                 exc,
             )
+            progress_bar.empty()
+            cooldown_box.empty()
+            _render_live_run_logs(log_box)
+            status_box.markdown(_status_card("Cached-route load failed.", tone="error"), unsafe_allow_html=True)
             st.warning(str(exc))
             st.session_state.heatmap_dataset = None
         except Exception as exc:
             _log.exception(
-                "Failed to load stored heatmap surface origin=%s cargo_t=%.3f",
+                "Failed to load cache-backed heatmap surface origin=%s cargo_t=%.3f",
                 scenario.origin_name,
                 scenario.cargo_t,
             )
-            st.error(f"Failed to load the stored heatmap surface: {exc}")
+            progress_bar.empty()
+            cooldown_box.empty()
+            _render_live_run_logs(log_box)
+            status_box.markdown(_status_card("Cached-route load failed.", tone="error"), unsafe_allow_html=True)
+            st.error(f"Failed to load the cached-route heatmap surface: {exc}")
             st.session_state.heatmap_dataset = None
         else:
             if dataset is None:
-                st.info("No stored comparison rows were found for this scenario yet. Use Run missing or Rerun all.")
+                progress_bar.empty()
+                cooldown_box.empty()
+                log_box.empty()
+                status_box.markdown(
+                    _status_card("No cached heatmap routes were found for this origin yet.", tone="warning"),
+                    unsafe_allow_html=True,
+                )
+                st.info(
+                    "No cached direct routes were found for this origin across the tracked heatmap cities yet. "
+                    "Use Run missing or Rerun all to trace them first."
+                )
                 st.session_state.heatmap_dataset = None
             else:
+                progress_bar.progress(1.0)
+                cooldown_box.empty()
+                log_box.empty()
+                status_box.markdown(
+                    _status_card("Cached-route surface loaded.", tone="success"),
+                    unsafe_allow_html=True,
+                )
                 st.session_state.heatmap_dataset = dataset
 
     if run_missing_clicked:

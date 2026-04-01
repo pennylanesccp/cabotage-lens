@@ -84,6 +84,7 @@ class HeatmapDatasetDiagnostics:
     skipped_missing_emissions: int
     loaded_bulk_rows: int = 0
     loaded_single_compare_rows: int = 0
+    loaded_route_cache_rows: int = 0
     failed_destinations: List[HeatmapFailureRecord] = field(default_factory=list)
 
     @property
