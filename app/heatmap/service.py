@@ -315,6 +315,25 @@ def _merge_loaded_rows(rows: List[_LoadedHeatmapRow]) -> List[_LoadedHeatmapRow]
     return sorted(latest_by_destiny.values(), key=lambda item: (item.destiny_name.casefold(), item.destiny_name))
 
 
+def _destination_key_set(destination_set_id: str) -> set[str]:
+    return {
+        normalize_bulk_place_input(destination).casefold()
+        for destination in _heatmap_destinations(destination_set_id)
+        if normalize_bulk_place_input(destination)
+    }
+
+
+def _filter_rows_to_destination_set(
+    rows: List[_LoadedHeatmapRow],
+    *,
+    destination_set_id: str,
+) -> List[_LoadedHeatmapRow]:
+    allowed_keys = _destination_key_set(destination_set_id)
+    if not allowed_keys:
+        return []
+    return [row for row in rows if _loaded_row_key(row) in allowed_keys]
+
+
 def default_cargo_options() -> List[float]:
     return [float(DEFAULTS["cargo_t"])]
 
@@ -485,10 +504,11 @@ def _load_map_rows(
     bulk_rows = _load_bulk_rows_for_map(conn, scenario, destination_set_id)
     single_compare_rows = _load_single_compare_rows_for_map(conn, scenario)
     merged_rows = _merge_loaded_rows([*bulk_rows, *single_compare_rows])
+    filtered_rows = _filter_rows_to_destination_set(merged_rows, destination_set_id=destination_set_id)
     _log.info(
         (
             "Resolved aggregated heatmap rows origin=%s cargo_t=%.3f selected_destination_set=%s "
-            "bulk_rows=%d single_compare_rows=%d merged_rows=%d"
+            "bulk_rows=%d single_compare_rows=%d merged_rows=%d selected_rows=%d"
         ),
         scenario.origin_name,
         scenario.cargo_t,
@@ -496,8 +516,9 @@ def _load_map_rows(
         len(bulk_rows),
         len(single_compare_rows),
         len(merged_rows),
+        len(filtered_rows),
     )
-    return merged_rows
+    return filtered_rows
 
 
 def list_origin_options(*, destination_set_id: str | None = None) -> List[str]:

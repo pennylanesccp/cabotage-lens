@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+
 import pydeck as pdk
 import streamlit.components.v1 as components
 
@@ -82,6 +84,11 @@ def inject_modifier_wheel_zoom(deck_html: str) -> str:
     )
 
 
+def _html_to_data_url(html: str) -> str:
+    payload = base64.b64encode(html.encode("utf-8")).decode("ascii")
+    return f"data:text/html;charset=utf-8;base64,{payload}"
+
+
 def render_deck_chart(deck: pdk.Deck, *, height: int, require_ctrl_for_wheel_zoom: bool = False) -> None:
     deck_html = deck.to_html(
         as_string=True,
@@ -91,4 +98,4 @@ def render_deck_chart(deck: pdk.Deck, *, height: int, require_ctrl_for_wheel_zoo
     )
     if require_ctrl_for_wheel_zoom:
         deck_html = inject_modifier_wheel_zoom(deck_html)
-    components.html(deck_html, height=height, scrolling=False)
+    components.iframe(_html_to_data_url(deck_html), height=height, scrolling=False)
