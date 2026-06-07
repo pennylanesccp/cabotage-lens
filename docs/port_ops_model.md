@@ -17,10 +17,10 @@ Runtime uses only processed artifact data from:
 ## Source References Used (repo-local only)
 
 - `references/Dados Relatorio 2.xlsx`
-- `references/rtg_crane_energy_usage_analysis_2017.pdf`
-- `references/hybrid_rtg_diesel_battery_energy_management_2021.pdf`
-- `references/ship_hoteling_loading_unloading_emissions_se_asia_2022.pdf`
-- `references/brazilian_cabotage_decarbonization_pathways_fuels_2024.pdf`
+- `references/support/rtg-crane-energy-usage-analysis-2017.pdf`
+- `references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf`
+- `references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf`
+- `references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
 
 ## Method
 

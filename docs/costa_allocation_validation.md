@@ -1,9 +1,9 @@
-﻿# Costa Papers Validation Note (Allocation Update)
+# Costa Papers Validation Note (Allocation Update)
 
 ## Sources Reviewed
 
-- `references/brazilian_cabotage_competitiveness_supernetwork_2024.pdf`
-- `references/brazilian_cabotage_decarbonization_pathways_fuels_2024.pdf`
+- `references/core/brazilian-cabotage-competitiveness-supernetwork-2024.pdf`
+- `references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
 
 ## Assumptions Used in Code
 
