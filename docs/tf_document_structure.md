@@ -111,8 +111,9 @@ Robustness checkpoints:
 Methodology debts to track:
 - Need source-quality ranking for each parameter family: regulator data, public
   operational data, literature, calibrated assumption.
-- Need final citation list for ANTAQ, ANTT, ANP, ORS, EU MRV, EMEP/EEA, and any
-  emissions-factor references used.
+- Need final citation list for the sources actually used, such as ANTAQ, ANTT,
+  ANP, IBGE, ORS, EU MRV, EMEP/EEA, GHG Protocol, IMO, or any other
+  emissions-factor references used in the frozen methodology.
 
 Writing rules:
 - Do not turn the chapter into a broad sustainability essay; keep it tied to
@@ -136,8 +137,8 @@ Expected content:
 - Vessel classes and MRV-derived fuel efficiency artifacts.
 - Hoteling assumptions and processed hoteling rates.
 - Fuel prices and emissions factors.
-- Supabase/Postgres persistence expectations if the final runtime uses the
-  project-level durable backend.
+- SQLite database behavior or the final active persistence layer, e.g. SQLite
+  database or other backend used at thesis freeze time.
 
 Robustness checkpoints:
 - For each data source, record: source institution, file/table name, temporal
@@ -166,6 +167,22 @@ Purpose:
 Give a reproducible, auditable description of how each scenario is computed.
 
 Expected content:
+- System boundary:
+  - Geographic boundary: Brazilian freight corridors represented by the selected
+    origin-destination set.
+  - Modal boundary: road-only and road-cabotage-road alternatives.
+  - Activity boundary: road movement, sea movement, and modeled port/hoteling
+    activities.
+  - Emissions boundary: state the final implemented scope, such as TTW/TTW-like
+    or WTW/WTW-like, and explicitly list excluded stages.
+  - Cost boundary: state which cost components are included and excluded in the
+    final implementation.
+- Functional unit:
+  - Define the normalized basis used for comparison, for example moving a stated
+    cargo mass between one O-D pair under the same scenario assumptions.
+  - State whether results are reported per route, per tonne, per tonne-km, per
+    TEU proxy, or another unit.
+  - Use the same functional unit across road-only and multimodal scenarios.
 - Scenario definition:
   - Inputs: origin, destination, cargo mass, selected parameters.
   - Outputs: distance, fuel, emissions, cost, and comparison indicators.
@@ -197,6 +214,9 @@ Expected content:
   - Logs for diagnostic traceability.
 
 Robustness checkpoints:
+- The system boundary must be stated before formulas and kept consistent in
+  Results and Discussion.
+- The functional unit must be identical for road-only and multimodal comparisons.
 - Every formula must include units for each variable.
 - Every parameter must map to a data source, default value, or documented
   assumption.
@@ -207,6 +227,8 @@ Robustness checkpoints:
 - Sensitivity parameters must be clearly separated from baseline parameters.
 
 Methodology debts to track:
+- Need final confirmation of the system boundary and functional unit used by the
+  frozen result tables.
 - Need final formula audit against the exact implementation used for results.
 - Need final confirmation of the active persistence layer and schema names.
 - Need final statement on whether CH4 and N2O are excluded or included.
@@ -277,18 +299,30 @@ Expected content:
   - Empty backhaul share.
   - Alternative ports, where relevant.
 - Exclusion criteria for invalid or incomplete scenarios.
+- Result classification criteria:
+  - Robust result: the direction and practical interpretation remain stable across
+    the planned sensitivity checks.
+  - Sensitive result: the direction or magnitude changes materially under one or
+    more plausible parameter variations.
+  - Inconclusive result: missing data, failed routing, narrow margins, or
+    conflicting sensitivity checks prevent a defensible interpretation.
 
 Robustness checkpoints:
 - Define the baseline before seeing or discussing results.
 - Keep one scenario identifier per modeled run.
 - Preserve failed or excluded scenario counts in logs/tables.
 - Avoid mixing calibration runs with final comparison runs.
+- Define classification thresholds before writing the final Results narrative.
+- Apply robust/sensitive/inconclusive labels consistently across emissions and
+  cost findings.
 
 Methodology debts to track:
 - Need final corridor list and justification.
 - Need final decision on whether the thesis emphasizes all Brazilian capitals, a
   smaller corridor sample, or a policy-relevant subset.
 - Need final minimum output table schema for each run.
+- Need final thresholds for what counts as a material change in sensitivity
+  analysis.
 
 Writing rules:
 - Use scenario tables instead of prose lists where possible.
@@ -301,6 +335,11 @@ Present modeled outputs clearly and without overclaiming causality.
 
 Expected content:
 - Baseline road-only vs multimodal totals by corridor.
+- Result classification table:
+  - Robust result.
+  - Sensitive result.
+  - Inconclusive result.
+  - Main evidence supporting each label.
 - Emissions comparison:
   - Absolute difference.
   - Percentage difference.
@@ -443,14 +482,17 @@ Expected content:
 - Freight/logistics literature.
 - Emissions accounting references.
 - ORS documentation.
-- ANTAQ/ANTT/ANP/IBGE datasets and documents.
-- EU MRV publication references.
-- EMEP/EEA guidebook references.
-- Any cost, fuel, or conversion-factor sources.
+- Candidate or final Brazilian public data references, depending on what the
+  frozen methodology actually uses, such as ANTAQ, ANTT, ANP, and IBGE.
+- Candidate or final maritime and emissions references, depending on what the
+  frozen methodology actually uses, such as EU MRV, EMEP/EEA, GHG Protocol, and
+  IMO.
+- Any other cost, fuel, or conversion-factor sources actually used.
 
 Robustness checkpoints:
 - Every non-original number in the methodology must have a citation or data
-  reference.
+  reference, but candidate sources should become final references only when they
+  are actually used.
 - Dataset access dates should be recorded where applicable.
 
 Writing rules:
@@ -499,7 +541,7 @@ Writing rules:
 
 | Debt | Current planning treatment | Required before final submission |
 | --- | --- | --- |
-| Persistence description drift | README and repo instructions may describe different durable backends over time. | Verify final implementation and document only the active persistence path. |
+| Persistence description drift | README and repo instructions may describe different durable backends over time. | Verify final implementation and document only SQLite or the active backend used at thesis freeze time. |
 | Emissions scope | Planned as explicit TTW/TTW-like scope unless implementation changes. | Audit formulas and factors against final code. |
 | CO2 vs CO2e | Planned as a named limitation if non-CO2 gases are excluded. | Confirm final emissions factors and labels. |
 | Terminal operations | Planned as hoteling-only, embedded, or out-of-scope depending on final code. | State final treatment in Methodology and Limitations. |
