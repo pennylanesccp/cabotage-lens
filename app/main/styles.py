@@ -21,6 +21,31 @@ BASE_CSS = """
     section[data-testid="stSidebar"] .stButton > button {
         margin-top: 0.65rem;
     }
+    div[data-testid="stSelectbox"] div[data-baseweb="select"],
+    div[data-testid="stMultiSelect"] div[data-baseweb="select"],
+    div[data-testid="stSelect"] div[data-baseweb="select"],
+    div[data-testid="stSelectbox"] [aria-haspopup="listbox"],
+    div[data-testid="stMultiSelect"] [aria-haspopup="listbox"],
+    div[data-testid="stSelect"] [aria-haspopup="listbox"],
+    [role="listbox"] [role="option"],
+    [data-baseweb="menu"] [role="option"],
+    [data-testid="stBaseButton"],
+    button,
+    [role="button"],
+    [role="tab"],
+    a[href] {
+        cursor: pointer;
+    }
+    input:not([readonly]):not([disabled]),
+    textarea:not([readonly]):not([disabled]),
+    [contenteditable="true"] {
+        cursor: text;
+    }
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] svg,
+    div[data-testid="stMultiSelect"] div[data-baseweb="select"] svg,
+    div[data-testid="stSelect"] div[data-baseweb="select"] svg {
+        cursor: pointer;
+    }
     section[data-testid="stSidebar"] hr {
         border: 0;
         height: 0;
