@@ -34,6 +34,9 @@ DEFAULT_ARC_POINTS = 100
 MIN_SIDE_DISTANCE_KM = 1.0
 AUTO_SIDE_BIAS_THRESHOLD_KM = 25.0
 DEFAULT_AUTO_ARC_SIDE = "right"
+BRAZIL_INLAND_CENTROID_LATLON = (-14.2350, -51.9253)
+BRAZIL_ARC_BIAS_LAT_RANGE = (-35.0, 6.0)
+BRAZIL_ARC_BIAS_LON_RANGE = (-60.0, -30.0)
 
 
 @dataclass(frozen=True)
@@ -213,6 +216,7 @@ class _ArcCandidateScore:
     midpoint_context_distance_km: float
     mean_context_distance_km: float
     nearest_clutter_distance_km: float
+    inland_centroid_distance_km: float
 
 
 LegReferencePathBuilder = Callable[[RouteArcPort, RouteArcPort], Sequence[tuple[float, float]]]
@@ -885,6 +889,10 @@ def _score_candidate_center(
     midpoint_context_distance_km = _distance_point_to_polyline(midpoint_xy, route_context_xy)
     mean_context_distance_km = _mean_distance_to_polyline(arc_points_xy[1:-1], route_context_xy)
     nearest_clutter_distance_km = _nearest_point_distance(midpoint_xy, clutter_points_xy)
+    inland_centroid_distance_km = 0.0
+    if _use_brazil_inland_centroid_bias(construction):
+        inland_centroid_xy = construction.projection.project(BRAZIL_INLAND_CENTROID_LATLON)
+        inland_centroid_distance_km = _vector_length(_subtract(midpoint_xy, inland_centroid_xy))
     context_side_bias_km = _context_side_bias(
         construction.port_a_xy,
         construction.port_b_xy,
@@ -916,17 +924,33 @@ def _score_candidate_center(
         midpoint_context_distance_km=midpoint_context_distance_km,
         mean_context_distance_km=mean_context_distance_km,
         nearest_clutter_distance_km=nearest_clutter_distance_km,
+        inland_centroid_distance_km=inland_centroid_distance_km,
     )
 
 
-def _candidate_sort_key(score: _ArcCandidateScore) -> tuple[float, float, float, float, float]:
+def _candidate_sort_key(score: _ArcCandidateScore) -> tuple[float, float, float, float, float, float]:
     return (
+        -float(score.inland_centroid_distance_km),
         float(score.side_match_penalty),
         float(score.default_side_penalty),
         float(score.midpoint_context_distance_km),
         float(score.mean_context_distance_km),
         -float(score.nearest_clutter_distance_km),
     )
+
+
+def _use_brazil_inland_centroid_bias(construction: CandidateArcCenters) -> bool:
+    endpoints = (
+        construction.projection.unproject(construction.port_a_xy),
+        construction.projection.unproject(construction.port_b_xy),
+    )
+    for lat, lon in endpoints:
+        if not (
+            BRAZIL_ARC_BIAS_LAT_RANGE[0] <= float(lat) <= BRAZIL_ARC_BIAS_LAT_RANGE[1]
+            and BRAZIL_ARC_BIAS_LON_RANGE[0] <= float(lon) <= BRAZIL_ARC_BIAS_LON_RANGE[1]
+        ):
+            return False
+    return True
 
 
 def _prepare_route_context_path(
