@@ -306,6 +306,9 @@ Expected content:
     more plausible parameter variations.
   - Inconclusive result: missing data, failed routing, narrow margins, or
     conflicting sensitivity checks prevent a defensible interpretation.
+  - Invalid/out-of-scope case: the scenario violates the system boundary,
+    functional unit, data-availability requirements, or model assumptions needed
+    for comparison.
 
 Robustness checkpoints:
 - Define the baseline before seeing or discussing results.
@@ -315,6 +318,7 @@ Robustness checkpoints:
 - Define classification thresholds before writing the final Results narrative.
 - Apply robust/sensitive/inconclusive labels consistently across emissions and
   cost findings.
+- Keep invalid/out-of-scope cases separate from inconclusive modeled results.
 
 Methodology debts to track:
 - Need final corridor list and justification.
@@ -339,6 +343,7 @@ Expected content:
   - Robust result.
   - Sensitive result.
   - Inconclusive result.
+  - Invalid/out-of-scope case.
   - Main evidence supporting each label.
 - Emissions comparison:
   - Absolute difference.
