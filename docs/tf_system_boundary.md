@@ -1,295 +1,76 @@
-# System Boundary for the Thesis Model
+# System Boundary and Functional Unit
 
-This note defines the proposed methodological boundary for the thesis comparison
-between road-only freight transport and road-cabotage-road multimodal transport
-in Brazil. It is intended to support the theoretical framing of the thesis and
-to keep the implemented model auditable. It does not introduce new experiments,
-data sources, or code requirements.
-
-The boundary should be read as a conservative planning document. Where the
-current implementation or available documentation does not prove that a
-component is modeled, the component is treated as outside the confirmed model
-or as methodology debt.
+This document defines the system boundary, functional unit, and the scope of the compared transport chains for the final academic report (Trabalho de Formatura - TF). The goal is to provide a defensible, transparent methodology for comparing freight transport alternatives in Brazil, specifically focusing on road-only and multimodal (road–cabotage–road) transport.
 
 ## 1. Functional Unit
 
-The functional unit is:
+The functional unit is the reference basis for quantifying the inputs and outputs of the compared transport systems.
 
-> The movement of one defined freight shipment, with the same cargo mass and
-> origin-destination demand, between a specified origin and a specified
-> destination in Brazil.
+**Defined Functional Unit:**
+The transportation of a specified mass of containerized cargo (in tonnes or TEUs) between a defined origin and destination pair within Brazil.
 
-For model interpretation, this means:
+**Expression of Results:**
+Results will be expressed in terms of:
+- Total emissions and costs **per shipment** (for a direct scenario comparison).
+- Specific emissions and costs **per tonne** or **per TEU** (to normalize across different cargo volumes).
+- Intensity metrics **per tonne-kilometer (t-km)** (to allow comparability across different origin-destination pairs and distances).
 
-- The road-only and multimodal alternatives must serve the same transport
-  demand.
-- The cargo mass, origin, destination, and scenario assumptions must be held
-  constant across alternatives.
-- Results may be reported per shipment and, when useful for comparison, as
-  normalized indicators such as per tonne-kilometre.
-- The comparison is not a national freight inventory, a company-wide emissions
-  inventory, or a full product life-cycle assessment unless the thesis later
-  adds those scopes explicitly.
-
-Recommended wording:
-
-> This study adopts as its functional unit the transport service required to
-> move a given freight shipment, with fixed cargo mass, origin, and destination,
-> within Brazil. The functional unit is therefore defined by the demanded
-> logistics service rather than by a vehicle, route segment, or annual transport
-> volume.
+**Rationale for the Final Thesis:**
+Using a shipment-based functional unit normalized to tonnes and tonne-kilometers is standard practice in freight transport studies. It provides a concrete basis for comparing the absolute environmental and economic performance of specific logistics corridors, while the normalized metrics (per t-km) allow for broader benchmarking against other literature and transport modes.
 
 ## 2. Compared Transport Chains
 
-### 2.1 Road-Only Chain
+The study evaluates two primary transport profiles to deliver the functional unit:
 
-The road-only chain represents a single road freight alternative:
+### 2.1 Road-Only Transport Chain
+This chain relies entirely on heavy-duty truck transport from origin to destination.
 
-1. The shipment departs from the origin.
-2. It is transported by road along the modeled road route.
-3. It arrives at the final destination without a maritime cabotage leg.
+**Included Legs:**
+- Direct road haulage from the origin facility to the destination facility.
 
-Inside this chain, the model boundary includes only the road transport service
-that is required to move the shipment between the origin and destination under
-the selected scenario assumptions.
+### 2.2 Multimodal Transport Chain (Road–Cabotage–Road)
+This chain uses coastal shipping (cabotage) for the primary long-haul segment, supported by road transport for the initial and final miles.
 
-Recommended wording:
-
-> The road-only alternative is modeled as a direct land transport chain from the
-> origin to the destination. It represents the operational performance of the
-> road route required to satisfy the same freight demand used in the multimodal
-> alternative.
-
-### 2.2 Road-Cabotage-Road Multimodal Chain
-
-The multimodal chain represents a road-cabotage-road freight alternative:
-
-1. The shipment departs from the origin by road.
-2. It travels by road to the selected origin port.
-3. It is transported by maritime cabotage between the selected origin and
-   destination ports.
-4. It travels by road from the destination port to the final destination.
-
-The multimodal alternative should be interpreted as a transport-chain
-comparison, not as a claim that every operational detail of port logistics is
-represented. Port choice, port eligibility, and maritime leg assumptions should
-be described according to the rules and data actually used by the model.
-
-Recommended wording:
-
-> The multimodal alternative is modeled as a three-leg logistics chain composed
-> of road access to an origin port, a domestic maritime cabotage leg, and road
-> egress from a destination port to the final destination. The comparison
-> therefore evaluates whether substituting part of the road distance with a
-> cabotage leg changes the modeled emissions and cost indicators for the same
-> freight demand.
+**Included Legs:**
+- **Origin Drayage (Road):** Truck transport from the origin facility to the port of origin.
+- **Port Operations (Origin):** Vessel hoteling and auxiliary power generation while the vessel is at berth for loading (if explicitly modeled).
+- **Maritime Sailing (Cabotage):** Coastal shipping from the port of origin to the port of destination.
+- **Port Operations (Destination):** Vessel hoteling and auxiliary power generation while the vessel is at berth for unloading (if explicitly modeled).
+- **Destination Drayage (Road):** Truck transport from the port of destination to the final destination facility.
 
 ## 3. Included Components
 
-The confirmed system boundary should include the following components when they
-are explicitly parameterized by tracked code and tracked data:
+To ensure methodological robustness, the following components are explicitly included within the system boundary:
 
-- Origin-destination definition, including coordinates or equivalent location
-  inputs used by the model.
-- Road route distance and geometry for the road-only alternative.
-- Road access and egress route distances and geometries for the multimodal
-  alternative.
-- Maritime cabotage distance or matrix value between the selected ports.
-- Fuel, emissions, and cost calculations for road legs, according to the
-  factors and formulas documented in the repository.
-- Fuel, emissions, and cost calculations for the cabotage leg, according to the
-  factors and formulas documented in the repository.
-- Port selection logic used to connect the origin and destination to maritime
-  cabotage options.
-- Route caching and reuse mechanisms that affect whether external routing calls
-  are needed, provided they do not change the underlying scenario definition.
-- Direct modeled outputs used for comparison, such as total distance, fuel
-  consumption, emissions, and monetary cost where available.
-
-The thesis should distinguish between components that are directly modeled and
-components that are only represented indirectly through aggregate factors. For
-example, if a cost factor already embeds a typical operational charge, the
-thesis should state that the component is included only through that aggregate
-factor, not as an independently modeled activity.
-
-Recommended wording:
-
-> The system boundary includes the operational transport activities explicitly
-> represented by the model: road movement in the direct road alternative, road
-> access and egress in the multimodal alternative, and the cabotage movement
-> between selected ports. Distances, fuel use, emissions, and costs are included
-> only to the extent that they are calculated from documented model formulas and
-> traceable input data.
+- **Distances:** Modeled road travel distances (using routing engines) and maritime sailing distances (using maritime networks).
+- **Fuel Consumption:** Road diesel consumption (based on truck specifications and distances) and marine fuel consumption (based on vessel operational profiles and distances).
+- **Port Operations:** Port hoteling and vessel auxiliary energy consumption during loading and unloading (where explicitly modeled).
+- **Costs:** Fuel costs (based on updated diesel and marine fuel prices) and operational transport costs.
+- **Emissions:** Direct tailpipe/stack emissions, primarily CO2 or CO2e, resulting from fuel combustion.
+- **Data Persistence:** Persisted scenario results, serving as an auditable output layer for all evaluated routes and comparisons.
 
 ## 4. Excluded Components
 
-The following components should be treated as outside the confirmed model unless
-the thesis later adds explicit data, formulas, and validation for them:
+To maintain a clear and feasible scope focused on operational differences, the following components are excluded from the system boundary:
 
-- Manufacturing, maintenance, and end-of-life treatment of trucks, vessels,
-  trailers, containers, and handling equipment.
-- Construction, maintenance, and depreciation of roads, ports, terminals,
-  warehouses, fuel stations, and maritime infrastructure.
-- Port terminal operations as separate activities, including cargo handling,
-  cranes, yard tractors, terminal lighting, reefer plugs, gate operations,
-  inspections, and administrative processing.
-- Cargo consolidation, deconsolidation, warehousing, cross-docking, inventory
-  holding, and stockout effects.
-- Empty repositioning, backhaul imbalance, fleet scheduling, vessel rotation,
-  and truck dispatch constraints.
-- Detailed congestion, waiting time, port dwell time, berth availability, and
-  weather-related delays.
-- Refrigeration, cargo-specific packaging, cargo damage, insurance, security,
-  and customs or tax treatment.
-- Non-greenhouse-gas externalities such as local air pollutants, noise,
-  accidents, road wear, land use, and ecosystem impacts.
-- Demand response, modal market adoption, induced demand, and network-wide
-  equilibrium effects.
-- Upstream fuel production, refining, electricity generation, and distribution,
-  unless the selected emission factors are explicitly documented as
-  well-to-wheel factors.
-- Financial costs that are not explicitly represented by the implemented cost
-  model, such as inventory carrying cost, opportunity cost of time, contract
-  penalties, and service reliability premiums.
-
-Recommended wording:
-
-> The model does not constitute a complete life-cycle assessment of freight
-> transport. It excludes vehicle and infrastructure life cycles, detailed
-> terminal operations, logistics network optimization, non-GHG externalities,
-> and other indirect effects unless they are explicitly embedded in the
-> documented factors used by the model.
+- **Manufacturing:** Vehicle (truck) and vessel manufacturing, maintenance, and end-of-life disposal.
+- **Infrastructure:** Construction, maintenance, and end-of-life of infrastructure (roads, ports, terminals).
+- **Full Life-Cycle:** Well-to-tank (upstream) emissions for fuels, unless explicitly noted; the focus is on tank-to-wheel/wake (operational) emissions.
+- **Cargo Handling:** Emissions from terminal cargo handling equipment (e.g., gantry cranes, reach stackers, yard tractors) unless explicitly modeled.
+- **Externalities:** Accidents, congestion, noise, insurance, theft, and broader social externalities.
+- **Market Dynamics:** Contract-specific freight rates, tariffs, and fluctuating spot market prices (the focus is on operational cost models rather than commercial pricing).
 
 ## 5. Boundary Risks
 
-The following risks should be acknowledged because they can affect interpretation
-even when the computational model is internally consistent.
+The chosen system boundaries introduce certain limitations that must be addressed transparently in the final thesis to prevent misinterpretation:
 
-### 5.1 Asymmetric Inclusion Risk
-
-If a component is included for one transport chain but omitted for the other,
-the comparison may become biased. For example, adding port handling emissions to
-the multimodal chain without adding comparable terminal or loading assumptions
-for the road-only chain would change the meaning of the comparison.
-
-Methodology debt:
-
-- Confirm whether any cost or emissions factor already embeds terminal,
-  handling, or administrative components.
-- Avoid adding chain-specific components unless comparable treatment is possible
-  for both alternatives or the asymmetry is explicitly justified.
-
-### 5.2 Emission Factor Scope Risk
-
-Emission factors may represent different scopes, such as tank-to-wheel,
-well-to-tank, or well-to-wheel emissions. Mixing scopes can produce misleading
-results.
-
-Methodology debt:
-
-- Document whether each fuel and mode emission factor is tank-to-wheel or
-  well-to-wheel.
-- If factor scopes differ, either harmonize them or state the limitation
-  directly in the thesis.
-
-### 5.3 Load Factor and Utilization Risk
-
-Freight emissions and costs are sensitive to assumptions about payload,
-utilization, empty return trips, and vehicle or vessel capacity. A model that
-uses fixed payload assumptions should not be interpreted as a complete fleet
-utilization model.
-
-Methodology debt:
-
-- State the load or cargo mass assumption used in each scenario.
-- Clarify whether empty movements and backhauls are excluded or represented by
-  aggregate factors.
-
-### 5.4 Port Selection Risk
-
-The nearest or modeled port may not be the commercially feasible port. Real
-decisions may depend on service frequency, vessel availability, cargo type,
-terminal capacity, contracts, regulatory constraints, and schedule reliability.
-
-Methodology debt:
-
-- Describe port selection as a scenario rule rather than as a proof of market
-  optimality.
-- Identify any cases where the selected port pair should be interpreted as
-  illustrative rather than operationally definitive.
-
-### 5.5 Temporal and Operational Variability Risk
-
-The model may use static distances, costs, and factors, while real freight
-operations vary over time. Fuel prices, tolls, congestion, vessel schedules,
-weather, and port waiting times can materially change results.
-
-Methodology debt:
-
-- State the temporal validity of input factors where known.
-- Avoid presenting a single model run as a permanent ranking between modes.
-
-### 5.6 Spatial Resolution Risk
-
-Coordinate precision and route provider behavior can affect road distance and
-therefore emissions and costs. This is especially relevant when origin or
-destination points represent municipalities, facilities, centroids, or
-approximated coordinates.
-
-Methodology debt:
-
-- Explain the geographic resolution of origins and destinations.
-- Note that route geometries are modeled representations, not audited GPS traces
-  of actual trips.
-
-### 5.7 Cost Boundary Risk
-
-Cost comparisons can be narrower than logistics decision-making. A modeled
-transport cost may exclude reliability, inventory, contractual, and service
-quality effects that matter to shippers.
-
-Methodology debt:
-
-- State whether the cost model is intended to represent direct transport cost
-  only.
-- Avoid interpreting lower modeled cost as a complete measure of commercial
-  attractiveness unless service-level factors are also modeled.
+- **Understating Port Emissions:** Excluding cargo handling equipment and focusing only on vessel hoteling may understate the total emissions profile of the port nodes in the multimodal chain.
+- **Operational vs. Life-Cycle Scope:** Focusing primarily on operational (tank-to-wheel/wake) emissions does not capture the full life-cycle impacts, potentially missing differences in upstream fuel production emissions between diesel and marine fuels.
+- **Modeled vs. Real-World Routes:** Relying on modeled distances (road routing and generalized sea networks) may differ from actual contracted routes or temporary operational detours.
+- **Averages and Aggregation:** Using average consumption assumptions, typical vessel profiles, or standard truck types may hide significant operational variability caused by weather, vessel age, driver behavior, or specific cargo characteristics.
 
 ## 6. Recommended Thesis Wording
 
-The thesis can use the following consolidated wording, adapted as needed to the
-language and style of the final document:
+The following wording is suggested for inclusion in the methodology chapter of the final thesis:
 
-> The analysis compares two alternative transport chains for the same freight
-> demand: a road-only chain and a road-cabotage-road multimodal chain. The
-> functional unit is the movement of a defined shipment, with fixed cargo mass,
-> origin, and destination, within Brazil. The system boundary includes the
-> operational transport activities explicitly represented by the model: road
-> transport between origin and destination in the road-only alternative, road
-> access and egress to selected ports in the multimodal alternative, and the
-> domestic maritime cabotage movement between those ports. The comparison is
-> based on modeled distances, fuel use, greenhouse-gas emissions, and transport
-> costs where these quantities are calculated from documented formulas and
-> traceable input data.
->
-> The study should not be interpreted as a complete life-cycle assessment or as
-> a full logistics network optimization. It excludes vehicle and infrastructure
-> life cycles, detailed terminal operations, warehousing, inventory effects,
-> empty repositioning, service reliability, non-GHG externalities, and broader
-> market responses unless such elements are explicitly embedded in the factors
-> used by the model. When a component is represented through an aggregate factor
-> rather than modeled directly, this treatment is identified as a modeling
-> assumption. Remaining uncertainties, especially emission factor scope, load
-> factor treatment, port selection feasibility, and temporal variability of cost
-> inputs, are treated as methodological limitations rather than as resolved
-> facts.
-
-For a more cautious limitations paragraph:
-
-> Because the model focuses on operational transport-chain comparison, its
-> results should be interpreted as scenario-based estimates rather than
-> definitive measurements of all environmental and economic consequences of
-> modal choice. The conclusions are strongest for the components explicitly
-> modeled and weakest for components outside the boundary or represented only by
-> aggregate assumptions.
-
+> *"The functional unit for this study is defined as the transportation of a specific mass of containerized cargo between an origin and destination within Brazil. To ensure comparability, results are expressed in absolute terms per shipment, as well as normalized per tonne and per tonne-kilometer (t-km). The system boundary focuses on operational, tank-to-wheel (and tank-to-wake) activities. For the road-only scenario, this encompasses direct truck haulage. For the multimodal scenario, the boundary includes origin road drayage, vessel hoteling during port operations, maritime sailing, and destination road drayage. Consequently, this study excludes upstream life-cycle emissions, infrastructure construction, vehicle manufacturing, and terminal cargo handling equipment emissions. While focusing on operational emissions provides a clear comparative basis for transport efficiency, it must be noted that this approach may underestimate the total life-cycle environmental impact and port-side operational footprint."*
