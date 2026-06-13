@@ -13,6 +13,7 @@
         "**/*venv*": true,
         "**/zz_codex_tmp_dir": true,
         "**/.cache": true,
-        ".pytest_cache": true
+        ".pytest_cache": true,
+        ".tmp_tests": true,
     },
 }
