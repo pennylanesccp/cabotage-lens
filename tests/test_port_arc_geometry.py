@@ -87,8 +87,54 @@ class PortArcGeometryTests(unittest.TestCase):
             n_points=61,
         )
 
-        self.assertGreater(geometry.midpoint_latlon[1], max(origin[1], dest[1]))
+        chord_mid_lon = (origin[1] + dest[1]) / 2.0
+        self.assertGreater(geometry.midpoint_latlon[1], chord_mid_lon)
         self.assertAlmostEqual(geometry.central_angle_radians, CENTRAL_ANGLE_RADIANS, places=9)
+
+    def test_brazil_coastal_chain_bends_east_toward_ocean(self) -> None:
+        ports = {port.key: port for port in load_master_route_ports()}
+        route_keys = [
+            "porto-de-santos",
+            "porto-de-sao-sebastiao",
+            "porto-de-angra-dos-reis",
+            "porto-de-itaguai",
+            "porto-do-rio-de-janeiro",
+            "porto-de-vitoria",
+            "porto-de-salvador",
+            "porto-de-aratu",
+            "porto-de-maceio",
+            "porto-de-suape",
+            "porto-do-recife",
+            "porto-de-cabedelo",
+            "porto-de-natal",
+            "porto-de-fortaleza",
+        ]
+        route_ports = [
+            RouteArcPort(name=ports[key].name, key=ports[key].key, latlon=ports[key].latlon)
+            for key in route_keys
+        ]
+
+        payloads = build_route_arc_debug_payloads(route_ports, n_points_per_leg=61)
+        payload_by_key = {payload.leg_key: payload for payload in payloads}
+
+        for leg_key in (
+            ("porto-de-vitoria", "porto-de-salvador"),
+            ("porto-de-salvador", "porto-de-aratu"),
+            ("porto-de-aratu", "porto-de-maceio"),
+            ("porto-de-maceio", "porto-de-suape"),
+            ("porto-de-suape", "porto-do-recife"),
+            ("porto-do-recife", "porto-de-cabedelo"),
+            ("porto-de-cabedelo", "porto-de-natal"),
+            ("porto-de-natal", "porto-de-fortaleza"),
+        ):
+            payload = payload_by_key[leg_key]
+            chosen = next(candidate for candidate in payload.candidates if candidate.arc_side == payload.chosen_arc_side)
+            chord_mid_lon = (payload.port_a_latlon[1] + payload.port_b_latlon[1]) / 2.0
+            self.assertGreater(
+                chosen.midpoint_latlon[1],
+                chord_mid_lon,
+                f"{leg_key} should bend east/ocean-side of its chord",
+            )
 
     def test_route_arc_chain_keeps_intermediate_ports(self) -> None:
         ports = [

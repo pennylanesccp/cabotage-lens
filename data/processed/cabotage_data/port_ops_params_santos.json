@@ -1,0 +1,127 @@
+{
+  "version": "1.0.0",
+  "scope": "santos_port_ops_moves_based",
+  "references": [
+    "references/Dados Relatorio 2.xlsx",
+    "references/rtg_crane_energy_usage_analysis_2017.pdf",
+    "references/hybrid_rtg_diesel_battery_energy_management_2021.pdf",
+    "references/ship_hoteling_loading_unloading_emissions_se_asia_2022.pdf",
+    "references/brazilian_cabotage_decarbonization_pathways_fuels_2024.pdf"
+  ],
+  "defaults": {
+    "default_port_calls": 2,
+    "t_per_teu_default": 14.0,
+    "default_port_moves_per_call": {
+      "p10": 26.0,
+      "median": 156.0,
+      "p90": 510.6000000000005,
+      "source": "Dados Relatorio 2.xlsx :: RTG Base C1 :: Transporte Semanal non-zero cells"
+    },
+    "diesel_density_kg_per_l": 0.85,
+    "diesel_fuel_type": "diesel",
+    "electricity_kg_co2e_per_kwh": 0.0,
+    "electricity_price_brl_per_kwh": 0.0
+  },
+  "scenarios": {
+    "santos_diesel_heavy": {
+      "description": "Diesel-heavy terminal operations based on Santos workbook baselines.",
+      "equipment": {
+        "sts_quay": {
+          "moves_per_container": 1.0,
+          "diesel_l_per_move": {
+            "p10": 0.0,
+            "median": 0.0,
+            "p90": 0.0,
+            "source": "No explicit STS per-move fuel factor identified in provided references."
+          },
+          "electricity_kwh_per_move": {
+            "p10": 0.0,
+            "median": 0.0,
+            "p90": 0.0,
+            "source": "No explicit STS electric factor identified in provided references."
+          }
+        },
+        "rtg_yard": {
+          "moves_per_container": 4.0,
+          "diesel_l_per_move": {
+            "p10": 0.35,
+            "median": 0.35514808238636364,
+            "p90": 0.3602961647727273,
+            "source": "Dados Relatorio 2.xlsx :: RTG Base C1 / RTG C2"
+          },
+          "electricity_kwh_per_move": {
+            "p10": 0.0,
+            "median": 0.0,
+            "p90": 0.0,
+            "source": "RTG scenarios in workbook are fuel-based (diesel/HVO)."
+          }
+        },
+        "terminal_truck": {
+          "moves_per_container": 2.0,
+          "diesel_l_per_move": {
+            "p10": 0.4875,
+            "median": 0.4946705433238636,
+            "p90": 0.5018410866477272,
+            "source": "Dados Relatorio 2.xlsx :: TT Base C1 / TT C2"
+          },
+          "electricity_kwh_per_move": {
+            "p10": 0.0,
+            "median": 0.0,
+            "p90": 0.0,
+            "source": "No electric terminal-truck factor identified in provided references."
+          }
+        }
+      }
+    },
+    "santos_partially_electrified": {
+      "description": "RTG diesel-per-move reduction proxy from hybrid DG+battery RTG literature.",
+      "equipment": {
+        "sts_quay": {
+          "moves_per_container": 1.0,
+          "diesel_l_per_move": {
+            "p10": 0.0,
+            "median": 0.0,
+            "p90": 0.0,
+            "source": "No explicit STS per-move fuel factor identified in provided references."
+          },
+          "electricity_kwh_per_move": {
+            "p10": 0.0,
+            "median": 0.0,
+            "p90": 0.0,
+            "source": "No explicit STS electric factor identified in provided references."
+          }
+        },
+        "rtg_yard": {
+          "moves_per_container": 4.0,
+          "diesel_l_per_move": {
+            "p10": 0.20789999999999997,
+            "median": 0.2317,
+            "p90": 0.2555,
+            "source": "hybrid_rtg_diesel_battery_energy_management_2021.pdf (27% and 40.6% reduction evidence) applied to RTG Base C1 diesel baseline"
+          },
+          "electricity_kwh_per_move": {
+            "p10": 0.0,
+            "median": 0.0,
+            "p90": 0.0,
+            "source": "Hybrid RTG paper support is used as diesel reduction proxy only."
+          }
+        },
+        "terminal_truck": {
+          "moves_per_container": 2.0,
+          "diesel_l_per_move": {
+            "p10": 0.4875,
+            "median": 0.4946705433238636,
+            "p90": 0.5018410866477272,
+            "source": "Dados Relatorio 2.xlsx :: TT Base C1 / TT C2"
+          },
+          "electricity_kwh_per_move": {
+            "p10": 0.0,
+            "median": 0.0,
+            "p90": 0.0,
+            "source": "No electric terminal-truck factor identified in provided references."
+          }
+        }
+      }
+    }
+  }
+}
