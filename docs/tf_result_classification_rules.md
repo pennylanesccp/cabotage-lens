@@ -6,7 +6,7 @@ This document defines practical rules for interpreting CabotageLens results in t
 
 This is a methodology planning note only. It does not run calculations, report results, or assign classifications to actual routes.
 
-This note should be read together with `docs/tf_assumptions_and_approximations.md`, `docs/tf_validation_plan.md`, and `docs/tf_sensitivity_analysis_plan.md`. The planning files `docs/tf_document_structure.md`, `docs/tf_system_boundary.md`, and `docs/tf_data_reliability_inventory.md` were not present in the repository when this note was prepared.
+This note should be read together with the existing TF planning documents: `docs/tf_validation_plan.md`, `docs/tf_sensitivity_analysis_plan.md`, `docs/tf_assumptions_and_approximations.md`, and `docs/tf_data_reliability_inventory.md`.
 
 ## 2. Core comparison metrics
 

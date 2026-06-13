@@ -6,7 +6,7 @@ Sensitivity analysis tests whether the thesis conclusions survive plausible vari
 
 This document is a planning note only. It does not run sensitivity analysis, report results, or define final thesis coefficients. Any numeric range below is an initial planning range that must be reviewed against sources, validation results, and the final thesis case-study boundary before use.
 
-This plan should be read together with `docs/tf_assumptions_and_approximations.md` and `docs/tf_validation_plan.md`. The planning files `docs/tf_document_structure.md`, `docs/tf_system_boundary.md`, and `docs/tf_data_reliability_inventory.md` were not present in the repository when this plan was prepared.
+This plan should be read together with the existing TF planning documents: `docs/tf_assumptions_and_approximations.md`, `docs/tf_validation_plan.md`, `docs/tf_data_reliability_inventory.md`, and `docs/tf_result_classification_rules.md`, as applicable.
 
 ## 2. Parameter sensitivity table
 

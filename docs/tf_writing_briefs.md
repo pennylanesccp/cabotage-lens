@@ -8,6 +8,9 @@ This is a planning document only. It does not add results, run calculations, cha
 
 The guide is based on the available TF planning and methodology documents:
 
+- `docs/tf_document_structure.md`
+- `docs/tf_system_boundary.md`
+- `docs/tf_data_reliability_inventory.md`
 - `docs/tf_assumptions_and_approximations.md`
 - `docs/tf_validation_plan.md`
 - `docs/tf_sensitivity_analysis_plan.md`
@@ -19,7 +22,7 @@ The guide is based on the available TF planning and methodology documents:
 - `docs/costa_allocation_validation.md`
 - `docs/tf.tex`
 
-The planning files `docs/tf_document_structure.md`, `docs/tf_system_boundary.md`, and `docs/tf_data_reliability_inventory.md` were not present in the repository when this brief was prepared.
+These documents should be read together as the current TF planning set for structure, boundary, data reliability, assumptions, validation, sensitivity, classification, and writing guidance.
 
 ## 2. Section-by-section briefs
 
