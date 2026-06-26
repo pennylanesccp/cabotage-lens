@@ -247,7 +247,7 @@ def apply_fx_brl(
     if converter is None and CurrencyConverter is None:
         raise RuntimeError(
             "currency_converter package is required for FX conversion. "
-            "Install dependencies (pip install -e .) or provide a custom converter."
+            "Install dependencies from requirements.txt or provide a custom converter."
         )
 
     c = converter or CurrencyConverter()

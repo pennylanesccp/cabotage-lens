@@ -24,11 +24,8 @@ if (-not (Test-Path $AppPath)) {
 
 $VenvPython = Join-Path $RepoRoot 'venv\Scripts\python.exe'
 $VenvStreamlit = Join-Path $RepoRoot 'venv\Scripts\streamlit.exe'
-$EditableInstallMarker = Join-Path $RepoRoot 'venv\.cabotagelens-editable.stamp'
-$EditableInstallInputs = @(
-    (Join-Path $RepoRoot 'pyproject.toml'),
-    (Join-Path $RepoRoot 'README.pypi.md')
-)
+$RequirementsInstallMarker = Join-Path $RepoRoot 'venv\.cabotagelens-requirements.stamp'
+$RequirementsPath = Join-Path $RepoRoot 'requirements.txt'
 
 if (-not (Test-Path $VenvPython)) {
     throw "Virtual environment not found at '$VenvPython'. Create it first: python -m venv venv"
@@ -56,23 +53,20 @@ Write-Host "Port: $Port"
 
 Push-Location $RepoRoot
 try {
-    $NeedsEditableInstall = $ForceInstall -or (-not (Test-Path $EditableInstallMarker))
-    if (-not $NeedsEditableInstall) {
-        $MarkerTime = (Get-Item $EditableInstallMarker).LastWriteTimeUtc
-        foreach ($InputPath in $EditableInstallInputs) {
-            if ((Test-Path $InputPath) -and ((Get-Item $InputPath).LastWriteTimeUtc -gt $MarkerTime)) {
-                $NeedsEditableInstall = $true
-                break
-            }
+    $NeedsRequirementsInstall = $ForceInstall -or (-not (Test-Path $RequirementsInstallMarker))
+    if (-not $NeedsRequirementsInstall -and (Test-Path $RequirementsPath)) {
+        $MarkerTime = (Get-Item $RequirementsInstallMarker).LastWriteTimeUtc
+        if ((Get-Item $RequirementsPath).LastWriteTimeUtc -gt $MarkerTime) {
+            $NeedsRequirementsInstall = $true
         }
     }
 
-    if ($NeedsEditableInstall) {
-        Write-Host "Installing project in editable mode..."
-        & $VenvPython -m pip install -e .
-        Set-Content -Path $EditableInstallMarker -Value (Get-Date -Format o) -Encoding ascii
+    if ($NeedsRequirementsInstall) {
+        Write-Host "Installing dependencies from requirements.txt..."
+        & $VenvPython -m pip install -r $RequirementsPath
+        Set-Content -Path $RequirementsInstallMarker -Value (Get-Date -Format o) -Encoding ascii
     } else {
-        Write-Host "Skipping editable install (metadata unchanged). Use -ForceInstall to reinstall."
+        Write-Host "Skipping dependency install (requirements unchanged). Use -ForceInstall to reinstall."
     }
 
     if (Test-Path $VenvStreamlit) {

@@ -139,7 +139,7 @@ Explain how the methodology is implemented in the repository without turning the
 
 **Required evidence**
 
-- Repository structure: `app/`, `scripts/`, `modules/`, `data/`, `supabase/`, `references/`.
+- Repository structure: `app/`, `scripts/`, `modules/`, `data/`, `supabase/`, `docs/`, and local-only `docs/references/`.
 - `docs/supabase_postgres.md` for persistence context if needed.
 - Current implementation notes from `docs/tf.tex`.
 - Runtime assumptions from `docs/tf_assumptions_and_approximations.md`.

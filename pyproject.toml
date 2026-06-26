@@ -1,10 +1,10 @@
-# pip install -e .
+# Secondary package metadata; install/deploy from requirements.txt.
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "carbon-footprint"
+name = "cabotage-lens"
 version = "2.0.8.7"
 description = "CabotageLens multimodal freight assessment of logistics cost and carbon footprint in Brazilian freight transport."
 requires-python = ">=3.10"

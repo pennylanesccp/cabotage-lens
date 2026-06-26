@@ -2,8 +2,8 @@
 
 ## Sources Reviewed
 
-- `references/core/brazilian-cabotage-competitiveness-supernetwork-2024.pdf`
-- `references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
+- `docs/references/core/brazilian-cabotage-competitiveness-supernetwork-2024.pdf`
+- `docs/references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
 
 ## Assumptions Used in Code
 

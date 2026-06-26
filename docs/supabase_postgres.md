@@ -94,7 +94,7 @@ Optional log archival:
 SUPABASE_URL = "https://your-project-ref.supabase.co"
 SUPABASE_KEY = "your-anon-or-service-role-key"
 # SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
-SUPABASE_STORAGE_LOGS_BUCKET = "carbon-logs"
+SUPABASE_STORAGE_LOGS_BUCKET = "cabotage-lens-logs"
 LOG_LEVEL = "INFO"
 LOG_ARCHIVE_ENABLED = true
 ```

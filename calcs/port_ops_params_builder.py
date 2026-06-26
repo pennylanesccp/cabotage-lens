@@ -8,7 +8,7 @@ Build moves-based port operations parameters from local references.
 Outputs:
 - data/processed/cabotage_data/port_ops_params_santos.json
 
-Reference scope is intentionally restricted to files in `references/`.
+Reference scope is intentionally restricted to local-only files in `docs/references/`.
 """
 
 from __future__ import annotations
@@ -20,10 +20,10 @@ from typing import Any
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-REFERENCE_XLSX = REPO_ROOT / "references" / "Dados Relatorio 2.xlsx"
+REFERENCE_XLSX = REPO_ROOT / "docs" / "references" / "core" / "Dados Relatorio 2.xlsx"
 OUTPUT_JSON = REPO_ROOT / "data" / "processed" / "cabotage_data" / "port_ops_params_santos.json"
 
-# From references/hybrid_rtg_diesel_battery_energy_management_2021.pdf:
+# From docs/references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf:
 # - 40.6% reduction in operation cost and CO2 emissions (case study result)
 # - 27% result reported in simulation discussion
 HYBRID_REDUCTION_P10 = 0.406
@@ -153,11 +153,11 @@ def build_payload() -> dict[str, Any]:
         "version": "1.0.0",
         "scope": "santos_port_ops_moves_based",
         "references": [
-            "references/Dados Relatorio 2.xlsx",
-            "references/rtg_crane_energy_usage_analysis_2017.pdf",
-            "references/hybrid_rtg_diesel_battery_energy_management_2021.pdf",
-            "references/ship_hoteling_loading_unloading_emissions_se_asia_2022.pdf",
-            "references/brazilian_cabotage_decarbonization_pathways_fuels_2024.pdf",
+            "docs/references/core/Dados Relatorio 2.xlsx",
+            "docs/references/support/rtg-crane-energy-usage-analysis-2017.pdf",
+            "docs/references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf",
+            "docs/references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf",
+            "docs/references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf",
         ],
         "defaults": {
             "default_port_calls": 2,

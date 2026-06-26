@@ -1,7 +1,7 @@
 {
   "summary": {
     "workbook": {
-      "workbook_path": "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\carbon-footprint\\references\\Dados Relatorio 2.xlsx",
+      "workbook_path": "docs/references/core/Dados Relatorio 2.xlsx",
       "pair_count": 21,
       "city_count": 6,
       "weekly_road_kg_co2e": 7614970.510653,

@@ -1,10 +1,15 @@
 .env
 .env.*
-!.env.example
 *.env
+!.env.example
+!.env.*.example
 *.pem
 *.key
 *.crt
+*.token
+*.credentials
+credentials.json
+token.json
 logs
 
 .streamlit/secrets.toml
@@ -58,5 +63,10 @@ Desktop.ini
 
 tmp/
 temp/
+local/
+outputs/
 
+# Local-only reference papers and workbooks. Tracked metadata lives in docs/.
+*.pdf
+docs/references/
 references/

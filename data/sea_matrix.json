@@ -2449,10 +2449,10 @@
     "weighting": "tonne_nm",
     "segment_cargo_rule": "cumulative net cargo after each stop, applied to the following leg",
     "inputs": {
-      "sea_matrix_path": "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\carbon-footprint\\data\\sea_matrix.json",
-      "voyages_csv_path": "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\carbon-footprint\\.cache\\supabase_data\\data\\processed\\cabotage_data\\tabular\\antaq_voyages.csv",
-      "stops_csv_path": "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\carbon-footprint\\.cache\\supabase_data\\data\\processed\\cabotage_data\\tabular\\antaq_voyage_stops.csv",
-      "mrv_json_path": "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\carbon-footprint\\.cache\\supabase_data\\data\\processed\\cabotage_data\\mrv_average_efficiency_by_imo.json"
+      "sea_matrix_path": "data/sea_matrix.json",
+      "voyages_csv_path": ".cache/supabase_data/data/processed/cabotage_data/tabular/antaq_voyages.csv",
+      "stops_csv_path": ".cache/supabase_data/data/processed/cabotage_data/tabular/antaq_voyage_stops.csv",
+      "mrv_json_path": ".cache/supabase_data/data/processed/cabotage_data/mrv_average_efficiency_by_imo.json"
     },
     "segment_summary": {
       "candidate_segments": 5473,

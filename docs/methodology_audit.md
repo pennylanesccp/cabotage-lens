@@ -6,7 +6,7 @@ Audit date: 2026-03-04.
 
 This audit checks the current pipeline against:
 
-- repo references under `references/`
+- local-only references under `docs/references/`
 - EU MRV workbook source fields used in preprocessing
 - EMEP/EEA Guidebook 2023 assumptions already used in `docs/hoteling_model.md`
 
@@ -20,7 +20,7 @@ Notes:
 - When full text was not machine-readable, classification below relies on filename/title metadata and should be treated as provisional.
 - "Cited/used in docs" means explicit file-level citation in current repo docs.
 
-### `references/core/seagoing-ships-at-berth-fuel-emissions-survey-2009.pdf`
+### `docs/references/core/seagoing-ships-at-berth-fuel-emissions-survey-2009.pdf`
 
 - Covers:
   - At-berth fuel consumption and associated emissions from seagoing ships.
@@ -32,7 +32,7 @@ Notes:
 - Recommendation:
   - Cite in `docs/hoteling_model.md` limitations section (boilers/auxiliary variability by port).
 
-### `references/low-use/biodiesel-brazil-history-environment-review-2017.pdf`
+### `docs/references/low-use/biodiesel-brazil-history-environment-review-2017.pdf`
 
 - Covers:
   - Biodiesel evolution and environmental context in Brazil.
@@ -43,7 +43,7 @@ Notes:
 - Recommendation:
   - Keep as background; use only if adding biodiesel blend sensitivity scenarios.
 
-### `references/core/brazilian-coastal-shipping-decarbonization-2022.pdf`
+### `docs/references/core/brazilian-coastal-shipping-decarbonization-2022.pdf`
 
 - Covers:
   - Brazilian coastal shipping growth and decarbonization framing.
@@ -54,7 +54,7 @@ Notes:
 - Recommendation:
   - Add explicit file citation in `README.md` and in scenario framing docs.
 
-### `references/core/brazilian-cabotage-competitiveness-supernetwork-2024.pdf`
+### `docs/references/core/brazilian-cabotage-competitiveness-supernetwork-2024.pdf`
 
 - Covers:
   - Multimodal supernetwork competitiveness for Brazilian cabotage.
@@ -65,7 +65,7 @@ Notes:
 - Recommendation:
   - Cite in methodology rationale section as external validation context.
 
-### `references/low-use/brazilian-cabotage-user-satisfaction-assessment-2022.pdf`
+### `docs/references/low-use/brazilian-cabotage-user-satisfaction-assessment-2022.pdf`
 
 - Covers:
   - User satisfaction in Brazilian container cabotage.
@@ -76,7 +76,7 @@ Notes:
 - Recommendation:
   - Keep for background and discussion, not core model calibration.
 
-### `references/core/short-sea-container-co2-efficiency-comparison-2019.pdf`
+### `docs/references/core/short-sea-container-co2-efficiency-comparison-2019.pdf`
 
 - Covers:
   - Comparative CO2 efficiency in short-sea container transport.
@@ -87,7 +87,7 @@ Notes:
 - Recommendation:
   - Cite in `docs/mrv_container_efficiency.md` discussion of class medians.
 
-### `references/Dados Relatorio 2.xlsx`
+### `docs/references/core/Dados Relatorio 2.xlsx`
 
 - Covers:
   - Scenario workbook with sheets for emissions factors, road/cabotage scenarios, and terminal operations.
@@ -98,7 +98,7 @@ Notes:
 - Recommendation:
   - Keep as processed-input source through `calcs/port_ops_params_builder.py`; add periodic refresh checks if workbook revisions are added.
 
-### `references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
+### `docs/references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
 
 - Covers:
   - Decarbonization pathways and marine fuel comparisons by filename.
@@ -109,7 +109,7 @@ Notes:
 - Recommendation:
   - Cite when introducing marine fuel-type scenarios beyond current default.
 
-### `references/support/eu-mrv-ship-energy-efficiency-framework-review-2025.pdf`
+### `docs/references/support/eu-mrv-ship-energy-efficiency-framework-review-2025.pdf`
 
 - Covers:
   - EU MRV data-based review of ship energy efficiency framework.
@@ -120,7 +120,7 @@ Notes:
 - Recommendation:
   - Add explicit citation to `docs/mrv_container_efficiency.md` under method validity.
 
-### `references/support/short-sea-shipping-external-cost-internalization-2023.pdf`
+### `docs/references/support/short-sea-shipping-external-cost-internalization-2023.pdf`
 
 - Covers:
   - External-cost internalization effects in short sea shipping.
@@ -131,7 +131,7 @@ Notes:
 - Recommendation:
   - Keep for future policy-scenario module; not required for current TTW model.
 
-### `references/low-use/fast-shapley-approximation-routing-ml-models-2025.pdf`
+### `docs/references/low-use/fast-shapley-approximation-routing-ml-models-2025.pdf`
 
 - Covers:
   - Shapley approximation for routing allocations.
@@ -142,7 +142,7 @@ Notes:
 - Recommendation:
   - Keep as future-work anchor; no immediate runtime integration.
 
-### `references/support/lifecycle-cost-alt-marine-fuels-short-sea-2020.pdf`
+### `docs/references/support/lifecycle-cost-alt-marine-fuels-short-sea-2020.pdf`
 
 - Covers:
   - Life-cycle cost assessment of alternative marine fuels in short-sea shipping.
@@ -153,7 +153,7 @@ Notes:
 - Recommendation:
   - Cite in future work for WTW expansion beyond TTW-only default.
 
-### `references/support/maritime-fuels-lca-review-insights-gaps-2024.pdf`
+### `docs/references/support/maritime-fuels-lca-review-insights-gaps-2024.pdf`
 
 - Covers:
   - LCA review of maritime fuels, gaps, and recommendations.
@@ -164,7 +164,7 @@ Notes:
 - Recommendation:
   - Use to define WTW methodological guardrails before adding fuel pathway comparisons.
 
-### `references/support/dry-bulk-shipping-carbon-footprint-mrv-assessment-2019.pdf`
+### `docs/references/support/dry-bulk-shipping-carbon-footprint-mrv-assessment-2019.pdf`
 
 - Covers:
   - Early MRV-based carbon footprint assessment methodology.
@@ -175,7 +175,7 @@ Notes:
 - Recommendation:
   - Cite in `docs/mrv_container_efficiency.md` as methodological precedent.
 
-### `references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf`
+### `docs/references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf`
 
 - Covers:
   - Hotelling and loading/unloading emissions in port operations.
@@ -186,7 +186,7 @@ Notes:
 - Recommendation:
   - Keep as contextual validation for port-ops granularity gaps.
 
-### `references/support/rtg-crane-energy-usage-analysis-2017.pdf`
+### `docs/references/support/rtg-crane-energy-usage-analysis-2017.pdf`
 
 - Covers:
   - RTG energy usage profile and operational efficiency behavior.
@@ -197,7 +197,7 @@ Notes:
 - Recommendation:
   - Use for future non-diesel RTG calibration once site-specific electrical factors are available.
 
-### `references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf`
+### `docs/references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf`
 
 - Covers:
   - Hybrid RTG energy management with reported diesel/CO2 reduction outcomes.
@@ -208,7 +208,7 @@ Notes:
 - Recommendation:
   - Keep reduction range explicit and scenario-bounded (no single deterministic value).
 
-### `references/support/latin-america-port-maritime-emissions-awareness-2014.pdf`
+### `docs/references/support/latin-america-port-maritime-emissions-awareness-2014.pdf`
 
 - Covers:
   - Port and maritime energy/emissions awareness context in Latin America and the Caribbean.
@@ -219,7 +219,7 @@ Notes:
 - Recommendation:
   - Keep as background reference for policy/context sections.
 
-### `references/desktop.ini`
+### `docs/references/desktop.ini`
 
 - Covers:
   - Windows metadata file.
@@ -312,9 +312,9 @@ What it does:
 Assumptions audit:
 
 - Moves-based equipment aggregation (`quay moves` -> RTG/TT multipliers).
-  - Status: supported by `references/Dados Relatorio 2.xlsx` structure and transparent in params artifact.
+  - Status: supported by `docs/references/core/Dados Relatorio 2.xlsx` structure and transparent in params artifact.
 - RTG partially-electrified scenario via diesel-reduction proxy.
-  - Status: supported as bounded proxy by `references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf`.
+  - Status: supported as bounded proxy by `docs/references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf`.
 - STS factor currently zero placeholder.
   - Status: pragmatic placeholder due missing direct per-move value in provided references.
 
@@ -399,7 +399,7 @@ Assumptions audit:
 
 - Add explicit uncertainty reporting in UI/CLI using `p10-p90` bands, not only medians.
 - Add an optional scenario switch for marine fuel type (`vlsfo` vs `mgo`) in evaluator inputs, with factor sourcing from `modules/fuel/emissions.py`.
-- Add a validation notebook comparing model outputs with `references/Dados Relatorio 2.xlsx` scenarios.
+- Add a validation notebook comparing model outputs with `docs/references/core/Dados Relatorio 2.xlsx` scenarios.
 
 ## Future work
 

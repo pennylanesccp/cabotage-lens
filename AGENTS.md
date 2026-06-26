@@ -6,7 +6,7 @@ Mission: Maintain CabotageLens as an academically defensible Streamlit Cloud app
 
 ## Project Overview
 
-CabotageLens is a multimodal cost and carbon-footprint assessment tool for Brazilian freight transport.
+CabotageLens is a multimodal cost and carbon footprint assessment tool for Brazilian freight transport.
 
 Core runtime flow:
 
@@ -24,7 +24,7 @@ Repository layout:
 - `data/` - tracked static inputs and processed non-database artifacts.
 - `supabase/migrations/` - Supabase Postgres schema migrations.
 - `docs/` - architecture, methodology, deployment, and academic notes.
-- `references/` - supporting papers, reports, and research artifacts.
+- `docs/references/` - local-only supporting papers, reports, and workbooks; ignored by Git.
 - `tests/` - targeted tests with mocked external boundaries.
 
 ## Product Direction
@@ -45,6 +45,7 @@ CabotageLens is a Streamlit Cloud app with local-development support.
 - Do not require `pyproject.toml` for normal install, deploy, or version management.
 - Do not update `[project].version` in `pyproject.toml` unless the user explicitly asks for it.
 - Never commit secrets, `.streamlit/secrets.toml`, API keys, credentials, private keys, personal local config, or real private data.
+- Never commit PDF reference papers or private benchmark workbooks restored under `docs/references/`.
 - Supabase Postgres is the only durable database backend.
 - Supabase Storage is optional and only used for configured archival/data assets.
 - Runtime logs should go to stdout/stderr by default.

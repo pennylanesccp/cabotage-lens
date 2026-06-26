@@ -21,7 +21,7 @@ from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO
 
 _log = get_logger(__name__)
 
-DEFAULT_GUSTAVO_WORKBOOK_PATH = Path("references/Dados Relatorio 2.xlsx")
+DEFAULT_GUSTAVO_WORKBOOK_PATH = Path("docs/references/core/Dados Relatorio 2.xlsx")
 DEFAULT_BENCHMARK_CSV_PATH = Path("data/processed/cabotage_data/gustavo_excel_benchmark.csv")
 DEFAULT_BENCHMARK_JSON_PATH = Path("data/processed/cabotage_data/gustavo_excel_benchmark_summary.json")
 

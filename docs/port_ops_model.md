@@ -14,13 +14,13 @@ Runtime uses only processed artifact data from:
 
 - `data/processed/cabotage_data/port_ops_params_santos.json`
 
-## Source References Used (repo-local only)
+## Source References Used (local-only, not tracked)
 
-- `references/Dados Relatorio 2.xlsx`
-- `references/support/rtg-crane-energy-usage-analysis-2017.pdf`
-- `references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf`
-- `references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf`
-- `references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
+- `docs/references/core/Dados Relatorio 2.xlsx`
+- `docs/references/support/rtg-crane-energy-usage-analysis-2017.pdf`
+- `docs/references/support/hybrid-rtg-diesel-battery-energy-management-2021.pdf`
+- `docs/references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf`
+- `docs/references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
 
 ## Method
 

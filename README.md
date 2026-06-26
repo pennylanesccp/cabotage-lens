@@ -2,6 +2,8 @@
 
 CabotageLens is a multimodal freight comparison toolkit for Brazil, focused on road-only versus cabotage-assisted scenarios.
 
+Public repository: `https://github.com/pennylanesccp/cabotage-lens`
+
 The current architecture is intentionally simple:
 
 - Supabase Postgres is the only durable database.
@@ -27,6 +29,7 @@ For a given origin, destination, and cargo profile, the toolkit:
 - `data/` tracked static inputs and processed non-database artifacts
 - `supabase/migrations/` SQL migrations for the Postgres schema
 - `docs/` supporting architecture and methodology notes
+- `docs/references/` local-only reference papers and workbooks, ignored by Git
 - `tests/` unit tests
 
 ## Persistence model
@@ -72,7 +75,7 @@ LOCATIONIQ_PATS = [
 SUPABASE_URL = "https://your-project-ref.supabase.co"
 SUPABASE_KEY = "your-anon-or-service-role-key"
 # SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
-SUPABASE_STORAGE_LOGS_BUCKET = "carbon-logs"
+SUPABASE_STORAGE_LOGS_BUCKET = "cabotage-lens-logs"
 SUPABASE_STORAGE_DATA_BUCKET = "cabotage-lens"
 SUPABASE_STORAGE_DATA_ENABLED = true
 SUPABASE_STORAGE_DATA_PREFER_REMOTE = true
@@ -97,11 +100,17 @@ Use `.streamlit/example_secrets.toml` as the local template.
 - If both Turnstile secrets are absent, the app falls back to password-only mode. This keeps local development simple while preserving the same access gate flow.
 - Do not commit secrets. For local runs, store them in `.streamlit/secrets.toml`. For Streamlit Cloud, add them in the app Secrets settings.
 
+## Local reference papers
+
+Reference PDFs and private benchmark workbooks are intentionally not tracked in Git. Keep them under `docs/references/` in local clones only. The tracked files `docs/references.bib` and `docs/references_renames.md` preserve the citation and filename map without publishing the papers.
+
+To restore a local research workstation, copy the private reference bundle back to `docs/references/` from a private backup or institution-approved source. Do not stage those files. The repository `.gitignore` ignores `docs/references/` and `*.pdf`, so `git status --short --untracked-files=all` should not list restored papers.
+
 ## Install
 
 ```powershell
 python -m venv venv
-.\venv\Scripts\pip.exe install -e .
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ## Run CabotageLens
@@ -110,7 +119,7 @@ python -m venv venv
 .\run_streamlit.ps1
 ```
 
-The app reads `.streamlit/secrets.toml`, shows the Router and Heatmap pages after the access gate succeeds, connects to Supabase Postgres, and keeps runtime logs on stdout/stderr. If `LOG_ARCHIVE_ENABLED=true` and Storage credentials are configured, it also archives compressed JSONL logs to Supabase Storage.
+The app reads `.streamlit/secrets.toml` for local runs, shows the Router and Heatmap pages after the access gate succeeds, connects to Supabase Postgres, and keeps runtime logs on stdout/stderr. In Streamlit Community Cloud, set the same values through the app Secrets settings. If `LOG_ARCHIVE_ENABLED=true` and Storage credentials are configured, it also archives compressed JSONL logs to Supabase Storage.
 
 When `SUPABASE_STORAGE_DATA_BUCKET` is configured, runtime loaders prefer the bucket copy of processed cabotage artifacts and cache them locally under `.cache/supabase_data/`.
 
@@ -179,6 +188,9 @@ Apply these SQL files to Supabase:
 - `supabase/migrations/20260309_000001_carbon_footprint_core.sql`
 - `supabase/migrations/20260310_000002_bulk_heatmap_runs.sql`
 - `supabase/migrations/20260312_000003_bulk_pipeline_perf.sql`
+- `supabase/migrations/20260313_000004_normalized_location_route_bulk_schema.sql`
+- `supabase/migrations/20260324_000005_bulk_failure_diagnostics.sql`
+- `supabase/migrations/20260327_000006_antaq_voyage_tables.sql`
 
 ## Tests
 
