@@ -2,6 +2,12 @@
 
 This document lists proposed changes or additions to the TF/report/article based on the literature audit. These are recommendations only and have not been applied to the codebase or main documentation.
 
+## Second-pass summary
+
+* **What became stronger**: The theoretical frameworks and boundary definitions (e.g., TTW vs WTW, CO2 vs CO2e) have been clearly mapped to specific papers in the matrix, establishing a strong structural foundation for the thesis methodology.
+* **What remains uncertain**: Because the PDFs could not be parsed in the current environment, all specific quantitative values (emissions factors, utilization rates, average distances) remain unverified. The strength of support for all claims has been downgraded to `Weak (Evidence missing)` until the numbers and page references can be extracted manually.
+* **What should be reviewed next**: A manual review of the five core papers is required to extract the exact tables and figures for fuel emissions factors, truck emissions baselines, and cabotage utilization rates.
+
 ## Must Include Before Final Report
 
 * **Recommendation**: Explicitly specify CO2 vs CO2e in all outputs and text.
