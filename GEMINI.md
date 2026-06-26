@@ -1,46 +1,47 @@
-# GEMINI.md - CabotageLens repo instructions
+# GEMINI.md - CabotageLens repo instructions (Literature Audit Branch)
 
 Follow `AGENTS.md` for the full repository guidance.
 
 CabotageLens is a Streamlit Cloud-oriented academic app for Brazilian freight
-transport comparison:
+transport comparison.
 
-- Streamlit orchestrates the app UI, access gate, session state, and result display.
-- `modules/` contains the reusable domain logic for routing, cabotage, fuel,
-  emissions, costs, persistence, data loading, and logging.
-- Supabase Postgres is the only durable database backend.
-- Supabase Storage is optional for archived logs and runtime data assets when
-  configured.
-- Local files under `data/` are useful for tracked static inputs, development
-  fixtures, and deterministic generated artifacts.
-- `requirements.txt` is the dependency source of truth for local development and
-  Streamlit Cloud deployment.
+## Branch Workflow: Literature Audit (`lit/paper-intersections`)
 
-Do not use `pyproject.toml` as the normal install, deploy, packaging, or version
-management workflow. Do not update `[project].version` unless explicitly
-requested. Do not require `pip install -e .` for normal usage.
+This branch is dedicated to literature review and audit work comparing local reference papers against the current methodology, validation documents, assumptions, and thesis structure.
 
-Keep changes small, maintainable, Windows-friendly, Streamlit Cloud-compatible,
-and consistent with the existing academic product surface. Do not introduce
-Docker, Poetry, PDM, uv, background workers, queues, schedulers, new cloud
-infrastructure, or extra services unless explicitly requested.
+### Scope of Work and Directory Restrictions
 
-This is an academic naval engineering project. Treat methodology changes as
-research work, not just app behavior:
+- **Editing is restricted to**: Only files under `docs/literature_audit/`.
+- **Exception for initialization**: Updating `GEMINI.md` itself is allowed during initialization.
+- **Do not edit anything else**. The assistant must not edit source code, data files, existing methodology docs, validation docs, config, or assets outside of `docs/literature_audit/`.
 
-- Prefer observed/concrete data over assumptions whenever available.
-- Keep units explicit and dimensionally consistent.
-- Do not invent coefficients, constants, fuel prices, emissions factors, vessel
-  parameters, or methodology claims.
-- Make approximations, filters, fallbacks, and data losses explicit when they
-  affect interpretation.
-- Preserve a citation trail in docs, comments, or metadata when practical.
-- Avoid false precision in displayed results.
+### Read Permissions
 
-Use `CabotageLens` when referring to the app. Use `road-only route`,
-`cabotage-assisted route`, `first-mile`, `sea leg`, and `last-mile` consistently
-when discussing route components.
+The assistant may freely read the rest of the repository for context, including:
+- `docs/`
+- `docs/validation/`
+- `docs/references.bib`
+- `docs/references_renames.md`
+- Local-only files under `docs/references/` (if present locally)
+- Source code, data files, and configuration files (for understanding context only)
+
+### Important Constraints for Literature Audit
+
+- **Do not modify source code** or database schemas.
+- **Do not modify data/model files**.
+- **Do not modify metadata or config files**: Do not edit `README.md`, `AGENTS.md`, `.gitignore`, `requirements.txt`, `pyproject.toml`, app files under `app/`, scripts under `scripts/`, modules under `modules/`, or tests under `tests/`.
+- **Do not edit existing validation results** or TF methodology documents directly.
+- **Do not edit existing validation docs directly**.
+- **Do not commit sensitive/local-only files**: Never commit PDFs, private workbooks, `.env`, `.streamlit/secrets.toml`, tokens, credentials, or local caches.
+- **Local-Only Files**: Reference PDFs and private benchmark workbooks under `docs/references/` are local-only and must remain ignored by Git.
+- **Outputs**: Future outputs should be documentation-only files under `docs/literature_audit/`.
+- **Purpose of Audit**: Identify intersections between local reference papers and the thesis, citation gaps, methodology caveats, recommended inclusions, and possible future changes, but do not apply those changes to code or existing docs directly.
+- **Units and Dimensions**: Preserve units and dimensional consistency.
+- **Emissions Definitions**: Distinguish Tank-to-Wake (TTW), Well-to-Wake (WTW), Life Cycle Assessment (LCA), CO2, and CO2e. Do not conflate these.
+- **Academic Rigor**: Do not invent coefficients, emissions factors, fuel prices, vessel parameters, route distances, paper claims, or methodology claims.
+- **Defensibility**: Keep outputs defensible for a naval engineering academic project.
 
 When handing off a commit instead of creating it directly, end the final response
 with only the Conventional Commit message text. Do not include a PowerShell
 assignment, `git add`, `git commit`, or any other shell commands.
+
