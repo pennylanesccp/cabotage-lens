@@ -68,6 +68,7 @@ The chosen system boundaries introduce certain limitations that must be addresse
 - **Understating Port Emissions:** Excluding cargo handling equipment and focusing only on vessel hoteling may understate the total emissions profile of the port nodes in the multimodal chain.
 - **Operational vs. Life-Cycle Scope:** Focusing primarily on operational (tank-to-wheel/wake) emissions does not capture the full life-cycle impacts, potentially missing differences in upstream fuel production emissions between diesel and marine fuels.
 - **Modeled vs. Real-World Routes:** Relying on modeled distances (road routing and generalized sea networks) may differ from actual contracted routes or temporary operational detours.
+- **Maritime Distance Provenance:** Sea-leg distance source affects route confidence and should be shown beside results when available. Route-quality warnings, including the current `50 km` minimum meaningful sea-leg threshold, are interpretation heuristics only; they are not model formulas, hard validation rules, or route optimization constraints.
 - **Averages and Aggregation:** Using average consumption assumptions, typical vessel profiles, or standard truck types may hide significant operational variability caused by weather, vessel age, driver behavior, or specific cargo characteristics.
 - **Cost Boundary:** Model cost estimates should not be interpreted as complete freight quotes because many commercial cost components are outside the current system boundary.
 

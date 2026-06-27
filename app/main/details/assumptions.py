@@ -6,6 +6,74 @@ import pandas as pd
 import streamlit as st
 
 from app.main.utils.formatters import safe_float
+from modules.multimodal.distance_provenance import maritime_distance_source_type
+
+_SOURCE_TYPE_LABELS = {
+    "seamatrix": "SeaMatrix distance",
+    "haversine_fallback": "Fallback estimate",
+    "manual_override": "Manual override",
+    "external_reference": "External reference",
+}
+
+
+def _clean_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _maritime_source_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
+    sea = results.get("multimodal", {}).get("sea", {})
+    if not isinstance(sea, Mapping):
+        return []
+
+    provenance = sea.get("distance_provenance")
+    if not isinstance(provenance, Mapping):
+        provenance = {}
+
+    source = _clean_text(provenance.get("source") or sea.get("distance_source"))
+    raw_source_type = _clean_text(provenance.get("source_type"))
+    source_type = None
+    if source or raw_source_type:
+        normalized = maritime_distance_source_type(source, source_type=raw_source_type)
+        source_type = None if normalized == "unknown" else normalized
+
+    if not source and not source_type:
+        return []
+
+    label = _SOURCE_TYPE_LABELS.get(source_type or "", "Maritime distance source")
+    if source_type and source:
+        value = f"{label} ({source_type}): {source}"
+    elif source_type:
+        value = f"{label} ({source_type})"
+    else:
+        value = source or "n/a"
+
+    rows = [
+        (
+            "Maritime distance source",
+            "Source used for the sea-leg distance. Distance source affects route confidence, not the emission factor itself.",
+            value,
+        )
+    ]
+
+    caution_by_type = {
+        "haversine_fallback": "Fallback estimate; treat route confidence as lower until checked against corridor evidence.",
+        "manual_override": "Manual override; review documented provenance before route-level conclusions.",
+        "external_reference": "External reference; confirm it matches the selected ports and corridor boundary.",
+    }
+    caution = caution_by_type.get(source_type or "")
+    if caution:
+        rows.append(
+            (
+                "Maritime distance note",
+                "Short caution for distance sources that affect route-confidence interpretation.",
+                caution,
+            )
+        )
+
+    return rows
 
 
 def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -> pd.DataFrame:
@@ -44,6 +112,7 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
             "Operational TTW emission factor applied per kilogram of marine fuel burned.",
             f"{safe_float(inputs.get('marine_ef_kg_per_kg')):.4f} kg CO2e/kg",
         ),
+        *_maritime_source_rows(results),
         (
             "Emissions boundary",
             "Displayed emissions use the current operational TTW CO2e boundary unless an explicit override says otherwise.",

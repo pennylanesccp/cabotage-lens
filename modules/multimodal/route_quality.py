@@ -7,6 +7,8 @@ from typing import Any, Mapping
 
 from modules.multimodal.distance_provenance import is_maritime_fallback_source
 
+# Warning heuristic only. This is not a validation rule, model formula, or route
+# optimization constraint.
 MIN_MEANINGFUL_SEA_LEG_KM = 50.0
 
 

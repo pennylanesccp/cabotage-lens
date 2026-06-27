@@ -1,4 +1,5 @@
 import csv
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -296,6 +297,25 @@ class Batch001BValidationTests(unittest.TestCase):
 
         self.assertEqual(header, ALL_OUTPUT_FIELDS)
         self.assertEqual(data[0], "TF-VAL-001B-TEST")
+
+    def test_tracked_batch_001b_artifact_schema_matches_output_fields(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        template_path = repo_root / "docs" / "validation" / "tf_validation_batch_001b_output_template.csv"
+        output_csv_path = repo_root / "docs" / "validation" / "tf_validation_batch_001b_output.csv"
+        output_json_path = repo_root / "docs" / "validation" / "tf_validation_batch_001b_output.json"
+
+        with template_path.open("r", encoding="utf-8", newline="") as handle:
+            template_header = next(csv.reader(handle))
+        with output_csv_path.open("r", encoding="utf-8", newline="") as handle:
+            output_header = next(csv.reader(handle))
+        with output_json_path.open("r", encoding="utf-8") as handle:
+            output_rows = json.load(handle)
+
+        self.assertEqual(template_header, ALL_OUTPUT_FIELDS)
+        self.assertEqual(output_header, ALL_OUTPUT_FIELDS)
+        self.assertTrue(output_rows)
+        for row in output_rows:
+            self.assertEqual(list(row.keys()), ALL_OUTPUT_FIELDS)
 
 
 if __name__ == "__main__":

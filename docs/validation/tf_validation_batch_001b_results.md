@@ -1,8 +1,10 @@
 # TF Validation Batch 001B Results
 
-Execution date: 2026-06-26
+Original planned export date: 2026-06-26
 
-Git commit SHA: `2c68d8bcc6d34bac8151dea3e4ae67527f9e899e`
+Schema refresh date: 2026-06-27
+
+Original planned export commit SHA: `2c68d8bcc6d34bac8151dea3e4ae67527f9e899e`
 
 Batch source config: `docs/validation/tf_validation_batch_001b_config.json`
 
@@ -23,6 +25,8 @@ The run produced eight artifact rows:
 
 The planned rows preserve documented reference candidates where they already exist, but they are not presented as executed model results. Cost and emissions fields remain empty for every Batch 001B row because no model evaluation was performed.
 
+The CSV and JSON artifacts were refreshed on 2026-06-27 in non-executing mode so their fields align with the current `ALL_OUTPUT_FIELDS` schema, including maritime distance unit, normalized source type, notes, optional bounds, and original maritime source type.
+
 Original Batch 001 outputs remain preserved in `docs/validation/tf_validation_batch_001_results.md`.
 
 ## 2. Commands Run
@@ -42,6 +46,14 @@ py scripts/run_validation_batch_001b.py --config docs/validation/tf_validation_b
 ```
 
 Result: success. The runner wrote the CSV and JSON artifacts listed above with `rows=8` and `execute=False`.
+
+The current schema refresh was run with the local virtual environment:
+
+```powershell
+.\venv\Scripts\python.exe scripts\run_validation_batch_001b.py --config docs\validation\tf_validation_batch_001b_config.json
+```
+
+Result: success. The runner rewrote the planned CSV and JSON artifacts with `rows=8` and `execute=False`.
 
 The actual execution command was not run:
 

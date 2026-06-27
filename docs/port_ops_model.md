@@ -130,6 +130,7 @@ Available in:
 - Electricity emission/cost factors are placeholders (0.0) pending local grid/tariff values in the provided references.
 - Reefer loads and non-handling terminal energy were not included.
 - Reviewed hoteling/port-operation papers can inform future checks, but pending or WTW/LCA evidence should not replace the current TTW port-ops factors without a separate implementation plan.
+- Batch 001B route-quality warnings and maritime-distance provenance do not validate commercial schedules, service frequency, or terminal productivity; those remain outside the current port-ops model boundary unless separately modeled and documented.
 
 ## Future improvements (still reference-constrained)
 

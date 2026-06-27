@@ -17,14 +17,16 @@ The hoteling and port-operation papers (`berth2009`, `shipops2022`, `berthairqua
 
 ## 2. Findings that require code or UI changes
 
+Status reflects the current main-branch implementation after the Batch 001B provenance and warning follow-up. "Implemented" means the hook or UI/output transparency exists; it does not mean the corresponding validation case is thesis-validated.
+
 | Finding | Why it affects implementation | Priority | Implementation direction |
 | --- | --- | --- | --- |
-| UI/result labels must distinguish CO2 vs CO2e. | Generic "Emissions" labels can be interpreted as CO2-only or CO2e. The current fuel helper returns `co2e_kg`, so outputs should say CO2e when that is the displayed metric. | High | Rename UI labels and exported/result descriptions to `TTW CO2e` or equivalent where the model boundary is operational TTW. |
-| UI/docs must distinguish TTW vs WTW/LCA. | Several audited papers report WTW or LCA values that cannot be directly compared with operational TTW model outputs. | High | Add UI captions/tooltips and methodology notes stating that current app results are operational TTW unless explicitly noted. |
-| Costs must not be presented as commercial freight rates. | The current model primarily estimates fuel/operational proxies, not full commercial freight with margins, tariffs, inventory time, insurance, demurrage, service frequency, and reliability. | High | Use labels such as `cost estimate`, `operational estimate`, or `model cost proxy`; avoid `freight rate` wording unless a future module actually models it. |
-| Maritime distance fallback needs override/bounds support for Batch 001B. | Batch 001 found haversine fallback can materially understate sea distance, biasing maritime emissions/costs. | High | Implement distance source provenance, external override fields, and conservative bounds before reclassifying affected validation cases. |
-| Same-port and cabotage-inappropriate cases need explicit warnings. | Same-port maritime legs or ports without plausible container cabotage service should not be treated as valid cabotage alternatives. | High | Add route construction validation or result warnings for same-port, zero-sea-distance, and service-plausibility failures. |
-| Validation outputs must preserve fallback/override provenance. | Future thesis validation needs to show whether each distance/result came from SeaMatrix, haversine fallback, external reference, manual override, or sensitivity bound. | High | Add metadata columns/fields for distance source, override source, fallback flag, and confidence classification in Batch 001B outputs. |
+| UI/result labels must distinguish CO2 vs CO2e. | Generic "Emissions" labels can be interpreted as CO2-only or CO2e. The current fuel helper returns `co2e_kg`, so outputs should say CO2e when that is the displayed metric. | High | Implemented for the primary app details/summary surfaces as `TTW CO2e`; continue using this wording in new outputs. |
+| UI/docs must distinguish TTW vs WTW/LCA. | Several audited papers report WTW or LCA values that cannot be directly compared with operational TTW model outputs. | High | Implemented for current UI captions and methodology notes; WTW/LCA remains future work unless the model boundary is explicitly changed. |
+| Costs must not be presented as commercial freight rates. | The current model primarily estimates fuel/operational proxies, not full commercial freight with margins, tariffs, inventory time, insurance, demurrage, service frequency, and reliability. | High | Implemented in primary UI/docs as `cost estimate`, `operational estimate`, or model proxy language; avoid `freight rate` wording in new surfaces. |
+| Maritime distance fallback needs override/bounds support for Batch 001B. | Batch 001 found haversine fallback can materially understate sea distance, biasing maritime emissions/costs. | High | Partially implemented: provenance, source-type classification, external/manual override fields, unit conversion, and optional bounds exist in the Batch 001B artifact path. Remaining work is methodology/evidence: decide replacement vs bound vs sensitivity before reruns. |
+| Same-port and cabotage-inappropriate cases need explicit warnings. | Same-port maritime legs or ports without plausible container cabotage service should not be treated as valid cabotage alternatives. | High | Partially implemented: same-port and cabotage-inappropriate flags exist in Batch 001B artifacts, and non-blocking UI route-quality warnings cover same-port, zero/small sea leg, fallback source, and access-dominance cases. Service plausibility and schedules remain future work. |
+| Validation outputs must preserve fallback/override provenance. | Future thesis validation needs to show whether each distance/result came from SeaMatrix, haversine fallback, external reference, manual override, or sensitivity bound. | High | Implemented for Batch 001B CSV/JSON schema through `ALL_OUTPUT_FIELDS`; keep template/output artifacts aligned with the code schema. |
 
 ## 3. Findings that require documentation changes only
 
@@ -103,15 +105,19 @@ Batch 001 is a historical validation record and should remain unchanged. The lit
 
 Batch 001B should therefore be treated as the implementation track for route-distance overrides, same-port warnings, service-plausibility flags, and provenance-preserving validation outputs.
 
+Current implementation status: route-distance provenance, manual/external override metadata, same-port flags, non-blocking route-quality warnings, and Batch 001B provenance exports are in place. Remaining Batch 001B work is evidence and methodology selection, not formula replacement.
+
+The route-quality module uses a minimum meaningful sea-leg distance threshold of `50 km` only as a warning heuristic. It is not a hard validation rule, model formula, or route optimization constraint, and it must not be used to classify a corridor as valid or invalid without case evidence.
+
 ## 10. Incremental implementation priorities
 
 ### High priority
 
-1. Standardize visible labels and docs around `TTW CO2e` versus CO2/WTW/LCA.
-2. Standardize cost language as `cost estimate` or `operational proxy`, not full freight quote.
-3. Plan and implement maritime distance override/bounds support for Batch 001B.
-4. Add same-port and cabotage-inappropriate warnings/classifications.
-5. Preserve distance/fallback/override provenance in validation outputs.
+1. Maintain visible labels and docs around `TTW CO2e` versus CO2/WTW/LCA. Current primary UI/docs are aligned.
+2. Maintain cost language as `cost estimate` or `operational proxy`, not full freight quote. Current primary UI/docs are aligned.
+3. Use the implemented maritime distance override/bounds support only after the Batch 001B methodology decision is explicit.
+4. Keep same-port and cabotage-inappropriate warnings/classifications visible, while treating service plausibility as a separate evidence task.
+5. Keep distance/fallback/override provenance in validation outputs and prevent schema drift from `ALL_OUTPUT_FIELDS`.
 
 ### Medium priority
 
@@ -128,18 +134,15 @@ Batch 001B should therefore be treated as the implementation track for route-dis
 4. Complete port dwell time / terminal efficiency data acquisition.
 5. Iso-emission map visualization.
 
-## 11. Changes allowed in the current small pass
+## 11. Current implementation guardrails
 
-This pass may safely include:
+Current implemented hooks improve transparency and validation artifact traceability. They do not authorize:
 
-- Restoring `GEMINI.md` to general main-branch guidance.
-- Creating this implementation plan.
-- Adding documentation-only boundary clarifications.
-- Adding small UI wording/caption changes for TTW CO2e and cost-boundary interpretation.
-
-This pass should not include:
-
-- Numerical factor replacement.
-- Major model refactoring.
-- Validation result rewrites.
-- New committed PDFs, workbooks, references folders, secrets, or caches.
+- numerical factor replacement;
+- fuel-consumption formula changes;
+- cost-formula changes;
+- route-optimization changes;
+- historical Batch 001 output rewrites;
+- new committed PDFs, workbooks, reference files, secrets, caches, or private data;
+- WTW/LCA substitution into the current operational TTW baseline;
+- commercial freight-rate claims without the missing commercial components.

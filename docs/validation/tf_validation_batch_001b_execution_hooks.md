@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Issue #14 added a validation-specific Batch 001B pathway for future corrected reruns. It does not change Streamlit behavior, does not change Batch 001 result files, and does not persist validation reruns into the legacy `analysis_results` table.
+Issue #14 added a validation-specific Batch 001B pathway for future corrected reruns. It does not change Batch 001 result files, and it does not persist validation reruns into the legacy `analysis_results` table. The normal Streamlit app has a separate transparency surface for maritime distance provenance in the result assumptions; it is not an execution control for Batch 001B.
 
 The implementation is centered on:
 
