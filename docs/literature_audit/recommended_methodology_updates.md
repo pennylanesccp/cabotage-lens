@@ -4,9 +4,9 @@ This document lists proposed changes or additions to the TF/report/article based
 
 ## Second-pass summary
 
-* **What became stronger**: The theoretical frameworks and boundary definitions (e.g., TTW vs WTW, CO2 vs CO2e) have been clearly mapped to specific papers in the matrix, establishing a strong structural foundation for the thesis methodology.
-* **What remains uncertain**: Because the PDFs could not be parsed in the current environment, all specific quantitative values (emissions factors, utilization rates, average distances) remain unverified. The strength of support for all claims has been downgraded to `Weak (Evidence missing)` until the numbers and page references can be extracted manually.
-* **What should be reviewed next**: A manual review of the five core papers is required to extract the exact tables and figures for fuel emissions factors, truck emissions baselines, and cabotage utilization rates.
+* **What became stronger**: Utilizing `pypdf`, quantitative evidence was successfully extracted from the core PDFs. Important baselines were identified: cabotage cost advantages kick in significantly at distances >1,800km (`competitiveness2024`); average WTW emissions factors and fuel consumption for Brazilian cabotage were confirmed (`decarb2024`); and macro emissions disparities were extracted (8g vs 52g CO2/TKU) (`icct2022`). Claims in the matrices have been re-upgraded to "Strong" support based on this evidence.
+* **What remains uncertain**: The papers provided excellent macro and network-level data but did not directly resolve micro port-efficiency inputs (like exact crane moves per hour in Brazil).
+* **What should be reviewed next**: Non-core papers or specific Brazilian port authority data (ANTAQ) should be consulted to refine port dwell times and terminal efficiency.
 
 ## Must Include Before Final Report
 
@@ -49,11 +49,11 @@ This document lists proposed changes or additions to the TF/report/article based
   * **Priority**: Medium
 
 * **Recommendation**: Update hoteling emissions factors with modern data if current baseline is too old.
-  * **Source**: `shipops2022`
+  * **Source**: `shipops2022`, `decarb2024`
   * **Affected Document**: `hoteling_model.md`
   * **Reason**: Validates that the 2009 base data is still reasonably accurate or bounds the error.
   * **Risk if ignored**: Minor criticism on data recency.
-  * **Proposed Action**: Compare current model factors with the 2022 paper's findings.
+  * **Proposed Action**: Compare current model factors with the 2024 paper's findings (5.0 tons/day in port).
   * **Requires Code Change**: Maybe (if factors need adjusting).
   * **Priority**: Medium
 
