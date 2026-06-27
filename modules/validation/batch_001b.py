@@ -15,6 +15,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from modules.multimodal.distance_provenance import (
+    build_maritime_distance_provenance,
+    is_maritime_fallback_source,
+    maritime_distance_source_type,
+)
+
 NM_TO_KM = 1.852
 
 OUTPUT_FIELDS = [
@@ -59,6 +65,12 @@ EXTRA_OUTPUT_FIELDS = [
     "automatic_destination_port",
     "origin_port_override_provenance",
     "destination_port_override_provenance",
+    "maritime_distance_unit",
+    "maritime_distance_source_type",
+    "maritime_distance_notes",
+    "maritime_distance_lower_bound_km",
+    "maritime_distance_upper_bound_km",
+    "original_maritime_distance_source_type",
     "maritime_distance_override_type",
     "maritime_distance_bound_role",
     "output_status",
@@ -82,7 +94,13 @@ class MaritimeDistanceOverride:
     distance_nm: float | None = None
     unit: str | None = None
     source: str | None = None
+    source_type: str | None = None
     provenance: str | None = None
+    notes: str | None = None
+    lower_bound_km: float | None = None
+    lower_bound_nm: float | None = None
+    upper_bound_km: float | None = None
+    upper_bound_nm: float | None = None
     scenario_type: str | None = None
     bound_role: str | None = None
     required: bool = False
@@ -254,6 +272,40 @@ def convert_maritime_distance(value: Any, unit: Any) -> tuple[float | None, floa
     raise ValidationConfigError("maritime distance unit must be 'km' or 'nm'.")
 
 
+def _convert_optional_maritime_distance(value: Any, unit: Any, *, field_name: str) -> tuple[float | None, float | None]:
+    if value in (None, ""):
+        return None, None
+    try:
+        return convert_maritime_distance(value, unit)
+    except ValidationConfigError as exc:
+        raise ValidationConfigError(f"{field_name}: {exc}") from exc
+
+
+def _normalize_maritime_bound(
+    raw: Mapping[str, Any],
+    *,
+    generic_key: str,
+    km_key: str,
+    nm_key: str,
+    default_unit: Any,
+) -> tuple[float | None, float | None]:
+    km = _float_or_none(raw.get(km_key), field_name=km_key)
+    nm = _float_or_none(raw.get(nm_key), field_name=nm_key)
+    if km is not None and km < 0:
+        raise ValidationConfigError(f"{km_key} cannot be negative.")
+    if nm is not None and nm < 0:
+        raise ValidationConfigError(f"{nm_key} cannot be negative.")
+    if km is not None:
+        return km, nm if nm is not None else km / NM_TO_KM
+    if nm is not None:
+        return nm * NM_TO_KM, nm
+    return _convert_optional_maritime_distance(
+        raw.get(generic_key),
+        raw.get("bounds_unit") or raw.get("bound_unit") or default_unit,
+        field_name=generic_key,
+    )
+
+
 def normalize_maritime_override(raw: Any) -> MaritimeDistanceOverride:
     if raw in (None, "", False):
         return MaritimeDistanceOverride(enabled=False)
@@ -262,11 +314,34 @@ def normalize_maritime_override(raw: Any) -> MaritimeDistanceOverride:
 
     value = raw.get("value")
     required = _as_bool(raw.get("required"), default=False)
+    lower_km, lower_nm = _normalize_maritime_bound(
+        raw,
+        generic_key="lower_bound",
+        km_key="lower_bound_km",
+        nm_key="lower_bound_nm",
+        default_unit=raw.get("unit"),
+    )
+    upper_km, upper_nm = _normalize_maritime_bound(
+        raw,
+        generic_key="upper_bound",
+        km_key="upper_bound_km",
+        nm_key="upper_bound_nm",
+        default_unit=raw.get("unit"),
+    )
+    if lower_km is not None and upper_km is not None and lower_km > upper_km:
+        raise ValidationConfigError("maritime_distance_override lower bound cannot exceed upper bound.")
+
     if value in (None, ""):
         return MaritimeDistanceOverride(
             enabled=True,
             source=_clean_text(raw.get("source")),
+            source_type=_clean_text(raw.get("source_type")),
             provenance=_clean_text(raw.get("provenance")),
+            notes=_clean_text(raw.get("notes")),
+            lower_bound_km=lower_km,
+            lower_bound_nm=lower_nm,
+            upper_bound_km=upper_km,
+            upper_bound_nm=upper_nm,
             scenario_type=_clean_text(raw.get("scenario_type") or raw.get("type")),
             bound_role=_clean_text(raw.get("bound_role")),
             required=required,
@@ -279,7 +354,13 @@ def normalize_maritime_override(raw: Any) -> MaritimeDistanceOverride:
         distance_nm=nm,
         unit=str(raw.get("unit")).strip().lower(),
         source=_clean_text(raw.get("source")) or "validation_override",
+        source_type=_clean_text(raw.get("source_type")),
         provenance=_clean_text(raw.get("provenance")),
+        notes=_clean_text(raw.get("notes")),
+        lower_bound_km=lower_km,
+        lower_bound_nm=lower_nm,
+        upper_bound_km=upper_km,
+        upper_bound_nm=upper_nm,
         scenario_type=_clean_text(raw.get("scenario_type") or raw.get("type")) or "single",
         bound_role=_clean_text(raw.get("bound_role")),
         required=required,
@@ -290,6 +371,28 @@ def _case_maritime_override(case: Mapping[str, Any]) -> MaritimeDistanceOverride
     return normalize_maritime_override(case.get("maritime_distance_override"))
 
 
+def _sea_leg_distance_provenance(
+    sea_leg: Mapping[str, Any],
+    *,
+    is_override: bool = False,
+) -> dict[str, Any]:
+    raw = sea_leg.get("distance_provenance")
+    if isinstance(raw, Mapping):
+        return dict(raw)
+    return build_maritime_distance_provenance(
+        distance_km=sea_leg.get("distance_km"),
+        source=sea_leg.get("source"),
+        unit="km",
+        is_override=is_override,
+    )
+
+
+def _provenance_value(provenance: Mapping[str, Any] | None, key: str) -> Any:
+    if not isinstance(provenance, Mapping):
+        return None
+    return provenance.get(key)
+
+
 def apply_maritime_distance_override(
     geometry: Mapping[str, Any],
     override: MaritimeDistanceOverride,
@@ -297,18 +400,44 @@ def apply_maritime_distance_override(
     """Return a geometry copy with validation maritime distance applied."""
     updated = deepcopy(dict(geometry))
     sea_leg = dict(updated.get("sea_leg") or {})
+    original_provenance = _sea_leg_distance_provenance(sea_leg)
     original = {
         "distance_km": sea_leg.get("distance_km"),
         "source": sea_leg.get("source"),
+        "source_type": original_provenance.get("source_type"),
+        "distance_provenance": original_provenance,
     }
     if override.enabled and override.distance_km is not None:
         sea_leg["distance_km"] = float(override.distance_km)
         sea_leg["source"] = override.source or "validation_override"
+        sea_leg["original_distance_provenance"] = original_provenance
+        sea_leg["distance_provenance"] = build_maritime_distance_provenance(
+            distance_km=override.distance_km,
+            distance_nm=override.distance_nm,
+            distance_value=override.distance_nm if override.unit == "nm" else override.distance_km,
+            unit=override.unit or "km",
+            source=override.source or "validation_override",
+            source_type=override.source_type,
+            notes=override.notes,
+            lower_bound_km=override.lower_bound_km,
+            upper_bound_km=override.upper_bound_km,
+            is_override=True,
+        )
         sea_leg["validation_override"] = {
             "distance_km": override.distance_km,
             "distance_nm": override.distance_nm,
             "source": override.source,
+            "source_type": maritime_distance_source_type(
+                override.source,
+                source_type=override.source_type,
+                is_override=True,
+            ),
             "provenance": override.provenance,
+            "notes": override.notes,
+            "lower_bound_km": override.lower_bound_km,
+            "lower_bound_nm": override.lower_bound_nm,
+            "upper_bound_km": override.upper_bound_km,
+            "upper_bound_nm": override.upper_bound_nm,
             "scenario_type": override.scenario_type,
             "bound_role": override.bound_role,
         }
@@ -391,10 +520,14 @@ def _fallback_flags(case: Mapping[str, Any], original_source: Any, geometry: Map
     values.append(case.get("fallback_flags"))
     sea_source = _clean_text(original_source)
     current_source = None
+    current_source_type = None
     if isinstance(geometry, Mapping):
-        current_source = _clean_text((geometry.get("sea_leg") or {}).get("source"))
-    for source in (sea_source, current_source):
-        if source and "haversine" in source.casefold():
+        sea_leg = geometry.get("sea_leg") or {}
+        if isinstance(sea_leg, Mapping):
+            current_source = _clean_text(sea_leg.get("source"))
+            current_source_type = _provenance_value(_sea_leg_distance_provenance(sea_leg), "source_type")
+    for source, source_type in ((sea_source, None), (current_source, current_source_type)):
+        if source and is_maritime_fallback_source(source, source_type=source_type):
             values.append("SeaMatrix haversine fallback")
         elif source and "fallback" in source.casefold():
             values.append(source)
@@ -431,6 +564,9 @@ def _populate_original_model(row: dict[str, Any], case: Mapping[str, Any]) -> No
         original = {}
     row["original_maritime_distance_km"] = original.get("maritime_distance_km")
     row["original_maritime_distance_source"] = _clean_text(original.get("maritime_distance_source"))
+    row["original_maritime_distance_source_type"] = _clean_text(
+        original.get("maritime_distance_source_type")
+    ) or maritime_distance_source_type(row["original_maritime_distance_source"])
     row["selected_origin_port"] = row["selected_origin_port"] or _clean_text(original.get("selected_origin_port"))
     row["selected_destination_port"] = row["selected_destination_port"] or _clean_text(
         original.get("selected_destination_port")
@@ -438,6 +574,14 @@ def _populate_original_model(row: dict[str, Any], case: Mapping[str, Any]) -> No
     row["road_only_distance_km"] = row["road_only_distance_km"] or original.get("road_only_distance_km")
     row["pre_carriage_distance_km"] = row["pre_carriage_distance_km"] or original.get("pre_carriage_distance_km")
     row["maritime_distance_km"] = row["maritime_distance_km"] or original.get("maritime_distance_km")
+    row["maritime_distance_source"] = row["maritime_distance_source"] or row["original_maritime_distance_source"]
+    row["maritime_distance_source_type"] = (
+        row["maritime_distance_source_type"]
+        or _clean_text(original.get("maritime_distance_source_type"))
+        or maritime_distance_source_type(row["maritime_distance_source"])
+    )
+    if row["maritime_distance_km"] not in (None, ""):
+        row["maritime_distance_unit"] = row["maritime_distance_unit"] or "km"
     row["on_carriage_distance_km"] = row["on_carriage_distance_km"] or original.get("on_carriage_distance_km")
 
 
@@ -454,10 +598,19 @@ def _populate_override_fields(row: dict[str, Any], case: Mapping[str, Any], over
     row["maritime_distance_override"] = bool(override.enabled and override.distance_km is not None)
     row["maritime_distance_override_type"] = override.scenario_type
     row["maritime_distance_bound_role"] = override.bound_role
+    row["maritime_distance_notes"] = override.notes
+    row["maritime_distance_lower_bound_km"] = override.lower_bound_km
+    row["maritime_distance_upper_bound_km"] = override.upper_bound_km
     if override.distance_km is not None:
         row["maritime_distance_km"] = override.distance_km
         row["maritime_distance_nm"] = override.distance_nm
+        row["maritime_distance_unit"] = override.unit or "km"
         row["maritime_distance_source"] = override.source
+        row["maritime_distance_source_type"] = maritime_distance_source_type(
+            override.source,
+            source_type=override.source_type,
+            is_override=True,
+        )
         row["maritime_distance_provenance"] = override.provenance
 
 
@@ -523,8 +676,10 @@ def build_result_row(
     row["road_only_distance_km"] = road_direct.get("distance_km")
     row["pre_carriage_distance_km"] = first_mile.get("distance_km")
     row["maritime_distance_km"] = sea_leg.get("distance_km")
+    distance_provenance = _sea_leg_distance_provenance(sea_leg)
     if row["maritime_distance_km"] not in (None, ""):
         row["maritime_distance_nm"] = float(row["maritime_distance_km"]) / NM_TO_KM
+        row["maritime_distance_unit"] = _provenance_value(distance_provenance, "unit") or "km"
     row["on_carriage_distance_km"] = last_mile.get("distance_km")
     row["selected_origin_port"] = _port_name(origin_port)
     row["selected_destination_port"] = _port_name(destination_port)
@@ -538,13 +693,32 @@ def build_result_row(
     row["destination_port_override_provenance"] = _port_override_provenance(case, "destination")
 
     row["maritime_distance_override"] = bool(override.enabled and override.distance_km is not None)
-    row["maritime_distance_source"] = override.source if row["maritime_distance_override"] else sea_leg.get("source")
+    row["maritime_distance_source"] = _provenance_value(distance_provenance, "source") or (
+        override.source if row["maritime_distance_override"] else sea_leg.get("source")
+    )
+    row["maritime_distance_source_type"] = _provenance_value(distance_provenance, "source_type") or (
+        maritime_distance_source_type(
+            override.source,
+            source_type=override.source_type,
+            is_override=True,
+        )
+        if row["maritime_distance_override"]
+        else maritime_distance_source_type(sea_leg.get("source"))
+    )
     row["maritime_distance_provenance"] = override.provenance
+    row["maritime_distance_notes"] = _provenance_value(distance_provenance, "notes") or override.notes
+    row["maritime_distance_lower_bound_km"] = _provenance_value(distance_provenance, "lower_bound_km")
+    row["maritime_distance_upper_bound_km"] = _provenance_value(distance_provenance, "upper_bound_km")
     row["maritime_distance_override_type"] = override.scenario_type
     row["maritime_distance_bound_role"] = override.bound_role
     if original_sea_leg:
+        original_provenance = _sea_leg_distance_provenance(original_sea_leg)
         row["original_maritime_distance_km"] = original_sea_leg.get("distance_km")
         row["original_maritime_distance_source"] = original_sea_leg.get("source")
+        row["original_maritime_distance_source_type"] = _provenance_value(
+            original_provenance,
+            "source_type",
+        ) or maritime_distance_source_type(row["original_maritime_distance_source"])
     row["fallback_flags"] = _fallback_flags(case, row.get("original_maritime_distance_source"), geometry)
 
     if results:

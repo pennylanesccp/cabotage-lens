@@ -64,12 +64,28 @@ Maritime-distance overrides are represented per case:
   "value": null,
   "unit": "nm",
   "scenario_type": "bounded_or_corrected",
+  "source_type": "external_reference",
   "source": "ANTAQ-based nautical-mile reference documented in tf_validation_batch_001_external_references.md",
-  "provenance": "docs/validation/tf_validation_batch_001_external_references.md"
+  "provenance": "docs/validation/tf_validation_batch_001_external_references.md",
+  "notes": "Optional short note explaining the distance treatment.",
+  "lower_bound": null,
+  "upper_bound": null,
+  "bounds_unit": "nm"
 }
 ```
 
-When `value` is supplied, `unit` must be `km` or `nm`. Nautical miles are converted using `1 nm = 1.852 km`, and both kilometre and nautical-mile fields are exported. The original model/fallback maritime distance and source are preserved in `original_maritime_distance_km` and `original_maritime_distance_source`.
+When `value` is supplied, `unit` must be `km` or `nm`. Nautical miles are converted using `1 nm = 1.852 km`, and both kilometre and nautical-mile fields are exported. The original model/fallback maritime distance, source, and normalized source type are preserved in `original_maritime_distance_km`, `original_maritime_distance_source`, and `original_maritime_distance_source_type`.
+
+`source_type` is optional but recommended. Supported thesis-facing categories are:
+
+- `seamatrix`;
+- `haversine_fallback`;
+- `manual_override`;
+- `external_reference`.
+
+If `source_type` is omitted, the runner infers it conservatively from the source label and whether the value is an override. Optional `lower_bound` / `upper_bound` values can be supplied with `bounds_unit`, or as explicit `lower_bound_km`, `upper_bound_km`, `lower_bound_nm`, and `upper_bound_nm` fields.
+
+Executed geometry also carries a nested `sea_leg.distance_provenance` object with `distance_value`, `unit`, `distance_km`, `distance_nm`, `source`, `source_type`, `notes`, and optional lower/upper bounds. When an override is applied, the original sea-leg provenance is retained as `sea_leg.original_distance_provenance`; when a SeaMatrix directional/corridor value replaces the base matrix/fallback value, the base provenance is retained as `sea_leg.base_distance_provenance`.
 
 Bounded or sensitivity cases should be represented as separate explicit scenario rows with distinct `case_id` values and `scenario_type` / `bound_role` metadata.
 

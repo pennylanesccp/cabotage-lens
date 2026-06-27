@@ -2,7 +2,9 @@ import csv
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
+from modules.multimodal.builder import build_path_geometry_from_resolved
 from modules.validation.batch_001b import (
     ALL_OUTPUT_FIELDS,
     OUTPUT_FIELDS,
@@ -57,6 +59,10 @@ class Batch001BValidationTests(unittest.TestCase):
                 "unit": "nm",
                 "source": "test source",
                 "provenance": "test provenance",
+                "notes": "manual distance note",
+                "lower_bound": 9,
+                "upper_bound": 11,
+                "bounds_unit": "nm",
                 "scenario_type": "bounded",
                 "bound_role": "high",
             }
@@ -69,10 +75,65 @@ class Batch001BValidationTests(unittest.TestCase):
 
         self.assertAlmostEqual(row["maritime_distance_km"], 18.52)
         self.assertEqual(row["maritime_distance_source"], "test source")
+        self.assertEqual(row["maritime_distance_source_type"], "manual_override")
         self.assertEqual(row["maritime_distance_provenance"], "test provenance")
-        self.assertEqual(original, {"distance_km": 500.0, "source": "haversine"})
+        self.assertEqual(row["maritime_distance_notes"], "manual distance note")
+        self.assertAlmostEqual(row["maritime_distance_lower_bound_km"], 16.668)
+        self.assertAlmostEqual(row["maritime_distance_upper_bound_km"], 20.372)
+        self.assertEqual(original["distance_km"], 500.0)
+        self.assertEqual(original["source"], "haversine")
+        self.assertEqual(original["source_type"], "haversine_fallback")
         self.assertAlmostEqual(updated["sea_leg"]["distance_km"], 18.52)
         self.assertEqual(updated["sea_leg"]["source"], "test source")
+        self.assertEqual(updated["sea_leg"]["distance_provenance"]["source_type"], "manual_override")
+        self.assertEqual(updated["sea_leg"]["distance_provenance"]["unit"], "nm")
+        self.assertEqual(updated["sea_leg"]["original_distance_provenance"]["source_type"], "haversine_fallback")
+
+    def test_maritime_override_can_mark_external_reference_and_bounds(self) -> None:
+        override = normalize_maritime_override(
+            {
+                "value": 100,
+                "unit": "km",
+                "source_type": "external_reference",
+                "source": "ANTAQ matrix reference",
+                "provenance": "reference doc",
+                "lower_bound_km": 95,
+                "upper_bound_nm": 60,
+            }
+        )
+
+        self.assertTrue(override.enabled)
+        self.assertEqual(override.source_type, "external_reference")
+        self.assertEqual(override.lower_bound_km, 95.0)
+        self.assertAlmostEqual(override.lower_bound_nm, 95.0 / 1.852)
+        self.assertAlmostEqual(override.upper_bound_km, 111.12)
+        self.assertEqual(override.upper_bound_nm, 60.0)
+
+    def test_builder_adds_structured_maritime_distance_provenance(self) -> None:
+        def fake_route_resolver(_start, _end, _leg_name):
+            return {"distance_km": 12.0, "source": "cache"}
+
+        sea_matrix = SimpleNamespace(km_with_source=lambda _origin, _destiny: (456.0, "sea_matrix"))
+
+        geometry = build_path_geometry_from_resolved(
+            {"label": "Origin", "lat": -23.55, "lon": -46.63, "uf": "SP"},
+            {"label": "Destiny", "lat": -22.97, "lon": -44.31, "uf": "RJ"},
+            ors=object(),
+            ports=[],
+            sea_matrix=sea_matrix,
+            port_origin={"name": "Porto de Santos", "lat": -23.96, "lon": -46.33},
+            port_destiny={"name": "Porto de Angra dos Reis", "lat": -23.01, "lon": -44.32},
+            first_mile_leg={"distance_km": 78.0, "source": "cache"},
+            route_resolver=fake_route_resolver,
+        )
+
+        self.assertIsNotNone(geometry)
+        assert geometry is not None
+        provenance = geometry["sea_leg"]["distance_provenance"]
+        self.assertEqual(provenance["distance_value"], 456.0)
+        self.assertEqual(provenance["unit"], "km")
+        self.assertEqual(provenance["source"], "sea_matrix")
+        self.assertEqual(provenance["source_type"], "seamatrix")
 
     def test_resolve_port_matches_code_and_repaired_plain_name(self) -> None:
         ports = [
@@ -213,6 +274,8 @@ class Batch001BValidationTests(unittest.TestCase):
         self.assertEqual(row["destination_port_override_provenance"], "correction plan")
         self.assertTrue(row["maritime_distance_override"])
         self.assertEqual(row["maritime_distance_source"], "manual test source")
+        self.assertEqual(row["maritime_distance_source_type"], "manual_override")
+        self.assertEqual(row["original_maritime_distance_source_type"], "haversine_fallback")
         self.assertEqual(row["original_maritime_distance_km"], 500.0)
         self.assertIn("SeaMatrix haversine fallback", row["fallback_flags"])
         self.assertEqual(row["road_cost_brl"], 100.0)

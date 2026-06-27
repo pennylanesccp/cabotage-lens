@@ -30,6 +30,8 @@ from modules.addressing.text import ascii_place_text
 from modules.cabotage.sea_matrix import SeaMatrix
 from modules.infra.database_manager import db_session, find_place_point, upsert_place_point
 from modules.infra.log_manager import get_logger
+from modules.multimodal.distance_provenance import build_maritime_distance_provenance
+from modules.multimodal.route_quality import build_route_quality_warnings
 from modules.ports.ports_index import load_ports
 from modules.ports.ports_nearest import find_nearest_port
 from modules.road.locationiq.structures import get_configured_locationiq_api_keys
@@ -65,6 +67,8 @@ class LegResult(TypedDict, total=False):
 class SeaResult(TypedDict, total=False):
     distance_km: float
     source: str
+    distance_provenance: Dict[str, Any]
+    base_distance_provenance: Dict[str, Any]
     fuel_g_per_tnm: float
     fuel_g_per_tnm_source: str
     corridor_leg_count: int
@@ -90,6 +94,7 @@ class PathGeometry(TypedDict):
     first_mile: LegResult
     last_mile: LegResult
     sea_leg: SeaResult
+    route_quality_warnings: list[Dict[str, str]]
     status: str
 
 
@@ -356,14 +361,44 @@ def build_path_geometry_from_resolved(
         {"lat": pd_data["lat"], "lon": pd_data["lon"], "name": pd_data["name"]},
     )
 
-    sea_leg: SeaResult = {"distance_km": float(sea_dist), "source": sea_src}
-    directional_stats = sea_matrix.best_directional_stats(po_data["name"], pd_data["name"])
+    base_distance_provenance = build_maritime_distance_provenance(
+        distance_km=sea_dist,
+        source=sea_src,
+        unit="km",
+        notes=(
+            "SeaMatrix coastline-adjusted haversine fallback; no matrix pair was available."
+            if "haversine" in str(sea_src).casefold()
+            else "SeaMatrix port-pair distance."
+        ),
+    )
+    sea_leg: SeaResult = {
+        "distance_km": float(sea_dist),
+        "source": sea_src,
+        "distance_provenance": base_distance_provenance,
+    }
+    directional_lookup = getattr(sea_matrix, "best_directional_stats", None)
+    directional_stats = (
+        directional_lookup(po_data["name"], pd_data["name"]) if callable(directional_lookup) else None
+    )
     if directional_stats:
         corridor_leg_count = int(directional_stats.get("corridor_leg_count") or 0)
         route_distance_km = directional_stats.get("distance_km")
         if isinstance(route_distance_km, (int, float)) and float(route_distance_km) > 0.0:
+            directional_source = str(directional_stats.get("distance_source") or sea_src)
             sea_leg["distance_km"] = float(route_distance_km)
-            sea_leg["source"] = str(directional_stats.get("distance_source") or sea_src)
+            sea_leg["source"] = directional_source
+            sea_leg["base_distance_provenance"] = base_distance_provenance
+            sea_leg["distance_provenance"] = build_maritime_distance_provenance(
+                distance_km=route_distance_km,
+                distance_nm=directional_stats.get("distance_nm"),
+                source=directional_source,
+                unit="km",
+                source_type="seamatrix",
+                notes=(
+                    "SeaMatrix directional/corridor distance replaced the base "
+                    "port-pair distance; base provenance is retained."
+                ),
+            )
         weighted_mean = directional_stats.get("fuel_g_per_tnm_weighted_mean")
         if isinstance(weighted_mean, (int, float)) and float(weighted_mean) > 0.0:
             sea_leg["fuel_g_per_tnm"] = float(weighted_mean)
@@ -406,7 +441,7 @@ def build_path_geometry_from_resolved(
             sea_leg.get("match_rate_tonne_nm"),
         )
 
-    return {
+    geometry = {
         "origin": origin_pt,
         "destiny": destiny_pt,
         "port_origin": po_data,
@@ -417,6 +452,8 @@ def build_path_geometry_from_resolved(
         "sea_leg": sea_leg,
         "status": "ok",
     }
+    geometry["route_quality_warnings"] = build_route_quality_warnings(geometry)
+    return cast(PathGeometry, geometry)
 
 
 def build_path_geometry(

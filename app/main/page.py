@@ -5,7 +5,7 @@ from typing import Any, Iterable
 
 import streamlit as st
 
-from app.main.cards import render_summary_cards
+from app.main.cards import render_route_quality_warnings, render_summary_cards
 from app.main.run_feedback import (
     inject_run_feedback_css,
     make_progress_callback,
@@ -152,6 +152,7 @@ def render_page() -> None:
     results = st.session_state.last_results
 
     render_summary_cards(results)
+    render_route_quality_warnings(results)
 
     if geo:
         if st.session_state.map_center_lat is None or st.session_state.map_center_lon is None:

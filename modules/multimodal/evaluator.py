@@ -454,6 +454,11 @@ def evaluate_path(
     res_first = _calc_road(path_data.get("first_mile", {}))
     res_last = _calc_road(path_data.get("last_mile", {}))
 
+    route_quality_warnings = [
+        dict(item)
+        for item in (path_data.get("route_quality_warnings") or [])
+        if isinstance(item, dict)
+    ]
     sea_leg_data = path_data.get("sea_leg", {}) if isinstance(path_data.get("sea_leg"), dict) else {}
     sea_dist_km = float(sea_leg_data.get("distance_km") or 0.0)
     sea_dist_nm = sea_dist_km / _NM_TO_KM if sea_dist_km > 0 else 0.0
@@ -577,6 +582,8 @@ def evaluate_path(
     res_sea = {
         "distance_km": float(sea_dist_km),
         "distance_nm": float(sea_dist_nm),
+        "distance_source": sea_leg_data.get("source"),
+        "distance_provenance": sea_leg_data.get("distance_provenance"),
         "vessel_class": vessel_eff.vessel_class,
         "fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
         "fuel_g_per_tnm": (None if fuel_g_per_tnm is None else float(fuel_g_per_tnm)),
@@ -739,7 +746,9 @@ def evaluate_path(
                 if not isinstance(port_ops_payload, dict)
                 else int(port_ops_payload.get("cargo_teu_resolved") or 0)
             ),
+            "route_quality_warning_count": len(route_quality_warnings),
         },
+        "route_quality_warnings": route_quality_warnings,
         "road_only": res_direct,
         "multimodal": {
             "first_mile": res_first,
