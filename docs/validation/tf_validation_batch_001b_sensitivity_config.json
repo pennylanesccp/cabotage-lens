@@ -1,0 +1,295 @@
+{
+  "batch_id": "Batch 001B Sensitivity",
+  "output_csv": "docs/validation/tf_validation_batch_001b_sensitivity_output.csv",
+  "output_json": "docs/validation/tf_validation_batch_001b_sensitivity_output.json",
+  "model_defaults": {
+    "cargo_t": 14.0,
+    "cargo_teu": 1.0,
+    "truck_key": "semi_27t",
+    "ors_profile": "driving-car",
+    "vessel_class": "container_feeder",
+    "include_hoteling": true,
+    "hoteling_hours_per_call": 14.0,
+    "port_calls": 2,
+    "include_port_ops": true,
+    "t_per_teu_default": 14.0,
+    "allocation_mode": "auto",
+    "allocation_load_factor": 0.8,
+    "full_call_mode": false,
+    "port_ops_scenario": "santos_diesel_heavy"
+  },
+  "cases": [
+    {
+      "case_id": "TF-VAL-001B-001",
+      "original_case_id": "TF-VAL-001",
+      "execution_mode": "record_only",
+      "origin": "Sao Paulo, SP",
+      "destination": "Santos, SP",
+      "validation_status": "record_only",
+      "same_port_flag": true,
+      "cabotage_inappropriate_flag": true,
+      "sensitivity_required": false,
+      "original_model": {
+        "selected_origin_port": "Porto de Santos",
+        "selected_destination_port": "Porto de Santos",
+        "road_only_distance_km": 77.2,
+        "pre_carriage_distance_km": 86.174,
+        "maritime_distance_km": 0.0,
+        "on_carriage_distance_km": 9.031,
+        "maritime_distance_source": "SeaMatrix haversine fallback"
+      },
+      "fallback_flags": [
+        "SeaMatrix haversine fallback"
+      ],
+      "notes": "Original Batch 001B case TF-VAL-001B-001. Same-port warning/exclusion retained for traceability; not a sensitivity scenario."
+    },
+    {
+      "case_id": "TF-VAL-001B-SENS-002-REFDIST",
+      "original_case_id": "TF-VAL-002",
+      "execution_mode": "model_rerun",
+      "executed_validation_status": "sensitivity_executed",
+      "origin": "Sao Paulo, SP",
+      "destination": "Manaus, AM",
+      "validation_status": "sensitivity_ready",
+      "sensitivity_required": true,
+      "port_overrides": {
+        "origin": {
+          "port": "BRSSZ",
+          "reason": "Lock sensitivity scenario to the documented Batch 001B Santos origin-port assumption.",
+          "provenance": "docs/validation/tf_validation_batch_001b_sensitivity_decisions.md"
+        },
+        "destination": {
+          "port": "BRMAO",
+          "reason": "Lock sensitivity scenario to the documented Batch 001B Manaus destination-port assumption.",
+          "provenance": "docs/validation/tf_validation_batch_001b_sensitivity_decisions.md"
+        }
+      },
+      "original_model": {
+        "selected_origin_port": "Porto de Santos",
+        "selected_destination_port": "Porto de Manaus",
+        "road_only_distance_km": 3870.0,
+        "pre_carriage_distance_km": 86.174,
+        "maritime_distance_km": 2744.7,
+        "on_carriage_distance_km": 6.763,
+        "maritime_distance_source": "SeaMatrix haversine fallback"
+      },
+      "maritime_distance_override": {
+        "required": true,
+        "value": 3300.0,
+        "unit": "nm",
+        "scenario_type": "reference_distance_sensitivity",
+        "source": "Costa et al. (2025) Appendix 6, ANTAQ-based matrix, as summarized in tf_validation_batch_001_external_references.md",
+        "provenance": "docs/validation/tf_validation_batch_001_external_references.md; BRMAO to BRSSZ listed as 3300 nm and documented as symmetric for comparison"
+      },
+      "fallback_flags": [
+        "SeaMatrix haversine fallback"
+      ],
+      "notes": "Original Batch 001B case TF-VAL-001B-002. Sensitivity-only replacement of the SeaMatrix haversine fallback with the documented 3300 nm reference-distance candidate."
+    },
+    {
+      "case_id": "TF-VAL-001B-003A",
+      "original_case_id": "TF-VAL-003",
+      "execution_mode": "planned",
+      "origin": "Manaus, AM",
+      "destination": "Fortaleza, CE",
+      "validation_status": "blocked_reference_needed",
+      "sensitivity_required": true,
+      "original_model": {
+        "selected_origin_port": "Porto de Manaus",
+        "selected_destination_port": "Porto de Fortaleza",
+        "road_only_distance_km": 5569.6,
+        "pre_carriage_distance_km": 7.563,
+        "maritime_distance_km": 2391.2,
+        "on_carriage_distance_km": 8.656,
+        "maritime_distance_source": "SeaMatrix haversine fallback"
+      },
+      "maritime_distance_override": {
+        "required": true,
+        "value": null,
+        "unit": "nm",
+        "scenario_type": "exact_selected_port_evidence",
+        "source": null,
+        "provenance": null
+      },
+      "fallback_flags": [
+        "SeaMatrix haversine fallback"
+      ],
+      "notes": "Exact Porto de Manaus -> Porto de Fortaleza distance/source remains missing; Pecem is not substituted into this row."
+    },
+    {
+      "case_id": "TF-VAL-001B-SENS-003B-ALTPECEM",
+      "original_case_id": "TF-VAL-003",
+      "execution_mode": "model_rerun",
+      "executed_validation_status": "sensitivity_executed",
+      "origin": "Manaus, AM",
+      "destination": "Fortaleza, CE",
+      "validation_status": "sensitivity_ready",
+      "sensitivity_required": true,
+      "port_overrides": {
+        "origin": {
+          "port": "BRMAO",
+          "reason": "Lock sensitivity scenario to the documented Manaus origin-port assumption.",
+          "provenance": "docs/validation/tf_validation_batch_001b_sensitivity_decisions.md"
+        },
+        "destination": {
+          "port": "BRPEC",
+          "reason": "Explicit Pecem alternate-port sensitivity scenario; not a silent replacement for Fortaleza.",
+          "provenance": "docs/validation/tf_validation_batch_001b_sensitivity_decisions.md"
+        }
+      },
+      "original_model": {
+        "selected_origin_port": "Porto de Manaus",
+        "selected_destination_port": "Porto de Fortaleza",
+        "road_only_distance_km": 5569.6,
+        "pre_carriage_distance_km": 7.563,
+        "maritime_distance_km": 2391.2,
+        "on_carriage_distance_km": 8.656,
+        "maritime_distance_source": "SeaMatrix haversine fallback"
+      },
+      "maritime_distance_override": {
+        "required": true,
+        "value": 1569.0,
+        "unit": "nm",
+        "scenario_type": "alternate_port_sensitivity",
+        "source": "Costa et al. (2025) Appendix 6, ANTAQ-based matrix, as summarized in tf_validation_batch_001_external_references.md",
+        "provenance": "docs/validation/tf_validation_batch_001_external_references.md; BRMAO to BRPEC listed as 1569 nm"
+      },
+      "fallback_flags": [
+        "SeaMatrix haversine fallback"
+      ],
+      "notes": "Original Batch 001B case TF-VAL-001B-003B. Alternate-port sensitivity only; runner computes on-carriage from forced BRPEC/Pecem to Fortaleza."
+    },
+    {
+      "case_id": "TF-VAL-001B-004A",
+      "original_case_id": "TF-VAL-004",
+      "execution_mode": "record_only",
+      "origin": "Brasilia, DF",
+      "destination": "Salvador, BA",
+      "validation_status": "excluded",
+      "sensitivity_required": false,
+      "original_model": {
+        "selected_origin_port": "Porto de Angra dos Reis",
+        "selected_destination_port": "Porto de Salvador",
+        "road_only_distance_km": 1472.9,
+        "pre_carriage_distance_km": 1369.936,
+        "maritime_distance_km": 1273.3,
+        "on_carriage_distance_km": 5.060,
+        "maritime_distance_source": "SeaMatrix haversine fallback"
+      },
+      "fallback_flags": [
+        "SeaMatrix haversine fallback"
+      ],
+      "notes": "Original Batch 001B case TF-VAL-001B-004A. Angra dos Reis chain retained as invalid/excluded for the 1 TEU / 14 t benchmark."
+    },
+    {
+      "case_id": "TF-VAL-001B-004B",
+      "original_case_id": "TF-VAL-004",
+      "execution_mode": "planned",
+      "origin": "Brasilia, DF",
+      "destination": "Salvador, BA",
+      "validation_status": "blocked_missing_port",
+      "sensitivity_required": true,
+      "port_overrides": {
+        "origin": {
+          "port": null,
+          "reason": "Defensible alternate origin port must be selected with evidence before execution.",
+          "provenance": "docs/validation/tf_validation_batch_001_correction_plan.md"
+        }
+      },
+      "original_model": {
+        "selected_origin_port": "Porto de Angra dos Reis",
+        "selected_destination_port": "Porto de Salvador",
+        "road_only_distance_km": 1472.9,
+        "pre_carriage_distance_km": 1369.936,
+        "maritime_distance_km": 1273.3,
+        "on_carriage_distance_km": 5.060,
+        "maritime_distance_source": "SeaMatrix haversine fallback"
+      },
+      "maritime_distance_override": {
+        "required": true,
+        "value": null,
+        "unit": "nm",
+        "scenario_type": "alternate_origin_port",
+        "source": null,
+        "provenance": null
+      },
+      "fallback_flags": [
+        "SeaMatrix haversine fallback"
+      ],
+      "notes": "No defensible alternate origin port has been selected; no sensitivity execution is allowed."
+    },
+    {
+      "case_id": "TF-VAL-001B-005A",
+      "original_case_id": "TF-VAL-005",
+      "execution_mode": "planned",
+      "origin": "Porto Alegre, RS",
+      "destination": "Recife, PE",
+      "validation_status": "blocked_reference_needed",
+      "sensitivity_required": true,
+      "original_model": {
+        "selected_origin_port": "Porto do Rio Grande",
+        "selected_destination_port": "Porto do Recife",
+        "road_only_distance_km": 3768.6,
+        "pre_carriage_distance_km": 317.409,
+        "maritime_distance_km": 3214.0,
+        "on_carriage_distance_km": 1.850,
+        "maritime_distance_source": "SeaMatrix haversine fallback"
+      },
+      "maritime_distance_override": {
+        "required": true,
+        "value": null,
+        "unit": "nm",
+        "scenario_type": "exact_selected_port_evidence",
+        "source": null,
+        "provenance": null
+      },
+      "fallback_flags": [
+        "SeaMatrix haversine fallback"
+      ],
+      "notes": "Exact Porto do Rio Grande -> Porto do Recife distance/source remains missing; Suape is not substituted into this row."
+    },
+    {
+      "case_id": "TF-VAL-001B-SENS-005B-ALTSUAPE",
+      "original_case_id": "TF-VAL-005",
+      "execution_mode": "model_rerun",
+      "executed_validation_status": "sensitivity_executed",
+      "origin": "Porto Alegre, RS",
+      "destination": "Recife, PE",
+      "validation_status": "sensitivity_ready",
+      "sensitivity_required": true,
+      "port_overrides": {
+        "origin": {
+          "port": "BRRIG",
+          "reason": "Lock sensitivity scenario to the documented Rio Grande origin-port assumption.",
+          "provenance": "docs/validation/tf_validation_batch_001b_sensitivity_decisions.md"
+        },
+        "destination": {
+          "port": "BRSUA",
+          "reason": "Explicit Suape alternate-port sensitivity scenario; not a silent replacement for Recife.",
+          "provenance": "docs/validation/tf_validation_batch_001b_sensitivity_decisions.md"
+        }
+      },
+      "original_model": {
+        "selected_origin_port": "Porto do Rio Grande",
+        "selected_destination_port": "Porto do Recife",
+        "road_only_distance_km": 3768.6,
+        "pre_carriage_distance_km": 317.409,
+        "maritime_distance_km": 3214.0,
+        "on_carriage_distance_km": 1.850,
+        "maritime_distance_source": "SeaMatrix haversine fallback"
+      },
+      "maritime_distance_override": {
+        "required": true,
+        "value": 1844.0,
+        "unit": "nm",
+        "scenario_type": "alternate_port_sensitivity",
+        "source": "Costa et al. (2025) Appendix 6, ANTAQ-based matrix, as summarized in tf_validation_batch_001_external_references.md",
+        "provenance": "docs/validation/tf_validation_batch_001_external_references.md; BRRIG to BRSUA listed as 1844 nm"
+      },
+      "fallback_flags": [
+        "SeaMatrix haversine fallback"
+      ],
+      "notes": "Original Batch 001B case TF-VAL-001B-005B. Alternate-port sensitivity only; runner computes on-carriage from forced BRSUA/Suape to Recife."
+    }
+  ]
+}

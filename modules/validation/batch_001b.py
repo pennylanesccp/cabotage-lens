@@ -68,6 +68,7 @@ ALL_OUTPUT_FIELDS = [*OUTPUT_FIELDS, *EXTRA_OUTPUT_FIELDS]
 
 RECORD_ONLY_MODES = {"record_only", "excluded", "invalid", "warning_only"}
 MODEL_RERUN_MODE = "model_rerun"
+PLANNED_MODES = {"planned", "not_run"}
 
 
 class ValidationConfigError(ValueError):
@@ -556,6 +557,7 @@ def build_result_row(
 
     _finalize_flags(row, case)
     row["output_status"] = "executed"
+    row["validation_status"] = _clean_text(case.get("executed_validation_status")) or row["validation_status"]
     return row
 
 
@@ -692,6 +694,8 @@ def build_rows(config: Mapping[str, Any], *, execute: bool = False) -> list[dict
             rows.append(build_exclusion_row(config, case))
         elif mode == MODEL_RERUN_MODE:
             rows.append(_execute_model_case(config, case))
+        elif mode in PLANNED_MODES:
+            rows.append(build_planned_row(config, case))
         else:
             raise ValidationConfigError(f"Unsupported execution_mode for case {case.get('case_id')}: {mode}")
     return rows

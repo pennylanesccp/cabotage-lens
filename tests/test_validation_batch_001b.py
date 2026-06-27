@@ -9,6 +9,7 @@ from modules.validation.batch_001b import (
     apply_maritime_distance_override,
     build_exclusion_row,
     build_planned_row,
+    build_rows,
     build_result_row,
     convert_maritime_distance,
     normalize_maritime_override,
@@ -138,6 +139,33 @@ class Batch001BValidationTests(unittest.TestCase):
         self.assertTrue(row["cabotage_inappropriate_flag"])
         self.assertEqual(row["validation_status"], "warning_only")
 
+    def test_execute_mode_keeps_planned_rows_planned(self) -> None:
+        config = self._config()
+        config["cases"] = [
+            {
+                "case_id": "TF-VAL-001B-BLOCKED",
+                "execution_mode": "planned",
+                "origin": "Origin, SP",
+                "destination": "Destination, AM",
+                "validation_status": "blocked_reference_needed",
+            },
+            {
+                "case_id": "TF-VAL-001B-RECORD",
+                "execution_mode": "record_only",
+                "origin": "Origin, SP",
+                "destination": "Destination, AM",
+                "validation_status": "excluded",
+            },
+        ]
+
+        rows = build_rows(config, execute=True)
+
+        self.assertEqual(rows[0]["case_id"], "TF-VAL-001B-BLOCKED")
+        self.assertEqual(rows[0]["output_status"], "planned")
+        self.assertEqual(rows[0]["validation_status"], "blocked_reference_needed")
+        self.assertEqual(rows[1]["case_id"], "TF-VAL-001B-RECORD")
+        self.assertEqual(rows[1]["output_status"], "record_only")
+
     def test_result_row_exports_required_schema_and_override_provenance(self) -> None:
         case = {
             "case_id": "TF-VAL-001B-003B",
@@ -156,6 +184,7 @@ class Batch001BValidationTests(unittest.TestCase):
                 "source": "manual test source",
                 "provenance": "manual test provenance",
             },
+            "executed_validation_status": "sensitivity_executed",
         }
         geometry, original = apply_maritime_distance_override(
             self._geometry(),
@@ -188,6 +217,7 @@ class Batch001BValidationTests(unittest.TestCase):
         self.assertIn("SeaMatrix haversine fallback", row["fallback_flags"])
         self.assertEqual(row["road_cost_brl"], 100.0)
         self.assertEqual(row["multimodal_emissions_kgco2e"], 120.0)
+        self.assertEqual(row["validation_status"], "sensitivity_executed")
 
     def test_csv_writer_uses_full_output_header(self) -> None:
         row = {field: None for field in ALL_OUTPUT_FIELDS}
