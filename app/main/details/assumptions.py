@@ -41,8 +41,18 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
         ),
         (
             "Marine EF",
-            "Emission factor applied per kilogram of marine fuel burned.",
+            "Operational TTW emission factor applied per kilogram of marine fuel burned.",
             f"{safe_float(inputs.get('marine_ef_kg_per_kg')):.4f} kg CO2e/kg",
+        ),
+        (
+            "Emissions boundary",
+            "Displayed emissions use the current operational TTW CO2e boundary unless an explicit override says otherwise.",
+            "TTW CO2e",
+        ),
+        (
+            "Cost boundary",
+            "Displayed cost values are model estimates/proxies, not complete commercial freight rates.",
+            "operational estimate",
         ),
         (
             "Allocation mode",
@@ -70,4 +80,3 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
 
 def render_assumptions(results: Mapping[str, Any], payload: Mapping[str, Any]) -> None:
     st.dataframe(_assumptions_table(results=results, payload=payload), hide_index=True, width="stretch")
-
