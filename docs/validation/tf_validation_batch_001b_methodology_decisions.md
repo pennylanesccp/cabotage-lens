@@ -4,6 +4,8 @@
 
 This document finalizes the Batch 001B methodology-decision layer before issue #16 sensitivity work. It decides which tracked Batch 001B cases are executable, sensitivity-only, blocked, record-only, or excluded.
 
+Final thesis result synthesis is recorded in `docs/validation/tf_final_result_synthesis.md`.
+
 This document uses only tracked repository evidence:
 
 - `docs/validation/tf_validation_batch_001b_rerun_assumptions.md`

@@ -4,6 +4,7 @@
 
 This document is the thesis-ready issue #16 sensitivity result artifact for Batch 001B. It consolidates the tracked Batch 001B sensitivity execution and interprets it under the methodology-decision handoff in:
 
+- `docs/validation/tf_final_result_synthesis.md`
 - `docs/validation/tf_validation_batch_001b_methodology_decisions.md`
 - `docs/validation/tf_validation_batch_001b_results.md`
 - `docs/validation/tf_validation_batch_001b_rerun_assumptions.md`

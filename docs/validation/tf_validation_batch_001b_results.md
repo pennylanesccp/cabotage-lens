@@ -31,6 +31,8 @@ The methodology-decision layer for these rows is recorded in `docs/validation/tf
 
 The thesis-ready issue #16 sensitivity summary is recorded in `docs/validation/tf_sensitivity_results_batch_001b.md`.
 
+Final thesis result synthesis is recorded in `docs/validation/tf_final_result_synthesis.md`.
+
 Original Batch 001 outputs remain preserved in `docs/validation/tf_validation_batch_001_results.md`.
 
 ## 2. Commands Run
