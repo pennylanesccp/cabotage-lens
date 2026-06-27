@@ -65,18 +65,20 @@ py scripts/run_validation_batch_001b.py --config docs/validation/tf_validation_b
 
 Reason: there were no `ready_to_execute` model cases. Running `--execute` would force blocked cases through the model, which would conflict with the Batch 001B rule that missing assumptions must not be converted into artificial outputs.
 
-## 3. Readiness Classification
+## 3. Artifact Status And Methodology Classification
 
-| Case ID | Original case | OD pair | Readiness | Execution mode | Output status | Validation status | Reason |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `TF-VAL-001B-001` | `TF-VAL-001` | Sao Paulo, SP -> Santos, SP | `record_only` | `record_only` | `record_only` | `warning_only` | Same-port / close-to-port case; cabotage-inappropriate for normal road-sea-road conclusions. |
-| `TF-VAL-001B-002` | `TF-VAL-002` | Sao Paulo, SP -> Manaus, AM | `blocked_methodology_decision` | `planned` | `planned` | `blocked_methodology_decision` | Santos -> Manaus reference value is documented, but the replacement/bound/sensitivity rule is not finalized. |
-| `TF-VAL-001B-003A` | `TF-VAL-003` | Manaus, AM -> Fortaleza, CE | `blocked_reference_needed` | `planned` | `planned` | `blocked_reference_needed` | Exact Porto de Manaus -> Porto de Fortaleza maritime distance/source was not found in the existing evidence. |
-| `TF-VAL-001B-003B` | `TF-VAL-003` | Manaus, AM -> Fortaleza, CE with Pecem alternate port | `blocked_methodology_decision` | `planned` | `planned` | `blocked_methodology_decision` | Pecem and reference distance are documented as an alternate candidate, but road access and Fortaleza-vs-Pecem thesis boundary are not finalized. |
-| `TF-VAL-001B-004A` | `TF-VAL-004` | Brasilia, DF -> Salvador, BA | `record_only` | `record_only` | `record_only` | `excluded` | Original Angra dos Reis origin-port chain is invalid/excluded for the 1 TEU / 14 t container benchmark. |
-| `TF-VAL-001B-004B` | `TF-VAL-004` | Brasilia, DF -> Salvador, BA with alternate origin port | `blocked_missing_port` | `planned` | `planned` | `blocked_missing_port` | No defensible alternate origin port has been selected; the maritime distance rule is also missing. |
-| `TF-VAL-001B-005A` | `TF-VAL-005` | Porto Alegre, RS -> Recife, PE | `blocked_reference_needed` | `planned` | `planned` | `blocked_reference_needed` | Exact Porto do Rio Grande -> Porto do Recife maritime distance/source was not found in the existing evidence. |
-| `TF-VAL-001B-005B` | `TF-VAL-005` | Porto Alegre, RS -> Recife, PE with Suape alternate port | `blocked_methodology_decision` | `planned` | `planned` | `blocked_methodology_decision` | Suape and reference distance are documented as an alternate candidate, but road access and Recife-vs-Suape thesis boundary are not finalized. |
+The readiness table below records the non-executing Batch 001B artifact/export status at the time the CSV/JSON were generated. The later methodology-decision layer in `tf_validation_batch_001b_methodology_decisions.md` determines issue #16 eligibility. In that later layer, selected blocked-methodology rows may be promoted only to named sensitivity analysis, not to validated baseline or headline thesis conclusions.
+
+| Case ID | Original case | OD pair | Artifact readiness | Execution mode | Output status | Artifact validation status | Methodology-decision status | Issue #16 use |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `TF-VAL-001B-001` | `TF-VAL-001` | Sao Paulo, SP -> Santos, SP | `record_only` | `record_only` | `record_only` | `warning_only` | `record_only_warning` | Excluded from numerical issue #16 execution; same-port route-logic limitation only. |
+| `TF-VAL-001B-002` | `TF-VAL-002` | Sao Paulo, SP -> Manaus, AM | `blocked_methodology_decision` | `planned` | `planned` | `blocked_methodology_decision` | `sensitivity_only` | Eligible only as Santos/Manaus reference-distance sensitivity; not a validated baseline replacement. |
+| `TF-VAL-001B-003A` | `TF-VAL-003` | Manaus, AM -> Fortaleza, CE | `blocked_reference_needed` | `planned` | `planned` | `blocked_reference_needed` | `reference_needed` | Blocked unless exact Porto de Manaus -> Porto de Fortaleza evidence is added. |
+| `TF-VAL-001B-003B` | `TF-VAL-003` | Manaus, AM -> Fortaleza, CE with Pecem alternate port | `blocked_methodology_decision` | `planned` | `planned` | `blocked_methodology_decision` | `sensitivity_only` | Eligible only as Pecem alternate-port sensitivity; not Fortaleza selected-port validation. |
+| `TF-VAL-001B-004A` | `TF-VAL-004` | Brasilia, DF -> Salvador, BA | `record_only` | `record_only` | `record_only` | `excluded` | `excluded` | Excluded from issue #16 execution; invalid Angra dos Reis container chain. |
+| `TF-VAL-001B-004B` | `TF-VAL-004` | Brasilia, DF -> Salvador, BA with alternate origin port | `blocked_missing_port` | `planned` | `planned` | `blocked_missing_port` | `planned_blocked_methodology_decision` | Blocked unless a defensible alternate origin port and distance source are documented. |
+| `TF-VAL-001B-005A` | `TF-VAL-005` | Porto Alegre, RS -> Recife, PE | `blocked_reference_needed` | `planned` | `planned` | `blocked_reference_needed` | `reference_needed` | Blocked unless exact Porto do Rio Grande -> Porto do Recife evidence is added. |
+| `TF-VAL-001B-005B` | `TF-VAL-005` | Porto Alegre, RS -> Recife, PE with Suape alternate port | `blocked_methodology_decision` | `planned` | `planned` | `blocked_methodology_decision` | `sensitivity_only` | Eligible only as Suape alternate-port sensitivity; not Recife selected-port validation. |
 
 ## 4. Case Details
 
@@ -114,9 +116,9 @@ Validation status: `blocked_methodology_decision`
 
 Sensitivity required: true.
 
-Blocker: the existing docs document the ANTAQ-based reference value, but they do not yet define whether Batch 001B should use it as a single replacement, a bound, or a sensitivity scenario.
+Artifact note: at export time, this row remained `blocked_methodology_decision`. The later methodology-decision layer classifies it as `sensitivity_only` for a named reference-distance sensitivity.
 
-Thesis use: not a validated numerical result. Use only to define the next sensitivity input for Santos -> Manaus.
+Thesis use: not a validated numerical result, baseline replacement, or headline conclusion. Use only as Santos/Manaus reference-distance sensitivity.
 
 ### `TF-VAL-001B-003A`
 
@@ -154,9 +156,9 @@ Validation status: `blocked_methodology_decision`
 
 Sensitivity required: true.
 
-Blocker: the Pecem alternate-port interpretation still needs an explicit thesis boundary decision and road access implications for Fortaleza versus Pecem before cost/emissions rerun.
+Artifact note: at export time, this row remained `blocked_methodology_decision`. The later methodology-decision layer classifies it as `sensitivity_only` for a named Pecem alternate-port sensitivity.
 
-Thesis use: possible future alternate-port sensitivity row only. It must not be presented as the Fortaleza selected-port case.
+Thesis use: alternate-port sensitivity only. It must not be presented as the Fortaleza selected-port case, a validated baseline replacement, or a headline conclusion.
 
 ### `TF-VAL-001B-004A`
 
@@ -232,9 +234,9 @@ Validation status: `blocked_methodology_decision`
 
 Sensitivity required: true.
 
-Blocker: the Suape alternate-port interpretation still needs an explicit thesis boundary decision and road access implications for Recife versus Suape before cost/emissions rerun.
+Artifact note: at export time, this row remained `blocked_methodology_decision`. The later methodology-decision layer classifies it as `sensitivity_only` for a named Suape alternate-port sensitivity.
 
-Thesis use: possible future alternate-port sensitivity row only. It must not be presented as the Recife selected-port case.
+Thesis use: alternate-port sensitivity only. It must not be presented as the Recife selected-port case, a validated baseline replacement, or a headline conclusion.
 
 ## 5. Validation Implications
 
@@ -249,14 +251,16 @@ The artifacts are useful because they now separate:
 
 The planned rows are suitable as an audit trail and sensitivity setup, not as final thesis results.
 
-## 6. Next Steps For Issue #16 Sensitivity Analysis
+## 6. Handoff For Issue #16 Sensitivity Analysis
 
-Issue #16 should not start by running every planned row. It should first resolve the sensitivity inputs:
+Issue #16 should not start by running every planned row. It should follow the methodology-decision layer in `docs/validation/tf_validation_batch_001b_methodology_decisions.md`.
 
-1. Decide whether `TF-VAL-001B-002` uses `3300 nm` as a single replacement, one bound in a range, or one named sensitivity scenario.
-2. Decide whether `TF-VAL-001B-003B` is an acceptable Pecem alternate-port scenario and document Pecem -> Fortaleza road-access treatment before execution.
-3. Decide whether `TF-VAL-001B-005B` is an acceptable Suape alternate-port scenario and document Suape -> Recife road-access treatment before execution.
-4. Select a defensible alternate origin port for `TF-VAL-001B-004B`, or keep the original Brasilia -> Salvador case excluded.
-5. Keep `TF-VAL-001B-003A` and `TF-VAL-001B-005A` blocked unless exact Fortaleza and Recife selected-port references are collected.
+Eligible rows are limited to:
 
-After those decisions, reruns should be executed only for rows whose config can be changed from `planned` to `model_rerun` without adding undocumented assumptions.
+- `TF-VAL-001B-002`: reference-distance sensitivity using the documented Santos/Manaus `3300 nm` candidate.
+- `TF-VAL-001B-003B`: Pecem alternate-port sensitivity only; not Porto de Fortaleza validation.
+- `TF-VAL-001B-005B`: Suape alternate-port sensitivity only; not Porto do Recife validation.
+
+The following remain excluded or blocked for issue #16 unless later evidence or methodology changes: `TF-VAL-001B-001`, `TF-VAL-001B-003A`, `TF-VAL-001B-004A`, `TF-VAL-001B-004B`, and `TF-VAL-001B-005A`.
+
+Sensitivity reruns should be executed only for rows whose config can be changed from `planned` to `model_rerun` without adding undocumented assumptions. Sensitivity outputs are not validated baselines and must not be used as headline thesis conclusions.
