@@ -87,6 +87,8 @@ Run summary from `data/processed/cabotage_data/gustavo_excel_benchmark_summary.j
 
 Cache/provider limitation: the configured Supabase route cache could not be read or written in this local run because the configured tenant/user was rejected. The script continued with in-memory live road routing provider results. This makes the generated artifacts a valid execution record, but the road-distance side is not cache-stabilized for future reruns until the database configuration is fixed or equivalent route rows are available in Supabase.
 
+Supabase/cache rerun note: after the Supabase project was reactivated, Batch 002 was rerun on `main` at `3a7307558cec1ce161bcc9aa5fc5ff4953514a23` with the same intended benchmark basis. The rerun completed all 21 positive OD pairs, route cache read worked, a rollbacked route-cache write probe worked, and the run log showed 63 road-route cache hits with zero cache misses, zero route-cache read/write failures, and zero live provider distance writes. The tracked CSV/JSON now reflect this cache-enabled rerun. The road mismatch remained materially similar (mean/median absolute road difference 199.8%/149.3%), the multimodal mismatch remained large (mean/median absolute multimodal difference 60.8%/63.7%), and mean model savings increased to 92.7%. See `docs/validation/tf_validation_batch_002_rerun_comparison.md` for the per-row comparison.
+
 ## 5. Batch 002C - Boundary and comparability classification
 
 All 21 model-run rows are only `partially_comparable`. They share the same city-pair labels and per-container benchmark unit, but the workbook's detailed route/service, distance, allocation, and emissions-boundary assumptions were not fully reconstructed in this issue.
@@ -98,6 +100,8 @@ Observed classification pattern:
 - One row, Sao Paulo -> Salvador, is classified as `same_direction_order_of_magnitude` because the savings percentages are closest while still requiring boundary and allocation caveats.
 - No row is classified as `opposite_direction` or `model_error`.
 - Secondary limitations that remain relevant across the set are `boundary_mismatch`, `distance_source_mismatch`, `allocation_mismatch`, possible `port_selection_mismatch`, and `reference_needed`.
+
+Rerun classification update: the cache-enabled rerun keeps the same directional agreement, but all 21 rows should now be treated as `same_direction_large_gap`. The previous Sao Paulo -> Salvador `same_direction_order_of_magnitude` classification is not retained because the rerun multimodal value moved substantially lower while the road value stayed stable.
 
 Likely explanation families:
 
@@ -212,7 +216,7 @@ The Gustavo/Costa workbook is valuable because it is an external benchmark assoc
 
 The workbook should not be treated as absolute ground truth. This Batch 002 run did not fully reconstruct the workbook's internal distance sources, service assumptions, port choices, allocation logic, or emissions boundary. It also did not prove that CabotageLens reproduces the paper or the workbook. The correct explanation is narrower: when the same city labels and a 1 TEU / 14 t cargo basis are used, both the workbook and CabotageLens point in the same direction for all 21 positive OD pairs: the cabotage or multimodal alternative emits less than the road-only alternative.
 
-The aligned part is therefore directional, not exact. The workbook's mean parsed pair-level reduction is 46.7%, while the current model run produces a much larger mean modeled reduction of 89.1%. That difference is too large to claim calibration or validation of magnitude. The safest committee wording is that Batch 002 supports the qualitative modal-shift direction but exposes boundary and route-assumption gaps that must remain visible.
+The aligned part is therefore directional, not exact. The workbook's mean parsed pair-level reduction is 46.7%, while the first model run produced a much larger mean modeled reduction of 89.1% and the cache-enabled rerun produced 92.7%. That difference is too large to claim calibration or validation of magnitude. The safest committee wording is that Batch 002 supports the qualitative modal-shift direction but exposes boundary, route-assumption, and cargo-allocation gaps that must remain visible.
 
 Several differences are expected:
 
