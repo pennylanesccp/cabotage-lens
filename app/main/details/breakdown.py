@@ -43,14 +43,14 @@ def _summary_table(results: Mapping[str, Any]) -> pd.DataFrame:
             {
                 "Route": "Road",
                 "Distance": fmt_distance_km(road.get("distance_km")),
-                "Cost": fmt_currency_brl(road.get("cost")),
-                "Emissions": fmt_emissions_kg(road.get("co2e")),
+                "Cost estimate": fmt_currency_brl(road.get("cost")),
+                "TTW CO2e": fmt_emissions_kg(road.get("co2e")),
             },
             {
                 "Route": "Multimodal (Road + Cabotage)",
                 "Distance": fmt_distance_km(mm_distance),
-                "Cost": fmt_currency_brl(mm.get("total_cost")),
-                "Emissions": fmt_emissions_kg(mm.get("total_co2e")),
+                "Cost estimate": fmt_currency_brl(mm.get("total_cost")),
+                "TTW CO2e": fmt_emissions_kg(mm.get("total_co2e")),
             },
         ]
     )
@@ -67,20 +67,20 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
         {
             "Leg": "Road to port (pre-carriage)",
             "Distance": fmt_distance_km(first.get("distance_km")),
-            "Cost": fmt_currency_brl(first.get("cost")),
-            "Emissions": fmt_emissions_kg(first.get("co2e")),
+            "Cost estimate": fmt_currency_brl(first.get("cost")),
+            "TTW CO2e": fmt_emissions_kg(first.get("co2e")),
         },
         {
             "Leg": "Sea leg (cabotage)",
             "Distance": fmt_distance_km(sea.get("distance_km")),
-            "Cost": fmt_currency_brl(maritime.get("sailing_cost_brl")),
-            "Emissions": fmt_emissions_kg(maritime.get("sailing_co2e_kg")),
+            "Cost estimate": fmt_currency_brl(maritime.get("sailing_cost_brl")),
+            "TTW CO2e": fmt_emissions_kg(maritime.get("sailing_co2e_kg")),
         },
         {
             "Leg": "Port ops",
             "Distance": "-",
-            "Cost": fmt_currency_brl(maritime.get("port_ops_cost_brl")),
-            "Emissions": fmt_emissions_kg(maritime.get("port_ops_co2e_kg")),
+            "Cost estimate": fmt_currency_brl(maritime.get("port_ops_cost_brl")),
+            "TTW CO2e": fmt_emissions_kg(maritime.get("port_ops_co2e_kg")),
         },
     ]
 
@@ -89,8 +89,8 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
             {
                 "Leg": "Hoteling",
                 "Distance": "-",
-                "Cost": fmt_currency_brl(maritime.get("hoteling_cost_brl")),
-                "Emissions": fmt_emissions_kg(maritime.get("hoteling_co2e_kg")),
+                "Cost estimate": fmt_currency_brl(maritime.get("hoteling_cost_brl")),
+                "TTW CO2e": fmt_emissions_kg(maritime.get("hoteling_co2e_kg")),
             }
         )
 
@@ -98,8 +98,8 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
         {
             "Leg": "Road from port (on-carriage)",
             "Distance": fmt_distance_km(last.get("distance_km")),
-            "Cost": fmt_currency_brl(last.get("cost")),
-            "Emissions": fmt_emissions_kg(last.get("co2e")),
+            "Cost estimate": fmt_currency_brl(last.get("cost")),
+            "TTW CO2e": fmt_emissions_kg(last.get("co2e")),
         }
     )
 
@@ -107,8 +107,11 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
 
 
 def render_breakdown(results: Mapping[str, Any]) -> None:
+    st.caption(
+        "Emissions are operational TTW CO2e estimates from the current fuel-factor boundary. "
+        "Cost values are model estimates/proxies, not complete commercial freight quotes."
+    )
     st.markdown("**Total summary**")
     st.dataframe(_summary_table(results), hide_index=True, width="stretch")
     st.markdown("**Multimodal leg breakdown**")
     st.dataframe(_legs_table(results), hide_index=True, width="stretch")
-
