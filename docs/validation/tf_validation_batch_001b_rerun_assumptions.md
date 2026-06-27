@@ -6,6 +6,8 @@ This document records the current Batch 001B rerun assumptions, implemented hook
 
 Batch 001B is a corrected or alternate validation layer beside the historical Batch 001 record. It must not silently replace `docs/validation/tf_validation_batch_001_results.md`, and it must not introduce undocumented maritime distances, costs, emissions factors, fuel prices, vessel parameters, or port choices.
 
+Case-level readiness classes and the handoff into issue #16 are defined in `docs/validation/tf_validation_batch_001b_methodology_decisions.md`.
+
 The current tracked Batch 001B artifacts are planned/record-only artifacts unless a future command explicitly runs with `--execute`.
 
 ## 2. Batch 001B Principles

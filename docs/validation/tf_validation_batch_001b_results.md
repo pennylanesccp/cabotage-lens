@@ -27,6 +27,8 @@ The planned rows preserve documented reference candidates where they already exi
 
 The CSV and JSON artifacts were refreshed on 2026-06-27 in non-executing mode so their fields align with the current `ALL_OUTPUT_FIELDS` schema, including maritime distance unit, normalized source type, notes, optional bounds, and original maritime source type.
 
+The methodology-decision layer for these rows is recorded in `docs/validation/tf_validation_batch_001b_methodology_decisions.md`.
+
 Original Batch 001 outputs remain preserved in `docs/validation/tf_validation_batch_001_results.md`.
 
 ## 2. Commands Run
