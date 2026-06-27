@@ -22,6 +22,12 @@ Runtime uses only processed artifact data from:
 - `docs/references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf`
 - `docs/references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf`
 
+## Boundary note
+
+Current runtime port-ops emissions use the same operational TTW CO2e fuel-factor pathway as the rest of the app. WTW or LCA values from the literature audit, including alternative-fuel values such as HVO, should be treated as references for future sensitivity or scenario work and should not be substituted into this model without an explicit boundary change and validation path.
+
+Port-ops cost outputs are model cost estimates for the included equipment/activity boundary. They are not full terminal tariffs or commercial freight-rate components unless those missing cost categories are added separately.
+
 ## Method
 
 ### 1) Moves basis
@@ -123,6 +129,7 @@ Available in:
 - TEU conversion (`t_per_teu_default`) is a pragmatic assumption (default `14`) and should be replaced by route/customer commodity mix when available.
 - Electricity emission/cost factors are placeholders (0.0) pending local grid/tariff values in the provided references.
 - Reefer loads and non-handling terminal energy were not included.
+- Reviewed hoteling/port-operation papers can inform future checks, but pending or WTW/LCA evidence should not replace the current TTW port-ops factors without a separate implementation plan.
 
 ## Future improvements (still reference-constrained)
 

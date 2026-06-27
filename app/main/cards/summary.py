@@ -45,13 +45,13 @@ def render_summary_cards(results: Mapping[str, Any] | None) -> None:
     multimodal = (results or {}).get("multimodal", {})
 
     multimodal_metrics = [
-        ("Fuel cost", _value_or_placeholder(results, fmt_currency_brl_rounded(multimodal.get("total_cost")))),
-        ("Emissions", _value_or_placeholder(results, fmt_emissions_compact(multimodal.get("total_co2e")))),
+        ("Cost estimate", _value_or_placeholder(results, fmt_currency_brl_rounded(multimodal.get("total_cost")))),
+        ("TTW CO2e", _value_or_placeholder(results, fmt_emissions_compact(multimodal.get("total_co2e")))),
         ("Distance", _value_or_placeholder(results, fmt_distance_km_rounded(multimodal_total_distance(results or {})))),
     ]
     road_metrics = [
-        ("Fuel cost", _value_or_placeholder(results, fmt_currency_brl_rounded(road.get("cost")))),
-        ("Emissions", _value_or_placeholder(results, fmt_emissions_compact(road.get("co2e")))),
+        ("Cost estimate", _value_or_placeholder(results, fmt_currency_brl_rounded(road.get("cost")))),
+        ("TTW CO2e", _value_or_placeholder(results, fmt_emissions_compact(road.get("co2e")))),
         ("Distance", _value_or_placeholder(results, fmt_distance_km_rounded(road.get("distance_km")))),
     ]
 
