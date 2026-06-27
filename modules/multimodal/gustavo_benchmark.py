@@ -24,6 +24,7 @@ _log = get_logger(__name__)
 DEFAULT_GUSTAVO_WORKBOOK_PATH = Path("docs/references/core/Dados Relatorio 2.xlsx")
 DEFAULT_BENCHMARK_CSV_PATH = Path("data/processed/cabotage_data/gustavo_excel_benchmark.csv")
 DEFAULT_BENCHMARK_JSON_PATH = Path("data/processed/cabotage_data/gustavo_excel_benchmark_summary.json")
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _CITY_QUERY_MAP = {
     "Manaus": "Manaus, AM",
@@ -99,7 +100,7 @@ def load_gustavo_workbook_pairs(
             )
 
     summary = {
-        "workbook_path": str(workbook.resolve()),
+        "workbook_path": _repo_relative_or_resolved_path(workbook),
         "pair_count": len(pairs),
         "city_count": len({pair.origin_city for pair in pairs} | {pair.destiny_city for pair in pairs}),
         "weekly_road_kg_co2e": _extract_total_origin_sum(summary_sheet, header_label="Origem / Destino", total_header="Total Origem CO2e (kg)"),
@@ -511,6 +512,14 @@ def _pct_diff(model_value: float, workbook_value: float) -> float | None:
     if workbook_value <= 0.0:
         return None
     return ((float(model_value) - float(workbook_value)) / float(workbook_value)) * 100.0
+
+
+def _repo_relative_or_resolved_path(path: Path) -> str:
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(_REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(resolved)
 
 
 def _safe_mean(values: Iterable[float]) -> float | None:
