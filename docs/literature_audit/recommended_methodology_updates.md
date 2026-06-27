@@ -94,3 +94,10 @@ This document lists proposed changes or additions to the TF/report/article based
   * **Requires Code Change**: No.
   * **Priority**: Low
 
+## Remaining Literature Work
+
+* **Note on Pending Reviews**: The hoteling and port-operation literature is still pending full audit. To refine the micro-level inputs for the port hoteling and terminal efficiency models, the following papers should be reviewed next:
+  * `berth2009` (Fuel consumption and at-berth emissions)
+  * `shipops2022` (Southeast Asia port hoteling emissions)
+  * `berthairquality2010` (At-berth air quality impacts)
+  * `isoemission2019` (Iso-emission maps, useful for sensitivity/result visualization in modal comparisons)

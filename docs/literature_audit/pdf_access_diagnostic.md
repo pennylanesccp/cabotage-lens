@@ -5,7 +5,7 @@ This document records the extraction status and methodology for the local refere
 ## Extraction Methodology
 * **Tested Methods**:
   1. **Python `pypdf`**: Installed and fully functional (`pypdf` version `6.14.2`). This was the primary tool used for text extraction. All 12 PDF files were successfully read, and raw text could be extracted.
-  2. **Python `pdfplumber`**: Tested but not installed/used in the current python environment since `pypdf` was sufficient for text and metadata extraction.
+  2. **Python `pdfplumber`**: Not installed or used in this audit. Standard text extraction via `pypdf` was sufficient for gathering all required context and data points, so no secondary library was necessary.
 * **Extraction Strategy**: Raw text was extracted per-page and saved to text files or processed directly using regex-based keyword searches (e.g. matching contexts within 250 characters around keywords like `WTW`, `CO2e`, `cost`).
 
 ## PDF Readability and Review Status
