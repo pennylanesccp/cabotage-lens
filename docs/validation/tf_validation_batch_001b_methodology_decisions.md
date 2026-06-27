@@ -81,6 +81,8 @@ Passing these gates makes a row executable for its declared purpose. It does not
 
 Cases eligible for sensitivity analysis now:
 
+The thesis-ready issue #16 results summary is recorded in `docs/validation/tf_sensitivity_results_batch_001b.md`.
+
 | Case | Issue #16 role | Exact reason |
 | --- | --- | --- |
 | `TF-VAL-001B-002` | Reference-distance sensitivity | Santos/Manaus has a documented `3300 nm` external reference candidate for the selected port pair, with original fallback preserved. Use it as sensitivity, not a validated baseline replacement. |

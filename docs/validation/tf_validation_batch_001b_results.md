@@ -29,6 +29,8 @@ The CSV and JSON artifacts were refreshed on 2026-06-27 in non-executing mode so
 
 The methodology-decision layer for these rows is recorded in `docs/validation/tf_validation_batch_001b_methodology_decisions.md`.
 
+The thesis-ready issue #16 sensitivity summary is recorded in `docs/validation/tf_sensitivity_results_batch_001b.md`.
+
 Original Batch 001 outputs remain preserved in `docs/validation/tf_validation_batch_001_results.md`.
 
 ## 2. Commands Run
