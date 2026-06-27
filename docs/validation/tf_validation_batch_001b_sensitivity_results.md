@@ -2,9 +2,9 @@
 
 Execution date: 2026-06-26
 
-Git commit SHA at run time: `e770f4694a6aca6c73556027dadacff7df25bac5`
+Git commit SHA at run time: `671e9cba6eb30ce3667787835c58e03bbc593551`
 
-Working-tree note: this sensitivity run used the issue #16 local changes that allow mixed configs to retain blocked rows as planned during `--execute`.
+Working-tree note: the rerun used the committed issue #16 sensitivity runner and config. A project virtual environment was created for this rerun and dependencies were installed from `requirements.txt`.
 
 Decision source: `docs/validation/tf_validation_batch_001b_sensitivity_decisions.md`
 
@@ -17,7 +17,9 @@ Output artifacts:
 
 ## 1. Execution Summary
 
-The sensitivity artifact was generated in planned mode. Actual model execution was attempted for the sensitivity-ready rows, but no numerical sensitivity scenario was executed because the active local Python environment is missing the runtime dependency `pandas`.
+The sensitivity artifact remains in planned mode. Actual model execution was retried in a project virtual environment after installing dependencies from `requirements.txt`, so the previous missing-`pandas` blocker was resolved.
+
+No numerical sensitivity scenario was executed. The rerun reached the first sensitivity-ready case, but evaluation failed while preparing the cost context because the configured Supabase data/cache endpoints were not usable in this environment and the local diesel-price CSV was absent. The runner therefore did not write executed cost or emissions rows.
 
 Final artifact status:
 
@@ -37,30 +39,55 @@ Planned sensitivity output:
 py scripts/run_validation_batch_001b.py --config docs/validation/tf_validation_batch_001b_sensitivity_config.json --output-csv docs/validation/tf_validation_batch_001b_sensitivity_output.csv --output-json docs/validation/tf_validation_batch_001b_sensitivity_output.json
 ```
 
-Result: success. The runner wrote 8 rows with `execute=False`.
+Result from issue #16: success. The runner wrote 8 rows with `execute=False`.
+
+Project virtual environment setup for this rerun:
+
+```powershell
+py -m venv venv
+.\venv\Scripts\python.exe -m pip install --upgrade pip
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Result: success. `pandas` and the other runtime dependencies were installed in `venv`.
+
+Focused checks in the virtual environment:
+
+```powershell
+.\venv\Scripts\python.exe -m unittest tests.test_validation_batch_001b
+.\venv\Scripts\python.exe -m compileall scripts modules
+```
+
+Result: success. The focused test module passed and the compile check completed.
 
 Actual sensitivity execution attempt:
 
 ```powershell
-py scripts/run_validation_batch_001b.py --config docs/validation/tf_validation_batch_001b_sensitivity_config.json --execute --output-csv docs/validation/tf_validation_batch_001b_sensitivity_output.csv --output-json docs/validation/tf_validation_batch_001b_sensitivity_output.json
+.\venv\Scripts\python.exe scripts/run_validation_batch_001b.py --config docs/validation/tf_validation_batch_001b_sensitivity_config.json --execute --output-csv docs/validation/tf_validation_batch_001b_sensitivity_output.csv --output-json docs/validation/tf_validation_batch_001b_sensitivity_output.json
 ```
 
-Result: failed before routing or evaluation because `modules.costs.diesel_prices` imports `pandas`, and `pandas` is not installed in the active `py` environment.
+Result: failed during the first sensitivity-ready case, `TF-VAL-001B-SENS-002-REFDIST`, before any CSV/JSON output was written.
 
-The repository did not have `.\\venv\\Scripts\\python.exe`, so no project virtual environment was available for a second execution attempt.
+Observed runtime blocker:
+
+- road-cache reads and writes attempted to use the configured Supabase Postgres endpoint and failed with `ENOTFOUND` / tenant-user lookup errors for the configured project;
+- evaluation then attempted to resolve `data/processed/road_data/latest_diesel_prices.csv` through Supabase Storage and failed because `fgspotqnwmvstzctuxzn.supabase.co` could not be resolved;
+- the repository does not currently contain local `data/processed/road_data/latest_diesel_prices.csv`, so the run could not fall back to a local diesel-price table under the active configuration.
+
+This is an environment/data-asset blocker, not a numerical sensitivity result.
 
 ## 3. Cases Included
 
 | Case ID | Original Batch 001B case | Original Batch 001 case | Type | Output status | Sensitivity / validation status | Execution outcome |
 | --- | --- | --- | --- | --- | --- | --- |
 | `TF-VAL-001B-001` | `TF-VAL-001B-001` | `TF-VAL-001` | record-only same-port case | `record_only` | `record_only` | emitted; not executed |
-| `TF-VAL-001B-SENS-002-REFDIST` | `TF-VAL-001B-002` | `TF-VAL-002` | reference-distance sensitivity | `planned` | `sensitivity_ready` | `not_executed_environment` |
+| `TF-VAL-001B-SENS-002-REFDIST` | `TF-VAL-001B-002` | `TF-VAL-002` | reference-distance sensitivity | `planned` | `sensitivity_ready` | `not_executed_environment`: Supabase data/cache and missing local diesel CSV |
 | `TF-VAL-001B-003A` | `TF-VAL-001B-003A` | `TF-VAL-003` | exact selected-port audit row | `planned` | `blocked_reference_needed` | not executed |
-| `TF-VAL-001B-SENS-003B-ALTPECEM` | `TF-VAL-001B-003B` | `TF-VAL-003` | alternate-port sensitivity | `planned` | `sensitivity_ready` | `not_executed_environment` |
+| `TF-VAL-001B-SENS-003B-ALTPECEM` | `TF-VAL-001B-003B` | `TF-VAL-003` | alternate-port sensitivity | `planned` | `sensitivity_ready` | `not_executed_environment`: not reached because first sensitivity case failed |
 | `TF-VAL-001B-004A` | `TF-VAL-001B-004A` | `TF-VAL-004` | invalid/excluded case | `record_only` | `excluded` | emitted; not executed |
 | `TF-VAL-001B-004B` | `TF-VAL-001B-004B` | `TF-VAL-004` | alternate-origin audit row | `planned` | `blocked_missing_port` | not executed |
 | `TF-VAL-001B-005A` | `TF-VAL-001B-005A` | `TF-VAL-005` | exact selected-port audit row | `planned` | `blocked_reference_needed` | not executed |
-| `TF-VAL-001B-SENS-005B-ALTSUAPE` | `TF-VAL-001B-005B` | `TF-VAL-005` | alternate-port sensitivity | `planned` | `sensitivity_ready` | `not_executed_environment` |
+| `TF-VAL-001B-SENS-005B-ALTSUAPE` | `TF-VAL-001B-005B` | `TF-VAL-005` | alternate-port sensitivity | `planned` | `sensitivity_ready` | `not_executed_environment`: not reached because first sensitivity case failed |
 
 ## 4. Sensitivity Scenarios
 
@@ -80,7 +107,7 @@ Original maritime distance preserved: `2744.7 km`, source `SeaMatrix haversine f
 
 Source/provenance: `docs/validation/tf_validation_batch_001_external_references.md`, based on Costa et al. (2025), Appendix 6, ANTAQ-based matrix, BRMAO -> BRSSZ.
 
-Execution status: `not_executed_environment`.
+Execution status: `not_executed_environment`. The case was reached by the `--execute` run, but evaluation failed before results were produced because the configured Supabase data/cache endpoints were unavailable and no local diesel-price CSV existed.
 
 Cost/emissions fields: not populated.
 
@@ -102,7 +129,7 @@ Original maritime distance preserved: `2391.2 km`, source `SeaMatrix haversine f
 
 Source/provenance: `docs/validation/tf_validation_batch_001_external_references.md`, based on Costa et al. (2025), Appendix 6, ANTAQ-based matrix, BRMAO -> BRPEC.
 
-Execution status: `not_executed_environment`.
+Execution status: `not_executed_environment`. The case was not reached because `TF-VAL-001B-SENS-002-REFDIST` failed before the runner could continue to later sensitivity cases.
 
 Cost/emissions fields: not populated.
 
@@ -124,7 +151,7 @@ Original maritime distance preserved: `3214.0 km`, source `SeaMatrix haversine f
 
 Source/provenance: `docs/validation/tf_validation_batch_001_external_references.md`, based on Costa et al. (2025), Appendix 6, ANTAQ-based matrix, BRRIG -> BRSUA.
 
-Execution status: `not_executed_environment`.
+Execution status: `not_executed_environment`. The case was not reached because `TF-VAL-001B-SENS-002-REFDIST` failed before the runner could continue to later sensitivity cases.
 
 Cost/emissions fields: not populated.
 
@@ -142,7 +169,7 @@ These rows were not executed and must not be interpreted as sensitivity results.
 
 ## 6. Interpretation Limits
 
-No cost or emissions comparison changed as a result of this issue because no sensitivity scenario executed numerically.
+No cost or emissions comparison changed as a result of this rerun because no sensitivity scenario executed numerically.
 
 The current artifacts support only the following thesis statements:
 
@@ -150,7 +177,7 @@ The current artifacts support only the following thesis statements:
 - Pecem and Suape are represented only as explicit alternate-port sensitivity scenarios, not as replacements for Fortaleza or Recife.
 - Exact Fortaleza and Recife selected-port cases remain blocked.
 - Brasilia -> Salvador remains excluded or blocked until a defensible alternate origin port is selected.
-- The final thesis should not classify these sensitivity rows as robust, validated, or baseline results until a dependency-complete execution environment produces numerical outputs.
+- The final thesis should not classify these sensitivity rows as robust, validated, or baseline results until a dependency-complete and data-asset-complete execution environment produces numerical outputs.
 
 ## 7. Implications For Final Classification
 
@@ -165,8 +192,9 @@ Under `docs/tf_result_classification_rules.md`, these rows remain outside robust
 
 Issue #17 should consolidate final thesis tables only after deciding how to handle the current non-executed sensitivity rows. Recommended next actions:
 
-1. Prepare a dependency-complete execution environment, preferably the project virtual environment installed from `requirements.txt`.
-2. Re-run the same sensitivity config with `--execute`.
-3. Review whether the three sensitivity rows produce cost/emissions results and preserve forced-port and maritime-distance provenance.
-4. Keep exact Fortaleza, exact Recife, and Brasilia alternate-origin rows blocked unless new documented evidence is added.
-5. Build final tables with separate sections for validated baseline rows, record-only/excluded rows, blocked rows, and sensitivity/alternate-port rows.
+1. Keep using the project virtual environment installed from `requirements.txt`.
+2. Provide a working configured Supabase project for cache/data access, or restore a defensible local `data/processed/road_data/latest_diesel_prices.csv` and document the local-data boundary before rerunning.
+3. Re-run the same sensitivity config with `--execute`.
+4. Review whether the three sensitivity rows produce cost/emissions results and preserve forced-port and maritime-distance provenance.
+5. Keep exact Fortaleza, exact Recife, and Brasilia alternate-origin rows blocked unless new documented evidence is added.
+6. Build final tables with separate sections for validated baseline rows, record-only/excluded rows, blocked rows, and sensitivity/alternate-port rows.
