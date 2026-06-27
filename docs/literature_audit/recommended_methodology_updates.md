@@ -2,11 +2,12 @@
 
 This document lists proposed changes or additions to the TF/report/article based on the literature audit. These are recommendations only and have not been applied to the codebase or main documentation.
 
-## Second-pass summary
+## Latest-pass summary
 
-* **What became stronger**: Utilizing `pypdf`, quantitative evidence was successfully extracted from the core PDFs. Important baselines were identified: cabotage cost advantages kick in significantly at distances >1,800km (`competitiveness2024`); average WTW emissions factors and fuel consumption for Brazilian cabotage were confirmed (`decarb2024`); and macro emissions disparities were extracted (8g vs 52g CO2/TKU) (`icct2022`). Claims in the matrices have been re-upgraded to "Strong" support based on this evidence.
-* **What remains uncertain**: The papers provided excellent macro and network-level data but did not directly resolve micro port-efficiency inputs (like exact crane moves per hour in Brazil).
-* **What should be reviewed next**: Non-core papers or specific Brazilian port authority data (ANTAQ) should be consulted to refine port dwell times and terminal efficiency.
+* **What was actually extracted**: Utilizing the `pypdf` library via a local python script, quantitative evidence was successfully extracted from 3 of the core PDFs (`competitiveness2024`, `decarb2024`, `icct2022`). For the remaining 2 core PDFs (`shortsea2019`, `modalshiftreview2020`), extraction was technically successful but review was restricted to the abstract/high-level level due to their qualitative or global focus.
+* **What became stronger**: Important baselines were identified for Brazil: cabotage cost advantages kick in significantly at distances >1,800km (`competitiveness2024`); average WTW emissions factors and fuel consumption for Brazilian cabotage were confirmed (`decarb2024`); and macro emissions disparities were extracted (8g vs 52g CO2/TKU) (`icct2022`). Claims in the matrices supported by these papers have been upgraded to "Strong".
+* **What remains partial or uncertain**: Papers `shortsea2019` and `modalshiftreview2020` remain only partially reviewed (abstract level). Therefore, their support for claims in the matrix has been downgraded to "Moderate". The papers provided excellent macro and network-level data but did not directly resolve micro port-efficiency inputs (like exact crane moves per hour in Brazil).
+* **What should be reviewed next**: Non-core papers or specific Brazilian port authority data (ANTAQ) should be consulted to refine port dwell times and terminal efficiency. The partial papers could also be reviewed in more depth if qualitative context is further needed.
 
 ## Must Include Before Final Report
 
@@ -88,13 +89,3 @@ This document lists proposed changes or additions to the TF/report/article based
   * **Requires Code Change**: No.
   * **Priority**: Low
 
-## Do Not Include / Outside Current Boundary
-
-* **Recommendation**: Advanced Machine Learning for Shapley Value cost allocation.
-  * **Source**: `shapley2025`
-  * **Affected Document**: N/A
-  * **Reason**: Too far outside the current scope of the tool's cost models.
-  * **Risk if ignored**: None.
-  * **Proposed Action**: Ignore.
-  * **Requires Code Change**: No.
-  * **Priority**: Low

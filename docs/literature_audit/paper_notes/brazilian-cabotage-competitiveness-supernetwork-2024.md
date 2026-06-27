@@ -4,7 +4,7 @@
 * **Year**: 2024
 * **Local File Path / Citation Key**: `docs/references/core/brazilian-cabotage-competitiveness-supernetwork-2024.pdf` / `competitiveness2024`
 * **Review Status**: reviewed
-* **What part of the paper was actually read**: Abstract, Introduction, Tables, and specific methodology sections focusing on costs and emissions boundaries via automated extraction.
+* **What part of the paper was actually read**: Abstract, Introduction, Tables, and specific methodology sections focusing on costs and emissions boundaries via automated extraction using a local python script with the `pypdf` library.
 * **Key claims relevant to CabotageLens**: Cabotage has a significant cost advantage over road for long-haul routes (>1,800 km). Cabotage offers up to 41.3% reduction in CO2e emissions.
 * **Exact section/page/table/figure references**: Page 1 (Abstract); Page 10 (Road diesel WTW); Page 20, Table 13 (MDO and VLSFO WTW parameters).
 * **Useful quantitative values, with units**: 
@@ -23,5 +23,5 @@
 * **Direct implications for final TF report**: Can strongly support claims about cabotage competitiveness on long-haul routes.
 * **Direct implications for technical article**: Provides a WTW CO2eq baseline to compare the model's TTW results.
 * **Caveats and non-applicable parts**: The supernetwork approach models 637 cities and detailed service frequencies, which may exceed CabotageLens' simplified routing logic.
-* **Claims that should not be borrowed because the boundary differs**: Do not directly compare the WTW emissions factors directly against CabotageLens' TTW factors without adjusting for the boundary.
+* **Claims that should not be borrowed because the boundary differs**: Do not directly compare the WTW emissions factors against CabotageLens' TTW factors without adjusting for the boundary. The paper is extremely useful for comparison but its WTW baseline should not be directly substituted into the TTW model.
 * **Recommended citation use**: Strongest citation for multimodal supernetwork methodology, long-haul distance thresholds (1800km), and full WTW cost-inclusive comparisons in Brazil.

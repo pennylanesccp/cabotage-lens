@@ -4,7 +4,7 @@
 * **Year**: 2022
 * **Local File Path / Citation Key**: `docs/references/core/brazilian-coastal-shipping-decarbonization-2022.pdf` / `icct2022`
 * **Review Status**: reviewed
-* **What part of the paper was actually read**: Executive Summary and selected sections via automated extraction.
+* **What part of the paper was actually read**: Executive Summary and selected sections via automated extraction using a local python script with the `pypdf` library.
 * **Key claims relevant to CabotageLens**: Brazilian freight is heavily dependent on road transport. Cabotage is much more CO2-efficient than road transport. Road transport freight rates are significantly higher than cabotage rates.
 * **Exact section/page/table/figure references**: Page 2 (Executive Summary); Page 13 (Emissions comparison); Page 14 (Total emissions).
 * **Useful quantitative values, with units**: 
@@ -20,5 +20,5 @@
 * **Direct implications for final TF report**: Strong evidence for the introductory context regarding modal shift potential and baseline emissions disparity.
 * **Direct implications for technical article**: Useful for framing the decarbonization impact of cabotage in Brazil.
 * **Caveats and non-applicable parts**: Values are national averages and do not account for specific multimodal corridor constraints.
-* **Claims that should not be borrowed because the boundary differs**: Do not use the 20% cost figure as a universal rule for all routes, as door-to-door distances change the cost parity.
+* **Claims that should not be borrowed because the boundary differs**: Do not use the 20% cost figure as a universal rule for all routes, as door-to-door distances change the cost parity. Note that TTW is used here, making it highly compatible with CabotageLens, though macro national averages shouldn't override specific route calculations.
 * **Recommended citation use**: Use to support claims that Brazilian freight is road-heavy, and for the baseline macro emissions factors (8g vs 52g CO2/TKU).

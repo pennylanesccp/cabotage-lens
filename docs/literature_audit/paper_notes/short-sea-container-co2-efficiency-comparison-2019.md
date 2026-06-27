@@ -3,8 +3,8 @@
 * **Full Title**: The comparative CO2 efficiency of short sea container transport
 * **Year**: 2019
 * **Local File Path / Citation Key**: `docs/references/core/short-sea-container-co2-efficiency-comparison-2019.pdf` / `shortsea2019`
-* **Review Status**: reviewed
-* **What part of the paper was actually read**: Abstract via automated extraction.
+* **Review Status**: partial
+* **What part of the paper was actually read**: Abstract via automated extraction using a local python script with the `pypdf` library.
 * **Key claims relevant to CabotageLens**: Short sea shipping is generally more CO2-efficient, but the edge is marginal in some scenarios. High capacity utilization is required for shipping to maintain its "green mode" advantage.
 * **Exact section/page/table/figure references**: Page 1 (Abstract).
 * **Useful quantitative values, with units**: None extracted (qualitative finding).

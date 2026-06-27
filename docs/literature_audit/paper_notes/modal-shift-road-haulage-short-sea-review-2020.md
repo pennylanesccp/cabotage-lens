@@ -3,8 +3,8 @@
 * **Full Title**: Modal shift from road haulage to short sea shipping: a systematic literature review and research directions
 * **Year**: 2020
 * **Local File Path / Citation Key**: `docs/references/core/modal-shift-road-haulage-short-sea-review-2020.pdf` / `modalshiftreview2020`
-* **Review Status**: reviewed
-* **What part of the paper was actually read**: Abstract via automated extraction.
+* **Review Status**: partial
+* **What part of the paper was actually read**: Abstract via automated extraction using a local python script with the `pypdf` library.
 * **Key claims relevant to CabotageLens**: Modal shift competitiveness relies on complex multi-agent and policy factors.
 * **Exact section/page/table/figure references**: Page 1-2 (Abstract).
 * **Useful quantitative values, with units**: None extracted (Literature review).

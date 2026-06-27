@@ -4,7 +4,7 @@
 * **Year**: 2024
 * **Local File Path / Citation Key**: `docs/references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf` / `decarb2024`
 * **Review Status**: reviewed
-* **What part of the paper was actually read**: Abstract and selected methodology sections via automated extraction.
+* **What part of the paper was actually read**: Abstract and selected methodology sections via automated extraction using a local python script with the `pypdf` library.
 * **Key claims relevant to CabotageLens**: Transitioning to HVO reduces emissions by 75.4%. Clearly establishes WTW factors for alternative and traditional marine fuels in Brazil. Provides average fuel consumption parameters.
 * **Exact section/page/table/figure references**: Page 1 (Abstract); Page 4 (Consumption parameters); Page 6, Table 1 (WTW factors); Page 7 (Route assumptions).
 * **Useful quantitative values, with units**: 
@@ -21,5 +21,5 @@
 * **Direct implications for final TF report**: Serves as the primary source for WTW boundary definitions and alternative fuel potential.
 * **Direct implications for technical article**: Key for defining emissions factors and the distinction between CO2 and CO2e.
 * **Caveats and non-applicable parts**: Focused heavily on HVO, which may be a future scenario rather than the baseline.
-* **Claims that should not be borrowed because the boundary differs**: Ensure WTW factors are not mixed with TTW outputs.
+* **Claims that should not be borrowed because the boundary differs**: Ensure WTW factors are not mixed with TTW outputs. CabotageLens uses a TTW boundary for its operational model, so these WTW values are useful for discussion and comparison but should not be directly substituted into the tool's core logic.
 * **Recommended citation use**: Strongest citation for distinguishing CO2 from CO2e, defining WTW boundaries, and sourcing average cabotage vessel consumption parameters.
