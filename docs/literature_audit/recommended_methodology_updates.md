@@ -4,10 +4,15 @@ This document lists proposed changes or additions to the TF/report/article based
 
 ## Latest-pass summary
 
-* **What was actually extracted**: Utilizing the `pypdf` library via a local python script, quantitative evidence was successfully extracted from 3 of the core PDFs (`competitiveness2024`, `decarb2024`, `icct2022`). For the remaining 2 core PDFs (`shortsea2019`, `modalshiftreview2020`), extraction was technically successful but review was restricted to the abstract/high-level level due to their qualitative or global focus.
-* **What became stronger**: Important baselines were identified for Brazil: cabotage cost advantages kick in significantly at distances >1,800km (`competitiveness2024`); average WTW emissions factors and fuel consumption for Brazilian cabotage were confirmed (`decarb2024`); and macro emissions disparities were extracted (8g vs 52g CO2/TKU) (`icct2022`). Claims in the matrices supported by these papers have been upgraded to "Strong".
-* **What remains partial or uncertain**: Papers `shortsea2019` and `modalshiftreview2020` remain only partially reviewed (abstract level). Therefore, their support for claims in the matrix has been downgraded to "Moderate". The papers provided excellent macro and network-level data but did not directly resolve micro port-efficiency inputs (like exact crane moves per hour in Brazil).
-* **What should be reviewed next**: Non-core papers or specific Brazilian port authority data (ANTAQ) should be consulted to refine port dwell times and terminal efficiency. The partial papers could also be reviewed in more depth if qualitative context is further needed.
+* **What was actually extracted**:
+  * `competitiveness2024`: Competitiveness distance threshold of >1,800 km (Page 18); VLSFO WTW emission factor of 94.26 gCO2eq/MJ and MDO WTW emission factor of 92.78 gCO2eq/MJ (Page 20, Table 13); and road transportation EBIT margin of 15% (Page 5).
+  * `icct2022`: Cabotage emission intensity of 8 gCO2/TKU vs road transport emission intensity of 52 gCO2/TKU (Page 12); road freight rate premium of 20% on average (Page 2); and 2020 cabotage sector emissions of 4.7 million tonnes of CO2e (Page 14).
+  * `decarb2024`: Vessel fuel consumption of 3.5 tons/day during voyage vs 5.0 tons/day in port (Page 4); HVO WTW emission factor of 23.7 gCO2e/MJ (Page 5, Table 1); and a 75.4% emission reduction potential by switching from VLSFO/MDO to HVO.
+  * `shortsea2019` (partial): Feeder vessel CO2 emissions of 582, 654, and 718 gCO2/TEU-km (Page 7, Table 3) depending on ship size (458–809 TEU).
+* **What became stronger**: Support for Brazilian-specific freight matrix claims (high road-dependency), macro emissions disparities (8g vs 52g CO2/TKU), average operational fuel consumption for cabotage vessels (3.5 t/day steaming, 5.0 t/day port), and the distance threshold at which cabotage becomes cost-competitive (>1,800 km).
+* **What remains partial**: Analysis of European container feeder operations (`shortsea2019`) and the global modal shift review (`modalshiftreview2020`) remain partial (limited to abstract/intro and key results). Consequently, their support in the claim matrix is downgraded to **Moderate**. The micro-level parameters for port terminal operations (such as actual port crane handling rates or port dwell times in Brazil) remain unextracted from the literature.
+* **What should be reviewed next**: Non-core papers focusing on at-berth/hoteling emissions (e.g. `berth2009`, `shipops2022`) and primary sources of Brazilian port performance (such as ANTAQ or port authority datasets) should be audited next to refine the hoteling and port operation model inputs.
+
 
 ## Must Include Before Final Report
 

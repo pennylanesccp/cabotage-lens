@@ -4,21 +4,34 @@
 * **Year**: 2022
 * **Local File Path / Citation Key**: `docs/references/core/brazilian-coastal-shipping-decarbonization-2022.pdf` / `icct2022`
 * **Review Status**: reviewed
-* **What part of the paper was actually read**: Executive Summary and selected sections via automated extraction using a local python script with the `pypdf` library.
-* **Key claims relevant to CabotageLens**: Brazilian freight is heavily dependent on road transport. Cabotage is much more CO2-efficient than road transport. Road transport freight rates are significantly higher than cabotage rates.
-* **Exact section/page/table/figure references**: Page 2 (Executive Summary); Page 13 (Emissions comparison); Page 14 (Total emissions).
-* **Useful quantitative values, with units**: 
-  - Cabotage emissions: 8 gCO2/TKU (tonne-kilometer)
-  - Road transport emissions: ~52 gCO2/TKU
-  - Road transport freight rates are on average 20% higher than cabotage.
-  - 2020 cabotage emissions totaled 4.7 million tonnes of CO2e.
-* **Emissions boundary**: TTW / CO2e. The emissions are reported as "tank-to-wake (TtW) GHG emissions", converted to CO2e using IPCC AR6 100-year GWP values.
-* **Cost boundary**: General reference to freight rates being 20% higher for road.
-* **Route/network modeling boundary**: General comparison.
-* **Direct implications for CabotageLens methodology**: Confirms TTW as a valid operational boundary. Provides a baseline macro-level comparison of emissions per TKU (8g vs 52g).
-* **Direct implications for validation Batch 001 / Batch 001B**: None directly.
-* **Direct implications for final TF report**: Strong evidence for the introductory context regarding modal shift potential and baseline emissions disparity.
-* **Direct implications for technical article**: Useful for framing the decarbonization impact of cabotage in Brazil.
-* **Caveats and non-applicable parts**: Values are national averages and do not account for specific multimodal corridor constraints.
-* **Claims that should not be borrowed because the boundary differs**: Do not use the 20% cost figure as a universal rule for all routes, as door-to-door distances change the cost parity. Note that TTW is used here, making it highly compatible with CabotageLens, though macro national averages shouldn't override specific route calculations.
-* **Recommended citation use**: Use to support claims that Brazilian freight is road-heavy, and for the baseline macro emissions factors (8g vs 52g CO2/TKU).
+* **Extraction Method**: Text extraction using `pypdf` via a local Python script, followed by targeted text and keyword context queries.
+* **What part of the paper was actually read**: Executive Summary (Page 2), Brazilian transport matrix context (Page 2), fleet composition (Page 4), operating costs (Page 9, Fig 8), fuel tax policies (Page 10), and emission intensity comparisons (Page 12, Page 14, Fig 10).
+* **Key claims relevant to CabotageLens**:
+  - Brazilian freight is heavily dependent on road transport (64% modal share). Cabotage is underutilized (11% of cargo transported, measured in TKU).
+  - Cabotage is significantly more CO2-efficient than road transport on a ton-kilometer basis.
+  - Road transport freight rates are on average 20% higher than cabotage rates.
+* **Exact section/page/table/figure references**:
+  - Page 2 (Executive Summary): Modal shares (11% cabotage, 64% road), and road rates being on average 20% higher.
+  - Page 4 (Figure 1): Ship types in Brazilian cabotage (63% oil tankers, 20% container ships, 10% dry bulk).
+  - Page 9 (Figure 8): Operating cost structure of cabotage (Fuel 44%, Taxes 20%, Other 13%, Maintenance 8%, Administrative 7%, Crew 5%, Insurance 3%).
+  - Page 10 (Section 7): Local ICMS tax and fuel price discrepancies (vessels pay 20% more for fuel than vessels in international transport).
+  - Page 12 (Section 9): Micro-level emission comparison (8 gCO2/TKU for cabotage vs 52 gCO2/TKU for road transport).
+  - Page 14 (Figure 10): 2020 cabotage emissions total of 4.7 million tonnes of CO2e.
+* **Useful quantitative values, with units**:
+  - **Cabotage Emission Intensity**: 8 gCO2/TKU (Page 12, Footnote 9 / Text; source EPL 2021). Tank-to-Wake (TTW) CO2 combustion boundary.
+  - **Road Transport Emission Intensity**: 52 gCO2/TKU (Page 12, Footnote 9 / Text; source EPL 2021). Tank-to-Wake (TTW) CO2 combustion boundary.
+  - **Road Freight Rate Premium**: On average 20% higher than cabotage rates (Page 2, Executive Summary; source Alvarenga 2019). Commercial freight rate boundary.
+  - **Cabotage Fleet Fuel Cost Share**: 44% of total operational cost (Page 9, Figure 8).
+  - **Fuel Cost Surcharge**: Cabotage vessels pay ~20% more for fuel than international vessels due to ICMS tax (Page 10, Section 7).
+  - **Cabotage Sector Emissions (2020)**: 4.7 million tonnes of CO2e (Page 14, Figure 10; based on Comer & Osipova 2021 and MEPC 2018 factors, using IPCC AR6 100-year GWP: CH4 = 29.8, N2O = 273).
+* **Emissions boundary**: Tank-to-Wake (TTW) / CO2 and CO2e. The micro comparison (8g vs 52g) is stated as CO2 (combustion only). The macro sector estimates (4.7M tonnes) are reported as CO2e using IPCC AR6 100-year GWP values.
+* **Cost boundary**: Commercial freight rates for the 20% premium claim; operational cost breakdown for the 44% fuel cost claim.
+* **Route/network modeling boundary**: National macro-level averages.
+* **Direct implications for CabotageLens methodology**:
+  - Confirms Tank-to-Wake (TTW) as the primary operational boundary for comparing combustion emissions.
+  - Provides a Brazilian-specific benchmark (8g vs 52g CO2/TKU) to validate or compare CabotageLens' output results.
+* **Caveats and non-applicable parts**: The 20% road freight premium is a national average and does not account for specific multimodal routes where road-only might be cheaper due to short distance or high port handling costs.
+* **Claims that should not be borrowed because the boundary differs**:
+  - Do not use the 8 gCO2/TKU and 52 gCO2/TKU as direct substitutes for corridor-specific calculations, as they represent cargo-aggregated national estimates.
+  - Do not assume fuel price local surcharges (20% more) apply uniformly across all states, due to variable ICMS tax exemptions.
+* **Recommended citation use**: Cite for the modal share statistics of Brazil, the 8g vs 52g CO2/TKU emission intensity comparison, and the 20% average road rate premium.
