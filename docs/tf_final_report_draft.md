@@ -100,20 +100,28 @@ O Batch 002 usa o workbook Gustavo/Costa como benchmark externo, nao como verdad
 
 Por fim, a unidade funcional tambem controla a linguagem dos resultados. Custos produzidos pelo modelo permanecem estimativas de custo sob a fronteira implementada, e nao tarifas, cotacoes ou fretes comerciais. Emissoes permanecem CO2e operacional TTW por remessa, salvo indicacao explicita em contrario. Evidencias WTW, LCA, CO2-only ou fatores de outro limite ambiental nao devem ser misturadas com os resultados TTW CO2e do CabotageLens sem mudanca documentada de fronteira. Essa disciplina de unidade funcional, base de carga e fronteira evita que linhas de sensibilidade ou benchmark sejam promovidas a conclusoes gerais que os artefatos rastreados ainda nao sustentam.
 
-### 4.2 Alternativa rodoviaria direta
+### 4.2 Alternativa rodoviária direta
 
-A alternativa rodoviaria direta representa o transporte da remessa por caminhao da origem ao destino. A distancia e expressa em quilometros (`km`). O consumo de combustivel, o custo modelado e as emissoes TTW CO2e sao calculados a partir da distancia rodoviaria, do preset de veiculo, da massa da carga, dos parametros de combustivel e dos fatores de emissao implementados.
+A alternativa rodoviária direta representa o movimento da mesma remessa definida na unidade funcional diretamente por caminhão entre a origem e o destino. Ela funciona como a cadeia de comparação rodoviária do CabotageLens: a carga, a massa representada e o par origem-destino permanecem os mesmos, enquanto a solução logística é limitada a uma perna rodoviária única. Portanto, trata-se de uma alternativa modelada de comparação, não de uma reconstrução de uma viagem real específica de caminhão.
 
-De forma conceitual, para uma perna rodoviaria:
+A distância dessa perna é expressa em quilômetros (`km`) e corresponde à distância de rota produzida pela lógica de roteamento e cache configurada para o cenário. Essa distância deve ser lida como rota modelada, rastreável aos artefatos de provedor/cache, e não como trajetória GPS medida, verdade de terreno exata ou registro operacional de uma viagem executada. A estabilidade do provedor e do cache melhora a rastreabilidade da entrada de distância, mas não elimina as limitações próprias de uma rota calculada.
 
-- distancia rodoviaria: `d_road` em `km`;
-- consumo de diesel: funcao de `d_road`, eficiencia do veiculo em `km/L`, carga e numero de viagens;
-- custo rodoviario modelado: litros de diesel multiplicados pelo preco aplicavel em `BRL/L`;
-- emissoes rodoviarias: combustivel consumido multiplicado pelo fator TTW CO2e aplicavel, em `kg CO2e`.
+Sobre essa distância rodoviária, o modelo calcula consumo de combustível, custo modelado e emissões operacionais TTW CO2e a partir do preset de veículo, da massa de carga, dos parâmetros de combustível e dos fatores de emissão implementados. O custo rodoviário permanece uma estimativa de custo dentro da fronteira operacional representada; não deve ser interpretado como tarifa, cotação ou frete comercial negociado. Da mesma forma, as emissões rodoviárias permanecem CO2e operacional TTW, sem conversão implícita para WTW, LCA ou CO2 isolado.
 
-Essa formulacao e adequada para uma comparacao padronizada, mas nao reconstrui telemetria real de caminhoes, politica de paradas, variacao de velocidade, congestionamento, pedagios ou contratos de frete.
+O escopo da alternativa rodoviária direta também define o que não está sendo reconstruído. O método não representa comportamento do motorista, perfil real de velocidade, congestionamento, padrões de parada, contratos detalhados de pedágio, despacho de frota ou negociação comercial de frete. Esses elementos podem afetar uma operação real, mas ficam fora da fronteira metodológica desta comparação.
 
-O Batch 002 tambem produziu uma reconciliacao diagnostica usando o fator rodoviario derivado das premissas Gustavo/Costa. Essa verificacao e uma sensibilidade de alinhamento de benchmark, nao uma substituicao silenciosa do modelo rodoviario de linha de base do CabotageLens. A metodologia do TF deve manter separados o modelo rodoviario implementado e o fator diagnostico usado para explicar parte da diferenca de magnitude.
+| Componente | Papel na alternativa rodoviária direta | Limite de interpretação |
+| --- | --- | --- |
+| Distância rodoviária | Entrada em `km` para a perna direta origem-destino. | Rota modelada por provedor/cache, não trajetória GPS medida nem verdade de terreno exata. |
+| Preset de veículo e massa de carga | Define o veículo representativo e a carga associada à mesma unidade funcional. | Não reconstrói configuração real de frota, escala de despacho ou alocação operacional de uma viagem específica. |
+| Consumo de combustível | Resultado modelado a partir de distância, veículo, carga e parâmetros de combustível. | Não captura perfil real de velocidade, congestionamento, paradas ou condução. |
+| Custo modelado | Estimativa operacional dentro da fronteira implementada. | Não equivale a frete comercial, tarifa contratada, cotação spot ou negociação logística completa. |
+| Emissões TTW CO2e | Emissões operacionais associadas à combustão de combustível na perna rodoviária representada. | Não são WTW, LCA nem CO2-only, e não devem ser misturadas com fatores de outra fronteira. |
+| Fator rodoviário diagnóstico | Sensibilidade de alinhamento com o benchmark Gustavo/Costa usando `0.8602944 kgCO2e/km`. | Não substitui, recalibra ou se mostra mais correto que a linha de base rodoviária do CabotageLens. |
+
+No Batch 002, a reexecução com Supabase/cache indicou que a instabilidade de provedor ou cache provavelmente não é a explicação principal para a lacuna de magnitude no lado rodoviário. Essa evidência é útil para separar um possível problema de distância/cache de diferenças metodológicas mais amplas, mas estabilidade de rota e cache não valida, por si só, a magnitude calibrada das emissões. Em outras palavras, a rota rastreável é uma condição de auditabilidade, não uma prova de que todos os resultados rodoviários reproduzem um benchmark externo.
+
+A reconciliação diagnóstica com o fator Gustavo/Costa deve permanecer separada da linha de base implementada. O fator `0.8602944 kgCO2e/km` explica parte importante da diferença rodoviária observada no Batch 002, pois testa uma hipótese de alinhamento de consumo e fator de emissão mantendo as distâncias cacheadas. Ainda assim, ele não recalibra a ferramenta, não substitui o modelo rodoviário operacional TTW do CabotageLens e não autoriza misturar fronteiras TTW, WTW, LCA, CO2 e CO2e. Seu papel no TF é metodológico e interpretativo: mostrar sensibilidade a premissas rodoviárias, sem transformar a sensibilidade em novo baseline.
 
 ### 4.3 Alternativa rodoviario-cabotagem-rodoviario
 
