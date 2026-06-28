@@ -174,7 +174,33 @@ Casos em que a origem e o destino marítimos recaem no mesmo porto também não 
 
 Por fim, a seleção de portos não altera as fronteiras gerais do estudo. Os custos calculados continuam sendo estimativas de custo do modelo, e não fretes comerciais, tarifas contratadas ou cotações de mercado. As emissões continuam sendo emissões operacionais TTW CO2e, salvo indicação explícita em contrário, e não devem ser confundidas com WTW, LCA, CO2 isolado ou CO2e sob outra fronteira. A seção, portanto, define como a rota é construída e como seus limites devem ser lidos, sem transformar a escolha de portos em prova de disponibilidade comercial ou de superioridade universal da cabotagem.
 
-### 4.5 Tipos de fonte maritima
+### 4.5 Proveniência da distância rodoviária e lógica de roteamento/cache
+
+A proveniência da distância rodoviária é um controle metodológico central no CabotageLens, porque a distância entra tanto na alternativa rodoviária direta quanto nas pernas rodoviárias de acesso da alternativa multimodal. No primeiro caso, ela representa a rota origem-destino usada para calcular custo modelado e emissões operacionais TTW CO2e da viagem exclusivamente rodoviária. No segundo, ela aparece no *pre-carriage* entre origem e porto de origem e no *on-carriage* entre porto de destino e destino final. Portanto, a qualidade dessa entrada afeta a comparação porta a porta, e não apenas uma etapa auxiliar do cálculo.
+
+As distâncias rodoviárias usadas pela ferramenta devem ser lidas como distâncias roteadas/modeladas sob um provedor, perfil e configuração específicos, não como trajetórias GPS medidas nem como verdade observada de campo. A seção 3.5 do artigo técnico registra o OpenRouteService (ORS), no perfil `driving-hgv`, como fonte de distância rodoviária associada à camada de provedor/cache. Essa proveniência torna explícito que o número de quilômetros é produto de uma lógica computacional de roteamento, e não uma medição direta de uma viagem executada.
+
+O uso de cache complementa essa lógica ao registrar e reutilizar saídas já obtidas do provedor de rota. Isso melhora a reprodutibilidade e a auditabilidade, pois reduz variações acidentais entre execuções, evita chamadas desnecessárias ao provedor e permite distinguir uma mudança de premissa metodológica de uma simples instabilidade de consulta. Ao mesmo tempo, uma distância em cache não prova que a rota seja a única possível, a rota comercialmente usada por uma transportadora ou a rota operacionalmente correta para toda data e condição de tráfego.
+
+| Elemento | Papel na proveniência da distância rodoviária | Limite de interpretação |
+| --- | --- | --- |
+| Provedor/perfil de roteamento | Produz a distância rodoviária modelada sob a configuração adotada, como ORS `driving-hgv` quando esse provedor/perfil está configurado. | É estimativa roteada sob aquela configuração, não distância observada de campo nem rota necessariamente usada por transportador real. |
+| Cache de rotas | Registra e reutiliza saídas do provedor/cache para tornar a entrada de distância rastreável e reprodutível. | Reutilização não valida, por si só, a correção operacional da rota. |
+| Distância rodoviária direta | Alimenta a alternativa road-only entre origem e destino. | Representa rota modelada para comparação, não trajetória GPS nem frete comercial. |
+| Distância de *pre-carriage* | Alimenta o trecho rodoviário da origem ao porto de origem. | Depende da seleção ou imposição do porto e não comprova despacho real. |
+| Distância de *on-carriage* | Alimenta o trecho rodoviário do porto de destino ao destino final. | Depende da seleção ou imposição do porto e não comprova escolha comercial de rota. |
+| Rerun cache Batch 002 | Verificou estabilidade da camada Supabase/cache para as pernas rodoviárias do benchmark. | 63 hits, 0 misses, 0 escritas de provedor e nenhuma falha de leitura/escrita reduzem a hipótese de instabilidade de cache, mas não validam magnitude calibrada. |
+| Lacuna metodológica remanescente | Separa qualidade da entrada de distância de outras premissas do modelo. | Estabilidade de distância não resolve diferenças de veículo, consumo, fator de emissão, carga/alocação ou fronteira TTW/WTW/LCA. |
+
+No Batch 002, o rerun com Supabase/cache registrou 63 *route-cache hits*, 0 *misses*, 0 escritas de distância pelo provedor e nenhuma falha de leitura/escrita. Esse resultado sustenta a interpretação conservadora de que a instabilidade da camada provedor/cache é improvável como explicação principal para a lacuna de magnitude no lado rodoviário do benchmark. A conclusão, porém, deve parar nesse ponto: o rerun não demonstra reprodução exata de Gustavo/Costa, não valida a magnitude calibrada das emissões e não transforma a distância roteada em evidência de operação real.
+
+A estabilidade da distância rodoviária também não elimina diferenças metodológicas mais amplas. Permanecem relevantes as premissas de veículo, consumo de combustível, fatores de emissão, massa e alocação de carga, além das fronteiras TTW, WTW, LCA, CO2 e CO2e. Assim, uma comparação com referência externa só é defensável quando explicita se está tratando emissões operacionais TTW CO2e ou outra fronteira ambiental. No CabotageLens, salvo indicação explícita em contrário, as emissões permanecem operacionais TTW CO2e.
+
+A camada de provedor/cache tampouco modela comportamento do motorista, dinâmica de congestionamento, despacho real, fechamentos viários, escolha comercial de rota ou contratos logísticos. Ela fornece uma entrada roteada e auditável para um cenário de comparação, não uma simulação completa da operação de transporte. Da mesma forma, os custos calculados a partir dessas rotas continuam sendo estimativas de custo do modelo, e não tarifas contratadas, cotações ou fretes comerciais.
+
+Desse modo, a proveniência da distância rodoviária deve ser tratada como controle de qualidade da entrada e como parte da trilha de auditoria do estudo. Ela melhora a capacidade de revisar e reproduzir o cenário calculado, mas não substitui validação operacional, não prova disponibilidade comercial da rota e não apaga lacunas de fronteira, carga, alocação ou parâmetros de emissão. Essa distinção é necessária para que a comparação entre rodovia e cabotagem permaneça tecnicamente rastreável sem ultrapassar o que os artefatos do projeto demonstram.
+
+### 4.6 Tipos de fonte maritima
 
 Os artefatos de validacao distinguem fontes de distancia maritima, incluindo:
 
@@ -185,23 +211,23 @@ Os artefatos de validacao distinguem fontes de distancia maritima, incluindo:
 
 Essa distincao impede que uma distancia aproximada seja tratada como rota operacional validada. Tambem impede substituicoes silenciosas entre portos proximos.
 
-### 4.6 Avisos same-port e qualidade de rota
+### 4.7 Avisos same-port e qualidade de rota
 
 Casos em que o porto de origem e o porto de destino sao o mesmo porto nao representam uma cadeia normal de cabotagem. O caso Sao Paulo, SP -> Santos, SP com Porto de Santos -> Porto de Santos e um exemplo de limite metodologico. Ele pode ser usado para mostrar a necessidade de avisos de rota, mas nao para concluir desempenho da cabotagem.
 
 O repositorio tambem registra avisos de qualidade associados a perna maritima muito pequena, fallback maritimo, acesso terrestre dominante e escolhas de porto. Esses avisos sao heuristicas de interpretacao e transparencia. Eles nao substituem uma analise de servico, frequencia, terminal, contrato ou viabilidade comercial.
 
-### 4.7 Fronteira de emissoes
+### 4.8 Fronteira de emissoes
 
 As emissoes reportadas neste trabalho sao operacionais TTW CO2e, em `kg CO2e` por remessa, salvo indicacao contraria. Essa fronteira inclui emissoes diretas associadas ao combustivel consumido nas pernas representadas e nao inclui WTW, LCA ou etapas upstream. Portanto, resultados do CabotageLens nao devem ser comparados diretamente com fatores WTW ou LCA da literatura sem ajuste explicito de fronteira, unidade e fator.
 
-### 4.8 Fronteira de custo
+### 4.9 Fronteira de custo
 
 Os custos reportados sao estimativas modeladas dos componentes incluidos. A unidade principal e `BRL` por remessa. Eles nao sao fretes comerciais. A metodologia exclui, salvo expansao futura, componentes como tarifas portuarias completas, margens, contratos, seguros, inventario, tempo de transito, confiabilidade, demurrage, frequencia de servico, disponibilidade de slots e custos administrativos.
 
 Por isso, a interpretacao correta e "menor custo modelado dentro da fronteira operacional", e nao "frete comercial menor". Essa diferenca e mantida em Resultados, Discussao, Limitacoes e Conclusao.
 
-### 4.9 Validacao e classificacao conservadora
+### 4.10 Validacao e classificacao conservadora
 
 A validacao do trabalho nao busca equivalencia perfeita com uma operacao real especifica. Ela busca plausibilidade, consistencia dimensional, proveniencia de dados e classificacao adequada da incerteza. Os artefatos Batch 001B separam:
 
