@@ -304,22 +304,37 @@ As sensibilidades de custo ajudam a avaliar dependência em relação a distânc
 
 Por fim, custo e emissões devem permanecer como dimensões distintas. Um cenário pode apresentar menor custo modelado e menor TTW CO2e operacional, mas essa coincidência não autoriza transformar `BRL` e `kg CO2e` em um único vencedor sem regra de decisão explícita. Da mesma forma, menor custo modelado não prova superioridade econômica universal da cabotagem; a conclusão válida é sempre condicionada ao corredor, à carga, à rota, aos portos, aos componentes incluídos e à fronteira de custo adotada.
 
-### 4.10 Validacao e classificacao conservadora
+### 4.10 Validação e classificação conservadora
 
-A validacao do trabalho nao busca equivalencia perfeita com uma operacao real especifica. Ela busca plausibilidade, consistencia dimensional, proveniencia de dados e classificacao adequada da incerteza. Os artefatos Batch 001B separam:
+A validação adotada neste TF é conservadora e hierarquizada por evidência. Ela não busca demonstrar equivalência perfeita entre o CabotageLens e uma operação real específica, nem transformar um benchmark externo em verdade de referência. O objetivo metodológico é mais restrito: verificar plausibilidade, consistência dimensional, rastreabilidade das entradas, disciplina de fronteira e classificação explícita da incerteza. Por isso, a classificação não é um apêndice posterior aos resultados; ela faz parte da metodologia e define, antes da interpretação final, o que cada linha pode ou não pode sustentar.
 
-- `historical_diagnostic`: resultados historicos preservados para diagnostico;
-- `record_only_warning`: linhas mantidas para registrar avisos, como same-port;
-- `reference_needed`: casos que ainda precisam de distancia exata para o par de portos selecionado;
-- `excluded`: casos invalidos para a fronteira atual;
-- `planned_blocked_methodology_decision`: casos bloqueados por decisao metodologica ou porto faltante;
-- `sensitivity_only`: cenarios adequados apenas para analise de sensibilidade;
-- `sensitive`: linhas executadas cujo resultado e condicional e nao robusto;
-- `headline_candidate`: categoria possivel para resultado principal, atualmente sem casos.
+Essa abordagem impede que "resultado executado" seja tratado automaticamente como "resultado válido para conclusão principal". Uma linha pode ter sido preservada por auditoria, planejada para sensibilidade, executada com hipótese condicional, bloqueada por lacuna de referência, excluída por inadequação de fronteira ou usada apenas como diagnóstico de benchmark. O uso acadêmico seguro depende dessa distinção. Assim, resultados fallback-only, same-port, alternate-port, históricos, bloqueados, excluídos ou `reference_needed` não devem ser promovidos a conclusões principais, mesmo quando contêm números rastreáveis.
 
-Essa classificacao evita que resultados bloqueados, excluidos, historicos, fallback-only ou alternate-port sejam promovidos a conclusoes principais.
+No Batch 001B, a camada de decisão metodológica separa diagnósticos históricos, avisos preservados, casos excluídos, casos bloqueados, lacunas de referência, cenários apenas de sensibilidade e linhas sensíveis executadas. `historical_diagnostic` preserva resultados anteriores para auditoria e comparação metodológica, não para defender a versão corrigida da conclusão. `record_only_warning` pode manter um aviso, como same-port, sem tornar a cadeia uma comparação válida de cabotagem. `reference_needed` indica que ainda falta referência exata para o par de portos selecionado. `excluded` indica caso inválido ou fora da fronteira atual. `planned_blocked_methodology_decision` indica bloqueio por decisão metodológica, porto elegível ausente ou condição ainda não resolvida. `sensitivity_only` limita a linha a discussão de sensibilidade, e `sensitive` identifica resultado executado que permanece condicional.
 
-O Batch 002 adiciona uma camada de classificacao especifica de benchmark. Linhas `same_direction_large_gap` podem sustentar consistencia direcional entre workbook e CabotageLens, mas nao validacao calibrada de magnitude. Categorias como `benchmark_supports_direction`, `benchmark_supports_road_factor_explanation`, `benchmark_methodology_gap` e `benchmark_boundary_mismatch` devem ser lidas como apoio a interpretacao conservadora, nao como promocao automatica a resultado robusto.
+| Classificação | Significado no TF | Uso seguro |
+| --- | --- | --- |
+| `historical_diagnostic` | Resultado anterior preservado para rastreabilidade e comparação metodológica. | Auditoria, histórico e explicação de evolução do método. |
+| `record_only_warning` | Registro mantido para documentar aviso de qualidade, como same-port. | Limitação ou exemplo metodológico; não valida cabotagem. |
+| `reference_needed` | Falta referência exata para o par de portos selecionado. | Lacuna de evidência e prioridade de validação futura. |
+| `excluded` | Caso inválido ou fora da fronteira atual. | Justificativa de exclusão; não sustenta resultado numérico. |
+| `planned_blocked_methodology_decision` | Caso bloqueado por decisão metodológica ou condição não atendida. | Registro de bloqueio e requisito para trabalho futuro. |
+| `sensitivity_only` | Cenário adequado apenas como hipótese de sensibilidade. | Discussão de sensibilidade, sem substituir o caso-base. |
+| `sensitive` | Linha executada com resultado condicional e não robusto. | Evidência sensível à hipótese; não é conclusão principal. |
+| `headline_candidate` | Possível resultado principal após validação e sensibilidade suficientes. | Deve permanecer vazio até que os artefatos rastreados sustentem a promoção. |
+| `same_direction_large_gap` | Linha de benchmark com mesma direção modal, mas grande diferença de magnitude. | Consistência direcional; não validação calibrada. |
+| `benchmark_supports_direction` | Benchmark externo apoia a direção da comparação de emissões. | Interpretação direcional e limitada por fronteira. |
+| `benchmark_supports_road_factor_explanation` | Reconciliação diagnóstica explica parte da lacuna rodoviária. | Diagnóstico de premissas rodoviárias, não recalibração. |
+| `benchmark_methodology_gap` | Diferença atribuída a lacunas metodológicas não reconciliadas. | Discussão de método, alocação, distância, rota e parâmetros. |
+| `benchmark_boundary_mismatch` | Diferença associada a fronteiras ambientais, operacionais ou de alocação distintas. | Caveat de comparabilidade; não valida magnitude exata. |
+
+No estado atual dos artefatos, não há `headline_candidate` robusto. As sensibilidades executadas podem apoiar a discussão sobre dependência de distância marítima, porto alternativo e hipótese de fronteira, mas não devem ser tratadas como achados principais universais. Em particular, uma linha `sensitive` pode indicar que a alternativa multimodal permanece menor em custo modelado e TTW CO2e operacional sob uma hipótese nomeada, mas essa leitura continua condicionada ao cenário, à origem-destino, aos portos usados, à distância adotada e aos componentes incluídos. Ela não valida automaticamente o porto originalmente selecionado nem demonstra superioridade geral da cabotagem.
+
+O Batch 002 acrescenta uma camada específica de benchmark. Suas categorias indicam apoio direcional, explicação diagnóstica de lacunas e incompatibilidades de fronteira, não reprodução exata do workbook Gustavo/Costa. A classificação `same_direction_large_gap` significa que o benchmark e o CabotageLens apontam a mesma direção modal nas linhas suportadas, mas com diferença de magnitude ainda grande. Portanto, concordância direcional não equivale a concordância calibrada. O Batch 002 pode fortalecer a defesa metodológica ao mostrar que o sinal comparativo é coerente sob determinadas condições, mas não valida magnitudes exatas de emissões, custos, portos, serviços, alocação interna do workbook ou equivalência com fretes comerciais.
+
+A reconciliação de fator rodoviário deve ser lida na mesma chave. Ela ajuda a explicar parte da lacuna de magnitude no lado road-only por diferenças de premissa rodoviária, mas permanece diagnóstica e não substitui o modelo de linha de base do CabotageLens. O fator testado nesse exercício não recalibra a aplicação, não altera a fronteira operacional do TF e não autoriza misturar TTW, WTW, LCA, CO2 e CO2e. Emissões continuam sendo interpretadas como CO2e operacional TTW, salvo indicação explícita em contrário; custos continuam sendo estimativas modeladas, não tarifas, cotações ou fretes comerciais.
+
+Por fim, a classificação conservadora também delimita o que este TF não prova. Uma linha classificada como direcionalmente coerente, sensível ou metodologicamente útil não demonstra disponibilidade real de serviço de cabotagem, frequência, escala, slot, aceitação de carga, contrato, viabilidade comercial ou decisão de armador. A contribuição metodológica está em tornar essas limitações explícitas, preservando rastreabilidade e evitando que resultados condicionais sejam apresentados como validação operacional completa. Dessa forma, a metodologia se encerra com uma regra de interpretação: cada resultado só pode ser usado até o limite da evidência e da classificação que os artefatos rastreados sustentam.
 
 ## 5. Ferramenta computacional
 
