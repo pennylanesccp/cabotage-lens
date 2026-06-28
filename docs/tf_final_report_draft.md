@@ -226,9 +226,28 @@ Por fim, a proveniência da distância marítima não altera as demais fronteira
 
 ### 4.7 Avisos same-port e qualidade de rota
 
-Casos em que o porto de origem e o porto de destino sao o mesmo porto nao representam uma cadeia normal de cabotagem. O caso Sao Paulo, SP -> Santos, SP com Porto de Santos -> Porto de Santos e um exemplo de limite metodologico. Ele pode ser usado para mostrar a necessidade de avisos de rota, mas nao para concluir desempenho da cabotagem.
+Os avisos de qualidade de rota no CabotageLens funcionam como controles interpretativos, não como mensagens cosméticas. Eles registram quando a construção modelada da alternativa rodoviário-cabotagem-rodoviário é fraca, incompleta ou inadequada para sustentar uma conclusão de nível TF. O objetivo desses avisos é impedir que uma linha tecnicamente rastreável, mas metodologicamente limitada, seja lida como comparação modal robusta.
 
-O repositorio tambem registra avisos de qualidade associados a perna maritima muito pequena, fallback maritimo, acesso terrestre dominante e escolhas de porto. Esses avisos sao heuristicas de interpretacao e transparencia. Eles nao substituem uma analise de servico, frequencia, terminal, contrato ou viabilidade comercial.
+O caso mais direto é o aviso *same-port*, que ocorre quando o porto de origem e o porto de destino da perna marítima são o mesmo porto. Nessa situação, a cadeia não representa uma alternativa normal de cabotagem, porque não há uma perna marítima efetiva entre portos distintos. O exemplo São Paulo/SP -> Santos/SP com Porto de Santos -> Porto de Santos deve ser tratado como limitação metodológica, diagnóstico ou registro de exclusão, não como evidência de desempenho da cabotagem. Isso não significa que o par origem-destino seja irrelevante para logística; significa apenas que a cadeia de cabotagem modelada naquele resultado não é uma alternativa multimodal válida para conclusão comparativa.
+
+Outros avisos indicam fragilidades diferentes: perna marítima muito curta, distância marítima `haversine_fallback`, acesso rodoviário dominante, porto alternativo ou forçado, ausência de referência exata para o par de portos selecionado, rota histórica preservada apenas para diagnóstico ou construção de baixa confiança. Esses sinais não provam que a rota seja impossível no mundo real. Eles indicam que, dentro da fronteira documentada do modelo e dos artefatos disponíveis, a linha é fraca para sustentar uma conclusão acadêmica forte.
+
+| Aviso ou condição de qualidade | O que indica | Uso seguro no TF |
+| --- | --- | --- |
+| Caso same-port | Porto marítimo de origem e destino coincidem. | Limitação, diagnóstico ou `record_only_warning`; não é comparação normal de cabotagem. |
+| Perna marítima muito curta | A etapa marítima pode ser artificial ou pouco representativa. | Aviso de qualidade de rota; não sustenta conclusão modal principal por si só. |
+| `haversine_fallback` | Distância marítima aproximada por triagem geométrica. | `reference_needed`, diagnóstico ou preparação de sensibilidade; não valida rota. |
+| Referência exata ausente | Falta evidência para o par de portos selecionado. | Lacuna metodológica, bloqueio conservador ou tratamento de referência pendente. |
+| Porto alternativo ou forçado | O cenário usa porto diferente do originalmente selecionado. | Sensibilidade nomeada; não substitui o caso-base selecionado. |
+| Acesso rodoviário dominante | A cadeia multimodal depende fortemente dos trechos terrestres. | Discussão de composição da rota e limitação, sem conclusão automática. |
+| Rota histórica diagnóstica | Resultado antigo preservado para auditoria. | `historical_diagnostic`; não é resultado corrigido. |
+| Rota excluída | A construção não é válida para a fronteira atual. | Justificativa de exclusão ou exemplo de limitação. |
+
+Essas condições alimentam a classificação conservadora dos resultados. Uma linha com aviso pode permanecer como `record_only_warning`, `reference_needed`, `excluded`, `sensitivity_only` ou `sensitive`, conforme a decisão metodológica aplicável. Essa classificação deve impedir que rotas fallback-only, same-port, alternate-port ou de baixa confiança sejam promovidas a `headline_candidate`. Do mesmo modo, a ausência de um aviso específico não deve ser interpretada como prova de disponibilidade real de serviço ou de validação comercial da rota.
+
+Os avisos também não substituem análises que estão fora da fronteira atual do CabotageLens. Eles não verificam serviço real de cabotagem, terminal disponível, cronograma de armador, frequência, capacidade de slot, contrato, tarifa ou viabilidade comercial. Um aviso, portanto, não é prova de inviabilidade operacional; e uma linha sem aviso não é prova de que existe serviço regular, economicamente contratável e operacionalmente disponível.
+
+Por fim, a leitura dos avisos deve manter as fronteiras gerais do estudo. Custos calculados em linhas com ou sem aviso continuam sendo estimativas de custo do modelo, não fretes comerciais. Emissões continuam sendo operacionais TTW CO2e, salvo indicação explícita em contrário, e não devem ser tratadas como CO2 isolado, WTW ou LCA. Assim, os avisos de qualidade de rota reforçam a transparência e a interpretação conservadora, evitando que resultados frágeis sejam convertidos em afirmações gerais sobre superioridade da cabotagem.
 
 ### 4.8 Fronteira de emissoes
 
