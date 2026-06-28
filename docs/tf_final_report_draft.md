@@ -79,7 +79,7 @@ Essa distincao e decisiva para a interpretacao dos resultados. Uma linha que mos
 
 ### 4.1 Unidade funcional e base de carga
 
-Esta subsecao expande a secao 3.1 do artigo tecnico, que define a unidade funcional como o transporte de uma massa especificada de carga conteinerizada entre uma origem e um destino no Brasil. No presente TF, essa definicao e mantida como a base de comparacao: o que se compara nao e um modo isolado, mas a entrega da mesma remessa sob duas alternativas de transporte.
+A unidade funcional adotada neste trabalho e o transporte de uma massa especificada de carga conteinerizada entre uma origem e um destino no Brasil. Essa definicao e mantida como base de comparacao ao longo do TF: o que se compara nao e um modo isolado, mas a entrega da mesma remessa sob duas alternativas de transporte.
 
 As duas alternativas avaliadas pelo CabotageLens atendem, portanto, a mesma unidade funcional. A primeira e a alternativa rodoviaria direta, na qual a remessa segue por caminhao entre origem e destino. A segunda e a alternativa rodoviario-cabotagem-rodoviario, na qual a mesma remessa inclui acesso rodoviario ao porto de origem, perna maritima de cabotagem, componentes portuarios quando modelados e acesso rodoviario final ao destino. Essa equivalencia de servico e necessaria para evitar que a comparacao seja reduzida ao trecho maritimo ou ao trecho rodoviario isolado.
 
