@@ -200,16 +200,29 @@ A camada de provedor/cache tampouco modela comportamento do motorista, dinâmica
 
 Desse modo, a proveniência da distância rodoviária deve ser tratada como controle de qualidade da entrada e como parte da trilha de auditoria do estudo. Ela melhora a capacidade de revisar e reproduzir o cenário calculado, mas não substitui validação operacional, não prova disponibilidade comercial da rota e não apaga lacunas de fronteira, carga, alocação ou parâmetros de emissão. Essa distinção é necessária para que a comparação entre rodovia e cabotagem permaneça tecnicamente rastreável sem ultrapassar o que os artefatos do projeto demonstram.
 
-### 4.6 Tipos de fonte maritima
+### 4.6 Proveniência da distância marítima e hierarquia de fallback
 
-Os artefatos de validacao distinguem fontes de distancia maritima, incluindo:
+A distância marítima é uma entrada central da alternativa rodoviário-cabotagem-rodoviário, pois define a extensão da perna de cabotagem entre o porto de origem e o porto de destino do cenário. No CabotageLens, essa distância é registrada em quilômetros (`km`) e, quando o artefato de origem usa essa unidade, também em milhas náuticas (`nm`). A conversão adotada nos artefatos rastreados é `1 nm = 1.852 km`. Essa informação não é apenas uma unidade de cálculo: ela faz parte da proveniência do resultado e condiciona a confiança que pode ser atribuída à linha analisada.
 
-- `external_reference`: referencia externa documentada para um par de portos especifico ou forçado;
-- `haversine_fallback`: distancia aproximada por fallback geometrico, insuficiente para conclusao forte por si so;
-- `seamatrix` ou matriz maritima quando a distancia esta registrada para o par de portos;
-- preservacao da fonte original do Batch 001 quando o valor historico e mantido apenas para diagnostico.
+A hierarquia metodológica privilegia evidência documentada para o par exato de portos selecionado ou explicitamente forçado no cenário. Uma referência marítima externa (`external_reference`) ou uma matriz marítima/SeaMatrix (`seamatrix`) é mais forte quando identifica o par de portos correspondente, preserva unidade e origem da informação, e não depende de substituição silenciosa por outro terminal. Mesmo nessa situação, proveniência de distância marítima não é a mesma coisa que disponibilidade efetiva de serviço: a distância documentada continua sendo uma entrada de rota ou de sensibilidade; ela não prova disponibilidade comercial de serviço, escala, frequência, cronograma, armador disponível, capacidade de slot, terminal operacional ou roteamento efetivamente contratado.
 
-Essa distincao impede que uma distancia aproximada seja tratada como rota operacional validada. Tambem impede substituicoes silenciosas entre portos proximos.
+Quando a distância vem de `haversine_fallback`, a interpretação deve ser mais restrita. Esse fallback geométrico pode ser útil para triagem, diagnóstico histórico, identificação de lacunas e priorização de correções, mas não representa uma rota marítima validada. Por isso, uma linha sustentada apenas por `haversine_fallback` não deve apoiar conclusões numéricas fortes de custo modelado ou TTW CO2e. Nesses casos, o uso adequado é manter a linha como `reference_needed`, registro diagnóstico, exclusão metodológica ou preparação de sensibilidade, conforme a classificação rastreada nos artefatos de validação.
+
+Referências externas associadas a portos forçados ou alternativos também exigem separação explícita. Uma distância documentada para um porto alternativo pode apoiar a interpretação de uma sensibilidade nomeada, mas não valida automaticamente o porto originalmente selecionado. Assim, Pecém não valida Fortaleza, e Suape não valida Recife. Do mesmo modo, uma referência vinculada a um cenário de porto forçado deve permanecer vinculada àquele cenário; ela não pode ser promovida silenciosamente a evidência do caso-base selecionado pelo modelo.
+
+| Fonte de distância marítima | Papel no CabotageLens | Limite de interpretação |
+| --- | --- | --- |
+| Referência exata para portos selecionados (`external_reference`) | Entrada mais forte quando documenta o par exato de portos do cenário. | Não comprova serviço comercial, frequência, escala, preço de frete ou roteamento real. |
+| Matriz marítima / SeaMatrix (`seamatrix`) | Fonte matricial para distância entre portos quando há registro aplicável. | Depende de par de portos, unidade e ausência de fallback; ainda é distância modelada/documentada, não prova operacional. |
+| Referência externa ou manual para porto forçado | Sustenta uma sensibilidade ou cenário alternativo explicitamente nomeado. | Não valida o porto originalmente selecionado nem substitui o caso-base sem decisão metodológica. |
+| `haversine_fallback` | Estimativa geométrica de triagem quando não há distância marítima documentada. | Não valida rota marítima e não sustenta conclusão numérica forte por si só. |
+| Valor histórico diagnóstico | Preserva saídas do Batch 001 para auditoria e comparação metodológica. | Não é resultado corrigido nem evidência de validação final. |
+| Referência exata ausente | Sinaliza lacuna de evidência para o par de portos selecionado. | Pode exigir `reference_needed`, tratamento apenas em sensibilidade ou classificação conservadora. |
+| Perna marítima same-port | Registra caso-limite em que origem e destino marítimos coincidem. | Serve como aviso de qualidade de rota; não deve ser tratado como comparação normal de cabotagem. |
+
+Essa hierarquia de fontes controla a classificação de uso no TF. Distância exata para o par selecionado, distância de matriz aplicável, referência de porto forçado, fallback geométrico e valor histórico não têm o mesmo peso metodológico. Promover evidência aproximada, histórica ou de porto próximo ao mesmo nível de uma referência exata para o par selecionado criaria falsa robustez. Por isso, a ausência de distância marítima exata para o porto selecionado pode manter o caso como lacuna de referência, bloquear conclusão principal ou limitar a leitura a uma sensibilidade conservadora.
+
+Por fim, a proveniência da distância marítima não altera as demais fronteiras do estudo. Os custos continuam sendo estimativas de custo do modelo, e não tarifas ou cotações comerciais de frete. As emissões continuam sendo operacionais TTW CO2e, salvo indicação explícita em contrário. Valores, estudos ou artefatos que tratem CO2, WTW ou LCA não devem ser misturados à fronteira atual sem reconciliação metodológica explícita. Essa separação evita que uma distância marítima bem documentada seja interpretada como validação completa da alternativa multimodal.
 
 ### 4.7 Avisos same-port e qualidade de rota
 
