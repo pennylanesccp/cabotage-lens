@@ -278,9 +278,31 @@ Consequentemente, os resultados de emissões deste TF devem ser usados como esti
 
 ### 4.9 Fronteira de custo
 
-Os custos reportados sao estimativas modeladas dos componentes incluidos. A unidade principal e `BRL` por remessa. Eles nao sao fretes comerciais. A metodologia exclui, salvo expansao futura, componentes como tarifas portuarias completas, margens, contratos, seguros, inventario, tempo de transito, confiabilidade, demurrage, frequencia de servico, disponibilidade de slots e custos administrativos.
+Os custos reportados pelo CabotageLens neste TF são estimativas modeladas dentro da fronteira operacional definida. A unidade principal é `BRL` por remessa, pois a comparação parte da mesma unidade funcional transportada entre uma origem e um destino. A função do modelo é tornar transparente a comparação entre alternativas construídas sob hipóteses explícitas, não produzir preço de mercado, cotação comercial ou recomendação de contratação.
 
-Por isso, a interpretacao correta e "menor custo modelado dentro da fronteira operacional", e nao "frete comercial menor". Essa diferenca e mantida em Resultados, Discussao, Limitacoes e Conclusao.
+Na alternativa rodoviária direta, o custo road-only é formado pelos componentes modelados da perna rodoviária incluída no cenário. Na alternativa multimodal, o custo pode ser formado por *pre-carriage*, perna marítima, *on-carriage* e componentes portuários modelados quando estiverem habilitados. Assim, o número final representa a soma dos itens que o cenário efetivamente inclui, e não uma tarifa logística completa para executar a cadeia no mercado.
+
+Essa fronteira deve ser separada de frete comercial. O custo modelado não é cotação de frete, não é tarifa de transportador, não é preço de armador, não é frete contratado e não deve ser usado diretamente para compras, contratação de transporte ou decisão comercial. A interpretação correta é "menor custo modelado dentro da fronteira definida", e não "menor frete comercial" ou "menor custo logístico total".
+
+| Elemento de custo ou item de fronteira | Papel neste TF | Limite de interpretação |
+| --- | --- | --- |
+| Custo rodoviário modelado | Representa a alternativa road-only com os componentes rodoviários incluídos no cenário. | Não equivale a frete rodoviário comercial, tarifa negociada ou preço de mercado. |
+| Custo de *pre-carriage* | Representa o acesso rodoviário da origem ao porto de origem. | Não é uma cotação independente de coleta, drayage ou serviço porta-porto. |
+| Custo da perna marítima | Representa o componente marítimo modelado da cadeia de cabotagem. | Não estima tarifa de armador, contrato, slot, booking ou frete marítimo contratado. |
+| Custo de *on-carriage* | Representa o acesso rodoviário do porto de destino ao destino final. | Não é uma cotação independente de entrega ou serviço porto-porta. |
+| Componente portuário modelado | Entra apenas quando o cenário habilita componente portuário ou operacional correspondente. | Não representa tarifa portuária completa, tabela terminal, demurrage, detention ou todos os encargos locais. |
+| Frete comercial de mercado | Fica fora da fronteira corrente do modelo. | Não pode ser inferido diretamente a partir do custo modelado. |
+| Contrato, tarifa ou cotação | Só entrariam no estudo se fossem explicitamente modelados em uma fronteira futura. | Não são produzidos pelo CabotageLens neste TF. |
+| Inventário, confiabilidade e cronograma | São dimensões logísticas relevantes, mas excluídas salvo modelagem explícita. | Não permitem concluir disponibilidade real, frequência de serviço, confiabilidade, restrição de cronograma ou disponibilidade de slot. |
+| Resultado de sensibilidade de custo | Mostra como o custo modelado responde a uma hipótese documentada. | Não constitui conclusão comercial robusta nem valida preço praticado no mercado. |
+
+A comparação de custos só é defensável quando os cenários preservam a mesma unidade funcional, a mesma base de carga, a mesma lógica de construção de rota, os portos selecionados ou forçados de forma explícita e a mesma regra sobre quais componentes entram no total. Se dois cenários usam componentes diferentes, a comparação precisa explicar o que está incluído e excluído em cada lado. Caso contrário, uma diferença em `BRL` pode refletir mudança de fronteira, e não diferença econômica entre modos.
+
+Além disso, a fronteira corrente exclui, salvo modelagem explícita, margens comerciais, contratos negociados, preços spot ou de mercado, tarifas portuárias completas, seguros, tributos e taxas não modelados, custos administrativos, custo de inventário, custo de confiabilidade, restrições de cronograma, frequência de serviço, disponibilidade de slots, demurrage e detention. Esses itens são relevantes para uma decisão logística real, mas não fazem parte do núcleo de custo modelado usado para comparar as alternativas neste TF.
+
+As sensibilidades de custo ajudam a avaliar dependência em relação a distância marítima, seleção de portos, componentes habilitados e outras hipóteses documentadas. Contudo, uma linha de sensibilidade com menor custo multimodal permanece uma evidência sensível à fronteira, não uma prova de viabilidade comercial, disponibilidade operacional ou competitividade contratual. O resultado também não demonstra que um transportador, armador ou operador logístico ofereceria frete menor no mundo real.
+
+Por fim, custo e emissões devem permanecer como dimensões distintas. Um cenário pode apresentar menor custo modelado e menor TTW CO2e operacional, mas essa coincidência não autoriza transformar `BRL` e `kg CO2e` em um único vencedor sem regra de decisão explícita. Da mesma forma, menor custo modelado não prova superioridade econômica universal da cabotagem; a conclusão válida é sempre condicionada ao corredor, à carga, à rota, aos portos, aos componentes incluídos e à fronteira de custo adotada.
 
 ### 4.10 Validacao e classificacao conservadora
 
