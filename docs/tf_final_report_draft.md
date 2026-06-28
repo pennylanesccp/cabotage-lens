@@ -249,9 +249,32 @@ Os avisos também não substituem análises que estão fora da fronteira atual d
 
 Por fim, a leitura dos avisos deve manter as fronteiras gerais do estudo. Custos calculados em linhas com ou sem aviso continuam sendo estimativas de custo do modelo, não fretes comerciais. Emissões continuam sendo operacionais TTW CO2e, salvo indicação explícita em contrário, e não devem ser tratadas como CO2 isolado, WTW ou LCA. Assim, os avisos de qualidade de rota reforçam a transparência e a interpretação conservadora, evitando que resultados frágeis sejam convertidos em afirmações gerais sobre superioridade da cabotagem.
 
-### 4.8 Fronteira de emissoes
+### 4.8 Fronteira de emissões
 
-As emissoes reportadas neste trabalho sao operacionais TTW CO2e, em `kg CO2e` por remessa, salvo indicacao contraria. Essa fronteira inclui emissoes diretas associadas ao combustivel consumido nas pernas representadas e nao inclui WTW, LCA ou etapas upstream. Portanto, resultados do CabotageLens nao devem ser comparados diretamente com fatores WTW ou LCA da literatura sem ajuste explicito de fronteira, unidade e fator.
+As emissões reportadas pelo CabotageLens neste TF são emissões operacionais TTW CO2e, salvo indicação explícita em contrário. A unidade principal é `kg CO2e` por remessa, pois a comparação metodológica parte de uma carga definida transportada entre a mesma origem e o mesmo destino. Normalizações por tonelada, TEU, contêiner ou tonelada-quilômetro podem ser úteis para comparação, mas somente quando preservam a unidade funcional, a base de carga, a distância considerada e a mesma fronteira ambiental.
+
+Nesta fronteira, TTW cobre emissões diretas associadas ao combustível consumido nas pernas de transporte e nos componentes operacionais incluídos no cenário. Assim, a alternativa rodoviária direta, o *pre-carriage*, a perna marítima, o *on-carriage* e, quando modelados, os componentes de operação portuária e *hoteling* devem permanecer dentro do mesmo limite de interpretação. O resultado não deve ser lido como uma avaliação climática completa da cadeia logística, mas como uma estimativa operacional comparável entre alternativas modeladas sob a mesma fronteira.
+
+O limite TTW CO2e exclui etapas a montante e efeitos de ciclo de vida. Portanto, este TF não incorpora, na linha de base, produção, refino e distribuição de combustíveis, construção e manutenção de infraestrutura, fabricação de caminhões ou navios, fim de vida de ativos, nem uma avaliação completa de ciclo de vida. Qualquer mudança para WTW, LCA ou uma métrica CO2-only exigiria documentação metodológica explícita, fatores compatíveis, unidades coerentes e separação clara em relação à linha de base atual.
+
+Essa disciplina de fronteira é especialmente importante na comparação com literatura e benchmarks externos. Evidências WTW, LCA, CO2-only ou CO2e com outro limite operacional não podem ser misturadas diretamente com os resultados TTW CO2e do CabotageLens. Do mesmo modo, fatores ou resultados reportados apenas como CO2 não são automaticamente equivalentes a CO2e. Antes de comparar magnitudes, é necessário verificar unidade, base de carga, regra de alocação, base de distância, fator de emissão, gases incluídos e fronteira ambiental.
+
+| Fronteira ou tipo de evidência | Significado neste TF | Limite de interpretação |
+| --- | --- | --- |
+| TTW CO2e | Fronteira operacional da linha de base do CabotageLens. | Não representa WTW, LCA ou impacto climático completo. |
+| WTW | Inclui etapas a montante do combustível quando adotado por outra fonte. | Não pode calibrar a linha de base TTW sem reconciliação explícita. |
+| LCA | Avalia ciclo de vida mais amplo, conforme escopo da fonte. | Não é executado pelo CabotageLens neste TF. |
+| CO2-only | Evidência limitada ao dióxido de carbono quando assim reportada. | Não é automaticamente equivalente a CO2e. |
+| Operações portuárias | Componentes operacionais incluídos somente quando modelados no cenário. | Devem usar a mesma fronteira das demais pernas combinadas. |
+| *Hoteling* | Consumo associado à permanência ou escala quando separado pelo modelo. | Pode gerar dupla contagem se a intensidade marítima já incluir essa operação. |
+| Benchmark externo | Referência comparativa para direção e lacunas metodológicas. | Acordo direcional não valida magnitude exata. |
+| Fator rodoviário diagnóstico | Sensibilidade de reconciliação do Batch 002. | Não substitui nem recalibra o modelo de emissões de linha de base. |
+
+A inclusão de operações portuárias e *hoteling* exige atenção adicional porque esses componentes podem estar representados de formas diferentes em fatores agregados. Se a intensidade marítima usada em um cenário já incorpora consumo associado a permanência em porto, adicionar *hoteling* ou operação portuária separadamente pode duplicar emissões. Se o cenário separa navegação, operação portuária e permanência atracada, essa decomposição precisa continuar explícita na metodologia e na interpretação do resultado.
+
+O Batch 002 reforça essa cautela. A reconciliação de fator rodoviário é diagnóstica e sensível à fronteira adotada: ela ajuda a explicar parte da diferença entre o CabotageLens e o benchmark externo no lado rodoviário, mas não constitui validação calibrada de todas as magnitudes, não substitui o modelo de emissões de linha de base e não autoriza misturar TTW, WTW, LCA, CO2 e CO2e. Da mesma forma, concordância direcional com um benchmark externo indica consistência interpretativa sob condições comparáveis, não prova reprodução exata da metodologia externa.
+
+Consequentemente, os resultados de emissões deste TF devem ser usados como estimativas operacionais TTW CO2e, específicas do corredor, da carga, da rota, dos portos e dos componentes modelados. Eles não devem sustentar afirmações de superioridade ambiental universal da cabotagem. A conclusão defensável é sempre condicionada à fronteira adotada, à qualidade das distâncias, à seleção de portos, à base de carga e à separação explícita entre evidência operacional TTW CO2e e outras métricas ambientais.
 
 ### 4.9 Fronteira de custo
 
