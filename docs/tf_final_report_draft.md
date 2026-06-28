@@ -147,11 +147,32 @@ Os cenários com portos forçados ou alternativos devem permanecer classificados
 
 Por fim, a interpretação econômica e ambiental desta alternativa segue as mesmas fronteiras do restante do TF. Custos multimodais são estimativas de custo do modelo, não fretes comerciais, tarifas contratadas ou cotações de mercado. Emissões multimodais são operacionais TTW CO2e por remessa, salvo mudança explícita e documentada de fronteira. Resultados TTW não devem ser misturados com evidências WTW, LCA, CO2 isolado ou CO2e de outra fronteira, e nenhuma linha de sensibilidade deve ser tratada como conclusão universal sobre superioridade da cabotagem.
 
-### 4.4 Proveniencia de rotas e distancias
+### 4.4 Seleção de portos e construção de rota
 
-A metodologia depende da proveniencia das distancias. As distancias rodoviarias sao resultados de roteamento, cache ou provedor e devem ser interpretadas como estimativas de rota sob o perfil usado. As distancias maritimas podem vir de matriz maritima, evidencia observada, referencia externa, override manual ou fallback. No Batch 001B, a classificacao do tipo de fonte tornou-se parte da interpretacao.
+A seleção de portos é a etapa que transforma a unidade funcional em cadeias de transporte comparáveis. Para cada cenário, o CabotageLens parte da mesma origem, do mesmo destino e da mesma base de carga definida para a remessa. A alternativa rodoviária direta e a alternativa rodoviário-cabotagem-rodoviário, portanto, não representam demandas distintas: elas são duas construções modeladas para entregar a mesma carga entre os mesmos pontos finais.
 
-As distancias maritimas em milhas nauticas sao convertidas por `1 nm = 1,852 km`. Sempre que uma referencia externa e registrada em `nm`, o valor convertido em `km` deve preservar a unidade original e a conversao. Uma distancia `haversine_fallback` e apenas uma estimativa de triagem. Ela pode explicar a necessidade de correcao, sensibilidade ou referencia adicional, mas nao deve sustentar conclusoes numericas fortes.
+Na alternativa exclusivamente rodoviária, a rota é representada como uma perna direta entre a origem e o destino. Na alternativa multimodal, a rota é decomposta em três trechos principais: o deslocamento rodoviário da origem ao porto de origem, a perna marítima entre o porto de origem e o porto de destino, e o deslocamento rodoviário do porto de destino ao destino final. Essa decomposição é necessária porque a escolha dos portos altera simultaneamente as distâncias de acesso terrestre, a distância marítima, os custos modelados, as emissões operacionais TTW CO2e e a interpretação metodológica do resultado.
+
+A lógica de seleção de portos usada pelo CabotageLens é determinística e auditável. Em cenários ordinários, a ferramenta pode selecionar o porto elegível mais próximo, com base geométrica, dentro do conjunto de portos configurados como elegíveis. Em cenários definidos pelo usuário ou por validação, portos específicos também podem ser forçados para representar uma hipótese explícita. Em ambos os casos, a escolha do porto deve permanecer rastreável, pois ela faz parte da premissa do cenário e não apenas de uma etapa operacional invisível.
+
+Essa lógica não deve ser confundida com uma otimização completa de rede de serviços multimodais. O método não modela grade de navegação, frequência de escalas, disponibilidade de armador, disponibilidade de espaço, aceitação comercial da carga, confiabilidade de serviço, tempo de trânsito, custo de estoque ou decisão comercial de roteamento. Assim, uma seleção por porto mais próximo ou por lista de portos elegíveis é transparente e reproduzível, mas não necessariamente operacionalmente ótima nem comercialmente correta.
+
+| Elemento da construção de rota | Papel no CabotageLens | Limite de interpretação |
+| --- | --- | --- |
+| Origem e destino | Definem os pontos finais da mesma remessa comparada. | Não especificam, por si só, serviço logístico contratado ou terminal efetivamente disponível. |
+| Rota rodoviária direta | Representa a alternativa rodoviária origem-destino. | É uma rota modelada para comparação, não uma cotação comercial de transporte. |
+| Porto de origem | Conecta a origem ao início da perna marítima. | Pode ser selecionado por elegibilidade/proximidade ou forçado; isso não comprova disponibilidade real de serviço. |
+| Perna marítima | Representa a cabotagem entre os portos definidos no cenário. | Depende da proveniência da distância e não prova frequência, escala ou aceitação operacional. |
+| Porto de destino | Conecta a perna marítima ao destino final. | Um porto regionalmente próximo não equivale automaticamente ao porto originalmente selecionado. |
+| *On-carriage* | Representa o trecho rodoviário do porto de destino ao destino final. | Pode alterar materialmente custo e TTW CO2e, sobretudo em cenários com porto alternativo. |
+| Porto forçado ou alternativo | Permite testar uma hipótese explícita de sensibilidade. | Deve ser rotulado como sensibilidade; não valida silenciosamente o porto originalmente selecionado. |
+| Caso de mesmo porto | Registra situações em que origem e destino marítimos recaem no mesmo porto. | É limitação, exclusão ou caso não comparável; não representa uma cadeia normal de cabotagem. |
+
+Os portos forçados ou alternativos devem, portanto, ser tratados como cenários de sensibilidade quando essa for a classificação rastreada. O uso de Pecém em um cenário alternativo para uma rota associada a Fortaleza não valida o Porto de Fortaleza, assim como o uso de Suape em uma sensibilidade associada a Recife não valida o Porto do Recife. Mesmo quando esses portos têm relação regional com o destino final, a mudança altera acessos rodoviários, distância marítima, terminal considerado e condição de interpretação; por isso, não pode ser apresentada como substituição silenciosa.
+
+Casos em que a origem e o destino marítimos recaem no mesmo porto também não representam uma alternativa normal de cabotagem. Eles podem ser úteis para revelar limitação da lógica de seleção, para documentar uma exclusão ou para justificar classificação como caso não comparável, mas não devem sustentar conclusão sobre desempenho relativo entre rodovia e cabotagem. Nesses casos, a cadeia rodoviário-cabotagem-rodoviário deixa de representar uma alternativa modal substantiva.
+
+Por fim, a seleção de portos não altera as fronteiras gerais do estudo. Os custos calculados continuam sendo estimativas de custo do modelo, e não fretes comerciais, tarifas contratadas ou cotações de mercado. As emissões continuam sendo emissões operacionais TTW CO2e, salvo indicação explícita em contrário, e não devem ser confundidas com WTW, LCA, CO2 isolado ou CO2e sob outra fronteira. A seção, portanto, define como a rota é construída e como seus limites devem ser lidos, sem transformar a escolha de portos em prova de disponibilidade comercial ou de superioridade universal da cabotagem.
 
 ### 4.5 Tipos de fonte maritima
 
