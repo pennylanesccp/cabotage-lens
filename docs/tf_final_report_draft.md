@@ -419,6 +419,31 @@ Da mesma forma, a proveniência das distâncias condiciona o uso do resultado. D
 
 Assim, a construção de rota no CabotageLens deve ser interpretada em conjunto com a seleção de portos, a proveniência das distâncias, os componentes habilitados, os avisos de qualidade, a fronteira de custo e a fronteira de emissões. O modelo não otimiza uma rede multimodal nacional completa, não escolhe a rota comercialmente ótima e não automatiza uma recomendação de decisão. Seus custos permanecem estimativas modeladas, não fretes comerciais; suas emissões permanecem operacionais TTW CO2e, salvo indicação explícita em contrário. A contribuição da ferramenta está em tornar a comparação entre alternativas transparente e auditável, sem transformar uma rota modelada em prova de operação real ou de superioridade universal da cabotagem.
 
+### 5.4 Cálculo de distância, custo modelado e emissões operacionais
+
+Após a construção das alternativas de rota, o CabotageLens consolida as distâncias, os custos modelados e as emissões operacionais em saídas de cenário. Essa consolidação parte das pernas definidas na seção anterior: a perna rodoviária direta no caso road-only e, no caso multimodal, o *pre-carriage*, a perna marítima e o *on-carriage*, com componentes adicionais apenas quando estiverem habilitados no cenário. Esta subseção descreve essa consolidação em nível de relatório; ela não introduz novas fórmulas, fatores de emissão, taxas de custo, parâmetros de combustível ou premissas de modelo.
+
+As distâncias são preservadas por perna antes de serem agregadas para interpretação do cenário. A alternativa rodoviária direta tem uma distância origem-destino; a alternativa multimodal combina as distâncias dos acessos rodoviários e da perna marítima. O total modelado, porém, não deve apagar a decomposição: a distância marítima, a distância de acesso terrestre, os portos selecionados ou forçados, a proveniência da distância e os avisos de qualidade de rota continuam determinando a confiança e o uso acadêmico do resultado.
+
+O custo modelado é calculado a partir dos componentes incluídos no cenário, como trechos rodoviários, perna marítima e componentes portuários quando aplicáveis. A saída em `BRL` representa uma estimativa operacional dentro da fronteira adotada, não uma cotação de frete, tarifa de transportador, preço de armador, contrato, booking ou custo logístico total de mercado. Portanto, uma diferença de custo entre road-only e multimodal deve ser lida como diferença de custo modelado sob as hipóteses do cenário, não como prova de superioridade comercial.
+
+As emissões são consolidadas separadamente como emissões operacionais TTW CO2e, de acordo com a fronteira definida no Capítulo 4. Essa fronteira cobre os componentes de transporte e operação explicitamente representados, mas não equivale a WTW, LCA ou evidência CO2-only. Resultados, fatores ou benchmarks com outra fronteira ambiental só podem ser comparados quando a diferença de unidade, gases incluídos, base de carga, alocação e escopo for explicitamente reconhecida. Assim, o resultado de emissões do protótipo permanece uma estimativa operacional por cenário, não uma avaliação completa de ciclo de vida.
+
+| Dimensão de saída | O que representa | Limite de interpretação |
+| --- | --- | --- |
+| Distância por perna | Quilometragem associada a road-only, *pre-carriage*, perna marítima e *on-carriage*. | Deve ser lida com a proveniência da distância e os avisos de qualidade. |
+| Distância total modelada | Soma interpretativa das pernas incluídas na alternativa avaliada. | Não substitui a leitura por perna nem prova rota operacional real. |
+| Custo modelado | Estimativa em `BRL` dos componentes incluídos no cenário. | Não é frete comercial, tarifa, cotação ou custo logístico total. |
+| Emissões TTW CO2e | Emissões operacionais dos componentes representados. | Não são WTW, LCA nem CO2-only. |
+| Operações portuárias | Parcela de custo e emissões quando o cenário inclui esse componente. | Deve ser compatível com a fronteira adotada para evitar comparação inconsistente. |
+| *Hoteling* | Parcela associada à permanência/escala quando habilitada e não incorporada em outra intensidade. | Pode causar dupla contagem se somada a fator que já inclui esse consumo. |
+| Comparação custo-emissões | Apresenta diferenças entre alternativas em dimensões separadas. | Não define vencedor único sem regra de decisão explícita. |
+| Comparação diagnóstica com benchmark | Ajuda a explicar lacunas de magnitude e sensibilidade a premissas. | Não valida magnitudes exatas nem recalibra a linha de base. |
+
+Os componentes habilitados exigem atenção especial. Operações portuárias e *hoteling* podem melhorar a completude operacional do cenário quando sua inclusão é compatível com a fronteira adotada, mas adicioná-los sem verificar o que já está representado em uma intensidade agregada pode criar dupla contagem ou comparação inconsistente. Do mesmo modo, desabilitar componentes altera a fronteira do cenário e deve ser considerado na interpretação do custo e das emissões. A comparabilidade depende de manter explícito o que entrou no cálculo e o que ficou fora.
+
+Por fim, o uso de benchmarks e diagnósticos não altera a linha de base do protótipo. A reconciliação de fator rodoviário do Batch 002 é útil para mostrar que parte da lacuna de magnitude pode estar associada a premissas rodoviárias, mas ela é uma sensibilidade de alinhamento com benchmark, não uma recalibração do CabotageLens. Ela não substitui o modelo de linha de base, não valida magnitudes exatas, não transforma WTW em TTW e não autoriza misturar CO2, CO2e, WTW e LCA sem reconciliação explícita. As saídas de distância, custo e emissões devem, portanto, ser interpretadas como resultados condicionados pela construção de rota, pelos portos, pela proveniência dos dados, pelos componentes habilitados e pelos parâmetros do cenário.
+
 ## 6. Estudos de caso e validacao
 
 ### 6.1 Batch 001 como diagnostico historico
