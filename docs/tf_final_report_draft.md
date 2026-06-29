@@ -907,6 +907,28 @@ O rerun Supabase/cache e a reconciliação rodoviária ajudam a organizar essa l
 
 Portanto, o uso seguro do Batch 002 no TF é afirmar apoio direcional externo com lacunas de magnitude explícitas. O lote não prova viabilidade comercial, disponibilidade de serviço, escolha real de rotas, frequência, preços praticados ou fretes contratados. Custos continuam sendo estimativas modeladas, e emissões continuam sendo CO2e operacional TTW, salvo indicação explícita em contrário. Com esses limites, o Batch 002 contribui para uma defesa acadêmica mais forte justamente porque combina evidência externa favorável em direção com transparência sobre aquilo que ainda não está calibrado.
 
+### 8.4 Papel do cache, da rastreabilidade e da reconciliação rodoviária
+
+O rerun com Supabase/cache e a reconciliação rodoviária não acrescentam uma nova conclusão de desempenho modal; eles qualificam a interpretação do Batch 002. Seu papel principal é separar hipóteses de erro operacional, como instabilidade de cache ou de provedor, de diferenças metodológicas mais profundas entre o CabotageLens e o benchmark externo. Essa distinção é importante porque uma lacuna de magnitude pode ter origens muito diferentes: pode decorrer de execução instável, de premissas incompatíveis ou de fronteiras analíticas distintas.
+
+No caso do cache, a estabilidade dos registros rodoviários e a repetição rastreável das distâncias tornam improvável que a instabilidade de provedor ou cache seja a principal explicação para a lacuna no lado rodoviário. Isso fortalece a auditabilidade do resultado, pois mostra que a comparação pode ser reproduzida dentro da infraestrutura de dados usada pelo projeto. Essa estabilidade, porém, não valida magnitude exata, não transforma o benchmark em calibração e não prova disponibilidade comercial. Registros de cache são evidência computacional, não evidência de mercado; do mesmo modo, acertos de route-cache não demonstram existência de serviço contratado, frequência, capacidade, aceite por transportador, slot ou rota comercial efetivamente disponível.
+
+A reconciliação rodoviária deve ser lida com a mesma cautela. O exercício indica que premissas de fator rodoviário, consumo e fronteira ambiental explicam parte relevante da diferença de magnitude no componente road-only. Ao reduzir a lacuna, ele torna a discussão mais específica: a divergência não precisa ser tratada como um desvio opaco, pois há indícios de que parte dela está associada ao lado rodoviário da comparação. Ainda assim, a reconciliação é diagnóstica, não normativa. O fator diagnóstico não substitui o modelo de linha de base do CabotageLens, o aplicativo não foi recalibrado, e as saídas de baseline permanecem as apresentadas no Capítulo 7.
+
+| Verificação | O que reduz ou descarta | O que permanece em aberto |
+| --- | --- | --- |
+| Supabase/cache rerun | Reduz a hipótese de que a lacuna seja explicada principalmente por instabilidade de cache, provedor ou repetição computacional. | Não valida magnitude exata, serviço disponível, rota comercial, preço ou frete contratado. |
+| Reconciliação rodoviária | Mostra que premissas rodoviárias explicam parte importante do desvio no lado road-only. | É diagnóstico apenas; não recalibra o aplicativo nem substitui o baseline. |
+| Lacuna rodoviária residual | Torna a explicação mais estreita e mais rastreável. | Diferenças residuais de distância, fronteira, alocação, veículo ou carga ainda podem permanecer. |
+| Lacuna multimodal | Evita atribuir toda a divergência ao componente rodoviário. | Permanecem diferenças potenciais de porto, rota marítima, operação portuária, alocação e lógica de serviço. |
+| Contribuição de auditabilidade | Documenta o que foi reexecutado, comparado e diagnosticado. | Auditabilidade não equivale a validação calibrada nem a evidência comercial. |
+
+Essas verificações, portanto, estreitam o espaço de explicações prováveis sem fechar a questão. O cache reduz a suspeita de instabilidade computacional; a reconciliação rodoviária reduz parte da incerteza sobre o lado road-only; mas lacunas residuais continuam presentes, inclusive no componente multimodal. O resultado metodologicamente seguro é reconhecer que os desvios são mais interpretáveis do que seriam sem esses testes, mas continuam insuficientes para sustentar validação calibrada ou reprodução exata do workbook.
+
+A contribuição mais importante dessas etapas é a transparência. Elas mostram que o trabalho não apenas observou uma divergência, mas também testou hipóteses plausíveis sobre sua origem e preservou a trilha de execução. Isso reforça a reprodutibilidade do estudo e torna mais claro o que pode ser defendido: apoio direcional externo, estabilidade computacional e diagnóstico parcial da lacuna rodoviária. Não autoriza, entretanto, afirmar que o modelo foi ajustado para coincidir com Gustavo/Costa, que o Batch 002 valida magnitudes exatas ou que os resultados possam ser usados como evidência comercial de contratação logística.
+
+Por fim, as mesmas fronteiras do relatório continuam válidas. Custos continuam sendo estimativas modeladas, não fretes de mercado, tarifas ou cotações contratadas. Emissões continuam sendo CO2e operacional TTW, salvo indicação explícita em contrário; TTW, WTW, LCA, CO2 e CO2e não devem ser misturados na interpretação. Com esses limites, cache, rastreabilidade e reconciliação rodoviária funcionam como instrumentos de defesa metodológica, não como recalibração do CabotageLens nem como solução completa das lacunas de magnitude.
+
 ## 9. Limitacoes
 
 Este trabalho possui limitacoes deliberadas e limitacoes ainda nao resolvidas.
