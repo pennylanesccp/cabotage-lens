@@ -1051,6 +1051,32 @@ A tabela acima resume a função organizadora do capítulo, sem esgotar cada lim
 
 Com essa estrutura, o Capítulo 9 prepara a transição para as conclusões e os trabalhos futuros. O Capítulo 10 pode afirmar a contribuição metodológica do CabotageLens sem extrapolar para validação comercial, operacional ou universal. O Capítulo 11, por sua vez, pode transformar as limitações em uma agenda de evolução: ampliar fronteiras ambientais, refinar custos, incorporar evidência operacional, reconciliar benchmarks e fortalecer a base de validação sem apagar as incertezas que tornam o argumento acadêmico defensável.
 
+### 9.2 Fronteira ambiental: TTW operacional, CO2e e exclusão de WTW/LCA
+
+A primeira limitação ambiental do TF é a fronteira de contabilização adotada para os resultados de emissões. Salvo indicação explícita em contrário, o CabotageLens reporta emissões operacionais TTW CO2e associadas às pernas e componentes modelados no cenário. Essa escolha permite comparar alternativas sob uma fronteira comum e auditável, mas não deve ser confundida com uma avaliação climática completa da cadeia logística.
+
+Na prática, a fronteira TTW operacional considera emissões associadas ao uso de combustível nas etapas representadas, enquanto deixa fora etapas a montante e de ciclo de vida. Assim, a linha de base atual não inclui produção, refino, transporte ou distribuição dos combustíveis; construção e manutenção de infraestrutura; fabricação de caminhões, navios ou equipamentos; nem fim de vida dos ativos. Esses elementos pertencem a fronteiras WTT, WTW ou LCA, que são relevantes para contextualização e trabalhos futuros, mas não substituem os resultados operacionais do modelo corrente [decarb2024] [maritimelca2024].
+
+Essa distinção também vale para a espécie de emissão reportada. Resultados em CO2 isolado não são automaticamente equivalentes a CO2e, porque CO2e depende dos gases incluídos e da regra de equivalência climática adotada pela fonte. Portanto, literatura ou benchmarks que reportam CO2-only, WTW, LCA ou CO2e sob outro limite metodológico não podem ser usados para calibrar, corrigir ou validar diretamente os resultados TTW CO2e do CabotageLens sem reconciliação explícita de fronteira, unidade funcional, base de carga e gases incluídos.
+
+| Escopo ambiental | Incluído no TF atual? | Limite de interpretação |
+| --- | --- | --- |
+| TTW CO2e operacional | Sim, como fronteira ambiental da linha de base quando o cenário reporta emissões. | Apoia comparação operacional entre cenários modelados, não conclusão WTW/LCA. |
+| WTT e produção de combustível | Não, salvo futura expansão explícita de fronteira. | Não deve ser inferido a partir dos resultados TTW. |
+| WTW/LCA | Não executado como resultado de linha de base. | Literatura WTW/LCA é contexto ou trabalho futuro, não substituição do modelo atual. |
+| Literatura CO2-only | Não como equivalente direto. | Exige reconciliação antes de qualquer comparação com CO2e. |
+| Poluentes locais | Não como resultado principal. | NOx, SOx, PM, CO e VOC ficam fora da fronteira de resultado, salvo discussão bibliográfica. |
+| Dispersão e qualidade do ar portuária | Não. | O TF não estima concentração, exposição ou impacto local à saúde. |
+| Combustíveis alternativos e HVO | Não na linha de base. | Permanecem como contexto ou trabalho futuro se não forem modelados separadamente. |
+
+As operações portuárias e o *hoteling* reforçam a importância dessa separação. O fato de o modelo poder representar componentes operacionais associados à estadia ou operação em porto não transforma o CabotageLens em inventário completo de emissões portuárias, nem em estudo de qualidade do ar local. Fontes sobre consumo de navios atracados e impactos locais de emissões portuárias ajudam a justificar a relevância metodológica do tema [berth2009] [shipops2022] [berthairquality2010], mas o TF atual não modela dispersão atmosférica, concentração, exposição populacional, terminal específico, produtividade real ou inventário completo de poluentes.
+
+Também não se deve usar discussões sobre combustíveis alternativos, HVO ou trajetórias de descarbonização como se fossem resultados da linha de base. Esses temas são úteis para posicionar a agenda de pesquisa e para orientar trabalhos futuros, mas exigiriam cenários separados, fatores compatíveis, fronteira ambiental documentada e rastreabilidade própria antes de serem comparados aos resultados TTW CO2e atuais. Sem essa etapa, a literatura de descarbonização permanece contextual, não uma fonte de recalibração silenciosa.
+
+A reconciliação rodoviária do Batch 002 segue a mesma regra. Ela é uma verificação diagnóstica de alinhamento com o benchmark externo, não uma autorização para alterar a fronteira ambiental da linha de base nem para substituir fatores do modelo. O próprio valor metodológico desse diagnóstico está em mostrar que diferenças de fronteira e premissas podem explicar lacunas de magnitude; ele não transforma uma hipótese WTW ou externa em resultado operacional TTW CO2e do CabotageLens.
+
+Portanto, a limitação ambiental não invalida o modelo, mas define o alcance das afirmações que ele pode sustentar. Os resultados atuais podem apoiar interpretação operacional, cenário-dependente e comparativa sob TTW CO2e. Eles não podem sustentar conclusões WTW, WTT, LCA, CO2-only, inventário completo de poluentes, impacto de qualidade do ar portuária ou superioridade ambiental universal sem uma expansão metodológica explícita e rastreada.
+
 ## 10. Conclusao
 
 O CabotageLens cumpre, no estado atual do projeto, uma funcao academica defensavel: fornece uma estrutura auditavel, reprodutivel e explicita em fronteiras para comparar transporte rodoviario direto e alternativas rodoviario-cabotagem-rodoviario em corredores brasileiros. A ferramenta organiza entradas, rotas, distancias, fontes, custos modelados, emissoes TTW CO2e e avisos de interpretacao em um fluxo coerente para analise de engenharia.
