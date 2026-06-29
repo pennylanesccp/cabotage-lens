@@ -1204,32 +1204,76 @@ Por isso, as fontes devem ser lidas junto com as classificações de evidência.
 
 Essa limitação encerra o Capítulo 9 porque define como o leitor deve atravessar a transição para as conclusões. O trabalho pode concluir que o CabotageLens oferece uma estrutura auditável e academicamente útil para comparação de cenários, mas não que a literatura, o benchmark ou as sensibilidades resolvam todas as lacunas de rota, validação, custo, emissões e operação. As limitações, portanto, não reduzem a contribuição do TF; elas estabelecem as condições sob as quais a contribuição pode ser defendida e indicam o que trabalhos futuros precisam fechar antes de afirmações mais gerais.
 
-## 10. Conclusao
+## 10. Conclusões e trabalhos futuros
 
-O CabotageLens cumpre, no estado atual do projeto, uma funcao academica defensavel: fornece uma estrutura auditavel, reprodutivel e explicita em fronteiras para comparar transporte rodoviario direto e alternativas rodoviario-cabotagem-rodoviario em corredores brasileiros. A ferramenta organiza entradas, rotas, distancias, fontes, custos modelados, emissoes TTW CO2e e avisos de interpretacao em um fluxo coerente para analise de engenharia.
+### 10.1 Conclusão principal
 
-A camada Batch 001B aumentou a rastreabilidade da validacao ao separar linhas historicas, same-port, excluidas, bloqueadas, reference-needed e sensibilidade. As tres sensibilidades executadas indicam que, nos cenarios nomeados Santos/Manaus com distancia de referencia, Manaus/Pecem como porto alternativo e Rio Grande/Suape como porto alternativo, o multimodal permanece menor que o rodoviario direto em custo modelado e TTW CO2e operacional. Contudo, essas linhas sao `sensitive`, nao `robust`, e nao substituem linhas de base validadas.
+Este trabalho desenvolveu e documentou o CabotageLens como um framework computacional reprodutível e auditável para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros. A conclusão principal não é que a cabotagem seja superior em termos universais. A contribuição central é que o framework torna a comparação rastreável, dependente de rota e defensável sob fronteiras explicitamente declaradas.
 
-O Batch 002 fortalece a defesa porque usa um benchmark externo familiar ao contexto do TF. Os 21 pares OD positivos e suportados ficam alinhados na direcao modal de emissoes, mas classificados como `same_direction_large_gap`, portanto sustentam interpretacao direcional cautelosa e nao validacao calibrada de magnitude. A reconciliacao rodoviaria tambem explica grande parte da lacuna road-only por diferencas de consumo e fator de emissao, sem substituir o modelo rodoviario de linha de base.
+A comparação adotada é porta a porta: a alternativa rodoviária direta liga origem e destino por caminhão, enquanto a alternativa multimodal combina pré-carriage rodoviário, perna marítima de cabotagem e on-carriage rodoviário. Os resultados são interpretados dentro de duas fronteiras principais: custo como estimativa modelada, não frete comercial, e emissões como CO2e operacional TTW, não WTW nem LCA. A análise também preserva a proveniência de distâncias, portos, parâmetros e artefatos de validação, além de classificar a força da evidência de forma conservadora.
 
-Assim, a conclusao geral deve permanecer conservadora: o CabotageLens demonstra uma contribuicao metodologica e computacional auditavel para comparar cadeias road-only e road-cabotage-road sob fronteiras explicitas. O projeto revela potencial vantagem modelada da cabotagem em cenarios especificos e evidencia direcional externa no Batch 002, mas nao demonstra superioridade universal da cabotagem, reproducao exata do workbook Gustavo/Costa ou equivalencia a fretes comerciais.
+Assim, o resultado mais defensável do TF é metodológico: o CabotageLens permite comparar cenários rodoviários e multimodais de forma explícita, com trilha de auditoria, avisos de qualidade e disciplina sobre o que pode ou não ser afirmado. Quando uma alternativa multimodal aparece favorável em um cenário específico, essa leitura deve continuar condicionada ao corredor, à seleção de portos, à distância marítima, aos parâmetros usados e à classificação do caso.
 
-## 11. Trabalhos futuros
+### 10.2 Contribuição metodológica e computacional
 
-Os proximos desenvolvimentos devem atacar diretamente as limitacoes que impedem conclusoes robustas:
+A contribuição do CabotageLens está na integração entre construção explícita de rotas, cálculo de custo modelado, cálculo de emissões operacionais TTW CO2e e preservação da proveniência dos dados. O protótipo separa a alternativa rodoviária direta da cadeia rodoviário-cabotagem-rodoviário, registra portos selecionados ou forçados, distingue distâncias marítimas de maior ou menor confiabilidade e mantém o vínculo entre resultado numérico, cenário, parâmetros e artefatos de validação.
 
-- obter evidencia exata de distancia maritima para os pares de portos selecionados ainda pendentes, especialmente Manaus -> Porto de Fortaleza e Porto do Rio Grande -> Porto do Recife;
-- expandir a fronteira ambiental para WTW ou LCA somente com fatores, unidades, combustiveis e documentacao compativeis;
-- implementar cenarios de HVO e combustiveis alternativos como modulos explicitamente separados da linha de base TTW;
-- incorporar modelagem de frete comercial, tarifas, inventario, tempo, confiabilidade e custos nao energeticos com fontes adequadas;
-- adicionar horarios, frequencia, disponibilidade de servico e restricoes operacionais de linhas de cabotagem;
-- evoluir para uma super-rede multimodal completa quando houver dados e escopo para isso;
-- desenvolver mapas de iso-emissao e visualizacoes de sensibilidade geografica apos estabilizar proveniencia de distancia;
-- refinar produtividade portuaria, hoteling, equipamentos de patio, eletricidade e fatores locais de porto;
-- ampliar validacao com referencias independentes de distancia rodoviaria, distancia maritima, custos e intensidades de emissao;
-- preservar manifestos de execucao com versao de codigo, parametros, artefatos, cache e status de fallback para cada resultado usado no TF.
+Essa estrutura é particularmente importante porque a comparação entre rodovia e cabotagem depende de escolhas que não são neutras. A distância marítima pode vir de SeaMatrix, de fallback haversine, de referência manual ou de referência externa rastreada. Portos alternativos, como Pecém ou Suape, podem ser úteis em sensibilidades, mas não substituem silenciosamente Porto de Fortaleza ou Porto do Recife. Por isso, o framework inclui avisos de qualidade de rota, status de fallback, identificação de casos bloqueados ou excluídos e separação entre baseline, sensibilidade, benchmark externo e diagnóstico.
 
-Esses trabalhos futuros nao reduzem a utilidade do prototipo atual. Eles delimitam a transicao de uma ferramenta academica de comparacao auditavel para uma ferramenta mais proxima de planejamento logistico operacional.
+O valor do trabalho, portanto, não está apenas na geração de números de custo e emissões. Está também na camada de auditoria e classificação: o relatório pode diferenciar resultado histórico, caso sensível, lacuna de referência, comparação externa, rerun de cache e reconciliação diagnóstica. Essa disciplina evita que saídas do modelo sejam transformadas em afirmações mais fortes do que a evidência permite, especialmente em relação a custos comerciais, fronteiras TTW/WTW/LCA, seleção de portos e reprodução de benchmarks externos.
+
+### 10.3 Síntese das evidências obtidas
+
+O Batch 001 permanece como evidência diagnóstica histórica. Ele registrou resultados iniciais e ajudou a revelar problemas de interpretação, especialmente a dependência de distâncias marítimas por fallback e a necessidade de separar casos same-port, lacunas de referência e casos inadequados para conclusão numérica. Esses resultados não foram reescritos como evidência final robusta.
+
+O Batch 001B passou a funcionar como camada de decisão metodológica. Ele reorganizou os casos por status de uso no TF, preservou portos, fontes de distância, unidades, conversões e classificações, e delimitou quais linhas poderiam ser usadas apenas como sensibilidade ou limitação. As sensibilidades executadas no issue #16 indicaram que, nos três cenários nomeados, a alternativa multimodal permaneceu menor que a rodoviária direta em custo modelado e TTW CO2e operacional. Entretanto, essas linhas foram classificadas como `sensitive`, não como `robust`, e nenhuma deve ser promovida a `headline_candidate` irrestrito.
+
+O Batch 002 acrescentou uma camada externa relevante por comparar o CabotageLens ao workbook/paper Gustavo/Costa em pares OD suportados. Esse benchmark tem importância acadêmica para a defesa porque confronta o framework com uma referência externa familiar ao problema estudado. Ao mesmo tempo, ele deve ser interpretado com cautela: os 21 pares OD positivos e suportados ficaram alinhados na direção modal das emissões, mas classificados como `same_direction_large_gap` após o rerun rastreado. Portanto, o Batch 002 apoia consistência direcional, não reprodução calibrada de magnitude, nem reconstrução completa da lógica de carga, alocação, rota, serviço e fronteira do workbook.
+
+O rerun Supabase/cache, presente nos artefatos rastreados, reduziu a hipótese de que a lacuna de magnitude fosse causada principalmente por instabilidade de cache ou provedor de rota. A execução cache-enabled manteve as diferenças agregadas em patamar semelhante e indicou que as lacunas remanescentes são mais provavelmente metodológicas. A reconciliação de fator rodoviário também explicou parte importante da lacuna do lado road-only ao aplicar, apenas como diagnóstico, premissas rodoviárias compatíveis com a família Gustavo/Costa. Essa reconciliação permanece diagnóstica: ela não substitui o modelo rodoviário de linha de base do CabotageLens e não altera a fronteira operacional TTW do trabalho.
+
+Em síntese, as evidências atuais sustentam uma leitura cautelosa e específica por corredor. Elas mostram que o framework produz comparações rastreáveis, que as sensibilidades internas preservam direção favorável sob hipóteses documentadas, que o benchmark Gustavo/Costa apoia consistência direcional externa e que a lacuna rodoviária tem explicação metodológica plausível. Elas não sustentam afirmação universal sobre cabotagem, validação calibrada de magnitude ou equivalência entre custo modelado e frete comercial.
+
+### 10.4 Implicações para interpretação dos resultados
+
+Os resultados permitem usar o CabotageLens como uma ferramenta reprodutível de triagem e comparação de cenários. O modelo pode mostrar se uma alternativa multimodal é direcionalmente favorável sob uma combinação explícita de rota, porto, distância, carga, parâmetros de custo e fronteira ambiental. A camada de benchmark e sensibilidade aumenta a confiança no comportamento direcional do framework e, ao mesmo tempo, evidencia as lacunas que precisam ser resolvidas antes de conclusões mais fortes.
+
+Essa leitura deve permanecer específica por corredor. Um resultado favorável em custo modelado e TTW CO2e operacional pode justificar investigação adicional, comparação de hipóteses ou discussão acadêmica, mas não encerra a análise logística. A decisão real dependeria de preço contratado, disponibilidade de serviço, frequência, tempo de trânsito, confiabilidade, capacidade, aceitação da carga, risco operacional e demais componentes fora da fronteira atual.
+
+Por consequência, o relatório não deve afirmar que:
+
+- a cabotagem é universalmente superior ao transporte rodoviário;
+- o custo modelado equivale a frete comercial ou cotação de mercado;
+- CO2e operacional TTW equivale a WTW ou LCA;
+- o workbook/paper Gustavo/Costa foi plenamente reproduzido;
+- as linhas de sensibilidade são substitutas validadas de baseline;
+- Pecém equivale a Porto de Fortaleza;
+- Suape equivale a Porto do Recife;
+- o fator rodoviário diagnóstico deve substituir o modelo rodoviário de linha de base.
+
+Essas restrições não diminuem a contribuição do trabalho; elas definem o uso correto dos resultados. A principal força do CabotageLens está em tornar claras as condições sob as quais cada comparação foi produzida e em impedir que evidências sensíveis, diagnósticas ou parcialmente comparáveis sejam tratadas como validação final.
+
+### 10.5 Limitações finais
+
+As limitações finais decorrem diretamente das fronteiras adotadas. A fronteira ambiental é operacional TTW CO2e, sem incorporação completa de WTW, LCA, infraestrutura, fabricação de veículos, manutenção ou demais etapas de ciclo de vida. A fronteira econômica é de estimativa modelada de custos operacionais, sem fretes comerciais, tarifas completas, margens, inventário, demurrage, contratos, disponibilidade de serviço ou formação real de preço.
+
+A construção das rotas também permanece simplificada. A seleção de portos é uma heurística ou uma decisão forçada de cenário, não uma otimização operacional completa. O modelo ainda não representa uma super-rede multimodal com serviços, frequência, horários, capacidade, conexões, confiabilidade e disponibilidade comercial. Além disso, algumas linhas continuam com evidência incompleta de distância marítima para o par de portos selecionado, especialmente quando o resultado depende de fallback, referência indireta ou sensibilidade com porto alternativo.
+
+As evidências de validação precisam ser lidas como classificação, não como veredito único de passa/falha. Casos same-port, excluídos, bloqueados, sensitivity-only ou not-comparable não devem ser usados para conclusão numérica principal. As sensibilidades executadas ajudam a entender comportamento do modelo, mas não substituem baseline robusto. O workbook Gustavo/Costa é evidência externa importante, mas sua lógica interna de carga, alocação, rota, serviço, distância, porto e fronteira ambiental não foi completamente reconstruída. A reconciliação rodoviária é útil para explicar a lacuna de magnitude, mas permanece diagnóstico de alinhamento, não recalibração do CabotageLens.
+
+Essas limitações não invalidam o framework. Elas indicam que a contribuição do TF está em produzir uma comparação auditável e metodologicamente disciplinada, com incertezas visíveis. A maturidade acadêmica do resultado depende justamente de preservar essas fronteiras, em vez de converter evidência parcial em afirmação geral.
+
+### 10.6 Trabalhos futuros
+
+Os próximos desenvolvimentos devem expandir a fronteira ambiental somente com fatores, unidades e documentação compatíveis. Uma extensão para WTW ou LCA exigiria separar explicitamente emissões upstream, combustíveis, infraestrutura, fabricação, manutenção, operações portuárias adicionais e possíveis cenários de combustíveis alternativos. Essa expansão não deve ser feita por substituição direta de fatores na linha de base TTW, mas por uma nova fronteira metodológica documentada.
+
+Também é necessário melhorar a validação de distâncias marítimas e de portos selecionados. Isso inclui obter evidência exata para pares ainda pendentes, separar portos alternativos de portos originalmente selecionados, ampliar referências independentes de distância e registrar a proveniência de cada rota usada em conclusão. Em paralelo, a modelagem de operações portuárias e hoteling deve incorporar dados mais específicos de terminal, equipamento, produtividade, energia elétrica, combustível, tempo de atracação e tratamento de dupla contagem.
+
+No eixo econômico e operacional, trabalhos futuros devem incorporar fretes comerciais, tarifas, tempo de trânsito, frequência, confiabilidade, demurrage, inventário, disponibilidade de serviço, capacidade e aceitação operacional. Uma evolução natural seria transformar a comparação atual em uma super-rede multimodal, com alternativas de porto, serviços marítimos, conexões, restrições de frequência e critérios explícitos de escolha. Essa expansão permitiria diferenciar melhor vantagem modelada, viabilidade operacional e competitividade comercial.
+
+Outra frente é aprofundar a reconciliação com o workbook/paper Gustavo/Costa. O objetivo não deve ser tratar o benchmark como verdade absoluta, mas reconstruir com mais precisão sua lógica de carga, alocação, distância, rota, porto, serviço e fronteira ambiental. O mesmo esforço deve ser ampliado para outros benchmarks independentes, de modo que a avaliação deixe de depender de uma única família de referência externa.
+
+Por fim, o trabalho deve avançar em sensibilidades de carga, alocação por contêiner, fator de carga, consumo rodoviário, intensidade marítima e parâmetros portuários, sempre com valores rastreados e defensáveis. A versão orientada à publicação do artigo técnico deve refletir a decisão de escopo registrada para o TF: o relatório final pode discutir Gustavo/Costa com maior detalhe por sua relevância para a defesa, mas o artigo deve reposicionar esse benchmark como evidência externa compacta, mantendo o CabotageLens como a contribuição central.
 
 ## 12. Citation placeholders
 
