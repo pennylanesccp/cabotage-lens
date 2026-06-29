@@ -627,15 +627,32 @@ Ao mesmo tempo, a estabilidade do cache não valida magnitudes exatas. Cache hit
 
 Portanto, o rerun Supabase/cache fortalece a auditabilidade e a reprodutibilidade computacional do Batch 002, mas não resolve sozinho os desencontros com Gustavo/Costa. Ele permite descartar uma explicação fraca, baseada apenas em instabilidade de cache/provedor, e prepara a discussão metodológica seguinte sobre fatores rodoviários e demais fronteiras de comparação.
 
-### 6.7 Reconciliação de fator rodoviário
+### 6.7 Reconciliação rodoviária como diagnóstico de alinhamento
 
-A reconciliacao de fator rodoviario testou uma explicacao metodologica especifica. As premissas Gustavo/Costa usadas no diagnostico foram `FDc = 0.28 L/km`, `FDe = 35.52 MJ/L` e `FDf = 86.5 gCO2eq/MJ`, resultando em:
+A reconciliação rodoviária do Batch 002 deve ser lida como diagnóstico de alinhamento com benchmark, não como atualização do modelo de linha de base do CabotageLens. Depois que o rerun Supabase/cache reduziu a hipótese de instabilidade de rota, esta etapa testou uma pergunta mais específica: quanto da lacuna de magnitude no lado rodoviário poderia ser explicado por diferenças de premissas de consumo de combustível e fator de emissão em relação à família Gustavo/Costa.
+
+O diagnóstico manteve fixas as mesmas distâncias rodoviárias em cache do Batch 002 e aplicou, apenas para comparação, as premissas rodoviárias rastreadas no benchmark: `FDc = 0.28 L/km`, `FDe = 35.52 MJ/L` e `FDf = 86.5 gCO2eq/MJ`. A combinação desses valores gera o fator diagnóstico:
 
 ```text
 0.28 L/km * 35.52 MJ/L * 86.5 gCO2eq/MJ / 1000 = 0.8602944 kgCO2e/km
 ```
 
-Aplicar esse fator diagnostico as mesmas distancias rodoviarias em cache reduziu a diferenca rodoviaria media/mediana de 199,8%/149,3% para 43,9%/19,6%. Isso indica que premissas de consumo rodoviario e fator de emissao explicam uma parte grande da diferenca de magnitude road-only. O diagnostico nao elimina toda a lacuna, nao substitui o modelo rodoviario de linha de base do CabotageLens e nao deve ser apresentado como recalibracao.
+| Item diagnóstico | Valor ou observação | Limite de interpretação |
+| --- | --- | --- |
+| Premissa de consumo rodoviário | `FDc = 0.28 L/km` | Usada apenas no diagnóstico de alinhamento; não substitui o preset rodoviário da ferramenta. |
+| Conteúdo energético do diesel | `FDe = 35.52 MJ/L` | Mantém o teste vinculado ao benchmark, não a uma nova calibração geral. |
+| Fator de emissão | `FDf = 86.5 gCO2eq/MJ` | Não autoriza misturar TTW, WTW, LCA, CO2 e CO2e sem reconciliação explícita de fronteira. |
+| Fator diagnóstico resultante | `0.8602944 kgCO2e/km` | Sensibilidade de alinhamento, não fator de linha de base do CabotageLens. |
+| Diferença rodoviária média | `199,8%` -> `43,9%` | Redução substancial, mas não eliminação da lacuna. |
+| Diferença rodoviária mediana | `149,3%` -> `19,6%` | Indica que premissas rodoviárias explicam grande parte do desalinhamento. |
+
+O efeito do teste é forte: aplicar o fator diagnóstico às mesmas distâncias rodoviárias em cache reduziu substancialmente a diferença média e mediana do lado road-only. Essa evidência sugere que uma parte importante da divergência com o workbook está associada a premissas rodoviárias de consumo e emissão, e não apenas à rota ou ao cache. Ela também ajuda a explicar por que a comparação direcional pode ser coerente enquanto a magnitude permanece distante.
+
+Essa redução, porém, não resolve todo o problema. Permanecem lacunas associadas à base de distância rodoviária, construção de rota, carga por contêiner, alocação, fronteira TTW versus WTW/LCA, gases incluídos, escolhas do workbook e demais parâmetros ainda não reconciliados. Por isso, o resultado deve ser apresentado como diagnóstico de sensibilidade a premissas rodoviárias, não como validação calibrada de magnitude.
+
+O teste também não altera a fronteira econômica ou operacional do trabalho. Ele não valida fretes comerciais, tarifas, disponibilidade de serviço, viabilidade de rota ou preços praticados no mercado. Custos do CabotageLens continuam sendo estimativas modeladas, e emissões continuam sendo operacionais TTW CO2e, salvo indicação explícita em contrário. O fator diagnóstico pode explicar parte do desalinhamento com o benchmark, mas não autoriza misturar TTW, WTW, LCA, CO2 e CO2e como se fossem equivalentes.
+
+Assim, a conclusão metodológica é limitada e útil: a reconciliação rodoviária mostra que as premissas de consumo e fator de emissão explicam muito da lacuna road-only, mas não substitui o modelo rodoviário de linha de base do CabotageLens, não recalibra a aplicação e não transforma o Batch 002 em validação exata. Seu valor no TF é tornar explícita uma causa provável da diferença de magnitude, preservando a classificação conservadora do benchmark.
 
 ## 7. Resultados
 
