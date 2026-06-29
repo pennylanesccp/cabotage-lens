@@ -444,6 +444,31 @@ Os componentes habilitados exigem atenção especial. Operações portuárias e 
 
 Por fim, o uso de benchmarks e diagnósticos não altera a linha de base do protótipo. A reconciliação de fator rodoviário do Batch 002 é útil para mostrar que parte da lacuna de magnitude pode estar associada a premissas rodoviárias, mas ela é uma sensibilidade de alinhamento com benchmark, não uma recalibração do CabotageLens. Ela não substitui o modelo de linha de base, não valida magnitudes exatas, não transforma WTW em TTW e não autoriza misturar CO2, CO2e, WTW e LCA sem reconciliação explícita. As saídas de distância, custo e emissões devem, portanto, ser interpretadas como resultados condicionados pela construção de rota, pelos portos, pela proveniência dos dados, pelos componentes habilitados e pelos parâmetros do cenário.
 
+### 5.5 Persistência, cache e proveniência dos dados
+
+A persistência e o cache têm papel metodológico no CabotageLens porque ajudam a preservar a memória técnica das execuções e a reduzir a dependência de chamadas repetidas a provedores externos. O repositório documenta o Supabase/Postgres como backend durável do protótipo, com uso associado a cache de rotas, pontos de localização, registros de cenário, resultados e fluxos de comparação. Essa camada, porém, não deve ser lida como documentação operacional de transporte: ela registra evidências computacionais produzidas sob condições definidas, não confirma a existência de uma operação logística real.
+
+No fluxo de construção de rota, o cache rodoviário pode reaproveitar distâncias já resolvidas entre locais normalizados, enquanto o cache de lugares preserva coordenadas associadas a entradas geográficas. Esse reaproveitamento melhora a repetibilidade do processo e evita variações desnecessárias causadas por novas consultas a provedores. Ainda assim, uma distância em cache continua dependente do provedor, do momento de obtenção, da configuração disponível, do perfil de roteamento e da forma como origem e destino foram resolvidos. Um cache hit indica que o protótipo reutilizou uma evidência anterior compatível com aquela consulta, não que a rota seja comercialmente disponível, contratável ou operacionalmente ótima.
+
+A proveniência cumpre função semelhante para as pernas marítimas e para os artefatos de validação. O relatório deve distinguir distâncias vindas de matriz interna, referência externa, substituição manual documentada, fallback geométrico, registro histórico ou informação ausente. Essas categorias não têm o mesmo peso interpretativo. Distâncias exatas ou documentadas tendem a sustentar melhor a leitura do cenário; distâncias por fallback, registros históricos, casos bloqueados, excluídos ou classificados como `reference_needed` servem principalmente para auditoria, diagnóstico, sensibilidade ou trabalho futuro.
+
+| Elemento persistido ou de proveniência | Papel no protótipo | Limite de interpretação |
+| --- | --- | --- |
+| Backend Supabase/Postgres | Camada durável para registros reutilizáveis do protótipo. | Não é base de mercado nem confirmação de serviço real. |
+| Cache de rota | Reaproveita distâncias rodoviárias resolvidas anteriormente. | Reduz chamadas a provedor, mas não prova disponibilidade ou qualidade comercial da rota. |
+| Cache de lugares/localização | Preserva coordenadas e nomes resolvidos para entradas geográficas. | Depende da resolução original e pode carregar ambiguidades da entrada. |
+| Registro de cenário/resultado | Documenta entradas, parâmetros e saídas calculadas sob uma fronteira definida. | Registra o que foi modelado, não uma operação executada. |
+| Fonte de provedor | Indica a origem computacional de uma distância ou localização. | Provedor identificado não equivale a verificação independente de serviço logístico. |
+| Proveniência de distância | Classifica fonte, fallback, referência, substituição ou lacuna. | Deve ser lida junto com avisos de qualidade e classificação metodológica. |
+| Evidência de rerun/cache hit | Mostra repetição controlada ou reaproveitamento de dados em cache. | Apoia reprodutibilidade, mas não valida magnitude de custo ou emissões. |
+| Registro histórico | Preserva resultados anteriores para rastreabilidade. | Não deve ser promovido a conclusão principal quando a classificação limita seu uso. |
+
+Os reruns e os cache hits são úteis para avaliar a estabilidade do processo computacional. Quando uma execução posterior reproduz a mesma fronteira de cenário usando registros de cache, ela fortalece a rastreabilidade e ajuda a separar instabilidade de provedor de diferenças metodológicas mais profundas. Esse tipo de evidência, entretanto, não valida por si só a viabilidade comercial, a disponibilidade de escala marítima, a aceitação por terminal, a frequência de serviço, a disponibilidade de slot ou a magnitude exata de custos e emissões.
+
+Também é necessário interpretar registros persistidos junto com avisos de qualidade de rota e classificações metodológicas. Um resultado salvo com distância por fallback, porto alternativo, mesma porta, caso histórico ou lacuna de referência continua sujeito à limitação indicada, mesmo que esteja registrado de forma completa no banco ou em artefato de exportação. A persistência aumenta a auditabilidade, mas não corrige automaticamente lacunas de fonte, fronteira, seleção de porto, compatibilidade de serviço ou premissas de modelo.
+
+Por fim, a camada de persistência não altera as fronteiras substantivas já definidas. Custos persistidos permanecem estimativas modeladas, não fretes comerciais, cotações ou tarifas de mercado. Emissões persistidas permanecem emissões operacionais TTW CO2e, salvo indicação explícita em contrário, e não se transformam em WTW, LCA ou evidência CO2-only por estarem registradas em cache ou exportação. A utilidade acadêmica da persistência está em permitir auditoria, repetição controlada e comparação transparente entre cenários, mantendo explícito o que foi calculado, em que condições e com quais limites de interpretação.
+
 ## 6. Estudos de caso e validacao
 
 ### 6.1 Batch 001 como diagnostico historico
