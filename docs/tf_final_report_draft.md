@@ -1077,6 +1077,30 @@ A reconciliação rodoviária do Batch 002 segue a mesma regra. Ela é uma verif
 
 Portanto, a limitação ambiental não invalida o modelo, mas define o alcance das afirmações que ele pode sustentar. Os resultados atuais podem apoiar interpretação operacional, cenário-dependente e comparativa sob TTW CO2e. Eles não podem sustentar conclusões WTW, WTT, LCA, CO2-only, inventário completo de poluentes, impacto de qualidade do ar portuária ou superioridade ambiental universal sem uma expansão metodológica explícita e rastreada.
 
+### 9.3 Fronteira econômica: custos modelados e ausência de fretes comerciais
+
+A segunda limitação central do Capítulo 9 é econômica. O CabotageLens reporta custos modelados dentro de uma fronteira definida, não fretes comerciais. Portanto, os valores em BRL devem ser lidos como saídas de um cenário de comparação construído com rotas, portos, componentes e hipóteses explícitas. Eles ajudam a comparar alternativas sob o mesmo enquadramento metodológico, mas não representam cotação de mercado, tarifa praticada, proposta de armador, contrato negociado ou recomendação de contratação.
+
+Essa distinção é importante porque a decisão logística real envolve elementos que o protótipo atual não captura integralmente. Além dos componentes operacionais representados no modelo, uma contratação real depende de frequência de serviço, confiabilidade, prazo, estoque em trânsito, seguro, risco operacional, demurrage, detention, janelas de terminal, disponibilidade de slot, condições contratuais, negociação comercial e tolerância do embarcador a variabilidade. A literatura sobre competitividade da cabotagem e mudança modal ajuda a contextualizar essas dimensões [competitiveness2024] [modalshiftreview2020], mas não valida automaticamente os custos calculados pelo CabotageLens.
+
+Assim, uma diferença favorável de custo modelado não deve ser narrada como prova de menor frete contratado. Ela indica apenas que, sob a fronteira atual e sob as premissas daquele cenário, a soma dos componentes representados foi menor para uma alternativa do que para outra. A interpretação continua condicionada à rota, à seleção de portos, aos componentes habilitados, à base de carga, à disponibilidade das distâncias e às regras de fronteira econômica. Se qualquer uma dessas dimensões muda, a leitura do resultado também pode mudar.
+
+| Dimensão de custo | Tratamento no TF atual | Limitação |
+| --- | --- | --- |
+| Custo de rota modelado | Calculado como saída do cenário dentro da fronteira implementada. | Não equivale a preço de mercado nem a custo logístico total. |
+| Cotação de frete | Fora da fronteira atual. | Exige consulta comercial a transportadores, armadores, agentes ou operadores. |
+| Contrato negociado | Fora da fronteira atual. | Não é inferido a partir do custo modelado. |
+| Tarifas portuárias e manuseio | Representadas apenas quando e como o cenário modela componentes portuários. | Não cobre tabelas completas, encargos locais ou condições terminal-específicas. |
+| Estoque, tempo e confiabilidade | Reconhecidos como dimensões logísticas relevantes. | Não são modelados como custo total de inventário, atraso ou variabilidade operacional. |
+| Seguro, risco e demurrage | Fora da fronteira corrente salvo componente explicitamente modelado. | Não sustentam conclusão de custo comercial completo. |
+| Viabilidade comercial integral | Não avaliada pelo protótipo. | Requer serviço disponível, preço contratado, capacidade, prazo e risco operacional verificados. |
+
+A fronteira econômica também impede que custo e disponibilidade sejam confundidos. O fato de uma alternativa apresentar menor custo modelado não prova que exista serviço de cabotagem disponível no corredor, que um terminal aceite a carga, que haja slot operacional, que um armador ofereça frequência adequada ou que o preço final negociado seja menor. O CabotageLens organiza uma comparação acadêmica auditável; ele não é motor de cotação, plataforma de booking, sistema de precificação comercial nem modelo completo de custo logístico.
+
+Essa limitação não reduz a utilidade do resultado. Pelo contrário, torna mais clara sua função: o custo modelado serve para testar coerência de cenário, sensibilidade de rota, efeito da seleção de portos e impacto dos componentes incluídos. Ele pode indicar onde uma investigação comercial posterior faria sentido, mas a passagem de um resultado favorável para uma decisão de mercado exige evidência externa de preço, serviço, prazo, risco e contrato. Sem essa verificação, a conclusão defensável permanece metodológica, não comercial.
+
+Por fim, a literatura de competitividade e de mudança modal deve ser usada com o mesmo cuidado. Estudos que discutem tarifas, frequência, confiabilidade ou estrutura de rede ajudam a explicar por que a decisão real é mais ampla do que o custo calculado, mas não substituem cotações reais nem transformam o CabotageLens em modelo comercial calibrado. No estado atual do TF, a afirmação segura é que os custos são estimativas modeladas, condicionadas à fronteira adotada; não são fretes comerciais, não provam viabilidade comercial e não demonstram superioridade econômica universal da cabotagem.
+
 ## 10. Conclusao
 
 O CabotageLens cumpre, no estado atual do projeto, uma funcao academica defensavel: fornece uma estrutura auditavel, reprodutivel e explicita em fronteiras para comparar transporte rodoviario direto e alternativas rodoviario-cabotagem-rodoviario em corredores brasileiros. A ferramenta organiza entradas, rotas, distancias, fontes, custos modelados, emissoes TTW CO2e e avisos de interpretacao em um fluxo coerente para analise de engenharia.
