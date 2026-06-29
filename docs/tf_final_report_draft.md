@@ -861,6 +861,29 @@ As fronteiras econômica e ambiental permanecem inalteradas nesta discussão. Cu
 
 Desse modo, o Capítulo 8 deve partir de uma conclusão deliberadamente estreita: os resultados atuais indicam comportamento multimodal favorável em cenários específicos e apoio externo direcional, mas não provam superioridade universal da cabotagem, viabilidade comercial, disponibilidade de serviço, aceitação por transportadores, disponibilidade de slot ou fretes contratados. Nenhum resultado corrente qualifica-se como `headline_candidate`; a contribuição defensável do trabalho está na estrutura auditável, na explicitação de fronteiras e na disciplina de classificar o que cada evidência pode e não pode sustentar.
 
+### 8.2 Dependência por corredor, porto e distância marítima
+
+A interpretação dos resultados do CabotageLens depende do corredor analisado, da cadeia de portos adotada e da fronteira de rota usada para construir a alternativa multimodal. A direção ambiental e econômica de uma configuração rodoviário-cabotagem-rodoviário não é uma propriedade abstrata da cabotagem; ela nasce da combinação entre acesso rodoviário ao porto de origem, perna marítima, acesso rodoviário final, componentes portuários modelados e premissas de distância. Por isso, os resultados do Capítulo 7 devem ser lidos como cenários condicionais, não como achados universais de rota.
+
+A escolha do porto não é um parâmetro cosmético. Alterar o porto de origem ou destino muda as pernas rodoviárias de acesso, a distância marítima, a coerência operacional da cadeia e a interpretação do resultado. Um porto alternativo pode ser útil para testar uma hipótese explícita, mas passa a representar outro cenário. Assim, Pecém não valida Porto de Fortaleza, e Suape não valida Porto do Recife; as sensibilidades com esses portos devem permanecer identificadas como cenários alternativos, sem substituição silenciosa dos portos originalmente selecionados.
+
+A proveniência da distância marítima é igualmente decisiva. Distâncias classificadas como `haversine_fallback` ou apoiadas em evidência fraca funcionam como estimativas de triagem e podem preservar rastreabilidade histórica, mas não bastam para sustentar validação robusta de rota. A sensibilidade Santos/Manaus com distância marítima documentada mostra como uma referência mais forte pode alterar a leitura de um caso específico, mas continua sendo uma sensibilidade nomeada; ela não prova que todos os casos baseados em fallback sejam válidos, nem transforma sensibilidade em resultado de linha de base.
+
+| Questão de rota/porto | Por que importa | Interpretação segura |
+| --- | --- | --- |
+| Caso same-port | A perna marítima deixa de representar uma cadeia normal de cabotagem. | Santos/Santos é exemplo de limitação ou exclusão, não desempenho normal da cabotagem. |
+| Distância marítima por fallback | A estimativa geométrica não documenta plenamente a rota marítima. | `haversine_fallback` preserva diagnóstico, mas não sustenta conclusão robusta sozinho. |
+| Sensibilidade de distância de referência | Testa uma distância documentada para um par de portos específico. | Santos/Manaus é resultado de sensibilidade, não validação geral de casos fallback. |
+| Sensibilidade Pecém | Altera o porto de destino e a cadeia de acesso. | Pecém é cenário alternativo e não valida Porto de Fortaleza. |
+| Sensibilidade Suape | Altera o porto de destino e a cadeia de acesso. | Suape é cenário alternativo e não valida Porto do Recife. |
+| Pernas rodoviárias de acesso | Pré-carriage e on-carriage mudam distância, custo modelado e TTW CO2e. | O resultado deve ser lido porta a porta, não como comparação marítima isolada. |
+
+O caso same-port Santos/Santos ilustra o limite mais evidente da construção de rota. Quando origem e destino marítimos recaem no mesmo porto, a cadeia deixa de representar uma alternativa normal de cabotagem entre portos distintos. Esse tipo de registro pode ser útil para documentar aviso, exclusão ou comportamento de seleção de portos, mas não deve ser usado como evidência de desempenho modal da cabotagem.
+
+Também é necessário separar construção de rota de disponibilidade operacional. Uma rota modelada, mesmo quando rastreável e coerente como cenário acadêmico, não prova que exista serviço de cabotagem disponível, frequência adequada, aceitação por armador, slot contratado, terminal disponível, prazo competitivo ou viabilidade comercial. O CabotageLens organiza uma comparação auditável sob fronteiras explícitas; ele não substitui uma análise de rede de serviços nem uma cotação de mercado.
+
+Por fim, as fronteiras de interpretação permanecem as mesmas da seção anterior. Custos continuam sendo estimativas modeladas, não fretes comerciais, tarifas ou cotações contratadas. Emissões continuam sendo CO2e operacional TTW, salvo mudança explícita de fronteira. Portanto, uma sensibilidade favorável em custo modelado e TTW CO2e deve ser discutida como comportamento condicionado por corredor, porto, distância e fronteira de rota, e não como prova de superioridade universal da cabotagem ou como resultado robusto de linha de base.
+
 ## 9. Limitacoes
 
 Este trabalho possui limitacoes deliberadas e limitacoes ainda nao resolvidas.
