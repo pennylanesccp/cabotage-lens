@@ -654,6 +654,33 @@ O teste também não altera a fronteira econômica ou operacional do trabalho. E
 
 Assim, a conclusão metodológica é limitada e útil: a reconciliação rodoviária mostra que as premissas de consumo e fator de emissão explicam muito da lacuna road-only, mas não substitui o modelo rodoviário de linha de base do CabotageLens, não recalibra a aplicação e não transforma o Batch 002 em validação exata. Seu valor no TF é tornar explícita uma causa provável da diferença de magnitude, preservando a classificação conservadora do benchmark.
 
+### 6.8 Categorias finais de uso no TF e controles de afirmação
+
+O fechamento do Capítulo 6 transforma as camadas anteriores em uma regra prática de uso da evidência. Um resultado executado não é automaticamente um resultado utilizável como conclusão principal do TF. A classificação atribuída a cada linha controla a forma de citação, a força da afirmação permitida e o tipo de ressalva exigida antes que o Capítulo 7 apresente números, tabelas ou sínteses.
+
+Essa classificação não é cosmética. Ela separa registros históricos, sensibilidades, bloqueios, exclusões, lacunas de referência e evidência externa de benchmark. Sem essa separação, casos frágeis poderiam ser promovidos indevidamente a conclusões de desempenho modal. No estado atual dos artefatos rastreados, nenhum caso é um `headline_candidate` robusto: as sensibilidades apoiam discussão condicionada, o Batch 002 apoia interpretação direcional com lacunas de magnitude, e a reconciliação rodoviária explica parte do desalinhamento sem substituir a linha de base.
+
+| Categoria de uso no TF | Significado | Uso permitido | Uso proibido |
+| --- | --- | --- | --- |
+| `headline_candidate` | Resultado apto a conclusão principal após validação e sensibilidade suficientes. | Nenhum uso atual; categoria reservada para evidência futura mais forte. | Promover qualquer caso atual a resultado principal robusto. |
+| `sensitivity_discussion` | Linha planejada ou executada sob hipótese nomeada. | Discutir comportamento do modelo sob premissas documentadas. | Tratar como linha de base, validação robusta ou prova geral de vantagem modal. |
+| `limitation_example` | Caso útil para mostrar limite de construção de rota ou interpretação. | Explicar limitações, como casos same-port. | Usar como desempenho normal de cabotagem ou conclusão numérica modal. |
+| `excluded` | Caso fora da fronteira atual ou inadequado para conclusão numérica. | Justificar exclusão e limite metodológico. | Executar ou interpretar numericamente como evidência de resultado. |
+| `reference_needed` | Falta evidência exata para referência, distância ou porto selecionado. | Registrar lacuna e requisito de evidência futura. | Declarar que a lacuna foi resolvida ou usar como resultado principal. |
+| `methodology_blocked` | Falta decisão metodológica antes de execução defensável. | Apontar bloqueio e trabalho futuro. | Converter em conclusão numérica ou sensibilidade executada sem decisão rastreada. |
+| `historical_diagnostic` | Registro histórico preservado para auditoria. | Mostrar evolução do método e motivação das correções. | Apresentar como resultado corrigido, validado ou calibrado. |
+| `benchmark_supports_direction` | Benchmark externo aponta a mesma direção modal sob fronteiras distintas. | Sustentar consistência direcional cautelosa. | Alegar validação calibrada, reprodução exata ou superioridade universal. |
+| `benchmark_supports_road_factor_explanation` | Diagnóstico rodoviário explica parte importante da lacuna road-only. | Discutir sensibilidade a premissas rodoviárias. | Substituir o modelo de linha de base pelo fator diagnóstico. |
+| `benchmark_methodology_gap` | Diferenças de método permanecem relevantes. | Explicar lacunas de rota, carga, alocação, serviço e parâmetros. | Tratar o benchmark como verdade de referência plenamente reconciliada. |
+| `benchmark_boundary_mismatch` | Fronteiras ambientais ou funcionais não coincidem totalmente. | Preservar cautela entre TTW, WTW, LCA, CO2 e CO2e. | Misturar fronteiras ou unidades como equivalentes. |
+| `not_comparable` | Linha ou evidência sem comparabilidade suficiente na fronteira atual. | Usar como limitação ou justificativa de não execução. | Transformar em evidência numérica ou conclusão de desempenho. |
+
+Esses controles também delimitam o que o trabalho não demonstra. Nenhuma linha atual prova superioridade universal da cabotagem, viabilidade comercial, disponibilidade de serviço, aceitação por transportador, disponibilidade de slot, frequência de escala ou frete contratado. Mesmo quando a direção modelada favorece a alternativa multimodal, a afirmação permanece condicionada ao corredor, aos portos, às distâncias, à fronteira de custo, aos parâmetros de emissão e à classificação da linha.
+
+O mesmo vale para as fronteiras de custo e emissões. Custos continuam sendo estimativas modeladas, não tarifas, cotações ou fretes comerciais. Emissões continuam sendo operacionais TTW CO2e, salvo indicação explícita em contrário. Evidências WTW, LCA, CO2 isolado ou CO2e sob outra fronteira não podem ser misturadas aos resultados do CabotageLens sem reconciliação metodológica explícita.
+
+Assim, o Capítulo 7 deve herdar integralmente esses limites. A apresentação dos resultados pode mostrar sensibilidades executadas, apoio direcional do Batch 002, estabilidade computacional do cache e diagnóstico de premissas rodoviárias, mas deve manter cada evidência dentro da categoria que a sustenta. A contribuição defendida é a rastreabilidade metodológica e a interpretação conservadora dos cenários, não uma validação universal, comercial ou calibrada de todas as magnitudes.
+
 ## 7. Resultados
 
 ### 7.1 Classificacao geral
