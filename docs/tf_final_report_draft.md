@@ -585,19 +585,26 @@ Mesmo quando uma sensibilidade apresenta menor custo modelado ou menor TTW CO2e 
 
 ### 6.5 Batch 002 como benchmark externo Gustavo/Costa
 
-O Batch 002 adicionou uma camada de benchmark externo baseada no workbook Gustavo/Costa. Esse workbook e util porque pertence ao mesmo contexto amplo de comparacao entre transporte rodoviario e cabotagem no Brasil, mas nao e tratado como verdade absoluta. O objetivo foi verificar se o CabotageLens aponta para a mesma direcao modal sob uma base comparavel de `1 TEU / 14 t`, nao reproduzir exatamente as magnitudes do workbook ou do artigo.
+O Batch 002 acrescentou uma camada de benchmark externo baseada no workbook Gustavo/Costa. Esse benchmark pertence ao mesmo contexto amplo de comparação entre transporte rodoviário e cabotagem ou alternativa multimodal no Brasil, por isso é útil para confrontar o CabotageLens com uma referência externa ao próprio protótipo. Seu papel, entretanto, é estritamente metodológico: verificar consistência direcional e expor lacunas de comparabilidade, não reproduzir exatamente o workbook nem tratá-lo como verdade absoluta.
 
-O inventario consolidado do Batch 002 registra:
+A leitura segura do Batch 002 começa pela diferença entre direção e magnitude. A pergunta defensável é se, nos pares OD positivos e suportados, o workbook e o CabotageLens apontam para o mesmo lado da comparação de emissões: cabotagem/multimodal abaixo do rodoviário direto. A pergunta que o Batch 002 ainda não responde é se as magnitudes são calibradas, se a metodologia do workbook foi reconstruída integralmente ou se cada rota representa uma operação comercial disponível.
 
-| Item | Resultado consolidado |
-| --- | ---: |
-| Celulas de matriz do workbook parseadas | 36 |
-| Pares OD positivos e suportados benchmarkados | 21 |
-| Linhas executadas com sucesso | 21 |
-| Celulas puladas antes da execucao do modelo | 15 |
-| Classificacao rastreada atual | 21 `same_direction_large_gap` |
+| Item Batch 002 | Valor consolidado | Interpretação segura |
+| --- | ---: | --- |
+| Células de matriz do workbook parseadas | 36 | Inventário inicial do benchmark; nem todas são comparáveis ou executáveis. |
+| Pares OD positivos e suportados benchmarkados | 21 | Escopo efetivo da comparação direcional. |
+| Linhas executadas com sucesso | 21 | Execução completa dos pares suportados; não implica validação calibrada. |
+| Células puladas antes da execução do modelo | 15 | Inclui self-pairs e linhas rodoviárias zero ou não positivas, portanto não deve ser tratado como falha do modelo. |
+| Pares com acordo direcional | 21 de 21 | Workbook e CabotageLens favorecem cabotagem/multimodal em emissões frente ao road-only. |
+| Classificação rastreada atual | 21 `same_direction_large_gap` | Apoia interpretação direcional cautelosa, mas preserva lacunas relevantes de magnitude. |
 
-As 15 celulas puladas correspondem a 6 self-pairs e 9 linhas rodoviarias zero ou nao positivas. Para os 21 pares OD positivos e suportados, workbook e CabotageLens ficaram direcionalmente alinhados: em ambos, as emissoes de cabotagem/multimodal ficaram abaixo das emissoes road-only. Essa e uma evidencia externa importante para a defesa do metodo, mas a precisao de magnitude da linha de base ainda nao e suficiente para afirmar validacao calibrada ou reproducao exata do workbook.
+As 15 células puladas correspondem a seis self-pairs e nove linhas rodoviárias zero ou não positivas. Essa filtragem é parte da disciplina de benchmark: nem todo par presente na matriz do workbook é automaticamente um corredor comparável para execução no CabotageLens. Assim, o denominador relevante para a leitura do Batch 002 é o conjunto de 21 pares OD positivos e suportados, não a matriz inteira sem qualificação.
+
+Para esses 21 pares, o resultado é consistente em direção: tanto o workbook quanto o CabotageLens indicam emissões de cabotagem/multimodal abaixo das emissões road-only. Esse alinhamento fortalece a defesa metodológica porque mostra que o sinal modal geral não é produzido apenas internamente pelo protótipo. Ainda assim, todas as linhas permanecem classificadas como `same_direction_large_gap`, o que significa que a diferença de magnitude continua material e deve ficar visível na interpretação.
+
+O workbook, portanto, é benchmark e não verdade de referência. Diferenças de distância, seleção de portos, lógica de serviço, carga, alocação, tratamento de port-ops/hoteling e fronteira ambiental podem explicar parte das lacunas. A concordância direcional não valida magnitude exata, não demonstra reprodução do workbook, não confirma disponibilidade de serviço, não prova viabilidade comercial e não transforma custos modelados em fretes ou tarifas de mercado. As emissões do CabotageLens permanecem operacionais TTW CO2e, salvo indicação explícita em contrário, e não devem ser misturadas com WTW ou LCA.
+
+Consequentemente, o Batch 002 não cria um `headline_candidate`. Seu uso adequado no Capítulo 6 é mostrar que há apoio externo direcional, acompanhado de limites de comparabilidade suficientemente importantes para impedir uma afirmação de validação calibrada. A conclusão conservadora é que o benchmark sustenta discussão metodológica e confiança direcional limitada, enquanto a validação de magnitude, custo comercial, serviço e rota permanece fora do alcance do lote.
 
 ### 6.6 Rerun Supabase/cache e reconciliacao rodoviaria
 
