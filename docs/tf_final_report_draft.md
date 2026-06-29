@@ -699,26 +699,34 @@ Assim, o Capítulo 7 deve herdar integralmente esses limites. A apresentação d
 
 ## 7. Resultados
 
-### 7.1 Classificacao geral
+### 7.1 Inventário final de casos e categorias de uso no TF
 
-A sintese final de resultados estabelece que nenhum caso Batch 001/001B e nenhuma linha Batch 002 se qualifica como `headline_candidate`. Isso significa que o TF nao deve apresentar uma tabela de "resultados principais validados" como se houvesse conclusoes robustas por corredor. O uso academico correto e apresentar o inventario de casos, discutir as tres linhas de sensibilidade executadas com suas restricoes e usar o Batch 002 como evidencia externa direcional e limitada por fronteiras.
+Este capítulo apresenta os resultados observados sob os controles de evidência definidos no Capítulo 6. A primeira função desta seção não é interpretar a relevância logística dos corredores, mas registrar quais linhas existem no inventário final, qual é a classificação de uso de cada camada de evidência e quais limites impedem sua promoção a conclusão principal. Com a síntese atualmente rastreada, nenhum caso Batch 001/001B e nenhuma linha Batch 002 deve ser apresentado como `headline_candidate` robusto.
 
-As categorias finais sao:
+O inventário final separa evidência executada, evidência planejada, lacunas de referência, bloqueios metodológicos, exemplos de limitação e camadas de benchmark. Essa separação é necessária porque uma linha executada não é automaticamente uma linha validada: execução apenas indica que a ferramenta produziu uma saída sob uma configuração documentada. Do mesmo modo, linhas de sensibilidade continuam sendo resultados de sensibilidade, não conclusões de linha de base.
 
-| Categoria | Significado | Casos associados |
-| --- | --- | --- |
-| `headline_candidate` | Possivel candidato a conclusao principal apos validacao e sensibilidade. | Nenhum. |
-| `sensitivity_discussion` | Evidencia de sensibilidade executada ou planejada, com avisos de fronteira. | Santos/Manaus, Manaus/Pecem e Rio Grande/Suape, alem de suas linhas planejadas. |
-| `limitation_example` | Exemplo de limite de rota ou metodo. | Same-port Santos/Santos. |
-| `excluded` | Invalido ou fora do escopo para conclusoes numericas. | Angra dos Reis -> Salvador no benchmark atual. |
-| `reference_needed` | Falta referencia exata para o par de portos selecionado. | Manaus/Fortaleza e Rio Grande/Recife. |
-| `methodology_blocked` | Falta decisao metodologica ou porto defensavel. | Brasilia/Salvador com alternativo nao definido. |
-| `historical_diagnostic` | Registro historico preservado para rastreabilidade. | Batch 001 original. |
-| `benchmark_supports_direction` | Evidencia externa de que workbook e CabotageLens favorecem a mesma direcao modal de emissoes. | 21 pares OD positivos e suportados do Batch 002. |
-| `benchmark_supports_road_factor_explanation` | Sensibilidade diagnostica mostra que premissas rodoviarias explicam grande parte da lacuna road-only. | Reconciliacao com `0.8602944 kgCO2e/km`. |
-| `benchmark_methodology_gap` | Benchmark util para discutir diferencas de metodo, nao reproducao calibrada. | Diferencas de magnitude road-only e multimodal no Batch 002. |
-| `benchmark_boundary_mismatch` | Fronteiras e alocacoes seguem parcialmente nao reconciliadas. | TTW/WTW/LCA/CO2/CO2e, carga, rotas, portos, servico e port-ops/hoteling. |
-| `not_comparable` | Celulas do workbook sem comparacao executavel na fronteira atual. | 15 celulas puladas do Batch 002. |
+Nos casos Batch 001 e Batch 001B, os registros originais permanecem como `historical_diagnostic`, os casos de rota inadequada ou fora da fronteira são tratados como `limitation_example` ou `excluded`, e as lacunas de distância ou decisão de porto permanecem como `reference_needed` ou `methodology_blocked`. As sensibilidades executadas e planejadas ficam em `sensitivity_discussion`, pois servem para mostrar comportamento do modelo sob hipóteses nomeadas, sem validar automaticamente o corredor original, o porto selecionado ou a magnitude final.
+
+| Categoria | Significado | Evidência associada | Uso seguro no Capítulo 7 |
+| --- | --- | --- | --- |
+| `headline_candidate` | Resultado candidato a conclusão principal robusta após validação e sensibilidade suficientes. | Nenhum caso atual. | Registrar a ausência de resultado principal robusto. |
+| `sensitivity_discussion` | Evidência planejada ou executada sob hipótese documentada. | Sensibilidades Batch 001B de distância de referência ou porto alternativo. | Apresentar como resultado de sensibilidade, não como linha de base validada. |
+| `limitation_example` | Caso útil para mostrar limite de rota, seleção de porto ou interpretação. | Registro same-port e casos de aviso. | Usar como exemplo de limitação metodológica. |
+| `excluded` | Caso inválido ou fora da fronteira atual de comparação. | Cadeias excluídas do benchmark vigente. | Justificar exclusão, sem conclusão numérica. |
+| `reference_needed` | Caso com referência exata ainda ausente. | Pares selecionados sem distância marítima exata rastreada. | Registrar lacuna de evidência e requisito futuro. |
+| `methodology_blocked` | Caso bloqueado por decisão metodológica ainda não definida. | Linhas sem porto alternativo ou regra defensável suficiente. | Registrar bloqueio, sem execução ou inferência numérica. |
+| `historical_diagnostic` | Resultado histórico preservado para rastreabilidade. | Saídas originais Batch 001. | Mostrar evolução do método, não resultado corrigido. |
+| `benchmark_supports_direction` | Benchmark externo apoia a mesma direção modal de emissões sob fronteiras próprias. | Pares OD positivos e suportados do Batch 002. | Usar como apoio direcional, não validação calibrada. |
+| `benchmark_supports_road_factor_explanation` | Diagnóstico rodoviário explica parte relevante da lacuna road-only. | Reconciliação de fator rodoviário do Batch 002. | Tratar como diagnóstico de premissas, não recalibração da linha de base. |
+| `benchmark_methodology_gap` | Diferenças de método permanecem relevantes para a magnitude. | Rerun com cache e diferenças remanescentes do Batch 002. | Descrever lacunas metodológicas sem tratar o workbook como verdade absoluta. |
+| `benchmark_boundary_mismatch` | Fronteiras funcionais ou ambientais não estão plenamente reconciliadas. | Diferenças de TTW, WTW, LCA, CO2, CO2e, alocação, rota, porto, serviço e port-ops/hoteling. | Preservar cautela de fronteira e unidade. |
+| `not_comparable` | Linha ou camada sem comparabilidade suficiente na fronteira atual. | Células puladas do workbook e evidências sem base comparável. | Usar como limitação, sem resultado numérico. |
+
+O Batch 002 entra neste inventário como benchmark externo direcional. Ele sustenta a interpretação de que, nas linhas comparáveis na unidade reportada, o workbook Gustavo/Costa e o CabotageLens apontam a mesma direção modal de emissões, mas não fornece validação calibrada de magnitude, reprodução exata do workbook, validação de escolhas de serviço ou equivalência de custo comercial. O workbook é uma camada externa de comparação, não uma verdade de referência que resolva automaticamente as fronteiras internas do modelo.
+
+A reconciliação de fator rodoviário também deve ser lida como resultado observado de diagnóstico. Ela indica que premissas de consumo e fator de emissão rodoviários explicam parcela relevante da lacuna road-only do Batch 002, mas não substitui o modelo rodoviário de linha de base, não recalibra o aplicativo e não elimina as diferenças remanescentes de distância, veículo, carregamento, alocação, fronteira ambiental ou premissas do workbook.
+
+Por fim, este inventário preserva as fronteiras materiais dos resultados. Custos permanecem estimativas modeladas, não tarifas ou fretes comerciais; emissões permanecem CO2e operacional TTW, salvo indicação explícita em contrário; e nenhum resultado desta seção prova superioridade universal da cabotagem, viabilidade comercial ou disponibilidade de serviço. A função do Capítulo 7 é apresentar o que foi observado e classificado; a interpretação mais profunda dessas implicações pertence ao Capítulo 8.
 
 ### 7.2 Resultados numericos das sensibilidades executadas
 
