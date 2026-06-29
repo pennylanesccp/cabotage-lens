@@ -365,6 +365,34 @@ Por isso, a arquitetura do CabotageLens deve ser lida como arquitetura de protó
 
 De modo análogo, as emissões reportadas permanecem emissões operacionais TTW CO2e, salvo indicação explícita em contrário. O protótipo não executa análise WTW nem LCA nesta versão, e seus resultados não devem ser usados para afirmar superioridade universal da cabotagem. A contribuição computacional está em oferecer uma estrutura transparente, modular e reproduzível para comparação condicionada entre alternativas, deixando explícito o que foi modelado, o que foi aproximado e o que permanece fora da fronteira do trabalho.
 
+### 5.2 Fluxo de uso e entradas do usuário
+
+O fluxo de uso do CabotageLens começa pela definição de um cenário de comparação, não pela solicitação de uma cotação ou pela reserva de transporte. Na interface Streamlit, e nos fluxos reprodutíveis por scripts quando aplicável, o usuário informa uma origem, um destino, uma base de carga e parâmetros operacionais ou de modelo que delimitam a análise. Esses campos não são apenas entradas de tela: eles definem a fronteira do cenário avaliado, isto é, quais locais, volumes, componentes, fontes de distância e hipóteses entram no cálculo comparativo.
+
+As entradas de origem e destino são resolvidas em localizações utilizadas pela construção de rota. A partir dessas localizações, a ferramenta monta duas alternativas conceituais: uma alternativa rodoviária direta entre origem e destino e uma alternativa rodoviário-cabotagem-rodoviário, composta por acesso rodoviário ao porto de origem, perna marítima e acesso rodoviário final a partir do porto de destino. A alternativa multimodal depende dos portos selecionados pelo procedimento do cenário ou, em fluxos de validação e sensibilidade, de portos elegíveis, forçados ou alternativos explicitamente configurados. Essa configuração deve ser interpretada como uma hipótese de modelagem, não como prova de serviço real entre os portos.
+
+Além dos pontos geográficos, o cenário inclui a base de carga e parâmetros que afetam a alocação dos resultados. A massa transportada, a quantidade em TEU quando informada, a conversão padrão entre toneladas e TEU, o modo de alocação da parcela marítima, o fator de carga, o tipo de caminhão, a classe representativa de embarcação e a ativação de componentes como hoteling e operações portuárias influenciam os resultados calculados. Portanto, alterar a base de carga, a forma de construção de rota, a escolha de portos, os componentes habilitados ou a fonte de distância pode alterar tanto a magnitude quanto a interpretação da comparação.
+
+| Elemento de entrada ou fluxo | Papel no cenário | Limite de interpretação |
+| --- | --- | --- |
+| Origem | Define o ponto inicial e a base para geocodificação, rota direta e acesso ao porto de origem. | Não garante disponibilidade de coleta, terminal ou serviço real. |
+| Destino | Define o ponto final e a base para rota direta e acesso rodoviário final. | Não confirma entrega comercial, janela operacional ou aceitação de carga. |
+| Base de carga | Define massa, TEU e alocação usada para custos e emissões por remessa. | Mudanças de carga podem alterar a comparação; não representam todos os perfis logísticos. |
+| Rota rodoviária direta | Alternativa de referência para transporte por caminhão entre origem e destino. | Depende de provedor/cache e não substitui rota contratada real. |
+| Seleção de portos / porto forçado | Define os nós marítimos usados na alternativa multimodal. | Porto selecionado ou forçado não prova serviço de armador, frequência, slot ou viabilidade comercial. |
+| Perna marítima | Representa a cabotagem entre os portos do cenário. | Fonte de distância e avisos de qualidade condicionam a confiança da leitura. |
+| Componentes habilitados | Incluem ou excluem parcelas como hoteling e operações portuárias quando modeladas. | Componentes desabilitados ou aproximados mudam a fronteira do resultado. |
+| Parâmetros de custo | Transformam consumo e componentes modelados em estimativas monetárias. | São estimativas de modelo, não tarifas, cotações ou fretes comerciais. |
+| Parâmetros de emissões | Aplicam a fronteira operacional TTW CO2e aos combustíveis e pernas representadas. | Não são WTW nem LCA, salvo indicação explícita de outra fronteira. |
+| Avisos de qualidade de rota | Indicam cautelas como mesma porta, distância marítima ausente, pequena ou estimada por fallback. | São alertas de interpretação, não validação automática nem otimização de rota. |
+| Registro de exportação ou validação | Preserva entradas, saídas, portos, proveniência e classificação quando disponível. | Aumenta auditabilidade, mas não transforma o cenário em recomendação operacional final. |
+
+O resultado apresentado ao usuário deve ser lido junto com os componentes que o produziram. Distâncias por perna, portos usados, origem da distância marítima, avisos de qualidade de rota, custos modelados, emissões TTW CO2e e eventuais classificações de validação formam um conjunto interpretativo. Separar o número final desses metadados enfraquece a rastreabilidade do protótipo, pois uma economia aparente de custo ou emissão pode depender de uma distância de menor confiança, de um porto alternativo, de um componente habilitado ou de uma fronteira de custo mais restrita.
+
+Também é essencial distinguir o cenário modelado de uma operação logística real. Um cenário de entrada não comprova aceitação efetiva da carga, disponibilidade de serviço de cabotagem, frequência de navegação, disponibilidade de slot, aceitação por terminal, janela de atracação, contrato, tarifa negociada ou viabilidade comercial. Da mesma forma, a seleção de um porto pelo protótipo ou por uma configuração de sensibilidade não significa que esse porto seja comercialmente ótimo ou operacionalmente disponível para a carga analisada.
+
+Quando há exportações, registros persistidos ou artefatos de validação, sua função é preservar a memória técnica do que foi calculado: entradas de cenário, parâmetros relevantes, saídas do modelo, proveniência de distância, portos usados, avisos e classificação de uso. Esses registros apoiam auditoria, repetição controlada e revisão acadêmica posterior. Eles não eliminam as limitações do cenário nem convertem a interface em ferramenta de decisão automática. Assim, o fluxo de uso do CabotageLens deve ser entendido como suporte transparente à comparação condicionada entre alternativas, mantendo explícito o que foi informado pelo usuário, o que foi calculado pelo modelo e o que permanece fora da fronteira do TF.
+
 ## 6. Estudos de caso e validacao
 
 ### 6.1 Batch 001 como diagnostico historico
