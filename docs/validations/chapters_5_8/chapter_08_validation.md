@@ -7,7 +7,7 @@ Este relatório apresenta a auditoria técnica e acadêmica do **Capítulo 8 (Di
 ---
 
 ### 2. Fonte(s) e Títulos Inspecionados
-- **Arquivo de Origem:** [tf_final_report_draft.md](file:///C:/Users/Cliente/Documents/workspaces/personal/skills-cabotage-lens/cabotage-lens/docs/tf_final_report_draft.md)
+- **Arquivo de Origem:** [tf_final_report_draft.md](docs/tf_final_report_draft.md)
 - **Títulos inspecionados (Capítulo 8 - Linhas 840 a 1028):**
   - `## 8. Discussao`
   - `### 8.1 Alcance das evidências e leitura conservadora`
@@ -57,7 +57,7 @@ O Capítulo 8 discute os resultados empíricos consolidados sob a ótica da teor
 - **Rigor Terminológico de Ciclo de Vida (TTW/WTW por Modo):** **Inconsistência Bloqueante.** Reitera-se a necessidade de desmembrar o termo genérico "TTW" ao longo da discussão:
   - Para pernas de transporte rodoviário: *Tank-to-Wheel* (TTW) e *Well-to-Wheel* (WTW).
   - Para pernas de transporte marítimo: *Tank-to-Wake* (TTW) e *Well-to-Wake* (WTW).
-- **Notação de Dióxido de Carbono Equivalente:** Padronizar em $\text{CO}_{2\text{eq}}$ (LaTeX) para indicar o equivalente ponderado por GWP de $CO_2$, $CH_4$ e $N_2O$.
+- **Notação de Dióxido de Carbono Equivalente:** Padronizar em $\text{CO}_{2\text{eq}}$ (LaTeX) para indicar a métrica de dióxido de carbono equivalente, devendo a monografia explicitar se a ferramenta de fato calcula o equivalente de gases adicionais ($CH_4$ e $N_2O$ ponderados por seus respectivos GWP) ou se adota uma simplificação baseada apenas no $CO_2$ rotulada como equivalente.
 - **Rastreabilidade de Dados e Equivalência de Fronteiras:** A discussão sobre hoteling e terminal portuário (Seção 8.6) está metodologicamente correta ao alertar sobre o risco de dupla contagem caso a intensidade marítima de referência do EU MRV já incorpore o consumo em porto.
 
 ---
@@ -74,8 +74,8 @@ O Capítulo 8 discute os resultados empíricos consolidados sob a ótica da teor
 5. **Redundância Sistemática de Disclaimers Operacionais:** Repetição exaustiva em todas as subseções do aviso de limitação de preços de mercado e disponibilidade de serviço real.
 
 #### Gravidade: Menor (Minor)
-6. **Estrangeirismos Técnicos sem Itálico:** Termos em inglês como *rerun*, *cache hits*, *misses*, *same-port*, *booking*, *pre-carriage*, *on-carriage*, *mismatch*, *hotelling* sem itálico.
-7. **Grafia Inconsistente de "Hoteling" / "Hotelling":** O texto oscila na inclusão de "l" duplo. Recomenda-se a padronização em torno de *hoteling*.
+6. **Estrangeirismos Técnicos sem Itálico:** Termos em inglês como *rerun*, *cache hits*, *misses*, *same-port*, *booking*, *pre-carriage*, *on-carriage*, *mismatch*, *hotelling*, *hoteling* sem itálico.
+7. **Grafia Inconsistente de "Hoteling" / "Hotelling":** O texto oscila na inclusão de "l" duplo. Recomenda-se adotar uma grafia padronizada e consistente (seja *hoteling* ou *hotelling*) ao longo do trabalho, preferencialmente alinhando com a terminologia utilizada na literatura de emissões marítimas citada.
 8. **Inconsistência de Dióxido de Carbono Equivalente:** Padronizar siglas entre `CO2e` e `CO2eq`.
 
 ---
@@ -104,7 +104,7 @@ O Capítulo 8 discute os resultados empíricos consolidados sob a ótica da teor
 
 #### Correção de Grafia e Unidades (Problemas 2, 7 e 8)
 - Substituir todas as instâncias de `TTW` e `WTW` gerais por *Tank-to-Wheel (TTW)* e *Well-to-Wheel (WTW)* para rodoviário, e *Tank-to-Wake (TTW)* e *Well-to-Wake (WTW)* para marítimo.
-- Padronizar toda a escrita de dióxido de carbono equivalente em $\text{CO}_{2\text{eq}}$ (no LaTeX) e itálico nos estrangeirismos: *\textit{reruns}*, *\textit{cache hits}*, *\textit{same-port}*, *\textit{pre-carriage}*, *\textit{on-carriage}*, *\textit{mismatch}*, *\textit{hoteling}*.
+- Padronizar toda a escrita de dióxido de carbono equivalente em $\text{CO}_{2\text{eq}}$ (no LaTeX) e itálico nos estrangeirismos: *\textit{reruns}*, *\textit{cache hits}*, *\textit{same-port}*, *\textit{pre-carriage}*, *\textit{on-carriage}*, *\textit{mismatch}*, além de uniformizar de forma consistente o termo *\textit{hoteling}* ou *\textit{hotelling}* de acordo com a literatura de referência.
 
 ---
 

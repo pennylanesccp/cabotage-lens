@@ -7,7 +7,7 @@ Este relatório apresenta a auditoria técnica e acadêmica do **Capítulo 7 (Re
 ---
 
 ### 2. Fonte(s) e Títulos Inspecionados
-- **Arquivo de Origem:** [tf_final_report_draft.md](file:///C:/Users/Cliente/Documents/workspaces/personal/skills-cabotage-lens/cabotage-lens/docs/tf_final_report_draft.md)
+- **Arquivo de Origem:** [tf_final_report_draft.md](docs/tf_final_report_draft.md)
 - **Títulos inspecionados (Capítulo 7 - Linhas 700 a 839):**
   - `## 7. Resultados`
   - `### 7.1 Inventário final de casos e categorias de uso no TF`

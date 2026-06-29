@@ -7,7 +7,7 @@ Este relatório apresenta a auditoria técnica e acadêmica do **Capítulo 6 (Es
 ---
 
 ### 2. Fonte(s) e Títulos Inspecionados
-- **Arquivo de Origem:** [tf_final_report_draft.md](file:///C:/Users/Cliente/Documents/workspaces/personal/skills-cabotage-lens/cabotage-lens/docs/tf_final_report_draft.md)
+- **Arquivo de Origem:** [tf_final_report_draft.md](docs/tf_final_report_draft.md)
 - **Títulos inspecionados (Capítulo 6 - Linhas 523 a 699):**
   - `## 6. Estudos de caso e validacao`
   - `### 6.1 Estratégia de validação e classificação de evidências`
