@@ -495,6 +495,31 @@ Os registros de exportação e validação dão suporte a essa disciplina porque
 
 Assim, a saída final do protótipo deve ser lida como evidência computacional classificada. O valor acadêmico está em tornar visível o que foi calculado, quais avisos foram acionados, qual proveniência sustenta as distâncias e qual uso metodológico é permitido. Essa estrutura evita que resultados frágeis sejam promovidos a conclusões principais e mantém a função do CabotageLens como ferramenta de comparação transparente e auditável, não como sistema automático de decisão, contratação ou validação operacional.
 
+### 5.7 Limitações computacionais e uso correto da ferramenta
+
+As seções anteriores mostram que o CabotageLens deve ser usado como protótipo de pesquisa para comparação transparente entre uma alternativa rodoviária direta e uma alternativa rodoviário-cabotagem-rodoviário. Seu valor está em tornar explícitas as entradas, pernas de rota, portos, fontes de distância, custos modelados, emissões operacionais TTW CO2e, avisos e classificações que sustentam cada cenário. O uso correto da ferramenta, portanto, é analítico e acadêmico: apoiar discussão técnica, análise de sensibilidade, rastreabilidade, reprodutibilidade e identificação de lacunas metodológicas.
+
+Essa função não deve ser confundida com uma plataforma logística comercial. O CabotageLens não é um sistema de precificação de frete em produção, não cota frete e não gera tarifas de transportadores, tarifas de armadores, taxas negociadas, bookings ou contratos. Também não confirma disponibilidade real de serviço, programação de navegação, frequência de escala, disponibilidade de slot, aceitação por terminal, aceitação por transportador ou viabilidade comercial de uma cadeia. Um cenário modelado pode ser útil para comparar alternativas sob fronteiras explícitas, mas não substitui consulta operacional, negociação comercial ou validação de serviço.
+
+Os resultados também não representam otimização completa de uma rede multimodal nacional. A construção de rota e a seleção de portos são mecanismos transparentes para formar cenários comparáveis, incluindo casos selecionados, elegíveis, forçados ou alternativos quando documentados. Eles não modelam todas as linhas, operadores, transbordos, horários, restrições de capacidade, tempos de espera, confiabilidade, custos de inventário ou regras comerciais de roteamento. Por isso, a alternativa calculada deve ser lida como uma cadeia modelada dentro da fronteira do TF, não como a melhor rota comercial disponível.
+
+| Capacidade da ferramenta | O que apoia | O que não prova |
+| --- | --- | --- |
+| Comparação de rotas | Comparar road-only e road-cabotage-road sob o mesmo cenário. | Superioridade universal da cabotagem ou rota comercial ótima. |
+| Estimativa de custo | Quantificar componentes de custo incluídos na fronteira do modelo. | Frete cotado, tarifa, taxa negociada ou contrato. |
+| Estimativa de emissões | Calcular emissões operacionais TTW CO2e dos componentes representados. | WTW, LCA ou emissões reais exatas de uma operação contratada. |
+| Seleção de portos | Tornar visível a hipótese portuária usada no cenário. | Serviço de armador, escala, slot, terminal ou aceitação comercial. |
+| Cache e proveniência | Rastrear fontes, reuso de dados e qualidade da distância. | Verdade operacional independente ou disponibilidade de rota real. |
+| Avisos e classificação | Definir cautelas e uso permitido no TF. | Permissão para ignorar limitações metodológicas. |
+| Registro de exportação/validação | Preservar cenário, saída, aviso e classificação para auditoria. | Validação comercial, operacional ou de magnitude exata. |
+| Análise de sensibilidade | Testar hipóteses documentadas e fronteiras alternativas. | Substituição automática da linha de base ou conclusão principal robusta. |
+
+A interpretação dos custos e das emissões deve preservar as fronteiras substantivas do trabalho. Custos modelados são estimativas dentro da fronteira operacional implementada; não são cotações de frete, tarifas, preços contratados ou custos logísticos totais de mercado. Emissões reportadas permanecem operacionais TTW CO2e, salvo indicação explícita em contrário; não são WTW, LCA nem equivalentes a evidências ambientais com outra fronteira. Misturar essas categorias enfraquece a comparabilidade e pode transformar uma saída condicionada em uma afirmação que o modelo não sustenta.
+
+Do mesmo modo, a classificação metodológica deve governar o uso de cada resultado. Resultados de sensibilidade, diagnósticos, fallback-only, same-port, porto alternativo, históricos, bloqueados, excluídos ou marcados como `reference_needed` não devem ser convertidos em conclusões principais. Eles são úteis para explicar incerteza, testar hipóteses, preservar histórico, documentar exclusões ou orientar trabalho futuro, mas não devem ser promovidos a evidência robusta de desempenho econômico ou ambiental. Nenhuma saída do protótipo, isoladamente, prova superioridade econômica ou ambiental universal da cabotagem.
+
+Consequentemente, os estudos de caso do Capítulo 6 devem herdar essas limitações. Seus resultados precisam ser lidos em conjunto com as entradas do cenário, a escolha ou imposição de portos, a proveniência das distâncias, a lógica de cache/provedor, os parâmetros do modelo, os componentes habilitados, os avisos de qualidade, a fronteira de custo, a fronteira de emissões e a classificação conservadora atribuída. O fechamento deste capítulo é, portanto, uma regra de uso: o CabotageLens apoia comparação transparente e auditável, mas não automatiza decisão comercial, contratação de transporte, validação operacional ou conclusão universal sobre a cabotagem.
+
 ## 6. Estudos de caso e validacao
 
 ### 6.1 Batch 001 como diagnostico historico
