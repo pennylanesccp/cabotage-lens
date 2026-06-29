@@ -1002,6 +1002,30 @@ Para uso acadêmico e técnico, a implicação prática é que cada saída deve 
 
 Com esses limites, o protótipo é útil justamente porque estrutura perguntas melhores para etapas posteriores. Ele ajuda a identificar quais rotas merecem investigação comercial, quais premissas precisam de fonte mais forte, quais resultados dependem de sensibilidade e quais lacunas devem ser levadas a operadores, terminais ou bases comerciais. Assim, o CabotageLens apoia triagem, comparação técnica e argumentação acadêmica, mas a passagem de um cenário favorável para uma decisão logística real requer validação externa de serviço, preço, capacidade, contrato e operação.
 
+### 8.8 Contribuição metodológica do framework auditável
+
+A contribuição central deste trabalho não é um ranking modal universal entre rodovia e cabotagem. Ela é metodológica: construir e documentar um framework auditável, conservador e orientado por cenários para comparar alternativas rodoviárias diretas e alternativas rodoviário-cabotagem-rodoviário sob fronteiras explícitas. Essa formulação é importante porque evita transformar resultados favoráveis em prova geral de superioridade da cabotagem e mantém visível que cada conclusão depende de rota, porto, distância, premissas de custo, fronteira ambiental e qualidade da evidência disponível.
+
+O CabotageLens combina, em um mesmo fluxo, construção de rota, estimativa de custo modelado, estimativa de CO2e operacional TTW, avisos de qualidade, proveniência de distância, classificação de validação, sensibilidades e comparação com benchmark externo. O valor dessa combinação está em tratar o resultado como um conjunto rastreável de evidências, não como uma resposta única e opaca. Quando uma distância é frágil, quando um porto é alternativo, quando uma linha é apenas sensibilidade ou quando uma lacuna de benchmark permanece grande, essa fragilidade aparece como parte da interpretação.
+
+| Elemento metodológico | Contribuição | Limitação remanescente |
+| --- | --- | --- |
+| Construção de rota | Organiza cadeias road-only e road-cabotage-road de forma explícita e comparável. | Não comprova operação real, disponibilidade de serviço, agenda ou aceitação comercial. |
+| Fronteira de custo e emissões | Mantém custos como estimativas modeladas e emissões como CO2e operacional TTW. | Não produz fretes comerciais, WTW, LCA ou inventário ambiental completo. |
+| Proveniência e cache | Preserva fontes, reuso computacional e rastreabilidade de distâncias e cenários. | Estabilidade computacional não valida magnitude nem disponibilidade de mercado. |
+| Classificação de validação | Impede que resultados sensíveis, bloqueados ou diagnósticos sejam promovidos indevidamente. | Nenhum resultado atual é um `headline_candidate` robusto. |
+| Casos de sensibilidade | Mostram como hipóteses documentadas alteram a leitura do modelo. | Não substituem baselines validados nem provam corredores originais. |
+| Benchmark externo | Acrescenta apoio direcional e disciplina de comparação fora do próprio modelo. | Não é validação calibrada, reprodução exata ou verdade de referência. |
+| Reconciliação diagnóstica | Ajuda a explicar parte das lacunas, especialmente no lado rodoviário. | Não recalibra o aplicativo, não resolve todas as magnitudes e não substitui o baseline. |
+
+Essa estrutura contribui para a qualidade acadêmica do trabalho porque transforma incertezas em objetos explícitos de análise. Em vez de ocultar premissas frágeis atrás de um valor final de custo ou emissão, o framework separa o que é resultado executado, o que é sensibilidade, o que é diagnóstico, o que é limitação e o que ainda depende de referência externa. A classificação de evidência, portanto, não é um detalhe administrativo; ela é parte da contribuição metodológica e reduz o risco de sobreinterpretação.
+
+O benchmark externo e as verificações diagnósticas reforçam essa leitura sem mudar sua natureza. O Batch 002 fortalece a interpretação ao mostrar apoio direcional externo, mas não transforma o CabotageLens em modelo calibrado contra Gustavo/Costa. O rerun com cache melhora a confiança na estabilidade computacional, mas não valida magnitude exata. A reconciliação rodoviária torna parte da lacuna mais explicável, mas não substitui o modelo de linha de base nem elimina todos os desvios. O ganho está na transparência metodológica, não em uma validação comercial ou universal.
+
+Como consequência, os resultados atuais permanecem condicionais. Nenhum resultado atual deve ser tratado como `headline_candidate` robusto. Eles dependem das premissas modeladas, das referências disponíveis, da construção de rota, da seleção de portos, da fronteira de custo e da fronteira ambiental adotada. Custos continuam sendo estimativas modeladas, não fretes comerciais, tarifas ou cotações negociadas. Emissões continuam sendo CO2e operacional TTW, salvo indicação explícita em contrário. O framework não substitui dados de operadores, terminais, agendas de armadores, disponibilidade de slots, cotações de mercado ou validação operacional de campo.
+
+Ao mesmo tempo, essa limitação define um caminho de evolução claro. O mesmo framework pode apoiar trabalhos futuros com referências marítimas mais completas, dados operacionais de operadores e terminais, agendas e frequências de transportadores, expansão WTW/LCA, custos comerciais e taxas negociadas, desde que cada nova camada seja incorporada com fronteira, unidade e proveniência explícitas. Assim, o Capítulo 8 se encerra com uma conclusão deliberadamente conservadora: o valor do CabotageLens está na estrutura auditável que permite comparar cenários e controlar afirmações. O Capítulo 9 detalha justamente as limitações que ainda impedem converter essa estrutura em validação operacional, comercial ou universal.
+
 ## 9. Limitacoes
 
 Este trabalho possui limitacoes deliberadas e limitacoes ainda nao resolvidas.
