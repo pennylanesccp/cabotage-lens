@@ -728,17 +728,23 @@ A reconciliação de fator rodoviário também deve ser lida como resultado obse
 
 Por fim, este inventário preserva as fronteiras materiais dos resultados. Custos permanecem estimativas modeladas, não tarifas ou fretes comerciais; emissões permanecem CO2e operacional TTW, salvo indicação explícita em contrário; e nenhum resultado desta seção prova superioridade universal da cabotagem, viabilidade comercial ou disponibilidade de serviço. A função do Capítulo 7 é apresentar o que foi observado e classificado; a interpretação mais profunda dessas implicações pertence ao Capítulo 8.
 
-### 7.2 Resultados numericos das sensibilidades executadas
+### 7.2 Resultados das sensibilidades executadas
 
-As tres linhas executadas de sensibilidade mostram que, sob a fronteira atual de custo modelado e TTW CO2e operacional, a alternativa multimodal permanece menor que a alternativa rodoviaria direta nos dois indicadores. Essa direcao e relevante, mas a classificacao continua sendo `sensitive`.
+Foram executadas três linhas de sensibilidade do Batch 001B: `TF-VAL-001B-SENS-002-REFDIST`, `TF-VAL-001B-SENS-003B-ALTPECEM` e `TF-VAL-001B-SENS-005B-ALTSUAPE`. A tabela a seguir apresenta apenas os valores já rastreados nos artefatos de validação e mantém a classificação de cada linha como `sensitive`. Os custos são estimativas modeladas por remessa, não fretes comerciais; as emissões são CO2e operacional TTW, não WTW nem LCA.
 
-| Caso | Papel | Portos | Custo rodoviario / multimodal | Emissoes rodoviario / multimodal | Classificacao |
-| --- | --- | --- | ---: | ---: | --- |
-| `TF-VAL-001B-SENS-002-REFDIST` | Sensibilidade de distancia Santos/Manaus | Santos -> Manaus | BRL 18456,45 / BRL 1263,50 | 6961,76 / 1104,67 kg TTW CO2e | `sensitive` |
-| `TF-VAL-001B-SENS-003B-ALTPECEM` | Sensibilidade de porto alternativo Pecem | Manaus -> Pecem | BRL 26391,03 / BRL 727,33 | 9989,83 / 573,48 kg TTW CO2e | `sensitive` |
-| `TF-VAL-001B-SENS-005B-ALTSUAPE` | Sensibilidade de porto alternativo Suape | Rio Grande -> Suape | BRL 18121,99 / BRL 2122,38 | 7013,27 / 1127,46 kg TTW CO2e | `sensitive` |
+| Caso | Papel da sensibilidade | Portos | Custo modelado rodoviário | Custo modelado multimodal | TTW CO2e rodoviário | TTW CO2e multimodal | Classificação |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| `TF-VAL-001B-SENS-002-REFDIST` | Distância de referência Santos/Manaus | Santos -> Manaus | BRL 18456,45 | BRL 1263,50 | 6961,76 kg TTW CO2e | 1104,67 kg TTW CO2e | `sensitive` |
+| `TF-VAL-001B-SENS-003B-ALTPECEM` | Porto alternativo Pecém | Manaus -> Pecém | BRL 26391,03 | BRL 727,33 | 9989,83 kg TTW CO2e | 573,48 kg TTW CO2e | `sensitive` |
+| `TF-VAL-001B-SENS-005B-ALTSUAPE` | Porto alternativo Suape | Rio Grande -> Suape | BRL 18121,99 | BRL 2122,38 | 7013,27 kg TTW CO2e | 1127,46 kg TTW CO2e | `sensitive` |
 
-Esses valores nao sao substitutos das linhas de base validadas. O caso Santos/Manaus e uma sensibilidade de distancia de referencia. O caso Manaus/Pecem e uma sensibilidade de porto alternativo e nao valida Porto de Fortaleza. O caso Rio Grande/Suape e uma sensibilidade de porto alternativo e nao valida Porto do Recife.
+Nos três cenários nomeados, a alternativa multimodal apresentou menor custo modelado e menor TTW CO2e operacional do que a alternativa rodoviária direta. Esse resultado é observado dentro das premissas documentadas de cada sensibilidade, e não deve ser lido como conclusão robusta de linha de base. Nenhuma dessas linhas é `headline_candidate`.
+
+O caso Santos/Manaus é uma sensibilidade de distância de referência. Ele mostra o comportamento do modelo quando a distância marítima de referência rastreada é usada para esse par específico, mas não valida automaticamente todos os casos que dependem de `haversine_fallback`, nem transforma distâncias de triagem em evidência final de rota.
+
+As linhas Manaus/Pecém e Rio Grande/Suape são sensibilidades de porto alternativo. Pecém não valida Porto de Fortaleza, e Suape não valida Porto do Recife. A mudança de porto altera o cenário avaliado e deve permanecer visível na leitura dos resultados, sem substituição silenciosa do porto originalmente selecionado.
+
+Portanto, os valores desta subseção devem ser usados como resultados observados de sensibilidade: úteis para mostrar a direção do modelo sob hipóteses documentadas, mas insuficientes para afirmar superioridade universal da cabotagem, disponibilidade de serviço, viabilidade comercial ou validação plena do modelo. A discussão das implicações permanece reservada ao Capítulo 8.
 
 ### 7.3 Interpretacao dos resultados
 
