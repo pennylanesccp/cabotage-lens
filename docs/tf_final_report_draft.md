@@ -469,6 +469,32 @@ Também é necessário interpretar registros persistidos junto com avisos de qua
 
 Por fim, a camada de persistência não altera as fronteiras substantivas já definidas. Custos persistidos permanecem estimativas modeladas, não fretes comerciais, cotações ou tarifas de mercado. Emissões persistidas permanecem emissões operacionais TTW CO2e, salvo indicação explícita em contrário, e não se transformam em WTW, LCA ou evidência CO2-only por estarem registradas em cache ou exportação. A utilidade acadêmica da persistência está em permitir auditoria, repetição controlada e comparação transparente entre cenários, mantendo explícito o que foi calculado, em que condições e com quais limites de interpretação.
 
+### 5.6 Saídas, avisos e registros de exportação
+
+As saídas do CabotageLens devem ser entendidas como um conjunto interpretativo, não como uma soma de totais finais isolados. Para que a comparação seja auditável, o resultado precisa mostrar as pernas da rota, os portos selecionados ou forçados quando aplicável, a proveniência das distâncias, os custos modelados, as emissões operacionais TTW CO2e, os avisos de qualidade de rota e os campos de classificação ou status disponíveis nos artefatos de validação. Essa combinação permite reconstruir por que uma alternativa apresentou determinado custo ou emissão e qual nível de confiança metodológica pode ser atribuído ao caso.
+
+Os avisos de qualidade de rota fazem parte do fluxo de interpretação. Eles indicam condições como porto de origem igual ao porto de destino, distância marítima ausente, distância marítima muito pequena, uso de fallback ou situação em que o acesso rodoviário domina uma cadeia marítima local. Esses avisos não são rótulos cosméticos: eles sinalizam que o resultado deve ser usado com cautela, como diagnóstico, limitação, triagem ou sensibilidade, conforme a classificação metodológica correspondente. Ao mesmo tempo, a presença de aviso não prova impossibilidade operacional; ela apenas mostra que a conclusão não pode ser tratada como robusta sem evidência adicional.
+
+A ausência de aviso também tem limite. Um resultado sem alerta explícito não comprova disponibilidade real de serviço, frequência de navegação, escala, slot, aceitação por terminal, contrato, tarifa ou viabilidade comercial. Significa apenas que, dentro das regras de qualidade implementadas, não foi identificado um problema específico daquele tipo. Por isso, a leitura do resultado deve continuar condicionada à fronteira do cenário, à seleção de portos, à fonte de distância, aos componentes habilitados e à classificação de uso atribuída nos artefatos de validação.
+
+| Saída ou registro | Por que importa | Limite de interpretação |
+| --- | --- | --- |
+| Pernas da rota | Mostram road-only, acesso rodoviário, perna marítima e acesso final quando aplicáveis. | Não provam operação real nem otimizam uma rede completa. |
+| Portos selecionados ou forçados | Identificam os nós marítimos usados no cenário. | Não confirmam serviço de armador, escala, slot ou aceitação terminal. |
+| Proveniência de distância | Indica fonte, fallback, referência, substituição ou lacuna. | Deve governar a confiança atribuída ao resultado. |
+| Custo modelado | Resume a estimativa monetária dos componentes incluídos. | Não é frete comercial, cotação, tarifa ou contrato. |
+| Emissões TTW CO2e | Resume emissões operacionais dentro da fronteira do modelo. | Não são WTW nem LCA, salvo declaração explícita de outra fronteira. |
+| Avisos de qualidade de rota | Alertam limitações de construção, distância ou interpretação. | Não validam nem invalidam sozinhos uma operação real. |
+| Classificação/status | Define o uso permitido do resultado no TF. | Não deve ser ignorada para promover resultado frágil a conclusão principal. |
+| Registro de exportação | Preserva entradas, saídas, avisos e metadados quando disponível. | Aumenta rastreabilidade, não validação comercial ou operacional. |
+| Registro de validação | Documenta bloqueios, exclusões, sensibilidades e uso metodológico. | Não transforma benchmark ou cenário em prova de magnitude exata. |
+
+As classificações e status são a camada que transforma uma saída numérica em evidência utilizável no TF. Um caso `record_only_warning` pode documentar um comportamento de rota, mas não sustenta conclusão de desempenho modal. Um caso `reference_needed` preserva uma lacuna de fonte. Um caso `sensitivity_only` ou `sensitive` pode ser discutido como sensibilidade, desde que a hipótese esteja visível. Categorias de benchmark, como apoio direcional com grande lacuna de magnitude, permitem discutir consistência qualitativa, mas não reprodução exata, validação calibrada ou superioridade universal da cabotagem.
+
+Os registros de exportação e validação dão suporte a essa disciplina porque preservam, quando disponíveis, entradas de cenário, portos, distâncias, proveniência, custos modelados, emissões TTW CO2e, avisos e classificações. Eles facilitam repetição controlada, revisão posterior e comparação entre versões do método. Contudo, uma linha exportada não é automaticamente uma rota real validada; ela continua sendo um registro de cálculo sob uma fronteira específica. Da mesma forma, exportar um custo não o converte em frete de mercado, e exportar uma emissão não altera sua fronteira operacional TTW CO2e.
+
+Assim, a saída final do protótipo deve ser lida como evidência computacional classificada. O valor acadêmico está em tornar visível o que foi calculado, quais avisos foram acionados, qual proveniência sustenta as distâncias e qual uso metodológico é permitido. Essa estrutura evita que resultados frágeis sejam promovidos a conclusões principais e mantém a função do CabotageLens como ferramenta de comparação transparente e auditável, não como sistema automático de decisão, contratação ou validação operacional.
+
 ## 6. Estudos de caso e validacao
 
 ### 6.1 Batch 001 como diagnostico historico
