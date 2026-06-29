@@ -393,6 +393,32 @@ Também é essencial distinguir o cenário modelado de uma operação logística
 
 Quando há exportações, registros persistidos ou artefatos de validação, sua função é preservar a memória técnica do que foi calculado: entradas de cenário, parâmetros relevantes, saídas do modelo, proveniência de distância, portos usados, avisos e classificação de uso. Esses registros apoiam auditoria, repetição controlada e revisão acadêmica posterior. Eles não eliminam as limitações do cenário nem convertem a interface em ferramenta de decisão automática. Assim, o fluxo de uso do CabotageLens deve ser entendido como suporte transparente à comparação condicionada entre alternativas, mantendo explícito o que foi informado pelo usuário, o que foi calculado pelo modelo e o que permanece fora da fronteira do TF.
 
+### 5.3 Construção das alternativas de rota
+
+A construção das alternativas de rota é a etapa em que as entradas do cenário são transformadas em duas cadeias comparáveis: uma rota rodoviária direta e uma cadeia rodoviário-cabotagem-rodoviário. O objetivo não é simular todas as opções logísticas possíveis no território nacional, mas gerar uma representação rastreável das alternativas necessárias para a comparação acadêmica definida na unidade funcional. Por isso, a rota construída deve ser lida como cenário modelado, condicionado às entradas, aos portos, às fontes de distância e aos componentes habilitados.
+
+Na alternativa road-only, o CabotageLens representa o transporte da origem ao destino por uma perna rodoviária direta dentro da fronteira do modelo. Essa perna fornece a distância rodoviária usada para estimar consumo, custo modelado e emissões operacionais TTW CO2e da alternativa exclusivamente terrestre. A existência dessa rota calculada não comprova uma viagem real executada, uma rota contratada específica ou uma condição comercial de frete; ela funciona como referência modelada para comparar a mesma remessa com a alternativa multimodal.
+
+Na alternativa rodoviário-cabotagem-rodoviário, a ferramenta decompõe a cadeia em três trechos principais: acesso rodoviário da origem ao porto de origem, perna marítima entre porto de origem e porto de destino, e acesso rodoviário final do porto de destino ao destino. Quando habilitados no cenário, componentes como operações portuárias e hoteling integram a avaliação sob a mesma lógica de fronteira operacional. Cada trecho contribui para a distância modelada, o custo modelado e as emissões operacionais TTW CO2e, de modo que a perna marítima não deve ser analisada isoladamente como se representasse toda a alternativa multimodal.
+
+| Elemento da rota | Papel no modelo | Limite de interpretação |
+| --- | --- | --- |
+| Perna road-only | Representa a alternativa rodoviária direta entre origem e destino. | É rota modelada para comparação, não frete comercial nem prova de operação real. |
+| *Pre-carriage* | Conecta a origem ao porto de origem por rodovia. | Pode alterar materialmente custo e TTW CO2e; não é etapa acessória desprezível. |
+| Perna marítima | Representa a cabotagem entre os portos do cenário. | Depende da proveniência da distância e não comprova serviço marítimo real. |
+| *On-carriage* | Conecta o porto de destino ao destino final por rodovia. | Pode mudar a leitura do multimodal quando o porto está afastado do destino. |
+| Porto selecionado | Define o nó marítimo escolhido pela lógica do cenário. | Não prova serviço de armador, aceitação terminal, slot, frequência ou viabilidade comercial. |
+| Porto forçado ou alternativo | Permite representar uma hipótese explícita de sensibilidade. | Não substitui silenciosamente o porto selecionado nem valida o caso-base. |
+| Caso same-port | Indica coincidência entre porto de origem e de destino. | Não representa cadeia normal de cabotagem nem conclusão principal robusta. |
+| Distância por fallback | Permite triagem quando falta distância marítima mais forte. | Não valida rota sozinha e deve ser tratada com cautela metodológica. |
+| Aviso de qualidade de rota | Sinaliza limitações de construção, distância ou interpretação. | É controle interpretativo, não otimização nem validação automática. |
+
+A escolha dos portos é decisiva nessa construção. Em cenários ordinários, portos selecionados a partir do conjunto elegível definem os nós da perna marítima e, por consequência, os acessos rodoviários de entrada e saída. Em cenários de validação ou sensibilidade, portos forçados ou alternativos podem ser usados para testar uma hipótese documentada. Essa flexibilidade aumenta a auditabilidade, mas também exige disciplina interpretativa: porto selecionado, elegível, forçado ou alternativo é uma premissa do cenário, não prova de disponibilidade de serviço, escala, frequência, slot, aceitação por terminal, contrato ou viabilidade comercial.
+
+Da mesma forma, a proveniência das distâncias condiciona o uso do resultado. Distâncias rodoviárias calculadas por provedor/cache e distâncias marítimas oriundas de matriz, referência externa ou fallback não têm o mesmo peso metodológico. Casos same-port, casos sustentados apenas por fallback, cenários de porto alternativo, registros históricos, linhas bloqueadas, excluídas ou classificadas como `reference_needed` devem permanecer fora de conclusões principais robustas. Eles podem informar limitações, sensibilidade, diagnóstico ou trabalho futuro, mas não devem ser promovidos a evidência de superioridade modal.
+
+Assim, a construção de rota no CabotageLens deve ser interpretada em conjunto com a seleção de portos, a proveniência das distâncias, os componentes habilitados, os avisos de qualidade, a fronteira de custo e a fronteira de emissões. O modelo não otimiza uma rede multimodal nacional completa, não escolhe a rota comercialmente ótima e não automatiza uma recomendação de decisão. Seus custos permanecem estimativas modeladas, não fretes comerciais; suas emissões permanecem operacionais TTW CO2e, salvo indicação explícita em contrário. A contribuição da ferramenta está em tornar a comparação entre alternativas transparente e auditável, sem transformar uma rota modelada em prova de operação real ou de superioridade universal da cabotagem.
+
 ## 6. Estudos de caso e validacao
 
 ### 6.1 Batch 001 como diagnostico historico
