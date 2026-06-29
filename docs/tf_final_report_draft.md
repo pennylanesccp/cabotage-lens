@@ -606,9 +606,28 @@ O workbook, portanto, é benchmark e não verdade de referência. Diferenças de
 
 Consequentemente, o Batch 002 não cria um `headline_candidate`. Seu uso adequado no Capítulo 6 é mostrar que há apoio externo direcional, acompanhado de limites de comparabilidade suficientemente importantes para impedir uma afirmação de validação calibrada. A conclusão conservadora é que o benchmark sustenta discussão metodológica e confiança direcional limitada, enquanto a validação de magnitude, custo comercial, serviço e rota permanece fora do alcance do lote.
 
-### 6.6 Rerun Supabase/cache e reconciliacao rodoviaria
+### 6.6 Rerun Supabase/cache como verificação de estabilidade
 
-O rerun Supabase/cache verificou se instabilidade de cache ou provedor de rota explicava a grande diferenca workbook-vs-modelo. A leitura e escrita de cache Supabase funcionaram, e o rerun usou apenas distancias rodoviarias em cache. O registro consolidado mostra 63 route-cache hits e 0 misses. A diferenca agregada do lado rodoviario mudou apenas ligeiramente, de 201,0%/150,5% para 199,8%/149,3% em media/mediana absoluta. A diferenca multimodal nao melhorou. Portanto, instabilidade de cache/provedor e improvavel como principal causa da lacuna rodoviaria.
+O rerun Supabase/cache foi usado para testar uma hipótese operacional específica do Batch 002: se a diferença de magnitude entre o workbook Gustavo/Costa e o CabotageLens, especialmente no lado rodoviário, poderia ser explicada por instabilidade de provedor de rota, leitura de cache ou escrita de cache. Essa verificação não buscou recalibrar o modelo nem forçar aproximação numérica ao benchmark; seu objetivo foi separar instabilidade computacional de diferenças metodológicas mais profundas.
+
+No rerun, as distâncias rodoviárias vieram apenas de cache. O artefato consolidado registra que a conexão e a leitura/escrita de cache Supabase funcionaram, que as pernas rodoviárias necessárias foram atendidas por registros existentes e que não houve necessidade de novas escritas de distância por provedor. Isso torna o rerun uma evidência de rastreabilidade do processo, não uma evidência de operação logística real.
+
+| Verificação do rerun | Resultado observado | Interpretação |
+| --- | --- | --- |
+| Fonte de distância rodoviária | Distâncias rodoviárias em cache | Reduz a hipótese de instabilidade por chamada em tempo real ao provedor. |
+| `route-cache hits` | 63 | As 21 pernas diretas, 21 pernas de acesso inicial e 21 pernas de acesso final foram atendidas por cache. |
+| `route-cache misses` | 0 | Não houve lacuna de cache rodoviário no rerun. |
+| Escritas de distância por provedor | 0 | O rerun não dependeu de novas distâncias de provedor. |
+| Falhas de leitura/escrita de cache | 0 | Não houve evidência de falha operacional de cache no lote. |
+| Diferença rodoviária média/mediana | 201,0%/150,5% -> 199,8%/149,3% | A mudança agregada foi pequena; a lacuna permanece. |
+
+Essa estabilidade reduz a probabilidade de que a grande lacuna rodoviária do Batch 002 seja explicada principalmente por ruído de provedor, falha de cache ou variação de rota entre execuções. A evidência aponta para uma interpretação mais conservadora: a diferença deve ser investigada sobretudo como diferença de método, fronteira, parâmetro, carga, alocação ou base de distância, e não como simples instabilidade computacional.
+
+Ao mesmo tempo, a estabilidade do cache não valida magnitudes exatas. Cache hits indicam que o processo reaproveitou entradas rastreáveis, mas não provam que a rota representa disponibilidade comercial, serviço contratado, tarifa praticada, frequência de escala ou viabilidade operacional. Também não transformam os custos em fretes comerciais nem alteram a fronteira das emissões, que continuam sendo operacionais TTW CO2e no CabotageLens.
+
+Portanto, o rerun Supabase/cache fortalece a auditabilidade e a reprodutibilidade computacional do Batch 002, mas não resolve sozinho os desencontros com Gustavo/Costa. Ele permite descartar uma explicação fraca, baseada apenas em instabilidade de cache/provedor, e prepara a discussão metodológica seguinte sobre fatores rodoviários e demais fronteiras de comparação.
+
+### 6.7 Reconciliação de fator rodoviário
 
 A reconciliacao de fator rodoviario testou uma explicacao metodologica especifica. As premissas Gustavo/Costa usadas no diagnostico foram `FDc = 0.28 L/km`, `FDe = 35.52 MJ/L` e `FDf = 86.5 gCO2eq/MJ`, resultando em:
 
