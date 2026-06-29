@@ -884,6 +884,29 @@ Também é necessário separar construção de rota de disponibilidade operacion
 
 Por fim, as fronteiras de interpretação permanecem as mesmas da seção anterior. Custos continuam sendo estimativas modeladas, não fretes comerciais, tarifas ou cotações contratadas. Emissões continuam sendo CO2e operacional TTW, salvo mudança explícita de fronteira. Portanto, uma sensibilidade favorável em custo modelado e TTW CO2e deve ser discutida como comportamento condicionado por corredor, porto, distância e fronteira de rota, e não como prova de superioridade universal da cabotagem ou como resultado robusto de linha de base.
 
+### 8.3 Interpretação do Batch 002 e das lacunas de magnitude
+
+O Batch 002 fortalece o relatório porque desloca parte da discussão para fora das saídas internas do próprio CabotageLens. Ao comparar o modelo com o workbook Gustavo/Costa, o trabalho passa a ter uma camada externa de benchmark para testar se a direção modal observada internamente aparece também em uma referência independente. Esse ganho, porém, deve ser interpretado com rigor: o benchmark é útil como contraste externo, não como verdade absoluta nem como calibração automática do modelo.
+
+O resultado direcional é claro dentro do conjunto comparável: os 21 pares OD positivos e suportados indicam menor emissão para a alternativa de cabotagem/multimodal tanto no workbook quanto no CabotageLens. Essa concordância sustenta uma afirmação limitada, mas relevante, de consistência direcional em emissões. Ela não autoriza afirmar que o CabotageLens reproduziu Gustavo/Costa, que as magnitudes foram validadas exatamente ou que a cabotagem é universalmente superior.
+
+Ao mesmo tempo, a classificação de todas as linhas comparáveis permanece `same_direction_large_gap`. Essa classificação é central para a discussão e não deve ser suavizada. Ela significa que o sinal modal é coerente, mas que as diferenças de magnitude continuam grandes o suficiente para impedir validação calibrada. Tratar essas lacunas como detalhe menor apagaria justamente uma das contribuições metodológicas do Batch 002: tornar visíveis as fronteiras, premissas e incompatibilidades que ainda precisam ser reconciliadas.
+
+| Achado do Batch 002 | Significado na discussão | Limite de interpretação |
+| --- | --- | --- |
+| 21/21 de alinhamento direcional | O benchmark externo e o CabotageLens apontam a mesma direção modal nas linhas comparáveis. | Direção não equivale a validação calibrada. |
+| 21 linhas `same_direction_large_gap` | A concordância convive com lacunas materiais de magnitude. | Não há reprodução exata do workbook nem `headline_candidate`. |
+| Células puladas do workbook | Nem toda a matriz era comparável ou executável no modelo atual. | Não se deve tratar todos os dados do workbook como evidência de comparação. |
+| Lacuna no lado rodoviário | Premissas de distância, consumo, fator de emissão, veículo, carga e alocação podem explicar parte do desvio. | A reconciliação rodoviária é diagnóstica, não recalibração do baseline. |
+| Lacuna no lado multimodal | Portos, lógica de serviço, rota marítima, port-ops/hoteling, alocação e fronteira ambiental podem divergir. | O desvio multimodal não fica resolvido pelo alinhamento direcional. |
+| Papel do benchmark | Fornece contraste externo e disciplina de comparação. | O workbook não é verdade de referência (`ground truth`) e não valida preços, fretes, rotas ou serviços. |
+
+As lacunas de magnitude podem ter várias origens plausíveis e cumulativas. No lado rodoviário, podem refletir diferenças de base de distância, premissas de consumo, fator de emissão, veículo, carregamento e alocação por contêiner. No lado multimodal, podem decorrer de distância marítima, seleção de portos, lógica de serviço, tratamento de operações portuárias e hoteling, premissas de embarcação, regra de alocação e fronteira ambiental. Essas possibilidades não devem ser usadas para desqualificar o benchmark, mas para enquadrá-lo corretamente como evidência metodológica com fronteiras ainda não reconciliadas.
+
+O rerun Supabase/cache e a reconciliação rodoviária ajudam a organizar essa leitura. O rerun reduz a hipótese de que a divergência seja principalmente instabilidade de provedor ou cache; a reconciliação rodoviária mostra que premissas rodoviárias explicam parte relevante da lacuna no lado road-only. Nenhum dos dois passos, entretanto, resolve integralmente a diferença de magnitude, substitui o modelo de linha de base ou transforma o workbook em referência normativa.
+
+Portanto, o uso seguro do Batch 002 no TF é afirmar apoio direcional externo com lacunas de magnitude explícitas. O lote não prova viabilidade comercial, disponibilidade de serviço, escolha real de rotas, frequência, preços praticados ou fretes contratados. Custos continuam sendo estimativas modeladas, e emissões continuam sendo CO2e operacional TTW, salvo indicação explícita em contrário. Com esses limites, o Batch 002 contribui para uma defesa acadêmica mais forte justamente porque combina evidência externa favorável em direção com transparência sobre aquilo que ainda não está calibrado.
+
 ## 9. Limitacoes
 
 Este trabalho possui limitacoes deliberadas e limitacoes ainda nao resolvidas.
