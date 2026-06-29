@@ -979,6 +979,29 @@ Essas cautelas não reduzem a importância de incluir o tema portuário na discu
 
 Por fim, a presença de custos portuários ou operacionais modelados não transforma o resultado em frete comercial. Custos continuam sendo estimativas modeladas, não tarifas portuárias completas, cotações, contratos ou fretes praticados. A inclusão de hotelling ou operações portuárias tampouco comprova disponibilidade de terminal, janela de atracação, frequência de serviço, escala real ou aceitação comercial. Assim, a contribuição da seção é reforçar a leitura de fronteira: portos e berços importam para a comparação, mas a evidência atual permanece operacional, modelada e não calibrada para inventário portuário completo.
 
+### 8.7 Implicações para uso do CabotageLens como apoio à decisão
+
+O CabotageLens pode ser usado de forma responsável como um protótipo acadêmico de apoio à decisão, desde que o termo "apoio" seja interpretado com rigor. A ferramenta organiza uma comparação transparente entre alternativa rodoviária direta e alternativa rodoviário-cabotagem-rodoviário, expondo rotas, portos, fontes de distância, custos modelados, CO2e operacional TTW e classificações de evidência. Seu valor principal está em tornar a discussão técnica mais rastreável, não em automatizar uma decisão logística final.
+
+O uso mais forte do protótipo é exploratório, metodológico e educacional. Ele permite comparar cenários, testar a sensibilidade de escolhas de porto e distância, identificar quando uma rota depende de premissas frágeis e mostrar como fronteiras de custo e emissões alteram a leitura do resultado. Nesse sentido, o número final não deve ser separado dos avisos, classificações e metadados de proveniência. Um resultado com `haversine_fallback`, status `sensitive`, lacuna de benchmark ou ressalva de serviço comunica algo diferente de um resultado com fonte mais forte e fronteira mais bem documentada.
+
+| Uso responsável | O que a ferramenta sustenta | O que ainda requer validação externa |
+| --- | --- | --- |
+| Triagem de cenários | Comparar, sob premissas explícitas, cadeias road-only e road-cabotage-road. | Decisão final de contratação, prazo, risco operacional e disponibilidade real. |
+| Comparação de rota/porto | Mostrar como seleção de portos, acessos terrestres e distância marítima afetam o resultado. | Consulta a operadores, terminais, armadores e serviços efetivamente ofertados. |
+| Consciência de fronteira | Evidenciar que custos são modelados e emissões são CO2e operacional TTW. | Fretes comerciais, tarifas negociadas, WTW, LCA ou escopos ambientais ampliados. |
+| Análise de sensibilidade | Explorar hipóteses documentadas sem confundi-las com baseline validado. | Calibração operacional, validação externa de magnitude e dados comerciais. |
+| Relato acadêmico | Preservar rastreabilidade, classificação e limites de interpretação. | Generalizações universais ou promoção de resultados a decisão de negócio. |
+| Decisão comercial | Estruturar perguntas para validação posterior. | Reserva de frete, agenda, slot, aceite de terminal, aceite de transportador e viabilidade contratual. |
+
+Essa distinção é essencial porque a ferramenta não reserva frete, não consulta disponibilidade de linha e não confirma janela operacional. Ela não prova disponibilidade de serviço de cabotagem, agenda, slot, aceitação de terminal, aceitação de armador ou transportador, nem viabilidade comercial de uma cadeia específica. Também não produz cotações de frete de mercado, tarifas negociadas ou taxas contratadas. Esses elementos exigem consulta externa a operadores, terminais, transportadores, armadores, agentes de carga e dados comerciais atualizados.
+
+O CabotageLens também não deve ser lido como um otimizador nacional completo. A seleção de portos e a construção de rotas fornecem cenários determinísticos e auditáveis, mas não resolvem uma super-rede multimodal com múltiplas linhas, frequências, capacidades, transbordos, tempos de espera, estoques, restrições comerciais e alternativas concorrentes. Pelo mesmo motivo, o protótipo não é um sistema calibrado de despacho operacional. Ele não decide qual veículo, navio, terminal, janela ou operador deve ser usado em uma operação real.
+
+Para uso acadêmico e técnico, a implicação prática é que cada saída deve ser lida como condicional. A confiabilidade da interpretação depende das entradas fornecidas, da proveniência das distâncias, da escolha de portos, da fronteira econômica, da fronteira ambiental e da classificação de validação. Custos permanecem estimativas modeladas, não fretes comerciais. Emissões permanecem CO2e operacional TTW, salvo indicação explícita em contrário; WTW, LCA, CO2 e CO2e não devem ser misturados sem reconciliação metodológica.
+
+Com esses limites, o protótipo é útil justamente porque estrutura perguntas melhores para etapas posteriores. Ele ajuda a identificar quais rotas merecem investigação comercial, quais premissas precisam de fonte mais forte, quais resultados dependem de sensibilidade e quais lacunas devem ser levadas a operadores, terminais ou bases comerciais. Assim, o CabotageLens apoia triagem, comparação técnica e argumentação acadêmica, mas a passagem de um cenário favorável para uma decisão logística real requer validação externa de serviço, preço, capacidade, contrato e operação.
+
 ## 9. Limitacoes
 
 Este trabalho possui limitacoes deliberadas e limitacoes ainda nao resolvidas.
