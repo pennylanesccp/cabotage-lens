@@ -1274,20 +1274,3 @@ No eixo econômico e operacional, trabalhos futuros devem incorporar fretes come
 Outra frente é aprofundar a reconciliação com o workbook/paper Gustavo/Costa. O objetivo não deve ser tratar o benchmark como verdade absoluta, mas reconstruir com mais precisão sua lógica de carga, alocação, distância, rota, porto, serviço e fronteira ambiental. O mesmo esforço deve ser ampliado para outros benchmarks independentes, de modo que a avaliação deixe de depender de uma única família de referência externa.
 
 Por fim, o trabalho deve avançar em sensibilidades de carga, alocação por contêiner, fator de carga, consumo rodoviário, intensidade marítima e parâmetros portuários, sempre com valores rastreados e defensáveis. A versão orientada à publicação do artigo técnico deve refletir a decisão de escopo registrada para o TF: o relatório final pode discutir Gustavo/Costa com maior detalhe por sua relevância para a defesa, mas o artigo deve reposicionar esse benchmark como evidência externa compacta, mantendo o CabotageLens como a contribuição central.
-
-## 12. Citation placeholders
-
-As chaves abaixo foram usadas como placeholders de citacao. Elas devem ser formatadas em etapa posterior, sem inventar metadados bibliograficos que nao estejam disponiveis nos artefatos do repositorio.
-
-| Chave | Uso no rascunho | Limite de uso |
-| --- | --- | --- |
-| `[icct2022]` | Contexto brasileiro de cabotagem, BR do Mar, modal share, emissao e motivacao de politica publica. | Referencia de contexto; nao valida custos ou resultados rota a rota do CabotageLens. |
-| `[competitiveness2024]` | Competitividade da cabotagem brasileira, super-rede, frequencia, custo comercial e limitacoes de rede. | Comparacao e limitacao; nao transforma o CabotageLens em super-rede ou cotador comercial. |
-| `[shortsea2019]` | Evidencia de que short sea/cabotagem nao e automaticamente superior e depende de corredor, utilizacao e hipoteses. | Limitacao e discussao; nao calibra fatores brasileiros. |
-| `[modalshiftreview2020]` | Complexidade da mudanca modal, barreiras logisticas, qualidade de servico e decisao alem de custo/emissao. | Referencia qualitativa; nao valida numericamente os resultados. |
-| `[decarb2024]` | Descarbonizacao da cabotagem brasileira, HVO, WTW/CO2e e trabalhos futuros. | Futuro trabalho e contraste de fronteira; nao substitui a linha de base TTW. |
-| `[berth2009]` | Contexto metodologico de combustivel/emissoes em navios atracados. | Referencia ou futuro trabalho; nao calibracao direta. |
-| `[shipops2022]` | Metodologia de hoteling, carga/descarga e produtividade portuaria. | Referencia ou futuro trabalho; fatores regionais nao sao parametros brasileiros diretos. |
-| `[berthairquality2010]` | Impacto de emissoes em porto e distincao de fases portuarias. | Contexto portuario; nao validacao modal completa. |
-| `[maritimelca2024]` | Distincao LCA/WTW e futuras extensoes de ciclo de vida. | Pendente/futuro; nao define a metodologia TTW atual. |
-| `[isoemission2019]` | Inspiracao para mapas de iso-emissao e visualizacao futura. | Futuro trabalho; nao implica que o CabotageLens ja implemente esse recurso. |
