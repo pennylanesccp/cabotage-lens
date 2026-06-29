@@ -1028,27 +1028,28 @@ Ao mesmo tempo, essa limitação define um caminho de evolução claro. O mesmo 
 
 ## 9. Limitacoes
 
-Este trabalho possui limitacoes deliberadas e limitacoes ainda nao resolvidas.
+### 9.1 Escopo das limitações e papel no argumento do TF
 
-Primeiro, a fronteira ambiental e TTW operacional. O trabalho nao e uma avaliacao WTW nem LCA. Isso significa que emissoes de producao, transporte e processamento dos combustiveis, construcao de infraestrutura, fabricacao de veiculos e navios e fim de vida nao estao incorporados. Fontes sobre WTW, LCA e HVO sao usadas como contexto ou trabalho futuro, nao como calibracao da linha de base [decarb2024] [maritimelca2024].
+As limitações deste trabalho não são tratadas como fragilidades a serem ocultadas, mas como parte explícita do argumento acadêmico do TF. Depois dos capítulos de validação, resultados e discussão, o papel do Capítulo 9 é delimitar o que os resultados podem sustentar e, com a mesma importância, o que eles não podem sustentar. Essa delimitação controla a leitura dos Capítulos 6, 7 e 8 e evita que evidências úteis, porém condicionais, sejam convertidas em conclusões mais fortes do que os artefatos rastreados permitem.
 
-Segundo, os custos sao estimativas modeladas, nao fretes comerciais. O modelo nao incorpora integralmente tarifas, margens, inventario, servico, frequencia, confiabilidade, demurrage, negociacao contratual, seguro e outros custos logisticos. Portanto, uma diferenca em `BRL` deve ser lida dentro da fronteira de custo representada.
+Essa postura não invalida o protótipo CabotageLens. Ao contrário, reforça sua contribuição mais segura: uma estrutura metodológica e computacional auditável para comparar cenários rodoviários e rodoviário-cabotagem-rodoviário sob fronteiras declaradas. O objetivo atual não é produzir um ranking universal entre cabotagem e transporte rodoviário, nem comprovar a viabilidade comercial de uma cadeia logística real. O valor do trabalho está em tornar visíveis as hipóteses de rota, porto, distância, custo, emissões, proveniência e classificação de evidência.
 
-Terceiro, a ferramenta nao modela horarios, frequencia de escalas, disponibilidade de servico, capacidade de navio, tempo de espera, confiabilidade ou conexoes comerciais. Esses fatores podem ser decisivos para a escolha modal real e sao caracteristicos de estudos de super-rede mais completos [competitiveness2024].
+A interpretação mais defensável, no estado atual do projeto, é cenário-dependente, direcional e diagnóstica. As linhas de sensibilidade mostram comportamento do modelo sob hipóteses documentadas; o benchmark externo apoia leitura direcional, mas não valida magnitude calibrada; e as verificações diagnósticas ajudam a explicar lacunas sem substituir o modelo de linha de base. Por isso, nenhum resultado atual deve ser promovido a `headline_candidate` robusto, e nenhuma evidência atual prova superioridade universal da cabotagem.
 
-Quarto, o CabotageLens nao implementa uma super-rede completa. A selecao de portos e a construcao de rota fornecem uma alternativa deterministica e auditavel, mas nao otimizam uma rede nacional com multiplas linhas, operadores, transbordos e horarios.
+Também é necessário separar as fronteiras econômicas, ambientais e operacionais. Os custos permanecem estimativas modeladas, não fretes comerciais, tarifas, cotações, contratos negociados ou comprovação de viabilidade econômica de mercado. As emissões permanecem operacionais TTW CO2e, salvo indicação explícita em contrário, e não devem ser misturadas com WTW, LCA, CO2 isolado ou outros limites de CO2e sem reconciliação metodológica. Da mesma forma, os resultados não comprovam disponibilidade de serviço, aceitação por armadores, aceitação por terminais, disponibilidade de slots, frequência operacional ou contratação real de frete.
 
-Quinto, permanecem lacunas de distancia maritima exata para portos selecionados. Manaus -> Porto de Fortaleza e Porto do Rio Grande -> Porto do Recife continuam sem evidencia exata suficiente nos artefatos atuais. Pecem e Suape nao podem ser usados como substitutos silenciosos.
+| Grupo de limitação | Por que importa | Onde afeta a interpretação |
+| --- | --- | --- |
+| Fronteira ambiental | Evita misturar TTW CO2e com WTW, LCA, CO2 isolado ou fatores de literatura ainda não adotados pelo método. | Capítulos 6, 7 e 8, especialmente nas comparações de emissões. |
+| Fronteira econômica | Mantém custos como estimativas modeladas, sem transformá-los em fretes comerciais ou viabilidade contratual. | Resultados de custo, discussão de apoio à decisão e conclusões. |
+| Fronteira operacional e de serviço | Impede inferir disponibilidade real de linhas, frequência, slots, aceitação de carga ou execução comercial. | Discussão logística, limitações e trabalhos futuros. |
+| Proveniência de rota e distância | Mantém visíveis lacunas de distância marítima, seleção de portos, casos same-port e cenários de porto alternativo. | Validação, classificação de casos e leitura por corredor. |
+| Limites de validação e benchmark | Preserva sensibilidades como sensibilidades, benchmark como apoio direcional e diagnósticos como diagnósticos. | Capítulos 6, 7 e 8, sem conversão em `headline_candidate`. |
+| Maturidade de fontes e citações | Evita usar literatura ou fontes pendentes como coeficientes, calibração ou validação sem adoção metodológica rastreada. | Revisão bibliográfica, metodologia e agenda de pesquisa futura. |
 
-Sexto, casos same-port e casos com perna maritima artificial precisam ser tratados como limitacao ou exclusao. Eles ajudam a melhorar a ferramenta, mas nao sustentam comparacao modal.
+A tabela acima resume a função organizadora do capítulo, sem esgotar cada limitação específica. As subseções seguintes podem detalhar grupos particulares de restrições, mas a regra de leitura já fica estabelecida aqui: limitações existem para impedir sobreafirmações, não para negar o valor do protótipo. Elas preservam a diferença entre resultado executado, sensibilidade, benchmark, diagnóstico, exclusão e trabalho futuro.
 
-Setimo, as sensibilidades de porto alternativo sao limitadas. Elas mostram comportamento sob uma hipotese documentada, mas nao cobrem toda a variacao possivel de porto, servico, custo, acesso terrestre ou intensidade maritima.
-
-Oitavo, fontes pendentes de auditoria ou marcadas como futuro trabalho nao foram usadas para calibracao numerica. Isso inclui, quando aplicavel, fontes de iso-emission mapping, LCA maritima e fatores portuarios ainda nao suficientemente extraidos para implementacao direta [isoemission2019] [maritimelca2024] [berth2009] [shipops2022] [berthairquality2010].
-
-Nono, o Batch 002 nao e uma reproducao completa do workbook ou do artigo Gustavo/Costa. O workbook nao e tratado como ground truth, e permanecem nao resolvidas sua massa interna de carga, definicao de TEU, premissa de veiculo, fator de carga, logica de alocacao, base de distancia, portos/servicos e fronteira de emissoes. A comparacao e valida como benchmark externo direcional e como evidencia de lacunas metodologicas.
-
-Decimo, o fator rodoviario diagnostico de `0.8602944 kgCO2e/km` e apenas uma sensibilidade de alinhamento com benchmark. Ele nao recalibra o CabotageLens, nao substitui a linha de base TTW operacional e nao autoriza misturar TTW, WTW, LCA, CO2 e CO2e. Do mesmo modo, o trabalho nao faz afirmacao WTW/LCA, nao transforma custos modelados em fretes comerciais e nao conclui superioridade universal da cabotagem.
+Com essa estrutura, o Capítulo 9 prepara a transição para as conclusões e os trabalhos futuros. O Capítulo 10 pode afirmar a contribuição metodológica do CabotageLens sem extrapolar para validação comercial, operacional ou universal. O Capítulo 11, por sua vez, pode transformar as limitações em uma agenda de evolução: ampliar fronteiras ambientais, refinar custos, incorporar evidência operacional, reconciliar benchmarks e fortalecer a base de validação sem apagar as incertezas que tornam o argumento acadêmico defensável.
 
 ## 10. Conclusao
 
