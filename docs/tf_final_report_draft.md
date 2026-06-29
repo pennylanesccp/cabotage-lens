@@ -565,15 +565,23 @@ Os casos com referência ausente também permanecem restritos. Manaus -> Fortale
 
 Por fim, o Batch 001B não prova disponibilidade de serviço, viabilidade comercial, frete contratado, frequência de escala ou validade operacional completa da cadeia. Mesmo quando uma linha se torna sensibilidade executada, os custos permanecem estimativas modeladas e as emissões permanecem operacionais TTW CO2e, salvo indicação explícita em contrário. A contribuição do Batch 001B é criar a disciplina necessária antes de executar, comparar ou discutir sensibilidades, evitando que registros históricos, bloqueios ou hipóteses condicionais sejam promovidos a resultados finais.
 
-### 6.4 Casos de sensibilidade executados
+### 6.4 Sensibilidades executadas
 
-Tres casos foram executados como sensibilidade Batch 001B:
+Três casos foram executados como sensibilidades do Batch 001B: Santos/Manaus com distância marítima de referência documentada, Manaus/Pecém como sensibilidade de porto alternativo para a região de Fortaleza e Rio Grande/Suape como sensibilidade de porto alternativo para a região de Recife. Esses casos foram selecionados porque cada um testava uma hipótese metodológica rastreada nos artefatos: correção de proveniência de distância, uso explícito de porto alternativo ou separação entre porto regionalmente próximo e porto originalmente selecionado.
 
-- `TF-VAL-001B-SENS-002-REFDIST`: Santos/Manaus com distancia de referencia `3300 nm / 6111,6 km`;
-- `TF-VAL-001B-SENS-003B-ALTPECEM`: Manaus/Pecem como porto alternativo para a regiao de Fortaleza, com `1569 nm / 2905,788 km`;
-- `TF-VAL-001B-SENS-005B-ALTSUAPE`: Rio Grande/Suape como porto alternativo para a regiao de Recife, com `1844 nm / 3415,088 km`.
+O ponto central desta subseção é a classificação, não a magnitude numérica. As três linhas executadas permanecem classificadas como `sensitive`. Elas podem ser usadas para discutir como a escolha de rota, porto e distância marítima afeta custo modelado e emissões operacionais TTW CO2e, mas não substituem validação robusta, não criam casos `headline_candidate` e não encerram as lacunas dos casos-base ainda dependentes de referência exata.
 
-Essas linhas sao `sensitive`, nao `robust`. Elas podem ser discutidas como comportamento do modelo sob hipoteses documentadas, mas nao substituem as linhas de base de Fortaleza e Recife e nao produzem uma conclusao universal sobre cabotagem.
+| Sensibilidade | Hipótese testada | Interpretação segura | Limitação |
+| --- | --- | --- | --- |
+| `TF-VAL-001B-SENS-002-REFDIST` | Santos/Manaus com distância marítima de referência documentada. | Mostra o comportamento do modelo quando a distância marítima histórica de fallback é tratada como hipótese de sensibilidade. | Não valida todos os casos com `haversine_fallback` nem transforma a linha em conclusão robusta. |
+| `TF-VAL-001B-SENS-003B-ALTPECEM` | Manaus/Pecém como porto alternativo para a região de Fortaleza. | Permite discutir sensibilidade a porto alternativo, acesso rodoviário e distância marítima. | Pecém não valida Porto de Fortaleza e não substitui a linha-base selecionada. |
+| `TF-VAL-001B-SENS-005B-ALTSUAPE` | Rio Grande/Suape como porto alternativo para a região de Recife. | Permite discutir sensibilidade a porto alternativo, acesso rodoviário e distância marítima. | Suape não valida Porto do Recife e não substitui a linha-base selecionada. |
+
+A sensibilidade Santos/Manaus é útil porque ilustra o efeito de substituir uma distância marítima histórica de fallback por uma referência documentada no mesmo corredor. Esse resultado, porém, não autoriza extrapolar a conclusão para qualquer caso com `haversine_fallback`. Cada linha com fallback continua exigindo análise própria de porto, proveniência, fronteira e uso permitido antes de sustentar qualquer afirmação forte.
+
+As sensibilidades Manaus/Pecém e Rio Grande/Suape têm outra função: mostrar como a mudança de porto pode alterar a interpretação do cenário. Pecém e Suape podem ser discutidos como portos alternativos explicitamente rotulados, mas não validam silenciosamente Porto de Fortaleza ou Porto do Recife. Portanto, os casos-base Manaus/Fortaleza e Rio Grande/Recife permanecem dependentes de referências exatas para os portos selecionados, ou de decisão metodológica posterior igualmente rastreada.
+
+Mesmo quando uma sensibilidade apresenta menor custo modelado ou menor TTW CO2e operacional para a alternativa multimodal, essa direção não prova superioridade universal da cabotagem. O resultado continua condicionado à hipótese testada, à cadeia de portos, à distância marítima adotada e aos componentes incluídos. Além disso, custos permanecem estimativas modeladas, não fretes comerciais, e emissões permanecem operacionais TTW CO2e, não WTW nem LCA. As sensibilidades também não demonstram disponibilidade de serviço, viabilidade comercial, frequência de escala ou preço praticado no mercado.
 
 ### 6.5 Batch 002 como benchmark externo Gustavo/Costa
 
