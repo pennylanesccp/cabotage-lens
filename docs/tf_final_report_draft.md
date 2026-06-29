@@ -770,6 +770,73 @@ As fronteiras do TF continuam válidas nesta subseção. Custos permanecem estim
 
 Por esses motivos, o Batch 002 não cria um `headline_candidate`. O uso seguro no Capítulo 7 é registrar que há apoio externo de direção para os pares comparáveis, preservando a ressalva de que a magnitude ainda não está calibrada e que parte do workbook permaneceu fora da execução por critérios explícitos de comparabilidade.
 
+### 7.4 Resultados do rerun Supabase/cache
+
+O rerun Supabase/cache foi usado para testar uma hipótese limitada: se a instabilidade de provedor de rota, leitura de cache ou escrita de cache poderia explicar a lacuna de magnitude observada no Batch 002. A execução não teve o objetivo de recalibrar o modelo, substituir premissas nem validar magnitude absoluta. Seu papel é documentar a rastreabilidade computacional das distâncias rodoviárias usadas no benchmark externo Gustavo/Costa.
+
+No rerun, as distâncias rodoviárias vieram apenas de registros já armazenados em cache. A evidência consolidada registra leitura de cache funcional, sonda de escrita com rollback bem-sucedida antes da execução, 63 route-cache hits, 0 misses, 0 escritas de distância pelo provedor e 0 falhas de leitura/escrita. Esses hits cobrem as pernas rodoviárias do lote executado, mas devem ser lidos como evidência computacional de reutilização de dados, não como prova de disponibilidade comercial de rota, serviço, frequência, capacidade ou preço.
+
+| Métrica do rerun | Valor observado | Interpretação segura |
+| --- | ---: | --- |
+| Route-cache hits | 63 | Todas as pernas rodoviárias consultadas no rerun foram atendidas por cache. |
+| Route-cache misses | 0 | Nenhuma distância rodoviária exigiu nova chamada viva ao provedor. |
+| Escritas de distância pelo provedor | 0 | O rerun não gerou novas distâncias de provedor para o lote. |
+| Falhas de leitura/escrita do cache | 0 | Não há falha registrada de persistência no rerun. |
+| Linhas parseadas/executadas | 21 / 21 | Todos os pares OD positivos e suportados foram processados com sucesso. |
+| Células puladas antes da execução | 15 | 6 self-pairs e 9 linhas rodoviárias zero ou não positivas permaneceram fora da comparação. |
+| Mismatch rodoviário antes/depois | 201.0% / 150.5% -> 199.8% / 149.3% | A média/mediana mudou pouco; cache/provedor é improvável como causa principal da lacuna road-only. |
+| Mismatch multimodal antes/depois | 53.5% / 52.9% -> 60.8% / 63.7% | A média/mediana não melhorou materialmente; a lacuna permanece metodológica e de fronteira. |
+
+O resultado rodoviário agregado ficou praticamente estável entre a execução original e o rerun. A diferença média absoluta caiu de 201.0% para 199.8%, e a mediana caiu de 150.5% para 149.3%. Essa mudança pequena reduz a plausibilidade de que a lacuna road-only seja explicada principalmente por instabilidade de cache ou provedor, mas não valida a magnitude exata das emissões rodoviárias calculadas.
+
+No lado cabotagem/multimodal, o rerun também não resolveu o desvio em relação ao workbook. A diferença média absoluta aumentou de 53.5% para 60.8%, e a mediana aumentou de 52.9% para 63.7%. Portanto, o rerun preserva a conclusão de que o Batch 002 oferece apoio direcional, mas não reprodução calibrada do workbook nem reconciliação plena das premissas de distância, alocação, serviço, porto, port-ops/hoteling e fronteira ambiental.
+
+A interpretação segura é que os registros Supabase/cache fortalecem a rastreabilidade e a reprodutibilidade computacional do rerun. Eles não são dados de mercado, não provam disponibilidade operacional ou viabilidade comercial e não transformam custos modelados em fretes comerciais. As emissões continuam sendo CO2e operacional TTW, salvo indicação explícita em contrário, e não WTW ou LCA. Assim, nenhum resultado do rerun prova superioridade universal da cabotagem, valida escolhas comerciais de serviço ou cria um `headline_candidate`.
+
+### 7.5 Resultados da reconciliação rodoviária
+
+A reconciliação rodoviária foi executada como diagnóstico de alinhamento com o benchmark Gustavo/Costa, mantendo fixas as mesmas distâncias rodoviárias cacheadas do rerun Supabase/cache. A pergunta testada foi restrita: quanto da lacuna road-only seria reduzida se as premissas rodoviárias do workbook fossem aplicadas apenas ao cálculo diagnóstico das emissões rodoviárias? Esse procedimento não substitui o modelo rodoviário de linha de base do CabotageLens, não altera fórmulas da aplicação e não sobrescreve os resultados do Batch 002.
+
+O diagnóstico usou as premissas rastreadas `FDc = 0.28 L/km`, `FDe = 35.52 MJ/L` e `FDf = 86.5 gCO2eq/MJ`. A combinação documentada dessas premissas resulta no fator diagnóstico `0.8602944 kgCO2e/km`, aplicado às distâncias rodoviárias cacheadas já usadas no rerun. Como o próprio fator vem de uma fronteira de benchmark distinta, ele deve ser tratado como sensibilidade de alinhamento, não como fator operacional TTW substituto.
+
+| Métrica diagnóstica | Valor baseline/rerun | Valor diagnóstico | Interpretação segura |
+| --- | ---: | ---: | --- |
+| Fator aplicado | Modelo rodoviário baseline do CabotageLens | 0.8602944 kgCO2e/km | Fator Gustavo/Costa usado apenas para diagnóstico de alinhamento. |
+| Mismatch rodoviário médio absoluto | 199.8% | 43.9% | Redução material da lacuna road-only ao trocar apenas a premissa de fator rodoviário. |
+| Mismatch rodoviário mediano absoluto | 149.3% | 19.6% | A mediana também cai fortemente, indicando sensibilidade sistemática às premissas rodoviárias. |
+| Lacuna residual | Presente no rerun | Ainda presente | O diagnóstico reduz, mas não elimina, o desvio em relação ao workbook. |
+| Limite de interpretação | Linha de base operacional TTW | Sensibilidade de benchmark | Não é recalibração, validação de magnitude ou substituição do baseline. |
+
+O efeito numérico observado é expressivo. A diferença média absoluta do lado rodoviário caiu de 199.8% para 43.9%, enquanto a mediana caiu de 149.3% para 19.6%. Como as distâncias rodoviárias foram mantidas constantes, essa redução sustenta a leitura de que premissas de consumo de combustível e fator de emissão explicam grande parte da lacuna de magnitude road-only do Batch 002.
+
+Essa redução, entretanto, não resolve integralmente o mismatch. A evidência rastreada ainda registra lacunas residuais, atribuíveis a diferenças de base de distância rodoviária, construção de rota, premissas de veículo e carregamento, alocação por contêiner, fronteira WTW versus TTW/operacional e hipóteses internas do workbook que não foram completamente extraídas. Portanto, o resultado deve permanecer como evidência diagnóstica, não como validação calibrada de magnitudes.
+
+Também não se deve interpretar o diagnóstico como confirmação de que o workbook é verdade de referência. O workbook continua sendo uma camada externa de benchmark, útil para testar sensibilidade e coerência direcional, mas insuficiente para definir sozinho a fronteira correta do CabotageLens. O uso do fator Gustavo/Costa não autoriza misturar TTW, WTW, LCA, CO2 e CO2e como se fossem equivalentes, nem altera a leitura das emissões do relatório, que permanecem CO2e operacional TTW salvo indicação explícita em contrário.
+
+Por fim, a reconciliação rodoviária não altera a fronteira econômica nem operacional do trabalho. Custos continuam sendo estimativas modeladas, não fretes comerciais, tarifas ou cotações de mercado. O diagnóstico não prova disponibilidade de serviço, viabilidade comercial, execução operacional real ou superioridade universal da cabotagem, e não cria um `headline_candidate`. Sua contribuição no Capítulo 7 é registrar o efeito numérico observado de uma hipótese rodoviária específica; a discussão das implicações metodológicas permanece para o Capítulo 8.
+
+### 7.6 Síntese da interpretação numérica segura
+
+A leitura conjunta do Capítulo 7 permite uma conclusão numérica conservadora, mas útil. As sensibilidades executadas, o Batch 002, o rerun Supabase/cache e a reconciliação rodoviária apontam para uma direção metodológica coerente: sob as hipóteses nomeadas e dentro das fronteiras rastreadas, a alternativa multimodal tende a aparecer favorável em emissões frente ao rodoviário direto. Essa conclusão, porém, é direcional e metodológica, não uma validação calibrada, universal ou comercial.
+
+| Grupo de evidência | Observação numérica | Conclusão segura | O que não sustenta |
+| --- | --- | --- | --- |
+| Sensibilidades executadas | Três linhas executadas, todas classificadas como `sensitive`. | A direção modelada favorece o multimodal sob hipóteses nomeadas de distância ou porto alternativo. | Conclusões robustas de linha de base, validação do porto original ou viabilidade comercial. |
+| Batch 002 direcional | 21/21 pares OD positivos e suportados alinhados em direção, com 21 x `same_direction_large_gap`. | O benchmark externo apoia consistência direcional de emissões. | Reprodução exata do workbook, validação calibrada de magnitude ou workbook como verdade absoluta. |
+| Rerun Supabase/cache | 63 route-cache hits, 0 misses e distâncias rodoviárias cacheadas; mismatch rodoviário praticamente estável em 199.8% / 149.3%. | A instabilidade de cache/provedor é improvável como principal causa da lacuna road-only. | Validação de magnitude, disponibilidade comercial de rota ou prova de serviço contratado. |
+| Reconciliação rodoviária | Mismatch rodoviário médio/mediano reduzido de 199.8% / 149.3% para 43.9% / 19.6%. | Premissas rodoviárias explicam parte substancial da lacuna de magnitude road-only. | Recalibração do CabotageLens, substituição do baseline ou eliminação total do mismatch. |
+| Status final de resultado principal | 0 `headline_candidate`. | O uso seguro é apresentar evidência direcional, diagnóstica e condicionada. | Afirmação robusta de superioridade universal da cabotagem. |
+
+As sensibilidades do Batch 001B são importantes porque mostram comportamento do modelo sob hipóteses explícitas. Nos três cenários executados, o multimodal permanece menor em custo modelado e em CO2e operacional TTW, mas cada linha continua `sensitive`. Elas não validam automaticamente Santos/Manaus como linha de base robusta, não transformam Pecém em Porto de Fortaleza, não transformam Suape em Porto do Recife e não provam aceitação operacional por transportador.
+
+O Batch 002 amplia a evidência por meio de um benchmark externo, mas seu resultado seguro também é limitado. O alinhamento 21/21 indica que workbook e CabotageLens apontam a mesma direção modal para os pares comparáveis, enquanto a classificação `same_direction_large_gap` mantém visível que a magnitude ainda diverge. Portanto, o lote apoia consistência direcional, não calibração contra Gustavo/Costa, reprodução exata de rotas, validação de serviços ou confirmação de fretes.
+
+O rerun Supabase/cache e a reconciliação rodoviária ajudam a separar duas explicações. O rerun reduz a hipótese de que a lacuna road-only seja causada principalmente por instabilidade computacional de cache ou provedor. A reconciliação rodoviária, por sua vez, mostra que premissas de consumo e fator de emissão explicam muito da diferença de magnitude no lado rodoviário. Ainda assim, cache estável não valida magnitude, e fator diagnóstico não recalibra nem substitui o modelo de linha de base.
+
+Assim, a síntese numérica segura é que os resultados atuais sustentam uma interpretação direcional e metodológica: há evidência de comportamento favorável ao multimodal em cenários específicos e evidência de que parte relevante do desalinhamento com o benchmark decorre de premissas rodoviárias e fronteiras não reconciliadas. Não há evidência suficiente para promover qualquer caso a `headline_candidate`, declarar superioridade universal da cabotagem, provar disponibilidade de serviço, viabilidade comercial, aceitação por transportador, disponibilidade de slot ou frete contratado.
+
+As fronteiras materiais permanecem inalteradas ao fechar o capítulo. Custos são estimativas modeladas, não tarifas, cotações ou fretes comerciais. Emissões são CO2e operacional TTW, salvo indicação explícita em contrário. TTW, WTW, LCA, CO2 e CO2e não devem ser misturados sem reconciliação metodológica explícita. Com esses limites, o Capítulo 7 apresenta resultados numericamente úteis, mas preserva para o Capítulo 8 a discussão mais ampla sobre implicações, limitações e trabalho futuro.
+
 ## 8. Discussao
 
 Os resultados reforcam que o desempenho da cabotagem e especifico por corredor. Em corredores longos com acesso portuario coerente e distancia maritima documentada, a alternativa multimodal pode apresentar forte reducao modelada de consumo rodoviario, custo operacional e TTW CO2e. No entanto, esse comportamento depende da qualidade da distancia maritima, da escolha do porto, da disponibilidade real de servico e da fronteira de custo. A propria literatura de short sea shipping indica que a vantagem ambiental nao e automatica [shortsea2019] [modalshiftreview2020].
