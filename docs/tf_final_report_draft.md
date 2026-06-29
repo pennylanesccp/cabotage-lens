@@ -1101,6 +1101,30 @@ Essa limitação não reduz a utilidade do resultado. Pelo contrário, torna mai
 
 Por fim, a literatura de competitividade e de mudança modal deve ser usada com o mesmo cuidado. Estudos que discutem tarifas, frequência, confiabilidade ou estrutura de rede ajudam a explicar por que a decisão real é mais ampla do que o custo calculado, mas não substituem cotações reais nem transformam o CabotageLens em modelo comercial calibrado. No estado atual do TF, a afirmação segura é que os custos são estimativas modeladas, condicionadas à fronteira adotada; não são fretes comerciais, não provam viabilidade comercial e não demonstram superioridade econômica universal da cabotagem.
 
+### 9.4 Limitações operacionais: serviço, horários, terminais e super-rede
+
+A terceira limitação central do Capítulo 9 é operacional. O CabotageLens constrói cenários determinísticos e auditáveis para comparar uma alternativa rodoviária direta com uma alternativa rodoviário-cabotagem-rodoviário, mas não transforma esse encadeamento em plano operacional de transporte. A rota modelada é uma representação metodológica sob fronteiras explícitas; ela não prova que exista serviço disponível, agenda compatível, vaga de embarque, aceitação de carga ou execução comercial possível naquele corredor.
+
+Essa distinção é especialmente importante na interpretação da cadeia portuária. Um porto selecionado pelo modelo, ou forçado em um cenário de sensibilidade, funciona como nó de comparação dentro do experimento. Isso não equivale a validação de terminal, aceitação de carga, janela de operação, cutoff documental, disponibilidade de pátio, slot de navio ou viabilidade de booking. Portanto, uma cadeia de portos modelada não deve ser narrada como confirmação de que o terminal ou o operador aceitariam a operação real.
+
+A decisão efetiva de mudança modal depende de dimensões que ficam fora da fronteira operacional atual: frequência de serviço, horários, confiabilidade, tempo de espera, coordenação entre operadores, qualidade de atendimento, risco de atraso, capacidade disponível e integração entre trechos terrestres e marítimos. A literatura de competitividade e mudança modal ajuda a contextualizar por que esses fatores são decisivos [competitiveness2024] [modalshiftreview2020], mas não transforma o CabotageLens em validador de serviço, agenda ou operação.
+
+| Dimensão operacional | Tratamento no TF atual | Limitação |
+| --- | --- | --- |
+| Disponibilidade de serviço | Não consultada como condição operacional real. | Uma rota modelada não comprova linha de cabotagem disponível no corredor. |
+| Horários e frequência | Fora da fronteira de cálculo. | O modelo não confirma escalas, janelas, transit time contratado ou regularidade de serviço. |
+| Aceitação por terminal | Não validada no nível terminal-carga. | Uma cadeia portuária modelada não prova aceitação operacional, documental ou comercial. |
+| Slot e capacidade | Não modelados como restrição de oferta. | Resultado favorável não prova vaga, capacidade de navio, pátio ou booking disponível. |
+| Espera e confiabilidade | Reconhecidas como fatores relevantes, mas não estimadas como resultado. | O TF não calcula variabilidade, fila, risco de atraso ou nível de serviço. |
+| Super-rede multimodal | Não otimizada como rede nacional completa. | O modelo não resolve múltiplas linhas, operadores, transbordos, frequências e capacidades. |
+| Coordenação de operadores | Depende de evidência externa. | O uso prático exigiria consulta a armadores, terminais, agentes, transportadores ou operadores logísticos. |
+
+Também não se deve interpretar o protótipo como otimizador de uma super-rede nacional. O modelo atual compara cenários construídos e rastreáveis; ele não escolhe simultaneamente entre múltiplas linhas de cabotagem, operadores, portos alternativos, transbordos, frequências, restrições de capacidade e conexões terrestres. Uma super-rede completa exigiria outro nível de dados, formulação e validação, incluindo oferta real de serviço, restrições temporais e capacidade operacional.
+
+Essa limitação não invalida a comparação de cenários. Ela define o alcance correto da interpretação: o CabotageLens pode indicar como custo modelado e emissões operacionais TTW CO2e se comportam sob uma rota e uma fronteira declaradas, mas não substitui consulta a armador, terminal, agente de carga, transportador rodoviário, operador logístico ou autoridade portuária. A passagem de um resultado acadêmico favorável para uma decisão operacional exigiria validação externa de serviço, horário, terminal, capacidade, aceitação, preço e risco.
+
+Assim, a afirmação defensável para o TF é que o CabotageLens organiza uma comparação metodológica e auditável, não um plano logístico final. Uma rota favorável no modelo pode orientar investigação posterior, mas não confirma disponibilidade de serviço, aceitação por transportador, slot, booking, operação terminal ou viabilidade comercial. Essa fronteira preserva a utilidade do protótipo sem transformar resultados condicionais em prova operacional.
+
 ## 10. Conclusao
 
 O CabotageLens cumpre, no estado atual do projeto, uma funcao academica defensavel: fornece uma estrutura auditavel, reprodutivel e explicita em fronteiras para comparar transporte rodoviario direto e alternativas rodoviario-cabotagem-rodoviario em corredores brasileiros. A ferramenta organiza entradas, rotas, distancias, fontes, custos modelados, emissoes TTW CO2e e avisos de interpretacao em um fluxo coerente para analise de engenharia.
