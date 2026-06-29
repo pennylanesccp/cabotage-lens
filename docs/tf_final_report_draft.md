@@ -746,13 +746,29 @@ As linhas Manaus/Pecém e Rio Grande/Suape são sensibilidades de porto alternat
 
 Portanto, os valores desta subseção devem ser usados como resultados observados de sensibilidade: úteis para mostrar a direção do modelo sob hipóteses documentadas, mas insuficientes para afirmar superioridade universal da cabotagem, disponibilidade de serviço, viabilidade comercial ou validação plena do modelo. A discussão das implicações permanece reservada ao Capítulo 8.
 
-### 7.3 Interpretacao dos resultados
+### 7.3 Resultados do Batch 002
 
-O resultado mais importante nao e a existencia de tres linhas favoraveis ao multimodal, mas o modo como elas devem ser classificadas. Nos tres casos, o multimodal e menor em custo modelado e em TTW CO2e operacional. Porem, a evidencia ainda nao testou faixas completas de carga, consumo rodoviario, intensidade maritima, operacoes portuarias, hoteling, preco de combustivel e expansao de fronteira de custo.
+O Batch 002 apresenta o resultado observado do benchmark externo Gustavo/Costa. A função desta subseção é registrar o inventário e a classificação do lote, não discutir em profundidade as causas das diferenças de magnitude. O workbook é tratado como camada de benchmark, não como verdade de referência, e o resultado do CabotageLens não deve ser lido como reprodução exata do workbook.
 
-Portanto, o TF pode afirmar que as sensibilidades executadas sugerem potencial vantagem modelada em cenarios nomeados, mas deve evitar qualquer uma das seguintes leituras: cabotagem universalmente melhor; resultado robusto; validacao de Fortaleza por Pecem; validacao de Recife por Suape; custo modelado equivalente a frete comercial; TTW CO2e equivalente a WTW ou LCA.
+Foram parseadas 36 células da matriz do workbook. Desse conjunto, 21 pares OD positivos e suportados foram benchmarkados e executados com sucesso no CabotageLens. As 15 células restantes foram puladas antes da execução do modelo; esse grupo inclui 6 self-pairs e 9 linhas com valor rodoviário zero ou não positivo. Portanto, as células puladas não devem ser tratadas como falhas do modelo sem esse contexto de filtragem.
 
-O Batch 002 acrescenta outro tipo de resultado: evidencia externa de consistencia direcional. Nos 21 pares positivos suportados, o workbook Gustavo/Costa e o CabotageLens favorecem cabotagem/multimodal em emissoes quando comparados a road-only. A classificacao rastreada, porem, e `same_direction_large_gap` para todas as 21 linhas. Logo, o resultado e melhor descrito como apoio direcional com diferenca de magnitude, nao como reproducao exata ou validacao calibrada.
+| Métrica | Valor observado | Interpretação |
+| --- | ---: | --- |
+| Células da matriz do workbook parseadas | 36 | Inventário completo da matriz 6 x 6 lida para o benchmark. |
+| Pares OD positivos e suportados | 21 | Linhas elegíveis para comparação na base reportada do workbook. |
+| Execuções bem-sucedidas | 21 | Todos os pares positivos suportados foram processados. |
+| Células puladas antes da execução | 15 | 6 self-pairs e 9 linhas rodoviárias zero ou não positivas; não são falhas de execução. |
+| Alinhamento direcional | 21/21 | Workbook e CabotageLens indicam cabotagem/multimodal abaixo do rodoviário direto em emissões. |
+| Classificação atual | 21 x `same_direction_large_gap` | Há concordância de direção, mas lacuna material de magnitude. |
+| Validação de magnitude | 0 linhas plenamente calibradas | O lote não sustenta validação calibrada nem reprodução exata do workbook. |
+
+O resultado central do Batch 002 é a consistência direcional externa: nos 21 pares OD positivos e suportados, tanto o workbook quanto o CabotageLens indicam emissões menores para a alternativa de cabotagem/multimodal do que para o rodoviário direto. Essa concordância é útil para a apresentação de resultados, mas não valida as magnitudes exatas de emissões.
+
+A classificação rastreada de todas as 21 linhas é `same_direction_large_gap`. Assim, o lote deve ser apresentado como apoio direcional com lacuna de magnitude, não como calibração, reprodução exata, validação plena de rota ou validação de premissas internas do workbook. As diferenças de magnitude permanecem um resultado observado relevante e são retomadas como questão metodológica no Capítulo 8.
+
+As fronteiras do TF continuam válidas nesta subseção. Custos permanecem estimativas modeladas, não tarifas, cotações ou fretes comerciais. Emissões permanecem CO2e operacional TTW, salvo indicação explícita em contrário, e não devem ser misturadas com WTW ou LCA. O Batch 002 também não valida disponibilidade real de serviço, viabilidade comercial, frequência, capacidade, preço praticado ou superioridade universal da cabotagem.
+
+Por esses motivos, o Batch 002 não cria um `headline_candidate`. O uso seguro no Capítulo 7 é registrar que há apoio externo de direção para os pares comparáveis, preservando a ressalva de que a magnitude ainda não está calibrada e que parte do workbook permaneceu fora da execução por critérios explícitos de comparabilidade.
 
 ## 8. Discussao
 
