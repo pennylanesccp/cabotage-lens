@@ -95,7 +95,28 @@ Os resultados são interpretados por remessa. Normalizações por tonelada, TEU,
 | Alternativa rodoviária-cabotagem-rodoviária | Cadeia porta a porta com acesso rodoviário, perna marítima, componentes portuários quando habilitados e acesso final. | Não equivale a comparar apenas navio contra caminhão. |
 | Comparação entre alternativas | Avalia custo modelado e emissões operacionais para a mesma remessa. | Não define superioridade universal de um modo nem substitui análise comercial ou operacional. |
 
-### 4.2 Fronteiras metodológicas do estudo
+### 4.2 Fontes primárias de dados e insumos derivados
+
+A metodologia do CabotageLens combina fontes primárias, fontes externas, bases observadas, APIs de roteamento, fontes de mercado, fatores técnicos e hipóteses de modelagem. Esses elementos não entram no modelo com a mesma força evidenciária. Uma base observada histórica, um insumo processado a partir de literatura técnica, uma distância retornada por API e um preço de mercado volátil têm usos metodológicos diferentes e, por isso, devem preservar origem, artefato derivado e limite de interpretação.
+
+Esta seção identifica os principais insumos usados tanto pelo aplicativo em tempo de execução quanto pelos scripts de pré-processamento e cálculo em `calcs/` e `scripts/`. O objetivo não é afirmar que todos os dados são oficiais, completos ou atuais, mas explicitar de onde vêm os artefatos que sustentam rotas, custos, emissões, seleção de portos, operações portuárias, *hoteling* e validação posterior.
+
+| Fonte primária ou origem | Artefato ou dado derivado no projeto | Uso metodológico | Limite de interpretação |
+| --- | --- | --- | --- |
+| Portal ANTAQ e tabelas TXT da ANTAQ, especialmente `Atracacao`, `Carga` e `TemposAtracacao` quando aplicável. | Viagens observadas de cabotagem; tabelas de viagens, paradas e chamadas portuárias; evidência de rota e de escala portuária. | Reconstruir movimentos observados de cabotagem, apoiar evidência marítima por corredor e enriquecer pares ANTAQ/MRV quando há correspondência. | Base observada histórica; não prova disponibilidade atual de serviço, frequência, slot comercial, aceitação terminal ou viabilidade para todo cenário modelado. |
+| Planilhas de publicação EU MRV usadas por scripts em `calcs/` para múltiplos anos. | Classes de eficiência de navios porta-contêineres, artefatos de taxa de combustível em navegação, artefatos de taxa de *hoteling* e eficiência média por IMO quando aplicável. | Fornecer aproximações de eficiência marítima, parâmetros por classe de embarcação e apoio a casamento de rota/viagem por IMO quando disponível. | Fonte externa europeia; o perfil de frota e operação do MRV é proxy técnico e pode não representar integralmente a cabotagem brasileira. |
+| OpenRouteService como API de roteamento. | Distâncias rodoviárias modeladas, coordenadas/geocodificação e metadados do provedor de rota. | Calcular a rota rodoviária direta e as pernas terrestres de *pre-carriage* e *on-carriage*. | Rota modelada por API, não viagem GPS observada, rota contratual de frete nem prova de viabilidade operacional. |
+| LocationIQ, quando configurado como fonte externa de fallback. | Saídas alternativas de geocodificação ou roteamento na cadeia de provedores. | Resolver localizações ou rotas quando a cadeia principal não é suficiente ou não responde. | Mantém a limitação de rota modelada; o uso como fallback deve permanecer rastreável e não deve ser confundido com fonte primária preferencial. |
+| Ship & Bunker / preço de bunker em Santos. | Insumo processado de preço Santos VLSFO, persistido ou lido pelo projeto. | Alimentar o preço de combustível marítimo no custo modelado da alternativa multimodal. | Fonte de mercado volátil e sensível à data de acesso; Santos pode ser apenas proxy para operações costeiras brasileiras mais amplas. |
+| Fonte de preço de diesel rodoviário e CSV processado do repositório. | `latest_diesel_prices.csv` com consulta por UF usada pelo avaliador. | Fornecer preço de diesel para o proxy de custo de combustível rodoviário por UF de origem/destino. | Quando a fonte primária, data e método de extração não estiverem totalmente rastreados, deve ser tratado como CSV processado do repositório, não como dado oficial vivo; preços são voláteis e o custo permanece proxy operacional limitado. |
+| Referências de distância marítima e `sea matrix`/SeaMatrix. | `data/sea_matrix.json` e registros de distância/proveniência, incluindo `seamatrix`, `external_reference`, `manual_override` e `haversine_fallback`. | Definir distância porto-a-porto e, quando disponível, evidência direcional marítima para a perna de cabotagem. | A proveniência varia; distância documentada para o par exato é mais forte que fallback geométrico, e `haversine_fallback` é triagem, não rota marítima validada. |
+| Literatura técnica, planilha técnica local de Santos e referências rastreáveis usadas em artefatos de operações portuárias e *hoteling*. | Parâmetros de operação portuária, parâmetros de taxa de combustível em *hoteling* e hipóteses de manuseio/chamada portuária. | Incluir, quando habilitados, componentes opcionais de custo, combustível e emissões associados a terminal e permanência em porto. | Não são medições terminal-específicas completas nem inventário portuário local; devem ser tratados como fator técnico ou hipótese de modelagem conforme a rastreabilidade. |
+| Fontes e presets de caminhão, consumo de combustível e fatores de emissão. | Presets de caminhão, entradas do modelo de consumo rodoviário, tabela ANTT-informed quando rastreável e fatores de conversão combustível-CO2e implementados. | Estimar consumo rodoviário e emissões operacionais TTW CO2e das pernas terrestres. | Fonte, unidade, escopo de gases e fronteira TTW/WTW/LCA precisam permanecer explícitos; lacunas de rastreabilidade devem ser declaradas como tal, não ocultadas. |
+| Material de referência Gustavo/Costa, quando usado em artefatos de validação. | Pares origem-destino, rotas, fatores ou planilhas de benchmark usados em comparação metodológica posterior. | Contexto externo para validação e comparação em capítulos posteriores, sem substituir o caso-base do CabotageLens. | Não é fonte de execução normal da ferramenta, não é verdade absoluta, não comprova reprodução integral e não deve calibrar a linha de base sem decisão metodológica explícita. |
+
+As fontes primárias e os artefatos derivados listados acima não são equivalentes em robustez, cobertura ou atualidade. Por isso, cada resultado deve preservar a proveniência do insumo e ser interpretado conforme a força da fonte: base observada, API de roteamento, fonte de mercado, fator técnico, insumo processado ou hipótese de modelagem. Essa distinção explica por que os capítulos seguintes usam avisos de rota, rótulos de sensibilidade, categorias de benchmark e classificação conservadora de evidência antes de transformar resultados calculados em conclusões acadêmicas.
+
+### 4.3 Fronteiras metodológicas do estudo
 
 O CabotageLens é tratado neste TF como uma ferramenta de comparação metodológica entre alternativas de transporte. Sua função é tornar explícitas as premissas de rota, distância, carga, custo modelado, emissões operacionais e qualidade da evidência. A ferramenta não é apresentada como cotador de frete, otimizador comercial de rede, sistema de contratação logística ou validação de disponibilidade real de serviço.
 
@@ -115,7 +136,7 @@ Essas fronteiras também delimitam o uso das evidências externas. Literatura, r
 | Custo modelado | Estimativa dos componentes representados no cenário. | Frete comercial, tarifa contratada, cotação, margem, serviço real, disponibilidade de slot ou decisão de compra. |
 | Escopo operacional | Comparação de alternativas modeladas para uma remessa e um par origem-destino. | Otimização nacional de rede, grade de armador, cronograma, frequência, confiabilidade e viabilidade comercial. |
 
-### 4.3 Construção da alternativa rodoviária direta
+### 4.4 Construção da alternativa rodoviária direta
 
 A alternativa rodoviária direta representa o transporte da mesma remessa por uma perna rodoviária origem-destino. Ela funciona como a referência terrestre da comparação: a origem, o destino, a carga e a unidade funcional permanecem constantes, enquanto a cadeia logística é limitada ao deslocamento por caminhão.
 
@@ -140,7 +161,7 @@ Essa cadeia não introduz novo fator, coeficiente ou alteração de linha de bas
 | Emissões operacionais | Aplicam o fator implementado ao combustível estimado. | Não são WTW, LCA nem CO2-only sem alinhamento explícito. |
 | Custo modelado | Agrega os componentes representados na fronteira do cenário. | Não é frete comercial, tarifa, cotação ou preço contratado. |
 
-### 4.4 Construção da alternativa rodoviária-cabotagem-rodoviária
+### 4.5 Construção da alternativa rodoviária-cabotagem-rodoviária
 
 A alternativa rodoviária-cabotagem-rodoviária representa a mesma remessa organizada como uma cadeia porta a porta. A perna marítima não substitui sozinha a viagem rodoviária completa; ela é combinada com os acessos terrestres e, quando habilitados, com componentes operacionais associados aos portos.
 
@@ -165,7 +186,7 @@ A decomposição por perna é metodologicamente indispensável. O resultado agre
 | *On-carriage* | Liga o porto de destino ao destino final por rodovia. | Pode alterar substancialmente custo e emissões da alternativa. |
 | Alocação da carga | Atribui à remessa uma parcela dos componentes marítimos e operacionais. | Não deve ser confundida com a lógica interna de referências externas não alinhadas. |
 
-### 4.5 Seleção de portos e definição de cenários
+### 4.6 Seleção de portos e definição de cenários
 
 A seleção de portos transforma a unidade funcional em uma cadeia multimodal concreta. Para cada cenário, a origem, o destino e a carga permanecem os mesmos; o que muda é a forma de construir a alternativa multimodal, incluindo os portos escolhidos, as distâncias de acesso e a perna marítima.
 
@@ -183,7 +204,7 @@ Essa lógica não é uma otimização completa de super-rede multimodal. O méto
 
 Portos alternativos exigem disciplina de nomenclatura. Pecém não valida Porto de Fortaleza, e Suape não valida Porto do Recife. Mesmo quando o porto alternativo é logisticamente plausível para uma região, a mudança altera acessos rodoviários, terminal, distância marítima e interpretação do cenário. Por isso, a alternativa deve ser identificada como tal, sem conversão silenciosa em validação do porto originalmente selecionado.
 
-### 4.6 Proveniência das distâncias e hierarquia de confiança
+### 4.7 Proveniência das distâncias e hierarquia de confiança
 
 A distância é uma entrada metodológica comum às duas alternativas. Na alternativa rodoviária direta, ela define a perna origem-destino. Na alternativa multimodal, aparece no *pre-carriage*, na perna marítima e no *on-carriage*. Por isso, a confiança no resultado depende da proveniência de cada distância, não apenas do total agregado.
 
@@ -202,7 +223,7 @@ As distâncias marítimas exigem hierarquia própria. Uma distância de matriz o
 
 A hierarquia de proveniência afeta a classificação da evidência, mas não altera a fronteira ambiental ou econômica. Uma distância bem documentada melhora a rastreabilidade da rota; não prova disponibilidade real de serviço. Uma distância frágil, por outro lado, pode tornar inadequada uma conclusão numérica forte mesmo que o cálculo tenha sido executado corretamente.
 
-### 4.7 Cadeias conceituais de cálculo de emissões e custos
+### 4.8 Cadeias conceituais de cálculo de emissões e custos
 
 Os cálculos do CabotageLens devem ser lidos como cadeias conceituais auditáveis, não como caixas-pretas nem como ajustes de linha de base a partir de referências externas. Esta seção resume a ordem lógica dos cálculos sem introduzir novos fatores, coeficientes ou valores de referência.
 
@@ -237,7 +258,7 @@ A agregação deve preservar a distinção entre distância, consumo, custo e em
 | Alocação marítima | Regra que atribui à remessa uma parcela da operação marítima. | Não tratar a alocação como equivalência automática com referências externas. |
 | Comparação custo-emissões | Mantém `BRL` e CO2e como saídas distintas. | Não converter menor custo modelado em competitividade comercial universal. |
 
-### 4.8 Operações portuárias, hoteling e prevenção de dupla contagem
+### 4.9 Operações portuárias, hoteling e prevenção de dupla contagem
 
 As operações portuárias e o *hoteling* entram na metodologia apenas quando explicitamente modelados e habilitados no cenário. Eles não são uma camada automática de validação operacional; são componentes adicionais de custo e emissões dentro da mesma fronteira operacional definida para a comparação.
 
@@ -254,7 +275,7 @@ A regra metodológica central é evitar dupla contagem. Se a intensidade maríti
 
 Essa disciplina é suficiente para o Capítulo 4. Discussões sobre atualização de fatores, literatura específica de emissões em berço, dados de produtividade portuária ou ampliação da fronteira de porto pertencem às limitações e aos trabalhos futuros, salvo se uma etapa posterior do projeto alterar explicitamente a metodologia.
 
-### 4.9 Qualidade de rota, classificação de evidências e limites de uso
+### 4.10 Qualidade de rota, classificação de evidências e limites de uso
 
 A metodologia adota uma leitura conservadora da qualidade de rota e da força da evidência. Um resultado calculado não é automaticamente um resultado adequado para conclusão principal. Antes de interpretar uma linha, é necessário verificar se a cadeia representa uma alternativa comparável, se a distância tem proveniência suficiente, se os portos pertencem ao cenário declarado, se a fronteira de custo e emissões foi preservada e se há avisos que limitem o uso acadêmico do resultado.
 
