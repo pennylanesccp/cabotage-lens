@@ -333,24 +333,23 @@ Os portos podem ser selecionados automaticamente a partir dos pontos resolvidos,
 
 A perna marítima é obtida na matriz marítima. Quando existem valores de par ou estatísticas direcionais/corredor enriquecidas por ANTAQ/MRV, o sistema pode usar essas evidências e manter a proveniência da distância. Quando não há cobertura suficiente, a matriz pode recorrer a `haversine_fallback`, que funciona como estimativa de triagem. Casos `same-port`, distância marítima ausente, distância fraca por `fallback` e domínio dos acessos rodoviários geram avisos de qualidade que limitam o uso interpretativo do resultado.
 
-### 5.5 Fontes de dados e inventário de insumos computacionais
+### 5.5 Operacionalização computacional dos insumos metodológicos
 
-O CabotageLens depende de fontes externas, ativos processados e parâmetros internos. O objetivo da ferramenta não é esconder essa heterogeneidade, mas organizar cada fonte como parte da trilha de auditoria do cenário.
+Os insumos metodológicos definidos na Seção 4.2 são operacionalizados no protótipo por meio de componentes de software que resolvem, transformam, combinam e preservam metadados. Assim, este capítulo não redefine o inventário de fontes primárias; ele descreve como a aplicação usa esses insumos em tempo de execução e como os fluxos offline mantêm artefatos processados disponíveis para o modelo.
 
-| Dado/fonte | Mecanismo no CabotageLens | Usado para | Limitação principal |
+No fluxo de cenário, o programa primeiro tenta reaproveitar dados computacionais persistidos e depois aciona provedores externos quando necessário. No fluxo offline, scripts de atualização baixam, processam ou enriquecem insumos, gerando artefatos que serão lidos pelo runtime. Em ambos os casos, a função do software é preservar a trilha de auditoria: provedor usado, status de cache, origem do insumo processado, fallback aplicado, componente habilitado ou excluído e avisos de interpretação.
+
+| Componente computacional | Insumo metodológico usado | Transformação realizada pelo software | Metadado preservado |
 | --- | --- | --- | --- |
-| OpenRouteService | Provedor primário de geocodificação e roteamento terrestre. | Coordenadas, distâncias rodoviárias, perfil e metadados de rota. | Rota modelada por provedor, não GPS observado nem rota contratada. |
-| LocationIQ | Fallback configurável da fachada de provedores. | Geocodificação/roteamento quando a cadeia primária falha ou está indisponível. | Depende de token configurado e da cobertura do provedor. |
-| Supabase/Postgres | Banco durável para cache e registros. | Lugares resolvidos, rotas, cenários, resultados e materializações opcionais. | Melhora rastreabilidade, mas não valida magnitude ou mercado. |
-| Supabase Storage | Repositório opcional de ativos e logs. | Sincronização de dados processados e arquivamento quando configurado. | Não altera a qualidade metodológica do dado sincronizado. |
-| Tabelas TXT da ANTAQ | Download/refresh a partir do portal ANTAQ. | Reconstrução de viagens observadas de cabotagem. | Cobertura observada não prova serviço disponível para todo cenário. |
-| Dados MRV/eficiência de embarcação | Artefatos processados por IMO e classe de embarcação. | Intensidade marítima, eficiência por classe e enriquecimento direcional. | Só fortalece pares com correspondência e cobertura suficiente. |
-| Matriz marítima | Ativo local/enriquecido de distâncias e estatísticas de pares. | Distância da perna de cabotagem e proveniência marítima. | Pode cair em `haversine_fallback` quando falta referência forte. |
-| CSV processado de diesel por UF | Consulta local por UF com fallback/default. | Preço de diesel para pernas rodoviárias. | Não é crawler em tempo real nem frete completo. |
-| Ship & Bunker / preço Santos VLSFO | Scraper/leitor de preço persistido de bunker em Santos. | Preço de combustível marítimo usado como insumo de custo. | Preço de combustível, não tarifa marítima ou custo logístico total. |
-| Parâmetros de operações portuárias e *hoteling* | Artefatos de cenário e taxas por classe/componente. | Componentes opcionais de combustível, custo e CO2e em porto. | Aproximações condicionais, sensíveis à fronteira e à dupla contagem. |
+| Fachada de geocodificação e roteamento | OpenRouteService e LocationIQ como provedores de rota/localização. | Resolve coordenadas, normaliza respostas de provedor e constrói pernas rodoviárias quando não há reaproveitamento persistido. | Provedor, status de cache, perfil de rota, coordenadas, metadados retornados e eventuais falhas/fallbacks. |
+| Construtor de pernas rodoviárias | Distâncias terrestres modeladas, origem/destino resolvidos e configuração do cenário. | Aplica lógica cache-first e provider-second para rota direta, *pre-carriage* e *on-carriage*. | Chave de consulta, hit/miss de cache, distância, fonte computacional e avisos de rota modelada. |
+| Construtor da perna marítima | `sea matrix`, proveniência marítima e campos enriquecidos por ANTAQ/MRV quando disponíveis. | Resolve distância porto-a-porto, identifica proveniência, usa estatísticas direcionais quando cobertas e sinaliza `haversine_fallback` quando necessário. | Fonte da distância, flag de fallback, par de portos, cobertura ANTAQ/MRV e estatísticas de correspondência quando presentes. |
+| Resolvedor de insumos de custo | CSV processado de diesel por UF e entrada de bunker/Santos VLSFO associada a Ship & Bunker. | Converte entradas de preço em insumos de proxy de custo para pernas rodoviárias e marítimas. | UF consultada, fonte do preço, uso de default/fallback, data quando disponível e fronteira de custo modelado. |
+| Avaliador por perna | Presets de caminhão, parâmetros de embarcação, operações portuárias e *hoteling*. | Calcula combustível, proxy de custo e TTW CO2e por componente, agregando road-only e multimodal sem ocultar a decomposição. | Detalhes por perna, componentes incluídos/excluídos, modo de alocação, razão de exclusão e avisos de dupla contagem. |
+| Fluxo offline de atualização | Tabelas ANTAQ, planilhas MRV e artefatos locais de matriz/parâmetros. | Reprocessa viagens observadas, materializa tabelas, cruza eficiência por IMO e atualiza artefatos consumidos pelo runtime. | Ano, arquivo processado, resumo de cobertura, pares enriquecidos e limitações de correspondência. |
+| Camada de persistência e exportação | Rotas, lugares, cenários e resultados computados. | Reutiliza registros, evita chamadas externas repetidas, guarda resultados e produz saídas CSV/JSON quando o fluxo solicita. | Identificador persistido, cache hit/miss, registros armazenados, campos exportados e classificação/aviso associado. |
 
-Esse inventário mostra por que o resultado final deve carregar metadados. Uma mesma diferença de custo ou emissão pode mudar de interpretação se a distância marítima veio de matriz forte ou `fallback`, se o diesel veio de UF conhecida ou default, se o *hoteling* foi incluído ou excluído, ou se a perna marítima tem cobertura ANTAQ/MRV.
+Supabase/Postgres e Supabase Storage pertencem a essa última camada de infraestrutura. Eles armazenam ou sincronizam registros e artefatos processados, mas não são tratados como fonte primária dos dados metodológicos. A qualidade interpretativa continua dependente do insumo original, da transformação realizada e dos metadados preservados em cada etapa.
 
 ### 5.6 Cálculo por perna: combustível, proxy de custo operacional e emissões
 
