@@ -1,6 +1,6 @@
 ---
 name: emissions_calculation_auditor
-description: Numerical logic, unit conversions, system boundaries, and formula audits for maritime cabotage and road emissions calculations.
+description: Numerical logic, unit conversions, emissions species, system-boundary, baseline/sensitivity/benchmark/diagnostic classification, and formula audits for CabotageLens maritime cabotage and road emissions calculations.
 ---
 
 # Emissions Calculation Auditor Skill
@@ -29,7 +29,7 @@ The agent expects or must locate:
 4. **Perform Dimensional Analysis**: Trace units through every step of the equation to ensure the final output matches the expected physical dimension.
 5. **Verify Equitable Comparison**: Verify if the road and cabotage modes are evaluated over equivalent boundaries (including pre/on-carriage, terminal handling, and correct distance routing).
 6. **Classify Data Inputs**: Classify calculation inputs as *Observed/Measured Data*, *Literature Values*, *Project Assumptions*, or *Fallbacks/Approximations*.
-7. **Run Checklists**: Run through the audit checklists in Sections 5-9.
+7. **Run Checklists**: Run through the audit checklists in Sections 5-10.
 8. **Draft Findings & Recommendations**: Compile the audit findings, pointing out specific red flags, corrected equations, and recommended validation steps.
 
 ## 5. Unit and Dimensional Consistency Checklist
@@ -50,32 +50,46 @@ Verify the scope of the calculation boundary:
   - Road leg: Direct origin-to-destination road transit.
   - Cabotage leg: Pre-carriage road leg + port terminal operations (handling/gate) + maritime voyage leg (including maneuvering and hotelling at berths) + on-carriage road leg.
 
-## 7. Formula Review Checklist
+## 7. CabotageLens Current Emissions Guardrails
+- Current baseline report outputs are operational TTW $\text{CO}_{2\text{eq}}$ unless explicitly stated otherwise.
+- Do not combine operational TTW $\text{CO}_{2\text{eq}}$ outputs with WTW, LCA, $\text{CO}_2$-only, or other $\text{CO}_{2\text{eq}}$ boundaries without explicit reconciliation.
+- Road-factor reconciliation using `0.8602944 kgCO2e/km` is diagnostic benchmark alignment only.
+- Do not replace baseline road emissions with the diagnostic factor unless a task explicitly asks for a separate diagnostic scenario.
+- Batch 002 directional agreement does not validate exact emissions magnitude.
+- Route-cache stability does not validate commercial route availability or operational service availability.
+- Values from uploaded literature must not be inserted as coefficients unless the current methodology explicitly adopts them and tracks provenance.
+- If a number is not in tracked project artifacts, do not invent it and do not silently derive it.
+
+## 8. Formula Review Checklist
 Validate the mathematical logic of the equations:
 - [ ] **Energy-Efficiency Formula**: Ensure engine power, load factors (MCR%), speed, and specific fuel oil consumption (SFOC) are integrated correctly:
   $$\text{Fuel Consumption} = \text{Power (kW)} \times \text{Load Factor} \times \text{SFOC (g/kWh)} \times \text{Time (h)}$$
 - [ ] **Transport Allocations**: Ensure cargo weight is correctly allocated to emissions (e.g., TEU-based, weight-based, or volume-based allocations).
 - [ ] **Aggregation Bias**: Ensure that averages are weighted correctly (e.g., average emissions intensity must be weighted by cargo-work $\text{t}\cdot\text{km}$, not a simple average of trip intensities).
 
-## 8. Data Quality and Fallback Checklist
+## 9. Data Quality and Fallback Checklist
 Ensure parameters are handled rigorously:
 - [ ] **No Inventions**: Do not invent coefficients, emissions factors, fuel prices, vessel parameters, load factors, or engine parameters.
 - [ ] **No Arbitrary Guessing**: Do not "pick reasonable values" for missing variables. If a parameter is missing, explicitly flag it, search authoritative references, or treat it as a transparent, documented assumption/fallback.
 - [ ] **Observed vs. Fallback**: Check if default fallbacks are only applied when primary observed data is unavailable, and that the switch to fallback is logged or surfaced.
 
-## 9. Output Interpretation Checklist
+## 10. Output Interpretation Checklist
 Validate user-facing results and academic defensibility:
 - [ ] **Justified Precision**: Ensure display values are rounded appropriately to reflect input data uncertainty (e.g., do not display emissions down to the gram if distances or payloads are rough estimates).
 - [ ] **Data Loss & Filter Disclosures**: Ensure that any calculations omitting data (e.g., skipped routes, failed geocoding fallbacks, or unrepresentative outliers) explicitly disclose the data loss or filtering criteria.
+- [ ] **Emissions Species**: Does every substantive audit report whether the value is $\text{CO}_2$ or $\text{CO}_{2\text{eq}}$?
+- [ ] **Boundary Label**: Does it report whether the value is TTW, WTT, WTW, LCA, or another boundary?
+- [ ] **Result Role**: Does it classify the value as baseline, sensitivity, benchmark, diagnostic, or future-work context?
+- [ ] **Thesis Impact**: Does it state whether the finding affects Chapter 6/7/8/9 thesis claims?
 
-## 10. Red Flags / Things to Reject
+## 11. Red Flags / Things to Reject
 Reject the following methodological bugs:
 - **Interchangeable CO2/CO2eq**: Treating $\text{CO}_2$ emissions factors as representative of total $\text{CO}_{2\text{eq}}$ without greenhouse gas scaling.
 - **Unit Mismatch**: Adding or multiplying incompatible units (e.g., adding TTW $\text{CO}_2$ directly to WTW $\text{CO}_{2\text{eq}}$).
 - **Asymmetric Comparisons**: Comparing road transport WTW emissions with cabotage TTW emissions, or ignoring port terminal handling emissions in the multimodal chain.
 - **Incorrect Distance Bases**: Multiplying maritime emissions factors (which are based on nautical miles or sea routes) by straight-line (great-circle) distances without detour factors, or mixing them with road kilometer bases without conversion.
 
-## 11. Expected Outputs
+## 12. Expected Outputs
 Depending on the size of the task, the agent must produce:
 
 - **For Small Checks / Minor Edits**:
@@ -86,14 +100,15 @@ Depending on the size of the task, the agent must produce:
   2. **Unit Consistency Assessment**: A dimensional verification proof showing that the units balance correctly.
   3. **Assumptions & Data-Source Classification**: A table separating Observed, Literature, Project Assumptions, and Fallback parameters.
   4. **Boundary Definition**: Explicit statement of TTW/WTT/WTW (defining Tank-to-Wake/Well-to-Wake for maritime, and Tank-to-Wheel/Well-to-Wheel for road) and $\text{CO}_2$/$\text{CO}_{2\text{eq}}$ boundaries.
-  5. **Red Flags or Required Corrections**: Clear list of any detected calculation bugs or risks.
-  6. **Recommended Validation Steps**: Actionable testing or coding validation steps to verify the numerical outputs.
+  5. **Result Role Classification**: State whether each value is baseline, sensitivity, benchmark, diagnostic, or future-work context, and whether it affects Chapter 6/7/8/9 claims.
+  6. **Red Flags or Required Corrections**: Clear list of any detected calculation bugs or risks.
+  7. **Recommended Validation Steps**: Actionable testing or coding validation steps to verify the numerical outputs.
 
-## 12. Language Rule
+## 13. Language Rule
 - Match the user request and target artifact language.
 - For academic report text in this project, default to Portuguese unless the target file or user request is in English.
 - Technical variable names, formulas, code identifiers, and terminal/log metrics may remain in English.
 
-## 13. Non-Goals
+## 14. Non-Goals
 - Performing academic literature audits or writing introductory text (this is covered by the `academic_maritime_research` skill).
 - Modifying application UI components, database schemas, or styling files unless the user explicitly requests calculation logic implementation in those areas.

@@ -1,6 +1,6 @@
 ---
 name: academic_maritime_research
-description: Technical guidelines and academic validation workflow for writing, reviewing, or validating research content, methodologies, and calculations regarding maritime cabotage, modal shift, and emissions.
+description: Academic validation workflow for final TF report drafting/review, chapter-level validation, limitation writing, conservative result interpretation, and methodology/claim checks for CabotageLens maritime cabotage, modal shift, modeled costs, and emissions work.
 ---
 
 # Academic Maritime/Naval Engineering Research Support Skill
@@ -11,8 +11,10 @@ This skill provides a structured framework and rigorous step-by-step workflow fo
 ## 2. When to Use
 Trigger this skill when:
 - Reviewing, modifying, or drafting academic documents (e.g., reports, articles, LaTeX draft `docs/tf.tex`, draft markdown files, or methodology documentation).
+- Drafting or reviewing the final TF report, chapter-level validation text, limitation sections, conservative interpretation of results, or examiner-facing methodology explanations.
 - Reviewing or updating calculations, formulas, coefficients, or equations related to vessel emissions, fuel consumption, road-versus-sea comparisons, and port operations in the `cabotage-lens` project.
 - Evaluating literature reviews, citation maps, assumptions, or data reliability inventories related to maritime decarbonization or multimodal transport in Brazil.
+- Checking that claims, labels, citations, validation classes, and result interpretations match tracked repository artifacts.
 
 ## 3. Inputs Expected
 The agent expects or must locate:
@@ -30,7 +32,7 @@ The agent expects or must locate:
    - *Fallbacks/Approximations* (e.g., average auxiliary engine load when specific data is missing).
 3. **Dimensional & Equation Audit**: Before proposing any updates to text, equations, or code:
    - Perform a formal dimensional analysis (e.g., ensuring emissions values match units like $\text{g CO}_2\text{/t}\cdot\text{km}$ or $\text{kg CO}_{2\text{eq}}\text{/TEU}$).
-   - Explicitly define the system boundary: Well-to-Tank (WTT, representing fuel production), and the mode-dependent Tank-to-Wake (TTW for maritime) / Tank-to-Wheel (TTW for road) or Well-to-Wake (WTW for maritime) / Well-to-Wheel (WTW for road).
+   - Identify the boundary used by the target artifact. For the current TF final report, default to operational TTW $\text{CO}_{2\text{eq}}$ unless the artifact explicitly states another boundary. Treat WTW/LCA literature as context or future work unless the target artifact explicitly expands the boundary.
 4. **Consistency Verification**: Cross-reference any updated calculation or statement against the existing methodologies in the repository (e.g., in `modules/` or `docs/`). Ensure changes do not introduce structural contradictions.
 5. **Language Rule**: Match the target document language. For this project, academic report text is likely Portuguese unless the target file or user request is in English.
 6. **Drafting or Review**: Revise the target text or model description, ensuring academic tone (passive voice where appropriate, precise terms, clear limitations).
@@ -40,7 +42,7 @@ The agent expects or must locate:
 Validate all drafted or reviewed text against the following criteria:
 - [ ] **Data Category Separability**: Are observed/measured data, literature parameters, project-specific assumptions, and fallback values clearly distinguished?
 - [ ] **Methodological Defensibility**: If an examiner questions a parameter, is it traceable to an authoritative source or justified by an engineering model?
-- [ ] **Emission Classifications**: Are emissions clearly specified as $\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$ (greenhouse gases)? Are the boundaries (TTW: Tank-to-Wake for maritime / Tank-to-Wheel for road; WTT: Well-to-Tank; WTW: Well-to-Wake for maritime / Well-to-Wheel for road) explicitly defined?
+- [ ] **Emission Classifications**: Are emissions clearly specified as $\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$ (greenhouse gases)? Is the artifact boundary identified without mixing TTW, WTT, WTW, LCA, $\text{CO}_2$, and $\text{CO}_{2\text{eq}}$?
 - [ ] **Modal Comparison Defensibility**: Does the road vs. cabotage comparison use equitable system boundaries? (e.g., does it account for pre/post-carriage road legs, port handling emissions, and detours/circuity factors for maritime routes?)
 - [ ] **Dimensional Integrity**: Are all equations dimensionally consistent? Are all units explicitly stated next to every constant, variable, or result?
 - [ ] **Uncertainty & Limitations**: Are the model's limitations, data constraints, and assumptions explicitly disclosed?
@@ -58,30 +60,48 @@ Validate all drafted or reviewed text against the following criteria:
 - **Port Operations Integration**: Account for terminal-side activities (e.g., RTG - Rubber Tyred Gantry cranes, TT - Terminal Tractors) when calculating port leg emissions, separating them clearly from seagoing transport legs.
 - **Road Circuity and Maritime Detour Factors**: Explicitly state the route circuity factors (actual distance divided by great-circle distance) used for both road and sea transport.
 
-## 8. Skill Boundaries & Calculation Auditing
+## 8. CabotageLens Thesis Guardrails
+- The current final TF report uses operational TTW $\text{CO}_{2\text{eq}}$ unless explicitly stated otherwise.
+- Do not mix TTW, WTW, LCA, $\text{CO}_2$, and $\text{CO}_{2\text{eq}}$.
+- Costs are modeled estimates, not commercial freight rates, quotes, tariffs, or negotiated contracts.
+- Do not claim universal cabotage superiority or promote any current result to `headline_candidate`.
+- Do not claim commercial feasibility, service availability, carrier acceptance, terminal acceptance, slot availability, or contracted freight.
+- Batch 002 supports directional interpretation only; it is not calibrated magnitude validation.
+- `same_direction_large_gap` must remain visible and must not be softened.
+- The Gustavo/Costa workbook is a benchmark, not ground truth.
+- Road-factor reconciliation is diagnostic only; it does not recalibrate or replace the CabotageLens baseline model.
+- Sensitivity rows remain sensitivity results; they are not robust baseline conclusions.
+- Pecém does not validate Porto de Fortaleza; Suape does not validate Porto do Recife.
+- Same-port cases are limitation examples or exclusions, not normal cabotage performance.
+- Angra dos Reis container chain remains excluded.
+- Brasília/Salvador alternate-port case remains methodology-blocked unless tracked artifacts explicitly change that.
+- Batch 001 remains historical diagnostic evidence, not corrected final validation.
+
+## 9. Skill Boundaries & Calculation Auditing
 - **Conceptual & Academic Focus**: This skill focuses on reviewing calculation methodology, theoretical assumptions, and dimensional consistency at an academic/conceptual level.
 - **Detailed Auditing**: Detailed numerical code audits and database validation belong to a dedicated calculation-auditor workflow (when available) rather than this skill.
 
-## 9. Red Flags / Things to Reject
+## 10. Red Flags / Things to Reject
 - **Lumping CO2 and CO2eq**: Treating $\text{CO}_2$ and $\text{CO}_{2\text{eq}}$ as interchangeable terms.
-- **Undefined System Boundaries**: Discussing decarbonization or modal shift without defining whether the analysis covers only TTW (Tank-to-Wake for maritime / Tank-to-Wheel for road direct combustion) or full WTW (Well-to-Wake for maritime / Well-to-Wheel for road, which also includes WTT/Well-to-Tank fuel production).
+- **Undefined or Expanded System Boundaries**: Discussing decarbonization or modal shift without identifying the target artifact boundary, or importing WTW/LCA literature into a TTW report as if it were directly comparable.
 - **Asymmetric Comparisons**: Comparing door-to-door road transport against port-to-port maritime cabotage without accounting for road first/last mile and port operations.
 - **Undocumented Parameters**: Introducing new numeric parameters (e.g., cargo loading factors, fuel consumption rates) without an explicit literature citation or a clearly documented engineering derivation.
 - **Oversimplified Claims**: Making sweeping claims about maritime cabotage being "always cleaner" or "always cheaper" without showing sensitivity to routing distances, vessel payloads, or port delays.
 
-## 10. Expected Outputs
+## 11. Expected Outputs
 When a task is complete, the final response must contain:
-1. The revised text or calculation, formatted cleanly in LaTeX or Markdown.
+1. The revised text, chapter-level validation note, limitation wording, claim audit, or calculation, formatted cleanly in LaTeX or Markdown.
 2. For substantive academic, methodology, calculation, or literature-review tasks:
    - An **Academic Defensibility Statement** summarizing:
      - The assumptions invoked.
      - The categories of data used (Observed vs. Literature vs. Assumptions).
      - The specific citations/sources from `docs/references.bib` or project docs.
-     - The system boundary: TTW (Tank-to-Wake for maritime / Tank-to-Wheel for road), WTT (Well-to-Tank), or WTW (Well-to-Wake for maritime / Well-to-Wheel for road) and carbon species ($\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$).
+     - The target artifact boundary and carbon species; for the current TF final report, operational TTW $\text{CO}_{2\text{eq}}$ unless the artifact explicitly says otherwise.
+     - Whether claims match tracked artifacts and remain conservative for final report Chapters 6/7/8/9.
    - The results of the **Academic Validation Checklist**.
    (For simple edits, typo fixes, or small tasks, these statement and checklist steps are optional and can be omitted.)
 
-## 11. Non-Goals
+## 12. Non-Goals
 - Inventing or proposing hypothetical alternative fuels or ship designs that are not standard/practical for current Brazilian cabotage.
 - Proposing major changes to the Streamlit app's UI or backend code.
 - Rewriting the entire final report draft in a single step (work must be incremental and focused).
