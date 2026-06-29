@@ -54,7 +54,7 @@ The agent expects or must locate:
 
 ## 8. Calculation Integration Rules
 When backend data flows touch emissions, fuel, costs, routes, cabotage, port handling, or methodology:
-- **Preserve Methodology**: Do not alter, modify, or "cleanup" calculation formulas, coefficients, emissions factors, or vessel parameters unless explicitly requested.
+- **Preserve Methodology**: Do not alter, modify, or "cleanup" calculation formulas, coefficients, emissions factors, vessel parameters, or lifecycle boundary classifications (Well-to-Tank [WTT], Tank-to-Wake [TTW for maritime] / Tank-to-Wheel [TTW for road], and Well-to-Wake [WTW for maritime] / Well-to-Wheel [WTW for road]) unless explicitly requested.
 - **Preserve Units**: Maintain strict dimensional consistency and units across data transfer objects (DTOs), database columns, and API responses.
 - **Traceability**: Ensure that derived calculations stored in the database or sent over APIs keep a trace of their sources (e.g., references to specific emission factor datasets or papers).
 - **Separation of Concerns**: Clearly isolate data retrieval, transformation, calculation, and presentation layers. Calculations should take raw python types or structured dataclasses, and return typed calculation result objects.
