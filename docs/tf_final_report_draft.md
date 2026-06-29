@@ -1151,6 +1151,33 @@ Essa limitação de rota controla especialmente a leitura das sensibilidades. As
 
 Por fim, a construção de rota permanece separada da validação operacional e comercial. Mesmo uma distância marítima bem documentada ou uma sensibilidade coerente não prova disponibilidade de serviço, frequência, slot, aceitação terminal, aceite de transportador, booking ou frete contratado. A afirmação segura é metodológica: o CabotageLens torna visíveis as hipóteses de rota, distância e porto para que elas possam ser auditadas. Ele não converte, no estado atual, essas hipóteses em prova de operação real.
 
+### 9.6 Limitações de validação: sensibilidades, Batch 002 e reconciliação rodoviária
+
+A quinta limitação do Capítulo 9 está na força das evidências de validação disponíveis. O TF já possui uma camada de sensibilidade interna, um benchmark externo Gustavo/Costa, um rerun com Supabase/cache e uma reconciliação rodoviária diagnóstica. Esses elementos melhoram a rastreabilidade da defesa, mas não têm o mesmo papel metodológico que uma calibração completa contra dados observados. A leitura correta é classificada: sensibilidade permanece sensibilidade, benchmark permanece benchmark, diagnóstico permanece diagnóstico e baseline permanece baseline.
+
+As linhas de sensibilidade do Batch 001B mostram comportamento do modelo sob hipóteses documentadas de distância marítima ou porto alternativo. Elas são úteis porque testam se a direção do resultado muda quando uma premissa rastreada é alterada. Contudo, essas linhas não são conclusões robustas de baseline, não validam os portos originalmente selecionados e não podem ser promovidas a `headline_candidate`. Seu papel é apoiar discussão de sensibilidade, não substituir validação de rota, custo, emissões ou serviço.
+
+O Batch 002 acrescenta uma camada externa importante, mas limitada. O workbook Gustavo/Costa é um benchmark, não uma verdade de referência. O fato de o benchmark e o CabotageLens apontarem na mesma direção para as linhas comparáveis sustenta interpretação direcional de emissões, mas acordo direcional não é validação calibrada de magnitude. Após o rerun rastreado, todas as linhas comparáveis do Batch 002 permanecem classificadas como `same_direction_large_gap`; essa etiqueta deve continuar visível porque ela comunica exatamente a lacuna entre direção e magnitude.
+
+| Camada de validação | O que sustenta | Limitação de validação |
+| --- | --- | --- |
+| Sensibilidades Batch 001B | Comportamento do modelo sob hipóteses documentadas. | Não são baseline robusto nem `headline_candidate`. |
+| Benchmark direcional Batch 002 | Apoio externo à direção modal das emissões em linhas comparáveis. | Não valida magnitude exata, serviço, rota, preço, frete ou viabilidade comercial. |
+| `same_direction_large_gap` | Transparência sobre acordo direcional com lacuna de magnitude. | Não deve ser suavizado como calibração ou reprodução exata. |
+| Rerun Supabase/cache | Estabilidade computacional da camada de cache/rota no benchmark. | Não valida disponibilidade operacional, disponibilidade comercial ou magnitude calibrada. |
+| Reconciliação rodoviária | Diagnóstico de alinhamento para premissas rodoviárias. | Não substitui o modelo rodoviário de linha de base e não recalibra o aplicativo. |
+| Lacuna residual | Evidência de que diferenças metodológicas permanecem. | O mismatch não está totalmente resolvido e não deve ser tratado como fechado. |
+
+As células puladas do workbook também precisam de interpretação cautelosa. Linhas não comparáveis, pares sem valor útil ou casos fora do escopo de comparação não devem ser transformados automaticamente em falha do modelo. Elas indicam limites de comparabilidade entre artefatos, especialmente quando a estrutura interna do workbook, as premissas de rota, a alocação por contêiner, os serviços assumidos e a fronteira de emissões não foram totalmente reconstruídos.
+
+O rerun Supabase/cache tem uma função diferente. Ele reduz a hipótese de que a lacuna de magnitude do Batch 002 seja explicada principalmente por instabilidade de provedor, leitura de cache ou escrita de rota. Isso melhora a confiança na reprodutibilidade computacional do benchmark, mas não valida rota comercial, disponibilidade de serviço, terminal, agenda, slot, frete, preço ou aceitação por operador. Estabilidade de cache é evidência de execução, não evidência operacional ou comercial.
+
+A reconciliação rodoviária com `0.8602944 kgCO2e/km` deve permanecer ainda mais claramente separada da linha de base. Esse valor é usado como fator diagnóstico de alinhamento com o benchmark externo e ajuda a explicar uma parte relevante do mismatch rodoviário. Ele não substitui o modelo rodoviário operacional TTW CO2e do CabotageLens, não recalibra o aplicativo, não altera os resultados de baseline e não autoriza misturar TTW, WTW, LCA, CO2 e CO2e. Se for citado, deve ser identificado como diagnóstico, não como novo coeficiente de linha de base.
+
+Mesmo depois da reconciliação, permanece mismatch residual. Essa lacuna pode estar associada a distância rodoviária, construção de rota, veículo, carregamento, alocação por contêiner, escolhas de porto e serviço, tratamento de operações portuárias e diferenças de fronteira ambiental entre TTW, WTW, LCA, CO2 e CO2e. Portanto, a reconciliação melhora a explicação da diferença, mas não fecha a validação. Ela torna a limitação mais inteligível, não resolvida.
+
+Por consequência, a validação atual sustenta uma conclusão acadêmica conservadora: o CabotageLens é auditável, reproduzível em suas trilhas de execução e coerente para comparação de cenários sob fronteiras explícitas. Ela não sustenta que o modelo esteja calibrado contra Gustavo/Costa, que o workbook seja uma verdade de referência, que o Batch 002 valide magnitudes exatas ou que custos modelados sejam fretes comerciais. A contribuição permanece metodológica e diagnóstica, com emissões operacionais TTW CO2e e custos como estimativas modeladas, até que uma futura camada de validação expanda explicitamente dados, fronteiras e evidências.
+
 ## 10. Conclusao
 
 O CabotageLens cumpre, no estado atual do projeto, uma funcao academica defensavel: fornece uma estrutura auditavel, reprodutivel e explicita em fronteiras para comparar transporte rodoviario direto e alternativas rodoviario-cabotagem-rodoviario em corredores brasileiros. A ferramenta organiza entradas, rotas, distancias, fontes, custos modelados, emissoes TTW CO2e e avisos de interpretacao em um fluxo coerente para analise de engenharia.
