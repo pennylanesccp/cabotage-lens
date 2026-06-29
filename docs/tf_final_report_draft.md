@@ -522,7 +522,29 @@ Consequentemente, os estudos de caso do Capítulo 6 devem herdar essas limitaç�
 
 ## 6. Estudos de caso e validacao
 
-### 6.1 Batch 001 como diagnostico historico
+### 6.1 Estratégia de validação e classificação de evidências
+
+A validação adotada neste TF não é tratada como um resultado binário de aprovação ou reprovação do modelo. Ela é uma estratégia em camadas para classificar evidências, preservar rastreabilidade e controlar a força das afirmações feitas a partir de cada linha. O objetivo é avaliar plausibilidade, consistência, proveniência, estabilidade computacional e disciplina de fronteira, sem transformar automaticamente uma execução numérica em validação operacional ou comercial.
+
+Essa abordagem é necessária porque as saídas do CabotageLens combinam distâncias modeladas, seleção de portos, fontes marítimas de qualidade desigual, parâmetros de custo e emissões e evidências externas com fronteiras nem sempre equivalentes. Um resultado executado, portanto, não é automaticamente um resultado válido para conclusão principal. A classificação define se a linha pode ser usada como diagnóstico histórico, sensibilidade, limitação, exclusão, bloqueio metodológico, lacuna de referência ou apoio direcional de benchmark.
+
+| Camada de evidência | Papel no Capítulo 6 | Interpretação segura |
+| --- | --- | --- |
+| Batch 001 histórico | Preserva a primeira camada diagnóstica de casos OD. | Evidência histórica e motivação para correções; não resultado final validado. |
+| Batch 001B metodológico | Classifica decisões, exclusões, bloqueios, lacunas de referência, avisos e sensibilidades. | Camada de auditabilidade que controla o uso permitido de cada caso. |
+| Sensibilidades executadas | Testa hipóteses documentadas sob portos, distâncias ou referências específicas. | Discussão condicional; não conclusão robusta nem `headline_candidate`. |
+| Batch 002 externo | Compara o modelo com o workbook Gustavo/Costa. | Apoio direcional de benchmark; não validação calibrada de magnitude. |
+| Rerun Supabase/cache | Verifica se instabilidade de provedor/cache explica a lacuna rodoviária. | Evidência de estabilidade computacional; não prova operacional ou comercial. |
+| Reconciliação rodoviária | Testa premissas rodoviárias como explicação diagnóstica da lacuna road-only. | Explica parte do desalinhamento; não recalibra nem substitui a linha de base. |
+| Classificação final de uso | Define o que cada linha pode sustentar no TF. | Controle de afirmação que deve ser herdado pelo Capítulo 7. |
+
+O Batch 001 é mantido como evidência histórica diagnóstica. O Batch 001B acrescenta a camada de decisão metodológica que separa casos excluídos, bloqueados, `reference_needed`, `record_only_warning` e `sensitivity_only` ou `sensitive`. As sensibilidades executadas ajudam a discutir comportamento do modelo sob hipóteses explícitas, mas não são resultados de linha de base e não devem ser promovidas a conclusões principais robustas.
+
+O Batch 002 acrescenta um benchmark externo, mas o workbook Gustavo/Costa é tratado como referência comparativa, não como verdade de referência. A concordância em direção entre benchmark e CabotageLens não implica validação calibrada de magnitude. Do mesmo modo, o rerun Supabase/cache testa estabilidade de processo, enquanto a reconciliação de fator rodoviário é um diagnóstico para explicar parte da lacuna road-only; esse diagnóstico não atualiza, recalibra nem substitui o modelo de linha de base do CabotageLens.
+
+As classificações também preservam as fronteiras substantivas do trabalho. Nenhuma classificação prova disponibilidade de serviço, aceitação por transportador, disponibilidade de slot, viabilidade comercial, frete contratado ou execução operacional real. Custos continuam sendo estimativas modeladas, não fretes comerciais, e emissões continuam sendo operacionais TTW CO2e, salvo indicação explícita em contrário. No estado atual dos artefatos rastreados, nenhum resultado deve ser promovido a `headline_candidate` sem suporte explícito adicional.
+
+### 6.2 Batch 001 como diagnóstico histórico
 
 O Batch 001 foi a primeira camada historica de avaliacao dos casos de validacao. Ele preserva resultados numericos para cinco pares origem-destino, mas todos os casos ficaram associados a necessidade de referencia ou revisao posterior. A principal limitacao diagnosticada foi o uso de distancias maritimas `haversine_fallback` em casos onde a distancia de navegacao e a plausibilidade de servico exigem evidencia mais forte.
 
@@ -537,12 +559,6 @@ Os cinco casos historicos foram:
 | `TF-VAL-005` | Porto Alegre, RS -> Recife, PE | Rio Grande -> Recife | Diagnostico historico; referencia exata de Recife permanece faltante. |
 
 Essas linhas nao devem ser tratadas como resultados corrigidos. Elas sao importantes porque mostram onde a metodologia precisava separar fallback, selecao de porto, sensibilidade e exclusao.
-
-### 6.2 Batch 001B como camada de auditabilidade
-
-O Batch 001B nao executou novos modelos para todos os casos. Ele reorganizou a evidencia em uma camada de auditabilidade, preservando portos selecionados ou forcados, fonte de distancia maritima, unidade, conversao, status metodologico e uso permitido no TF. O resultado foi uma matriz de decisoes que separa casos executaveis, sensiveis, bloqueados, excluidos e apenas registrados.
-
-Nenhum caso Batch 001B planejado foi classificado como pronto para conclusao principal. O principal ganho foi metodologico: o trabalho passou a registrar de forma explicita por que uma linha nao deve ser executada, por que uma referencia proxima nao substitui o porto selecionado e por que uma sensibilidade nao e uma linha de base validada.
 
 ### 6.3 Batch 001B como camada de decisão metodológica
 
