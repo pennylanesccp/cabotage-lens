@@ -30,7 +30,7 @@ The agent expects or must locate:
    - *Fallbacks/Approximations* (e.g., average auxiliary engine load when specific data is missing).
 3. **Dimensional & Equation Audit**: Before proposing any updates to text, equations, or code:
    - Perform a formal dimensional analysis (e.g., ensuring emissions values match units like $\text{g CO}_2\text{/t}\cdot\text{km}$ or $\text{kg CO}_{2\text{eq}}\text{/TEU}$).
-   - Explicitly define the system boundary: Tank-to-Wheel (TTW), Well-to-Tank (WTT), or Well-to-Wheel (WTW).
+   - Explicitly define the system boundary: Well-to-Tank (WTT, representing fuel production), and the mode-dependent Tank-to-Wake (TTW for maritime) / Tank-to-Wheel (TTW for road) or Well-to-Wake (WTW for maritime) / Well-to-Wheel (WTW for road).
 4. **Consistency Verification**: Cross-reference any updated calculation or statement against the existing methodologies in the repository (e.g., in `modules/` or `docs/`). Ensure changes do not introduce structural contradictions.
 5. **Language Rule**: Match the target document language. For this project, academic report text is likely Portuguese unless the target file or user request is in English.
 6. **Drafting or Review**: Revise the target text or model description, ensuring academic tone (passive voice where appropriate, precise terms, clear limitations).
@@ -40,7 +40,7 @@ The agent expects or must locate:
 Validate all drafted or reviewed text against the following criteria:
 - [ ] **Data Category Separability**: Are observed/measured data, literature parameters, project-specific assumptions, and fallback values clearly distinguished?
 - [ ] **Methodological Defensibility**: If an examiner questions a parameter, is it traceable to an authoritative source or justified by an engineering model?
-- [ ] **Emission Classifications**: Are emissions clearly specified as $\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$ (greenhouse gases)? Are the boundaries (TTW, WTT, WTW) explicitly defined?
+- [ ] **Emission Classifications**: Are emissions clearly specified as $\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$ (greenhouse gases)? Are the boundaries (TTW: Tank-to-Wake for maritime / Tank-to-Wheel for road; WTT: Well-to-Tank; WTW: Well-to-Wake for maritime / Well-to-Wheel for road) explicitly defined?
 - [ ] **Modal Comparison Defensibility**: Does the road vs. cabotage comparison use equitable system boundaries? (e.g., does it account for pre/post-carriage road legs, port handling emissions, and detours/circuity factors for maritime routes?)
 - [ ] **Dimensional Integrity**: Are all equations dimensionally consistent? Are all units explicitly stated next to every constant, variable, or result?
 - [ ] **Uncertainty & Limitations**: Are the model's limitations, data constraints, and assumptions explicitly disclosed?
@@ -64,7 +64,7 @@ Validate all drafted or reviewed text against the following criteria:
 
 ## 9. Red Flags / Things to Reject
 - **Lumping CO2 and CO2eq**: Treating $\text{CO}_2$ and $\text{CO}_{2\text{eq}}$ as interchangeable terms.
-- **Undefined System Boundaries**: Discussing decarbonization or modal shift without defining whether the analysis covers only TTW (direct combustion) or full WTW (including fuel production/transportation).
+- **Undefined System Boundaries**: Discussing decarbonization or modal shift without defining whether the analysis covers only TTW (Tank-to-Wake for maritime / Tank-to-Wheel for road direct combustion) or full WTW (Well-to-Wake for maritime / Well-to-Wheel for road, which also includes WTT/Well-to-Tank fuel production).
 - **Asymmetric Comparisons**: Comparing door-to-door road transport against port-to-port maritime cabotage without accounting for road first/last mile and port operations.
 - **Undocumented Parameters**: Introducing new numeric parameters (e.g., cargo loading factors, fuel consumption rates) without an explicit literature citation or a clearly documented engineering derivation.
 - **Oversimplified Claims**: Making sweeping claims about maritime cabotage being "always cleaner" or "always cheaper" without showing sensitivity to routing distances, vessel payloads, or port delays.
@@ -77,7 +77,7 @@ When a task is complete, the final response must contain:
      - The assumptions invoked.
      - The categories of data used (Observed vs. Literature vs. Assumptions).
      - The specific citations/sources from `docs/references.bib` or project docs.
-     - The system boundary (TTW/WTT/WTW) and carbon species ($\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$).
+     - The system boundary: TTW (Tank-to-Wake for maritime / Tank-to-Wheel for road), WTT (Well-to-Tank), or WTW (Well-to-Wake for maritime / Well-to-Wheel for road) and carbon species ($\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$).
    - The results of the **Academic Validation Checklist**.
    (For simple edits, typo fixes, or small tasks, these statement and checklist steps are optional and can be omitted.)
 

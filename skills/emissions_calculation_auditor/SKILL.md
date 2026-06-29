@@ -24,7 +24,7 @@ The agent expects or must locate:
 
 ## 4. Step-by-Step Audit Workflow
 1. **Locate and Extract**: Identify the code or document sections containing the calculations, constants, and unit conversions.
-2. **Determine Boundaries**: Identify the greenhouse gases covered ($\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$) and lifecycle boundaries (Tank-to-Wheel (TTW), Well-to-Tank (WTT), or Well-to-Wheel (WTW)).
+2. **Determine Boundaries**: Identify the greenhouse gases covered ($\text{CO}_2$ vs. $\text{CO}_{2\text{eq}}$) and lifecycle boundaries: Well-to-Tank (WTT), Tank-to-Wake (TTW for maritime) / Tank-to-Wheel (TTW for road), or Well-to-Wake (WTW for maritime) / Well-to-Wheel (WTW for road).
 3. **Trace Conversion Factors**: Audit every conversion factor (e.g., density, specific gravity, energy density, emissions factor per fuel unit).
 4. **Perform Dimensional Analysis**: Trace units through every step of the equation to ensure the final output matches the expected physical dimension.
 5. **Verify Equitable Comparison**: Verify if the road and cabotage modes are evaluated over equivalent boundaries (including pre/on-carriage, terminal handling, and correct distance routing).
@@ -44,7 +44,7 @@ Verify the following unit mappings and conversions:
 
 ## 6. Emissions Boundary Checklist
 Verify the scope of the calculation boundary:
-- [ ] **Lifecycle Boundaries**: Is the distinction between TTW (direct combustion), WTT (fuel extraction, refining, transport), and WTW (sum of TTW and WTT) maintained correctly in formulas and labels?
+- [ ] **Lifecycle Boundaries**: Is the distinction between TTW (direct combustion: Tank-to-Wake for maritime, Tank-to-Wheel for road), WTT (Well-to-Tank fuel extraction/refining/transport), and WTW (sum of TTW and WTT: Well-to-Wake for maritime, Well-to-Wheel for road) maintained correctly in formulas and labels?
 - [ ] **Carbon Species**: Are $\text{CO}_2$-only factors clearly separated from $\text{CO}_{2\text{eq}}$ factors (which include $\text{CH}_4$, $\text{N}_2\text{O}$, etc., based on GWP horizons)?
 - [ ] **Equivalent Scope**: When comparing road and cabotage, are all relevant legs accounted for?
   - Road leg: Direct origin-to-destination road transit.
@@ -85,7 +85,7 @@ Depending on the size of the task, the agent must produce:
   1. **Audited Formula/Calculation Summary**: A mathematical summary of the audited equations and variables.
   2. **Unit Consistency Assessment**: A dimensional verification proof showing that the units balance correctly.
   3. **Assumptions & Data-Source Classification**: A table separating Observed, Literature, Project Assumptions, and Fallback parameters.
-  4. **Boundary Definition**: Explicit statement of TTW/WTT/WTW and $\text{CO}_2$/$\text{CO}_{2\text{eq}}$ boundaries.
+  4. **Boundary Definition**: Explicit statement of TTW/WTT/WTW (defining Tank-to-Wake/Well-to-Wake for maritime, and Tank-to-Wheel/Well-to-Wheel for road) and $\text{CO}_2$/$\text{CO}_{2\text{eq}}$ boundaries.
   5. **Red Flags or Required Corrections**: Clear list of any detected calculation bugs or risks.
   6. **Recommended Validation Steps**: Actionable testing or coding validation steps to verify the numerical outputs.
 

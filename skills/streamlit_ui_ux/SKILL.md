@@ -44,13 +44,13 @@ The agent expects or must locate:
 - **Streamlit Version Compliance**: Write code compatible with Streamlit Community Cloud.
 - **API Guidelines**:
   - Prefer current Streamlit APIs over deprecated functions.
-  - Do not use the deprecated parameter `use_container_width`. Instead, use `width` (set to `"stretch"` where supported) or modern container controls.
+  - When handling parameters like `use_container_width`, do not apply a blanket automatic replacement. Future agents must inspect the project's pinned Streamlit version (e.g. in `requirements.txt`) and specific API documentation before replacing deprecated parameters. Prefer modern Streamlit APIs, such as setting `width="stretch"` where supported, ensuring compatibility is not broken.
 - **Session State Hygiene**: Preserve user inputs across page reruns by caching keys and setting explicit default state objects when necessary.
 - **Performance Caching**: Ensure expensive operations (e.g., route fetching, file parsing) are cached so that normal page interactions do not trigger sluggish page runs.
 
 ## 8. Academic Transparency Rules
 - **Expose Assumptions**: Ensure that pre-carriage, on-carriage, port delays, vessel hotelling load factors, cargo handling, and routing detours are disclosed clearly in the UI.
-- **Explicit Boundaries**: Clearly state the emission boundaries: Tank-to-Wheel (TTW), Well-to-Tank (WTT), or Well-to-Wheel (WTW). Never lump these together.
+- **Explicit Boundaries**: Clearly state the emission boundaries: Well-to-Tank (WTT), Tank-to-Wake (TTW for maritime) / Tank-to-Wheel (TTW for road), or Well-to-Wake (WTW for maritime) / Well-to-Wheel (WTW for road). Never lump these together.
 - **Species Clarity**: Distinguish clearly between $\text{CO}_2$ (carbon dioxide) and $\text{CO}_{2\text{eq}}$ (greenhouse gases including methane, etc.).
 - **Uncertainty & Fallbacks**: If default fallbacks (e.g., routing approximations or default fuel constants) are active due to missing inputs, display an warning banner or text (e.g., `st.warning`) explaining the approximation.
 
@@ -79,8 +79,8 @@ The agent expects or must locate:
 ## 14. Validation Checklist
 Verify the UI changes against the following:
 - [ ] **Labels with Units**: Are all output labels, table columns, metric cards, and charts annotated with correct units?
-- [ ] **Boundary Clarifications**: Are the emissions scopes (TTW/WTT/WTW) and carbon species ($\text{CO}_2/\text{CO}_{2\text{eq}}$) explicitly stated?
-- [ ] **Streamlit Cloud Ready**: Is the page free of unsupported libraries or deprecated API parameters (like `use_container_width`)?
+- [ ] **Boundary Clarifications**: Are the emissions scopes (TTW/WTT/WTW, using Tank-to-Wake/Well-to-Wake for maritime and Tank-to-Wheel/Well-to-Wheel for road) and carbon species ($\text{CO}_2/\text{CO}_{2\text{eq}}$) explicitly stated?
+- [ ] **Streamlit Cloud Ready**: Is the page free of unsupported libraries, and are any Streamlit API parameter updates (e.g. `use_container_width` vs. `width="stretch"`) verified against the pinned Streamlit version in `requirements.txt`?
 - [ ] **Empty States**: Does the app show clean instructions if inputs are missing?
 - [ ] **Error Boundaries**: Are network failures caught and surfaced as friendly banners rather than traceback screens?
 - [ ] **Responsiveness**: Do layout grids and columns render cleanly on standard desktop and mobile viewports?
@@ -109,7 +109,7 @@ Depending on the size of the task, the agent must produce:
 ## 17. Language Rule
 - Match the user request language.
 - User-facing app text (labels, warnings, text fields, UI buttons) should default to Portuguese unless the surrounding app page is explicitly designed in English.
-- Standard technical abbreviations (e.g., $\text{CO}_2$, $\text{CO}_{2\text{eq}}$, $\text{TTW}$, $\text{WTT}$, $\text{WTW}$, $\text{TEU}$, $\text{t}\cdot\text{km}$) can remain in their standard forms but must be explained in tooltips or legend notes when context warrants.
+- Standard technical abbreviations (e.g., $\text{CO}_2$, $\text{CO}_{2\text{eq}}$, $\text{TTW}$ [Tank-to-Wake/Wheel], $\text{WTT}$ [Well-to-Tank], $\text{WTW}$ [Well-to-Wake/Wheel], $\text{TEU}$, $\text{t}\cdot\text{km}$) can remain in their standard forms but must be explained in tooltips or legend notes when context warrants (ensuring mode-appropriate terminology: Wake for maritime, Wheel for road).
 
 ## 18. Non-Goals
 - Modifying underlying calculation formulas or database persistence structures.
