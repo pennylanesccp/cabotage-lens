@@ -544,13 +544,26 @@ O Batch 001B nao executou novos modelos para todos os casos. Ele reorganizou a e
 
 Nenhum caso Batch 001B planejado foi classificado como pronto para conclusao principal. O principal ganho foi metodologico: o trabalho passou a registrar de forma explicita por que uma linha nao deve ser executada, por que uma referencia proxima nao substitui o porto selecionado e por que uma sensibilidade nao e uma linha de base validada.
 
-### 6.3 Casos excluidos, bloqueados, reference-needed e record-only
+### 6.3 Batch 001B como camada de decisão metodológica
 
-O caso `TF-VAL-001B-001` e mantido como `record_only_warning`, pois Santos -> Santos e um caso same-port, inadequado para representar uma cadeia normal de cabotagem. O caso `TF-VAL-001B-004A` e `excluded`, pois a cadeia Angra dos Reis -> Salvador nao e defensavel para o benchmark conteinerizado de `1 TEU / 14 t` sob a fronteira atual.
+O Batch 001B deve ser lido como uma camada de decisão metodológica e auditabilidade, não como uma nova rodada que transformou todos os casos em resultados finais validados. Sua função principal foi reorganizar a evidência histórica do Batch 001 em linhas com portos selecionados ou forçados, fonte de distância marítima, unidade, conversão, status metodológico e uso permitido no TF. Esse arranjo preserva a rastreabilidade das escolhas, mas também limita explicitamente o que cada linha pode sustentar.
 
-Os casos `TF-VAL-001B-003A` e `TF-VAL-001B-005A` permanecem `reference_needed`, porque faltam referencias exatas para Porto de Manaus -> Porto de Fortaleza e Porto do Rio Grande -> Porto do Recife. Pecem nao pode validar Fortaleza, e Suape nao pode validar Recife.
+A classificação controla a interpretação. Um caso planejado, bloqueado, excluído, `reference_needed` ou `record_only_warning` não deve ser executado ou narrado como conclusão numérica robusta. Do mesmo modo, uma linha preparada para sensibilidade não se torna resultado principal apenas porque possui uma hipótese documentada. No estado atual dos artefatos, nenhum caso planejado do Batch 001B deve ser promovido a conclusão principal robusta sem evidência rastreada adicional que justifique essa mudança.
 
-O caso `TF-VAL-001B-004B` permanece bloqueado por decisao metodologica, pois nao ha porto alternativo de origem defensavel e documentado para Brasilia -> Salvador, nem distancia maritima associada. Ele deve aparecer como trabalho futuro ou bloqueio, nao como resultado numerico.
+| Classificação/status | Significado | Uso seguro no TF |
+| --- | --- | --- |
+| `historical_diagnostic` | Preserva os resultados originais do Batch 001 para auditoria e comparação metodológica. | Histórico diagnóstico; não é resultado corrigido nem validação final. |
+| `record_only_warning` | Mantém um aviso ou caso-limite, como Santos -> Santos same-port. | Exemplo de limitação de construção de rota; não representa cabotagem normal nem desempenho modal. |
+| `excluded` | Caso fora da fronteira atual ou inadequado para conclusão numérica. | Justificativa de exclusão; não deve ser executado como evidência de resultado. |
+| `reference_needed` | Falta referência exata para o par de portos selecionado. | Lacuna de evidência; permanece não resolvida até que a referência exata seja documentada. |
+| `methodology_blocked` | Falta decisão metodológica ou porto defensável antes da execução. | Registro de bloqueio e trabalho futuro; não sustenta conclusão numérica. |
+| `sensitivity_only` / `sensitive` | Cenário preparado ou executado sob hipótese nomeada. | Discussão de sensibilidade com ressalvas; não é linha de base robusta. |
+
+Essa disciplina explica casos concretos do lote. Santos -> Santos permanece como exemplo same-port e, portanto, como limite da lógica de rota, não como cadeia normal de cabotagem. Angra dos Reis -> Salvador fica excluído para a fronteira atual de benchmark conteinerizado, pois a cadeia selecionada não é defensável como base numérica sob os critérios documentados. Esses casos podem aparecer como diagnóstico, exclusão ou limitação, mas não como evidência de vantagem modal.
+
+Os casos com referência ausente também permanecem restritos. Manaus -> Fortaleza e Rio Grande -> Recife continuam dependentes de referências exatas para os portos selecionados; uma referência para Pecém não valida silenciosamente Fortaleza, e uma referência para Suape não valida silenciosamente Recife. Quando Pecém ou Suape aparecem em linhas posteriores, eles devem ser lidos como portos alternativos explicitamente rotulados, não como substitutos metodológicos dos portos originalmente selecionados.
+
+Por fim, o Batch 001B não prova disponibilidade de serviço, viabilidade comercial, frete contratado, frequência de escala ou validade operacional completa da cadeia. Mesmo quando uma linha se torna sensibilidade executada, os custos permanecem estimativas modeladas e as emissões permanecem operacionais TTW CO2e, salvo indicação explícita em contrário. A contribuição do Batch 001B é criar a disciplina necessária antes de executar, comparar ou discutir sensibilidades, evitando que registros históricos, bloqueios ou hipóteses condicionais sejam promovidos a resultados finais.
 
 ### 6.4 Casos de sensibilidade executados
 
