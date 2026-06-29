@@ -1125,6 +1125,32 @@ Essa limitação não invalida a comparação de cenários. Ela define o alcance
 
 Assim, a afirmação defensável para o TF é que o CabotageLens organiza uma comparação metodológica e auditável, não um plano logístico final. Uma rota favorável no modelo pode orientar investigação posterior, mas não confirma disponibilidade de serviço, aceitação por transportador, slot, booking, operação terminal ou viabilidade comercial. Essa fronteira preserva a utilidade do protótipo sem transformar resultados condicionais em prova operacional.
 
+### 9.5 Limitações de rota: distância marítima, portos alternativos e casos same-port
+
+A quarta limitação do Capítulo 9 está na própria construção das rotas usadas para comparação. No CabotageLens, a rota rodoviário-cabotagem-rodoviário depende da seleção de portos, da distância marítima entre esses portos, dos acessos rodoviários de entrada e saída e da classificação de qualidade do cenário. Esses elementos tornam a comparação auditável, mas também delimitam o que pode ser afirmado: uma cadeia modelada não é, por si só, evidência de rota marítima robusta, serviço disponível ou viabilidade comercial.
+
+A proveniência da distância marítima continua sendo uma restrição central. Quando há referência exata para o par de portos do cenário, a interpretação é mais forte; quando a distância depende de fallback, fonte fraca ou ausência de referência exata, a linha não deve sustentar conclusão numérica robusta. Em especial, Manaus -> Porto de Fortaleza permanece sem evidência suficiente de distância marítima exata nos artefatos rastreados atuais, e Porto do Rio Grande -> Porto do Recife também permanece sem evidência suficiente de distância marítima exata. Essas lacunas devem aparecer como limitações, não como problemas já resolvidos.
+
+Os portos alternativos precisam permanecer separados dos portos originalmente selecionados. Pecém pode ser discutido apenas como sensibilidade de porto alternativo para a região de Fortaleza; Pecém não valida Porto de Fortaleza. Do mesmo modo, Suape pode ser discutido apenas como sensibilidade de porto alternativo para a região de Recife; Suape não valida Porto do Recife. A troca de porto altera a perna marítima, os acessos rodoviários, o terminal considerado, a interpretação operacional e a fronteira do cenário. Portanto, uma sensibilidade com porto alternativo é um cenário diferente, não uma substituição silenciosa do caso-base.
+
+| Limitação de rota | Exemplo afetado | Tratamento seguro no TF |
+| --- | --- | --- |
+| Distância marítima exata ausente | Manaus -> Porto de Fortaleza; Porto do Rio Grande -> Porto do Recife | Manter como lacuna de referência até que artefatos rastreados documentem a distância exata do par selecionado. |
+| Sensibilidade com Pecém | Manaus -> Pecém como porto alternativo | Discutir apenas como cenário alternativo; não usar como validação de Porto de Fortaleza. |
+| Sensibilidade com Suape | Rio Grande -> Suape como porto alternativo | Discutir apenas como cenário alternativo; não usar como validação de Porto do Recife. |
+| Caso same-port | Santos -> Santos | Tratar como exemplo de limitação, aviso de qualidade ou exclusão, não como desempenho normal de cabotagem. |
+| Cadeia Angra dos Reis | Brasília/Salvador com Angra dos Reis | Manter excluída para a cadeia conteinerizada atual. |
+| Caso metodologia-bloqueado | Brasília/Salvador com porto alternativo ainda não documentado | Não converter em resultado até que a decisão metodológica e a evidência de rota estejam rastreadas. |
+| Distância marítima por fallback | Linhas sem referência marítima robusta | Usar como diagnóstico, histórico ou lacuna; não como validação final de rota. |
+
+Os casos same-port exigem cuidado adicional. Uma linha Santos/Santos não representa desempenho normal de cabotagem, porque não há uma perna marítima substantiva entre portos distintos. Esse tipo de caso pode ser útil para mostrar como a lógica de seleção de portos deve emitir avisos, preservar exclusões ou bloquear interpretações indevidas, mas não deve sustentar comparação modal entre rodovia e cabotagem.
+
+Os casos excluídos ou bloqueados também não podem ser reaproveitados como resultado numérico. A cadeia conteinerizada envolvendo Angra dos Reis permanece excluída no estado atual do TF. O caso Brasília/Salvador com alternativa de porto ainda permanece metodologia-bloqueado enquanto os artefatos rastreados não documentarem uma decisão defensável de porto alternativo e sua distância marítima. Esses registros têm valor como evidência de limitação e agenda de melhoria, não como base para conclusão de custo, emissões ou desempenho de rota.
+
+Essa limitação de rota controla especialmente a leitura das sensibilidades. As linhas executadas como sensibilidade continuam sendo sensibilidade: elas mostram como o modelo se comporta sob uma hipótese documentada de distância ou porto alternativo, mas não se tornam conclusões robustas de baseline. Um resultado favorável em sensibilidade não elimina a lacuna do caso selecionado original, não transforma fallback em referência robusta e não resolve automaticamente a diferença entre porto regional alternativo e porto originalmente escolhido.
+
+Por fim, a construção de rota permanece separada da validação operacional e comercial. Mesmo uma distância marítima bem documentada ou uma sensibilidade coerente não prova disponibilidade de serviço, frequência, slot, aceitação terminal, aceite de transportador, booking ou frete contratado. A afirmação segura é metodológica: o CabotageLens torna visíveis as hipóteses de rota, distância e porto para que elas possam ser auditadas. Ele não converte, no estado atual, essas hipóteses em prova de operação real.
+
 ## 10. Conclusao
 
 O CabotageLens cumpre, no estado atual do projeto, uma funcao academica defensavel: fornece uma estrutura auditavel, reprodutivel e explicita em fronteiras para comparar transporte rodoviario direto e alternativas rodoviario-cabotagem-rodoviario em corredores brasileiros. A ferramenta organiza entradas, rotas, distancias, fontes, custos modelados, emissoes TTW CO2e e avisos de interpretacao em um fluxo coerente para analise de engenharia.
