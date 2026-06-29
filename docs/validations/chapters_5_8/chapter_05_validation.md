@@ -7,7 +7,7 @@ Este relatório apresenta a auditoria técnica e acadêmica do **Capítulo 5 (Fe
 ---
 
 ### 2. Fonte(s) e Títulos Inspecionados
-- **Arquivo de Origem:** [tf_final_report_draft.md](file:///C:/Users/Cliente/Documents/workspaces/personal/skills-cabotage-lens/cabotage-lens/docs/tf_final_report_draft.md)
+- **Arquivo de Origem:** [tf_final_report_draft.md](docs/tf_final_report_draft.md)
 - **Títulos inspecionados (Capítulo 5 - Linhas 339 a 522):**
   - `## 5. Ferramenta computacional`
   - `### 5.1 Visão geral da ferramenta e arquitetura do protótipo`
@@ -83,7 +83,7 @@ O Capítulo 5 descreve a arquitetura e a operação do protótipo computacional 
 
 #### Correção de Fronteira e Gases (Problemas 1 e 2)
 - **Sugestão de Reescrita para a Seção 5.1 (Último parágrafo):**
-  > *"De modo análogo, as emissões reportadas correspondem a emissões operacionais de dióxido de carbono equivalente ($\text{CO}_{2\text{eq}}$) sob a fronteira Tank-to-Wheel (TTW) para as pernas rodoviárias e Tank-to-Wake (TTW) para a perna marítima, salvo indicação explícita em contrário. O modelo computacional adota a unidade funcional de emissões em gramas de $\text{CO}_{2\text{eq}}$ por tonelada-quilômetro ($\text{g }\text{CO}_{2\text{eq}}\text{/t}\cdot\text{km}$), incorporando a ponderação de gases de efeito estufa ($CO_2$, $CH_4$ e $N_2O$) com base em seus respectivos potenciais de aquecimento global (GWP) de 100 anos. O protótipo não executa análise de ciclo de vida completo Well-to-Wheel (WTW) para transporte rodoviário ou Well-to-Wake (WTW) para transporte marítimo nesta versão, e seus resultados não devem ser interpretados como análise de ciclo de vida completo (LCA)."*
+  > *"De modo análogo, as emissões reportadas correspondem a emissões operacionais de dióxido de carbono equivalente ($\text{CO}_{2\text{eq}}$) sob a fronteira Tank-to-Wheel (TTW) para as pernas rodoviárias e Tank-to-Wake (TTW) para a perna marítima, salvo indicação explícita em contrário. O modelo computacional adota a unidade funcional de emissões em gramas de $\text{CO}_{2\text{eq}}$ por tonelada-quilômetro ($\text{g }\text{CO}_{2\text{eq}}\text{/t}\cdot\text{km}$), devendo a monografia esclarecer explicitamente se o cálculo incorpora de fato gases adicionais ($CH_4$ e $N_2O$) ponderados por seus respectivos potenciais de aquecimento global (GWP) de 100 anos, ou se é uma simplificação baseada apenas nos fatores de emissão diretos de $CO_2$ rotulada como equivalente. O protótipo não executa análise de ciclo de vida completo Well-to-Wheel (WTW) para transporte rodoviário ou Well-to-Wake (WTW) para transporte marítimo nesta versão, e seus resultados não devem ser interpretados como análise de ciclo de vida completo (LCA)."*
 
 #### Correção de Redundância e Citações (Problemas 3 e 4)
 - **Fusão de Disclaimers:** Remover os parágrafos defensivos repetitivos das seções 5.2, 5.3, 5.4, 5.5 e 5.6. Manter um único parágrafo robusto na Seção 5.1 e um de fechamento em 5.7.
