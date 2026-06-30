@@ -266,7 +266,7 @@ A agregação deve preservar a distinção entre distância, consumo, custo e em
 
 ### 4.9 Operações portuárias, hoteling e proveniência dos dados
 
-As operações portuárias e o *hoteling* entram na metodologia como componentes explícitos dentro da fronteira operacional selecionada, não como camada automática de validação operacional. Eles acrescentam custo modelado, combustível e emissões apenas quando o caminho do modelo possui base representável e registra a fonte usada para cada componente.
+As operações portuárias entram na metodologia como componentes explícitos dentro da fronteira operacional selecionada quando há base representável. O *hoteling* também pode entrar explicitamente quando não estiver coberto por uma intensidade marítima agregada. Em ambos os casos, esses elementos não funcionam como camada automática de validação operacional; acrescentam custo modelado, combustível e emissões apenas quando o caminho do modelo registra a fonte usada para cada componente.
 
 Operações portuárias representam atividades de terminal incluídas pelo modelo, como movimentações e equipamentos quando parametrizados. *Hoteling* representa consumo associado à permanência da embarcação em escala quando essa parcela é tratada separadamente. Ambos devem ser interpretados como aproximações operacionais modeladas, não como tarifa portuária completa, produtividade real de terminal, tempo de permanência observado ou inventário local de emissões atmosféricas.
 
@@ -551,6 +551,21 @@ O inventário final combina cinco camadas de evidência. A tabela resume a escal
 | Batch 002 benchmark externo | 21 pares OD positivos e suportados | Todos classificados como `same_direction_large_gap` após o rerun. | Registrar apoio direcional externo com lacuna de magnitude. |
 | Células Batch 002 não comparáveis | 15 células puladas | 6 self-pairs e 9 linhas rodoviárias zero ou não positivas. | Registrar limite de comparabilidade, não falha de execução nem evidência numérica. |
 
+A rerodada de 30 de junho de 2026 das validações, incorporando a exposição dos componentes de operações portuárias e *hoteling* conforme a metodologia atual, manteve a conclusão modal dos cenários avaliados.[^rerodada-portops-hoteling-relatorio] Foram executadas 24 linhas de validação/modelo, com emissões médias rodoviárias de 6.258,34 kg CO2e e emissões médias multimodais por cabotagem de 467,43 kg CO2e, resultando em economia média de 91,97%. Em todos os cenários executados, a cabotagem permaneceu como alternativa de menor emissão, sem mudança de conclusão modal em relação aos artefatos comparáveis.
+
+| Métrica da rerodada 2026-06-30 | Valor | Leitura segura |
+| --- | ---: | --- |
+| Linhas executadas/modelo | 24 | Denominador agregado da rerodada. |
+| Emissões médias rodoviárias | 6.258,34 kg CO2e | Média não ponderada das linhas executadas/modelo. |
+| Emissões médias multimodais por cabotagem | 467,43 kg CO2e | Média não ponderada das linhas executadas/modelo. |
+| Economia média da cabotagem | 91,97% | Diferença percentual média frente ao rodoviário direto. |
+| Soma de emissões de navegação | 8.586,80 kg CO2e | Componente marítimo em navegação. |
+| Soma de *hoteling* explícito | 0,00 kg CO2e | Tratamento metodológico resumido em nota. |
+| Soma de operações portuárias | 309,72 kg CO2e | Componente explicitamente incluído nas linhas executadas/modelo. |
+| Conclusão modal | 24/24 `cabotage_lower_emissions`; 0 mudanças | Nenhuma conclusão modal mudou nos comparáveis. |
+
+[^rerodada-portops-hoteling-relatorio]: Nos cenários desta validação, o componente de *hoteling* foi tratado como incorporado à intensidade agregada de transporte marítimo, evitando dupla contagem. As operações portuárias foram incluídas explicitamente por valor-padrão documentado de literatura, sem uso de registros observados por porto ou médias estimadas de portos observados no artefato ativo. As diferenças antigo-novo do Batch 001B não são interpretadas como efeito puro de portops/*hoteling*, pois pernas rodoviárias resolvidas por cache/provedor também mudaram.
+
 As categorias de uso que controlam este capítulo são as seguintes.
 
 | Categoria | Evidência associada | Uso seguro no Capítulo 7 |
@@ -587,9 +602,9 @@ Foram executadas três linhas de sensibilidade do Batch 001B: `TF-VAL-001B-SENS-
 
 | Caso | Papel da sensibilidade | Portos forçados | Custo modelado rodoviário (BRL/remessa) | Custo modelado multimodal (BRL/remessa) | Emissões rodoviárias (kg CO2e/remessa; fronteira operacional TTW) | Emissões multimodais (kg CO2e/remessa; fronteira operacional TTW) | Classificação |
 | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
-| `TF-VAL-001B-SENS-002-REFDIST` | Distância de referência Santos/Manaus | Santos -> Manaus | 18.456,45 | 1.263,50 | 6.961,76 | 1.104,67 | `sensitive` |
-| `TF-VAL-001B-SENS-003B-ALTPECEM` | Porto alternativo Pecém | Manaus -> Pecém | 26.391,03 | 727,33 | 9.989,83 | 573,48 | `sensitive` |
-| `TF-VAL-001B-SENS-005B-ALTSUAPE` | Porto alternativo Suape | Rio Grande -> Suape | 18.121,99 | 2.122,38 | 7.013,27 | 1.127,46 | `sensitive` |
+| `TF-VAL-001B-SENS-002-REFDIST` | Distância de referência Santos/Manaus | Santos -> Manaus | 16.347,22 | 1.144,38 | 6.937,54 | 1.079,70 | `sensitive` |
+| `TF-VAL-001B-SENS-003B-ALTPECEM` | Porto alternativo Pecém | Manaus -> Pecém | 22.986,28 | 621,84 | 9.984,32 | 549,12 | `sensitive` |
+| `TF-VAL-001B-SENS-005B-ALTSUAPE` | Porto alternativo Suape | Rio Grande -> Suape | 15.074,20 | 1.906,34 | 6.755,66 | 1.176,70 | `sensitive` |
 
 Nos três cenários de sensibilidade executados, a alternativa multimodal apresentou menor custo modelado e menores emissões operacionais TTW CO2e do que a alternativa rodoviária direta. Essa afirmação vale apenas para essas hipóteses nomeadas de distância ou porto alternativo, e cada linha continua `sensitive`, não linha de base validada nem `headline_candidate`.
 
@@ -640,6 +655,7 @@ O Capítulo 7 não produz uma conclusão universal sobre cabotagem. Ele organiza
 | Batch 001 | 5 casos históricos executados com limitações de referência/rota. | `historical_diagnostic` | Rastrear a origem das decisões metodológicas. | Resultado corrigido ou validação final. |
 | Batch 001B | 8 linhas de decisão, incluindo limitação, exclusão, lacuna, bloqueio e preparação de sensibilidade. | `limitation_example`, `excluded`, `reference_needed`, `methodology_blocked`, `sensitivity_discussion` | Controlar quais linhas podem ou não ser usadas numericamente. | Execução numérica de todas as linhas planejadas. |
 | Sensibilidades executadas | 3 linhas `sensitive`, todas com multimodal menor em custo modelado e emissões operacionais TTW CO2e. | `sensitive` | Resultado de sensibilidade sob hipóteses documentadas. | Linha de base robusta, validação do porto original ou frete comercial. |
+| Rerodada portops/*hoteling* | 24 linhas executadas/modelo; médias de 6.258,34 kg CO2e rodoviárias e 467,43 kg CO2e multimodais. | 24/24 `cabotage_lower_emissions` | Reportar estabilidade da conclusão modal com componentes portuários expostos. | Efeito puro de mudança metodológica em todas as diferenças antigo-novo. |
 | Batch 002 | 21/21 pares comparáveis alinhados em direção, todos `same_direction_large_gap`. | `benchmark_supports_direction` | Apoio externo direcional com lacuna de magnitude. | Reprodução exata, calibração ou workbook como verdade de referência. |
 | Rerun Supabase/cache | 63 cache hits, 0 misses e divergências agregadas ainda grandes. | `benchmark_methodology_gap` | Evidência de estabilidade computacional e rastreabilidade. | Validação de magnitude, rota comercial ou serviço disponível. |
 | Reconciliação rodoviária | Divergência rodoviária média/mediana reduzida para 43.9% / 19.6% no diagnóstico. | `benchmark_supports_road_factor_explanation` | Indicar sensibilidade a premissas rodoviárias. | Recalibração da aplicação ou substituição da linha de base. |

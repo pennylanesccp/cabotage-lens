@@ -26,6 +26,29 @@ Células Batch 002 não comparáveis & 15 células & 6 self-pairs e 9 linhas rod
 \end{tabularx}
 \end{table}
 
+A rerodada de 30 de junho de 2026 das validações, incorporando a exposição dos componentes de operações portuárias e \emph{hoteling} conforme a metodologia atual, manteve a conclusão modal dos cenários avaliados. Foram executadas 24 linhas de validação/modelo, com emissões médias rodoviárias de 6.258,34 kg \cooe{} e emissões médias multimodais por cabotagem de 467,43 kg \cooe{}, resultando em economia média de 91,97\%. Em todos os cenários executados, a cabotagem permaneceu como alternativa de menor emissão, sem mudança de conclusão modal em relação aos artefatos comparáveis.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Resumo agregado da rerodada de validação com componentes portuários expostos.}
+\label{tab:rerodada-portops-hoteling}
+\begin{tabularx}{\textwidth}{L{0.38\textwidth}L{0.25\textwidth}Y}
+\toprule
+Métrica & Valor & Leitura segura \\
+\midrule
+Linhas executadas/modelo & 24 & Denominador agregado da rerodada.\\
+Emissões médias rodoviárias & 6.258,34 kg \cooe{} & Média não ponderada das linhas executadas/modelo.\\
+Emissões médias multimodais por cabotagem & 467,43 kg \cooe{} & Média não ponderada das linhas executadas/modelo.\\
+Economia média da cabotagem & 91,97\% & Diferença percentual média frente ao rodoviário direto.\\
+Soma de emissões de navegação & 8.586,80 kg \cooe{} & Componente marítimo em navegação.\\
+Soma de \emph{hoteling} explícito & 0,00 kg \cooe{} & Tratamento metodológico resumido no Apêndice~\ref{sec:app-nota-portops-hoteling}.\\
+Soma de operações portuárias & 309,72 kg \cooe{} & Componente explicitamente incluído nas linhas executadas/modelo.\\
+Conclusão modal & 24/24 \codecell{cabotage\_lower\_emissions}; 0 mudanças & Nenhuma conclusão modal mudou nos comparáveis.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 As categorias preservam as fronteiras materiais dos resultados. Custos são estimativas modeladas por remessa, não tarifas, cotações, contratos ou fretes comerciais. A saída ambiental é reportada como emissões operacionais \ttw{} de \cooe{}, salvo indicação explícita em contrário; valores \wtw{}, LCA ou CO$_2$-only não devem ser misturados com a saída atual sem reconciliação metodológica.
 
 \section{Resultados históricos e decisões metodológicas Batch 001/001B}
@@ -70,9 +93,9 @@ Foram executadas três linhas de sensibilidade do Batch 001B: \texttt{TF-VAL-001
 \toprule
 Caso & Papel e portos & Custo rod./multi. (BRL) & Emissões rod./multi. (kg \cooe{}) & Classe \\
 \midrule
-\codecell{SENS-002-REFDIST} & Distância de referência; Santos--Manaus & 18.456,45 / 1.263,50 & 6.961,76 / 1.104,67 & \codecell{sensitive}\\
-\codecell{SENS-003B-ALTPECEM} & Porto alternativo; Manaus--Pecém & 26.391,03 / 727,33 & 9.989,83 / 573,48 & \codecell{sensitive}\\
-\codecell{SENS-005B-ALTSUAPE} & Porto alternativo; Rio Grande--Suape & 18.121,99 / 2.122,38 & 7.013,27 / 1.127,46 & \codecell{sensitive}\\
+\codecell{SENS-002-REFDIST} & Distância de referência; Santos--Manaus & 16.347,22 / 1.144,38 & 6.937,54 / 1.079,70 & \codecell{sensitive}\\
+\codecell{SENS-003B-ALTPECEM} & Porto alternativo; Manaus--Pecém & 22.986,28 / 621,84 & 9.984,32 / 549,12 & \codecell{sensitive}\\
+\codecell{SENS-005B-ALTSUAPE} & Porto alternativo; Rio Grande--Suape & 15.074,20 / 1.906,34 & 6.755,66 / 1.176,70 & \codecell{sensitive}\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -158,6 +181,7 @@ Grupo & Observação obtida & Classificação & O que não sustenta \\
 Batch 001 & 5 casos históricos com limitações. & \codecell{historical\_diagnostic} & Resultado corrigido ou validação final.\\
 Batch 001B & 8 linhas de decisão. & Diversas categorias metodológicas & Execução numérica de todas as linhas planejadas.\\
 Sensibilidades & 3 linhas com multimodal menor em custo e emissões. & \codecell{sensitive} & Linha de base robusta, validação do porto original ou frete comercial.\\
+Rerodada portops/\emph{hoteling} & 24 linhas executadas/modelo; médias de 6.258,34 kg \cooe{} rodoviárias e 467,43 kg \cooe{} multimodais. & 24/24 \codecell{cabotage\_lower\_emissions} & Efeito puro de mudança metodológica em todas as diferenças antigo--novo.\\
 Batch 002 & 21/21 pares alinhados em direção. & \codecell{benchmark\_supports\_direction} & Reprodução exata, calibração ou workbook como verdade de referência.\\
 Rerun/cache & 63 cache hits e 0 misses. & \codecell{benchmark\_methodology\_gap} & Validação de magnitude, rota comercial ou serviço disponível.\\
 Reconciliação & Divergência rodoviária reduzida para 43,9\%/19,6\%. & \codecell{benchmark\_supports\_road\_factor\_explanation} & Recalibração da aplicação.\\

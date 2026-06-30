@@ -54,11 +54,13 @@ As sensibilidades internas executadas indicaram menor custo modelado e menores e
 
 | Sensibilidade | Hipótese testada | Custo rodoviário / multimodal (BRL/remessa) | Emissões rodoviárias / multimodais (kg CO2e/remessa) |
 | --- | --- | ---: | ---: |
-| Santos/Manaus | Distância marítima de referência | 18.456,45 / 1.263,50 | 6.961,76 / 1.104,67 |
-| Manaus/Pecém | Porto alternativo para a região de Fortaleza | 26.391,03 / 727,33 | 9.989,83 / 573,48 |
-| Rio Grande/Suape | Porto alternativo para a região de Recife | 18.121,99 / 2.122,38 | 7.013,27 / 1.127,46 |
+| Santos/Manaus | Distância marítima de referência | 16.347,22 / 1.144,38 | 6.937,54 / 1.079,70 |
+| Manaus/Pecém | Porto alternativo para a região de Fortaleza | 22.986,28 / 621,84 | 9.984,32 / 549,12 |
+| Rio Grande/Suape | Porto alternativo para a região de Recife | 15.074,20 / 1.906,34 | 6.755,66 / 1.176,70 |
 
 Essas linhas permanecem classificadas como sensíveis. Elas mostram comportamento do modelo sob hipóteses nomeadas; não confirmam os portos originalmente selecionados, não demonstram disponibilidade de serviço e não substituem evidência operacional externa.
+
+A rerodada de 30 de junho de 2026 das validações, incorporando a exposição dos componentes de operações portuárias e *hoteling* conforme a metodologia atual, manteve a conclusão modal dos cenários avaliados.[^rerodada-portops-hoteling] Foram executadas 24 linhas de validação/modelo, com emissões médias rodoviárias de 6.258,34 kg CO2e e emissões médias multimodais por cabotagem de 467,43 kg CO2e, resultando em economia média de 91,97%. Em todos os cenários executados, a cabotagem permaneceu como alternativa de menor emissão.
 
 O benchmark externo baseado no workbook Gustavo/Costa apresentou alinhamento direcional em todos os 21 pares origem-destino positivos e suportados: tanto o workbook quanto o CabotageLens favoreceram a cabotagem/multimodal em emissões frente ao rodoviário direto. Quinze células da matriz original foram puladas antes da execução por não serem comparáveis na fronteira adotada: seis self-pairs e nove linhas rodoviárias zero ou não positivas.
 
@@ -84,9 +86,11 @@ Por fim, o benchmark externo permanece parcial. Gustavo/Costa serve como contras
 
 O CabotageLens oferece um framework computacional auditável para comparar alternativas rodoviárias diretas e rodoviária-cabotagem-rodoviária em corredores brasileiros. Sua contribuição principal não é demonstrar uma hierarquia modal universal, mas tornar explícitas as condições sob as quais uma comparação é produzida: unidade funcional, rota, portos, distâncias, componentes portuários, proxy de custo operacional modelado, emissões operacionais TTW CO2e e qualidade da evidência.
 
-As sensibilidades internas e o benchmark externo sustentam interpretação direcional cautelosa. Nos três cenários de sensibilidade, a alternativa multimodal foi menor em custo modelado e emissões operacionais TTW CO2e; nos 21 pares comparáveis do benchmark, a direção modal de emissões coincidiu com a referência externa. Essas evidências são suficientes para mostrar plausibilidade metodológica e utilidade do framework, mas não para afirmar validação calibrada, reconstrução de Gustavo/Costa, disponibilidade operacional ou superioridade universal da cabotagem.
+As sensibilidades internas, a rerodada consolidada e o benchmark externo sustentam interpretação direcional cautelosa. Nos três cenários de sensibilidade, a alternativa multimodal foi menor em custo modelado e emissões operacionais TTW CO2e; na rerodada consolidada, 24 de 24 linhas executadas/modelo classificaram a cabotagem como alternativa de menor emissão; e, nos 21 pares comparáveis do benchmark, a direção modal de emissões coincidiu com a referência externa. Essas evidências são suficientes para mostrar plausibilidade metodológica e utilidade do framework, mas não para afirmar validação calibrada, reconstrução de Gustavo/Costa, disponibilidade operacional ou superioridade universal da cabotagem.
 
 Como artigo técnico, o resultado central é a estrutura: um modo rastreável de formular comparações multimodais com fronteiras explícitas. Trabalhos futuros devem ampliar a cobertura de distâncias marítimas, melhorar a verificação de portos e serviços, incorporar fronteiras WTW/LCA separadas quando houver fatores compatíveis, e adicionar camadas comerciais apenas quando houver dados de frete, frequência, contrato e confiabilidade adequadamente documentados.
+
+[^rerodada-portops-hoteling]: Nos cenários desta validação, o componente de *hoteling* foi tratado como incorporado à intensidade agregada de transporte marítimo, evitando dupla contagem. As operações portuárias foram incluídas explicitamente por valor-padrão documentado de literatura, sem uso de registros observados por porto ou médias estimadas de portos observados no artefato ativo. As diferenças antigo-novo do Batch 001B não são interpretadas como efeito puro de portops/*hoteling*, pois pernas rodoviárias resolvidas por cache/provedor também mudaram.
 
 ## Referências e artefatos pendentes
 

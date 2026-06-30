@@ -166,7 +166,7 @@ Custos e emissões são dimensões diferentes e não definem, por si só, um ven
 \section{Operações portuárias, hoteling e proveniência dos dados}
 \label{sec:portops-metodologia}
 
-As operações portuárias e o \emph{hoteling} entram na metodologia como componentes explícitos dentro da fronteira operacional selecionada, não como camada automática de validação operacional. Eles acrescentam custo modelado, combustível e emissões apenas quando o caminho do modelo possui base representável e registra a fonte usada para cada componente.
+As operações portuárias entram na metodologia como componentes explícitos dentro da fronteira operacional selecionada quando há base representável. O \emph{hoteling} também pode entrar explicitamente quando não estiver coberto por uma intensidade marítima agregada. Em ambos os casos, esses elementos não funcionam como camada automática de validação operacional; acrescentam custo modelado, combustível e emissões apenas quando o caminho do modelo registra a fonte usada para cada componente.
 
 Quando há dados específicos de operações portuárias ou \emph{hoteling} para o porto selecionado, esses valores são usados diretamente como \texttt{observed}. Quando os dados específicos faltam, o modelo evita interpretar a ausência como zero e aplica uma hierarquia transparente de proveniência: \texttt{estimated\_port\_average}, quando há média ponderada defensável de portos observados; \texttt{literature\_default}, quando só existe um padrão documentado do modelo; ou \texttt{unavailable}, quando nenhum valor observado ou documentado pode ser atribuído.
 

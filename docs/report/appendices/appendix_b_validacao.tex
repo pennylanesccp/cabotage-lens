@@ -31,6 +31,11 @@ Reconciliação rodoviária & Fator diagnóstico derivado de premissas do benchm
 \end{tabularx}
 \end{table}
 
+\section{Nota metodológica da rerodada portops/\emph{hoteling}}
+\label{sec:app-nota-portops-hoteling}
+
+Nos cenários da rerodada de 30 de junho de 2026, o componente de \emph{hoteling} foi tratado como incorporado à intensidade agregada de transporte marítimo quando havia intensidade positiva de transporte-trabalho, evitando dupla contagem. As operações portuárias foram incluídas explicitamente por valor-padrão documentado de literatura, na ausência de registros observados por porto ou médias estimadas de portos observados no artefato ativo da validação. As diferenças numéricas antigo--novo do Batch 001B não devem ser interpretadas como efeito puro de portops/\emph{hoteling}, pois as pernas rodoviárias resolvidas por cache/provedor também mudaram entre o arquivo de sensibilidade anterior e esta rerodada.
+
 \section{Sensibilidades executadas}
 \label{sec:app-sensibilidades}
 
@@ -47,9 +52,9 @@ A Tabela~\ref{tab:app-sensibilidades-executadas} repete os valores numéricos pr
 \toprule
 Caso & Papel e portos & Custo rod./multi. (BRL) & Emissões rod./multi. (kg \cooe{}) & Classe \\
 \midrule
-\codecell{SENS-002-REFDIST} & Distância de referência; Santos--Manaus & 18.456,45 / 1.263,50 & 6.961,76 / 1.104,67 & \codecell{sensitive}\\
-\codecell{SENS-003B-ALTPECEM} & Porto alternativo; Manaus--Pecém & 26.391,03 / 727,33 & 9.989,83 / 573,48 & \codecell{sensitive}\\
-\codecell{SENS-005B-ALTSUAPE} & Porto alternativo; Rio Grande--Suape & 18.121,99 / 2.122,38 & 7.013,27 / 1.127,46 & \codecell{sensitive}\\
+\codecell{SENS-002-REFDIST} & Distância de referência; Santos--Manaus & 16.347,22 / 1.144,38 & 6.937,54 / 1.079,70 & \codecell{sensitive}\\
+\codecell{SENS-003B-ALTPECEM} & Porto alternativo; Manaus--Pecém & 22.986,28 / 621,84 & 9.984,32 / 549,12 & \codecell{sensitive}\\
+\codecell{SENS-005B-ALTSUAPE} & Porto alternativo; Rio Grande--Suape & 15.074,20 / 1.906,34 & 6.755,66 / 1.176,70 & \codecell{sensitive}\\
 \bottomrule
 \end{tabularx}
 \end{table}
