@@ -31,7 +31,6 @@ Esta primeira versão usa `\bibliographystyle{plain}` e `../references.bib`. A f
 
 ## TODOs conhecidos
 
-- Substituir placeholders de orientador, instituição, curso, local e ano.
 - Escrever o abstract final em inglês.
 - Trocar placeholders de figuras por diagramas finais.
 - Revisar captions, labels e paginação após compilação real.
