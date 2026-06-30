@@ -22,7 +22,7 @@ Use the following hierarchy whenever drafting, reviewing, or resolving conflicts
    - Source narrative and argument flow. The final TF should expand this article, not restart from an empty report outline.
 3. `docs/tf_final_report_draft.md`
    - Academic scaffold and expanded report structure. Use it to align subsection placement, report tone, and body-chapter coverage.
-4. `docs/tf_literature_citation_map.md`
+4. `docs/tf_support/writing/tf_literature_citation_map.md`
    - Source of truth for allowed citation placeholders, safe citation use, and misuse boundaries.
 5. Validation, benchmark, and boundary artifacts
    - `docs/validation/tf_validation_batch_002_gustavo_benchmark.md`
@@ -30,7 +30,7 @@ Use the following hierarchy whenever drafting, reviewing, or resolving conflicts
    - `docs/validation/tf_validation_batch_002_road_factor_reconciliation.md`
    - `docs/validation/tf_sensitivity_results_batch_001b.md`
    - `docs/validation/tf_validation_batch_001b_methodology_decisions.md`
-   - `docs/tf_system_boundary.md`
+   - `docs/tf_support/methodology/tf_system_boundary.md`
    - `docs/port_ops_model.md`
 
 Conflict-resolution rules:
@@ -38,7 +38,7 @@ Conflict-resolution rules:
 - Result conflicts: follow `docs/validation/tf_final_result_synthesis.md`.
 - Narrative conflicts: follow `docs/tf_technical_article_draft.md`, unless the final synthesis says otherwise.
 - Academic-structure conflicts: follow `docs/tf_final_report_draft.md`.
-- Citation-use conflicts: follow `docs/tf_literature_citation_map.md`.
+- Citation-use conflicts: follow `docs/tf_support/writing/tf_literature_citation_map.md`.
 - Boundary conflicts: preserve the narrower or more conservative boundary.
 - Do not introduce new results, citations, assumptions, routes, ports, distances, formulas, factors, model parameters, workbook values, or metadata.
 
@@ -54,7 +54,7 @@ Conflict-resolution rules:
 - Keep TTW, WTW, LCA, CO2, and CO2e boundaries explicit.
 - Keep model cost estimates separate from commercial freight rates.
 - Preserve units and dimensional consistency.
-- Use only citation placeholders already allowed by `docs/tf_literature_citation_map.md`.
+- Use only citation placeholders already allowed by `docs/tf_support/writing/tf_literature_citation_map.md`.
 - Treat literature as context, boundary framing, limitation support, or future-work support unless a tracked methodology artifact explicitly authorizes direct model use.
 - Keep observed results separate from interpretation. Results chapters should report what was observed; Discussion should explain what it means and what it does not mean.
 - Do not collapse cost and emissions into a single winner unless a decision rule is explicitly introduced in tracked methodology.
@@ -97,8 +97,8 @@ Source artifacts:
 - `docs/tf_technical_article_draft.md`
 - `docs/validation/tf_final_result_synthesis.md`
 - `docs/tf_final_report_draft.md`
-- `docs/tf_literature_citation_map.md`
-- `docs/tf_system_boundary.md`
+- `docs/tf_support/writing/tf_literature_citation_map.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
 
 Purpose in the final report:
 
@@ -149,7 +149,7 @@ Source artifacts:
 - `docs/tf_technical_article_draft.md`
 - `docs/validation/tf_final_result_synthesis.md`
 - `docs/tf_final_report_draft.md`
-- `docs/tf_system_boundary.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
 
 Purpose in the final report:
 
@@ -194,9 +194,9 @@ Source article section(s):
 Source artifacts:
 
 - `docs/tf_technical_article_draft.md`
-- `docs/tf_literature_citation_map.md`
+- `docs/tf_support/writing/tf_literature_citation_map.md`
 - `docs/tf_final_report_draft.md`
-- `docs/tf_system_boundary.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
 - `docs/port_ops_model.md`
 
 Purpose in the final report:
@@ -251,7 +251,7 @@ Source article section(s):
 Source artifacts:
 
 - `docs/tf_technical_article_draft.md`
-- `docs/tf_system_boundary.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
 - `docs/port_ops_model.md`
 - `docs/validation/tf_final_result_synthesis.md`
 - `docs/validation/tf_validation_batch_001b_methodology_decisions.md`
@@ -311,7 +311,7 @@ Source artifacts:
 
 - `docs/tf_technical_article_draft.md`
 - `docs/tf_final_report_draft.md`
-- `docs/tf_system_boundary.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
 - `docs/port_ops_model.md`
 - `docs/validation/tf_validation_batch_002_rerun_comparison.md`
 - `docs/validation/tf_validation_run_manifest.md`
@@ -368,7 +368,7 @@ Source artifacts:
 - `docs/validation/tf_validation_batch_002_gustavo_benchmark.md`
 - `docs/validation/tf_validation_batch_002_rerun_comparison.md`
 - `docs/validation/tf_validation_batch_002_road_factor_reconciliation.md`
-- `docs/tf_literature_citation_map.md`
+- `docs/tf_support/writing/tf_literature_citation_map.md`
 
 Purpose in the final report:
 
@@ -481,8 +481,8 @@ Source artifacts:
 
 - `docs/tf_technical_article_draft.md`
 - `docs/validation/tf_final_result_synthesis.md`
-- `docs/tf_literature_citation_map.md`
-- `docs/tf_system_boundary.md`
+- `docs/tf_support/writing/tf_literature_citation_map.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
 - `docs/validation/tf_validation_batch_002_rerun_comparison.md`
 - `docs/validation/tf_validation_batch_002_road_factor_reconciliation.md`
 
@@ -535,9 +535,9 @@ Source artifacts:
 
 - `docs/tf_technical_article_draft.md`
 - `docs/validation/tf_final_result_synthesis.md`
-- `docs/tf_system_boundary.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
 - `docs/port_ops_model.md`
-- `docs/tf_literature_citation_map.md`
+- `docs/tf_support/writing/tf_literature_citation_map.md`
 - `docs/validation/tf_validation_batch_002_gustavo_benchmark.md`
 - `docs/validation/tf_sensitivity_results_batch_001b.md`
 
@@ -589,7 +589,7 @@ Source artifacts:
 - `docs/tf_technical_article_draft.md`
 - `docs/validation/tf_final_result_synthesis.md`
 - `docs/tf_final_report_draft.md`
-- `docs/tf_literature_citation_map.md`
+- `docs/tf_support/writing/tf_literature_citation_map.md`
 
 Purpose in the final report:
 
@@ -626,7 +626,7 @@ Future work should include:
 
 ### References
 
-References are handled mainly in issue #26. Until final formatting, use only citation placeholders approved in `docs/tf_literature_citation_map.md`.
+References are handled mainly in issue #26. Until final formatting, use only citation placeholders approved in `docs/tf_support/writing/tf_literature_citation_map.md`.
 
 ### Appendices
 
@@ -790,7 +790,7 @@ Prohibited claims:
 <list prohibited claims for this subsection>
 
 Allowed citation placeholders:
-<list citation placeholders allowed by docs/tf_literature_citation_map.md, or "none">
+<list citation placeholders allowed by docs/tf_support/writing/tf_literature_citation_map.md, or "none">
 
 Expected length:
 <paragraph/word target>
@@ -805,7 +805,7 @@ Validation checklist:
 - Confirm TTW, WTW, LCA, CO2, and CO2e boundaries remain explicit where relevant.
 - Confirm model cost estimates are not described as commercial freight rates.
 - Confirm sensitive, benchmark-mismatched, not-comparable, blocked, excluded, reference-needed, and historical-diagnostic evidence is not promoted to robust evidence.
-- Confirm any citation placeholders used are allowed by docs/tf_literature_citation_map.md.
+- Confirm any citation placeholders used are allowed by docs/tf_support/writing/tf_literature_citation_map.md.
 - Confirm what was changed and which source article section was used.
 
 Hard constraints:

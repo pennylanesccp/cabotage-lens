@@ -4,7 +4,7 @@
 
 This document identifies assumptions and approximations that affect the interpretation of the TF results for CabotageLens. The model compares road-only transport with multimodal road-cabotage-road transport in Brazil, but it should not be presented as a perfect measurement system. The defensible academic claim is narrower: the assumptions are explicit, traceable where possible, and candidates for validation, sensitivity analysis, or limitation wording.
 
-This inventory is based on the current repository documentation and implementation context, especially `docs/tf_document_structure.md`, `docs/tf_system_boundary.md`, `docs/tf_data_reliability_inventory.md`, `docs/methodology_audit.md`, `docs/mrv_container_efficiency.md`, `docs/hoteling_model.md`, `docs/port_ops_model.md`, `docs/costa_allocation_validation.md`, and `docs/tf.tex`. Where a specific runtime detail or parameter source is not fully traceable from the available documents, it is marked as uncertain or methodology debt rather than treated as established fact.
+This inventory is based on the current repository documentation and implementation context, especially `docs/tf_support/writing/tf_document_structure.md`, `docs/tf_support/methodology/tf_system_boundary.md`, `docs/tf_support/methodology/tf_data_reliability_inventory.md`, `docs/tf_support/audit/methodology_audit.md`, `docs/mrv_container_efficiency.md`, `docs/hoteling_model.md`, `docs/port_ops_model.md`, `docs/costa_allocation_validation.md`, and `docs/tf.tex`. Where a specific runtime detail or parameter source is not fully traceable from the available documents, it is marked as uncertain or methodology debt rather than treated as established fact.
 
 ## 2. Assumption inventory table
 

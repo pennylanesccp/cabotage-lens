@@ -111,7 +111,7 @@ The following rows remain blocked and should stay as planned rows if included in
 
 ## 6. Thesis Boundary
 
-Sensitivity outputs can show whether cost and emissions estimates change materially under documented distance and port assumptions. They cannot by themselves support robust thesis conclusions. Final classification must still use `docs/tf_result_classification_rules.md` and separate:
+Sensitivity outputs can show whether cost and emissions estimates change materially under documented distance and port assumptions. They cannot by themselves support robust thesis conclusions. Final classification must still use `docs/tf_support/validation/tf_result_classification_rules.md` and separate:
 
 - validated baseline results;
 - record-only and excluded cases;

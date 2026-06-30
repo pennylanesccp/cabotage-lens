@@ -1,6 +1,6 @@
 # TF Validation Execution Notes
 
-These notes define the first controlled validation batch for CabotageLens. They translate the candidate sample in `docs/tf_validation_plan.md` into an execution-ready planning structure.
+These notes define the first controlled validation batch for CabotageLens. They translate the candidate sample in `docs/tf_support/validation/tf_validation_plan.md` into an execution-ready planning structure.
 
 This document does not contain validation results. Do not add reference distances, emissions, costs, pass/fail outcomes, or calculated deltas until the validation cases have been run and independently checked.
 

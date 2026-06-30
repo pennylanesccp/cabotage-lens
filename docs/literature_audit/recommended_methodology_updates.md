@@ -18,7 +18,7 @@ This document lists proposed changes or additions to the TF/report/article based
 
 * **Recommendation**: Explicitly specify CO2 vs CO2e in all outputs and text.
   * **Source**: `decarb2024`, `icct2022`
-  * **Affected Document**: `tf_system_boundary.md`, all UI labels.
+  * **Affected Document**: `docs/tf_support/methodology/tf_system_boundary.md`, all UI labels.
   * **Reason**: Academic rigor; mixing gas species invalidates comparative results.
   * **Risk if ignored**: Critical methodology flaw during examination.
   * **Proposed Action**: Audit terminology and standardize on the selected metric.
@@ -27,7 +27,7 @@ This document lists proposed changes or additions to the TF/report/article based
 
 * **Recommendation**: State clearly that cost outputs are operational estimates, not commercial freight rates.
   * **Source**: `competitiveness2024`
-  * **Affected Document**: `tf_assumptions_and_approximations.md`
+  * **Affected Document**: `docs/tf_support/methodology/tf_assumptions_and_approximations.md`
   * **Reason**: Prevents misinterpretation of the economic feasibility.
   * **Risk if ignored**: Examiner might question the commercial realism of the costs.
   * **Proposed Action**: Add a dedicated "Cost Boundary" section to assumptions.

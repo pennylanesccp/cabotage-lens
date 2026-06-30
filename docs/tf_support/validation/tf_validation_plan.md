@@ -6,7 +6,7 @@ This document defines practical validation checks for CabotageLens before the fi
 
 This is a validation plan only. It does not report validation results, error statistics, or final acceptance outcomes.
 
-This plan should be read together with the existing TF planning documents: `docs/tf_document_structure.md`, `docs/tf_system_boundary.md`, `docs/tf_data_reliability_inventory.md`, and `docs/tf_assumptions_and_approximations.md`.
+This plan should be read together with the existing TF planning documents: `docs/tf_support/writing/tf_document_structure.md`, `docs/tf_support/methodology/tf_system_boundary.md`, `docs/tf_support/methodology/tf_data_reliability_inventory.md`, and `docs/tf_support/methodology/tf_assumptions_and_approximations.md`.
 
 ## 2. Validation principles
 

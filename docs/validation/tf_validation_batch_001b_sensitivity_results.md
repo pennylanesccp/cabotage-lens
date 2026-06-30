@@ -201,7 +201,7 @@ Pecem and Suape rows are explicitly alternate-port scenarios. They must remain s
 
 ## 8. Implications For Final Classification
 
-Under `docs/tf_result_classification_rules.md`, the final thesis tables should classify these rows as follows:
+Under `docs/tf_support/validation/tf_result_classification_rules.md`, the final thesis tables should classify these rows as follows:
 
 - `TF-VAL-001B-SENS-002-REFDIST`: sensitivity result, not validated baseline.
 - `TF-VAL-001B-SENS-003B-ALTPECEM`: alternate-port sensitivity result, not Fortaleza validation.

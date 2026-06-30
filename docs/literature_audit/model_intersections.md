@@ -72,7 +72,7 @@ This document explains how the literature intersects with the current CabotageLe
 * **Alignment**: High, as long as it's stated.
 * **Mismatch/Limitation**: Misinterpretation by users comparing WTW road to TTW shipping.
 * **Recommended Thesis Wording**: "This tool bounds its emissions analysis to Tank-to-Wake (TTW)..."
-* **Methodology Update**: Update `tf_system_boundary.md` to ensure TTW is explicitly declared as the primary boundary. (Writing-only change).
+* **Methodology Update**: Update `docs/tf_support/methodology/tf_system_boundary.md` to ensure TTW is explicitly declared as the primary boundary. (Writing-only change).
 
 ## 10. Port operations and hoteling
 * **What literature says**: Hoteling and port equipment contribute materially to the total footprint (`berth2009`, `shipops2022`, `decarb2024`). Average daily port fuel consumption is around 5.0 tons/day (`decarb2024`).

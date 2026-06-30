@@ -8,14 +8,14 @@ This is a planning document only. It does not add results, run calculations, cha
 
 The guide is based on the available TF planning and methodology documents:
 
-- `docs/tf_document_structure.md`
-- `docs/tf_system_boundary.md`
-- `docs/tf_data_reliability_inventory.md`
-- `docs/tf_assumptions_and_approximations.md`
-- `docs/tf_validation_plan.md`
-- `docs/tf_sensitivity_analysis_plan.md`
-- `docs/tf_result_classification_rules.md`
-- `docs/methodology_audit.md`
+- `docs/tf_support/writing/tf_document_structure.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
+- `docs/tf_support/methodology/tf_data_reliability_inventory.md`
+- `docs/tf_support/methodology/tf_assumptions_and_approximations.md`
+- `docs/tf_support/validation/tf_validation_plan.md`
+- `docs/tf_support/validation/tf_sensitivity_analysis_plan.md`
+- `docs/tf_support/validation/tf_result_classification_rules.md`
+- `docs/tf_support/audit/methodology_audit.md`
 - `docs/mrv_container_efficiency.md`
 - `docs/hoteling_model.md`
 - `docs/port_ops_model.md`
@@ -73,7 +73,7 @@ Position the project in relation to modal comparison, cabotage competitiveness, 
 
 **Required evidence**
 
-- References already listed in `docs/methodology_audit.md` and `docs/references.bib`.
+- References already listed in `docs/tf_support/audit/methodology_audit.md` and `docs/references.bib`.
 - Literature supporting Brazilian cabotage context and supernetwork/service logic.
 - Literature supporting EU MRV use for maritime efficiency.
 - Literature or references supporting hoteling and port operations as relevant phases.
@@ -107,10 +107,10 @@ Define the model boundary, inputs, assumptions, calculations, route construction
 **Required evidence**
 
 - System flow from `docs/tf.tex`: geocoding, nearest ports, road routing, sea matrix, fuel/emissions/cost evaluation, persistence.
-- Assumption inventory from `docs/tf_assumptions_and_approximations.md`.
-- Validation plan from `docs/tf_validation_plan.md`.
-- Sensitivity plan from `docs/tf_sensitivity_analysis_plan.md`.
-- Classification rules from `docs/tf_result_classification_rules.md`.
+- Assumption inventory from `docs/tf_support/methodology/tf_assumptions_and_approximations.md`.
+- Validation plan from `docs/tf_support/validation/tf_validation_plan.md`.
+- Sensitivity plan from `docs/tf_support/validation/tf_sensitivity_analysis_plan.md`.
+- Classification rules from `docs/tf_support/validation/tf_result_classification_rules.md`.
 - Unit definitions: km, nautical mile, tonnes, TEU, L, kg fuel, kg CO2e, BRL.
 
 **Methodology risks**
@@ -142,7 +142,7 @@ Explain how the methodology is implemented in the repository without turning the
 - Repository structure: `app/`, `scripts/`, `modules/`, `data/`, `supabase/`, `docs/`, and local-only `docs/references/`.
 - `docs/supabase_postgres.md` for persistence context if needed.
 - Current implementation notes from `docs/tf.tex`.
-- Runtime assumptions from `docs/tf_assumptions_and_approximations.md`.
+- Runtime assumptions from `docs/tf_support/methodology/tf_assumptions_and_approximations.md`.
 - Evidence that Supabase Postgres is the durable backend and Storage is archival/file-log sink where configured.
 
 **Methodology risks**
@@ -170,8 +170,8 @@ Define the OD pairs, port pairs, cargo assumptions, scenario boundaries, and val
 
 **Required evidence**
 
-- Candidate OD and port-pair samples from `docs/tf_validation_plan.md`.
-- Cargo mass, TEU, load factor, and boundary assumptions from current model inputs and `docs/tf_sensitivity_analysis_plan.md`.
+- Candidate OD and port-pair samples from `docs/tf_support/validation/tf_validation_plan.md`.
+- Cargo mass, TEU, load factor, and boundary assumptions from current model inputs and `docs/tf_support/validation/tf_sensitivity_analysis_plan.md`.
 - Route plausibility checks and validation status.
 - Clear indication of whether each route uses observed route intensity, corridor aggregation, class fallback, or another fallback.
 
@@ -203,7 +203,7 @@ Present model outputs and classifications without overstating precision.
 - Final model outputs, once generated.
 - Validation status for each route.
 - Sensitivity results for high-priority parameters.
-- Classification table based on `docs/tf_result_classification_rules.md`.
+- Classification table based on `docs/tf_support/validation/tf_result_classification_rules.md`.
 - Units and boundaries for every table: BRL, kg CO2e, km, nm, tonnes, TEU, TTW, cost boundary.
 
 **Methodology risks**
@@ -233,9 +233,9 @@ Interpret what the results mean for modal comparison, methodology, and engineeri
 **Required evidence**
 
 - Classified results from the Results section.
-- Sensitivity drivers from `docs/tf_sensitivity_analysis_plan.md`.
-- Validation and failure handling from `docs/tf_validation_plan.md`.
-- Literature and benchmark context from `docs/methodology_audit.md`, `docs/costa_allocation_validation.md`, and `docs/tf.tex`.
+- Sensitivity drivers from `docs/tf_support/validation/tf_sensitivity_analysis_plan.md`.
+- Validation and failure handling from `docs/tf_support/validation/tf_validation_plan.md`.
+- Literature and benchmark context from `docs/tf_support/audit/methodology_audit.md`, `docs/costa_allocation_validation.md`, and `docs/tf.tex`.
 
 **Methodology risks**
 
@@ -262,10 +262,10 @@ Make the model boundaries, unresolved assumptions, data gaps, and threats to val
 
 **Required evidence**
 
-- High-impact assumptions and methodology debts from `docs/tf_assumptions_and_approximations.md`.
-- Validation failures or pending checks from `docs/tf_validation_plan.md`.
-- Sensitivity parameters requiring source verification from `docs/tf_sensitivity_analysis_plan.md`.
-- Out-of-scope criteria from `docs/tf_result_classification_rules.md`.
+- High-impact assumptions and methodology debts from `docs/tf_support/methodology/tf_assumptions_and_approximations.md`.
+- Validation failures or pending checks from `docs/tf_support/validation/tf_validation_plan.md`.
+- Sensitivity parameters requiring source verification from `docs/tf_support/validation/tf_sensitivity_analysis_plan.md`.
+- Out-of-scope criteria from `docs/tf_support/validation/tf_result_classification_rules.md`.
 
 **Methodology risks**
 
@@ -323,7 +323,7 @@ Identify realistic extensions that address known methodology debts and improve d
 **Required evidence**
 
 - Methodology debts from assumptions, validation, sensitivity, and classification docs.
-- Future-work items from `docs/methodology_audit.md`, `docs/hoteling_model.md`, and `docs/port_ops_model.md`.
+- Future-work items from `docs/tf_support/audit/methodology_audit.md`, `docs/hoteling_model.md`, and `docs/port_ops_model.md`.
 - Known gaps: service network, port feasibility, inland waterways, backhaul, non-fuel costs, shore power, reefers, electricity factors, WTW factors, multi-year ANTAQ/MRV coverage.
 
 **Methodology risks**
@@ -340,23 +340,23 @@ Group future work by theme: data coverage, route/service realism, emissions boun
 
 | TF section | Supporting docs | Evidence needed | Main risk |
 | --- | --- | --- | --- |
-| Introduction | `docs/tf.tex`, `docs/tf_assumptions_and_approximations.md` | Problem framing, research objective, model boundary summary | Overclaiming cabotage advantage before evidence |
-| Literature review | `docs/methodology_audit.md`, `docs/references.bib`, `docs/costa_allocation_validation.md` | Cabotage, MRV, emissions, port operations, cost-boundary literature | Mixing source boundaries or unsupported references |
-| Methodology | `docs/tf_assumptions_and_approximations.md`, `docs/tf_validation_plan.md`, `docs/tf_sensitivity_analysis_plan.md`, `docs/tf_result_classification_rules.md` | Equations, assumptions, validation/sensitivity/classification rules | Hiding fallbacks or uncertainty |
+| Introduction | `docs/tf.tex`, `docs/tf_support/methodology/tf_assumptions_and_approximations.md` | Problem framing, research objective, model boundary summary | Overclaiming cabotage advantage before evidence |
+| Literature review | `docs/tf_support/audit/methodology_audit.md`, `docs/references.bib`, `docs/costa_allocation_validation.md` | Cabotage, MRV, emissions, port operations, cost-boundary literature | Mixing source boundaries or unsupported references |
+| Methodology | `docs/tf_support/methodology/tf_assumptions_and_approximations.md`, `docs/tf_support/validation/tf_validation_plan.md`, `docs/tf_support/validation/tf_sensitivity_analysis_plan.md`, `docs/tf_support/validation/tf_result_classification_rules.md` | Equations, assumptions, validation/sensitivity/classification rules | Hiding fallbacks or uncertainty |
 | Implementation / computational tool | `docs/tf.tex`, `docs/supabase_postgres.md`, `docs/mrv_container_efficiency.md`, `docs/hoteling_model.md`, `docs/port_ops_model.md` | Repo architecture, data artifacts, runtime flow, persistence | Turning thesis into code walkthrough or overstating reproducibility |
-| Case study / scenarios | `docs/tf_validation_plan.md`, `docs/tf_sensitivity_analysis_plan.md`, `docs/tf_result_classification_rules.md` | OD sample, cargo assumptions, route/port selection, scenario definitions | Cherry-picking or including implausible routes |
-| Results | `docs/tf_result_classification_rules.md`, `docs/tf_validation_plan.md`, `docs/tf_sensitivity_analysis_plan.md` | Base outputs, validation status, sensitivity behavior, classifications | Reporting numbers without uncertainty context |
-| Discussion | `docs/tf_result_classification_rules.md`, `docs/costa_allocation_validation.md`, `docs/methodology_audit.md` | Pattern interpretation, benchmark/literature comparison, sensitivity drivers | Treating sensitive results as robust |
-| Limitations | `docs/tf_assumptions_and_approximations.md`, `docs/tf_validation_plan.md`, `docs/tf_sensitivity_analysis_plan.md` | Data gaps, boundary limits, validation failures, source-verification needs | Understating limitations |
-| Conclusion | `docs/tf_result_classification_rules.md`, `docs/tf.tex` | Final classified findings and contribution statement | Generalizing beyond validated scope |
-| Future work | `docs/methodology_audit.md`, `docs/port_ops_model.md`, `docs/hoteling_model.md`, `docs/tf_assumptions_and_approximations.md` | Methodology debts and concrete extensions | Presenting future work as current capability |
+| Case study / scenarios | `docs/tf_support/validation/tf_validation_plan.md`, `docs/tf_support/validation/tf_sensitivity_analysis_plan.md`, `docs/tf_support/validation/tf_result_classification_rules.md` | OD sample, cargo assumptions, route/port selection, scenario definitions | Cherry-picking or including implausible routes |
+| Results | `docs/tf_support/validation/tf_result_classification_rules.md`, `docs/tf_support/validation/tf_validation_plan.md`, `docs/tf_support/validation/tf_sensitivity_analysis_plan.md` | Base outputs, validation status, sensitivity behavior, classifications | Reporting numbers without uncertainty context |
+| Discussion | `docs/tf_support/validation/tf_result_classification_rules.md`, `docs/costa_allocation_validation.md`, `docs/tf_support/audit/methodology_audit.md` | Pattern interpretation, benchmark/literature comparison, sensitivity drivers | Treating sensitive results as robust |
+| Limitations | `docs/tf_support/methodology/tf_assumptions_and_approximations.md`, `docs/tf_support/validation/tf_validation_plan.md`, `docs/tf_support/validation/tf_sensitivity_analysis_plan.md` | Data gaps, boundary limits, validation failures, source-verification needs | Understating limitations |
+| Conclusion | `docs/tf_support/validation/tf_result_classification_rules.md`, `docs/tf.tex` | Final classified findings and contribution statement | Generalizing beyond validated scope |
+| Future work | `docs/tf_support/audit/methodology_audit.md`, `docs/port_ops_model.md`, `docs/hoteling_model.md`, `docs/tf_support/methodology/tf_assumptions_and_approximations.md` | Methodology debts and concrete extensions | Presenting future work as current capability |
 
 ## 4. Writing principles
 
 - Distinguish observed data from modeled outputs. ANTAQ/MRV records, reference workbooks, processed artifacts, and model estimates are not the same type of evidence.
 - Do not overclaim precision. Use appropriate rounding and avoid false certainty for planning-level estimates.
 - Avoid saying cabotage is always better. Classify findings by corridor and boundary.
-- Classify results as robust, sensitive, inconclusive, or out-of-scope according to `docs/tf_result_classification_rules.md`.
+- Classify results as robust, sensitive, inconclusive, or out-of-scope according to `docs/tf_support/validation/tf_result_classification_rules.md`.
 - Make assumptions and limitations explicit before interpreting results.
 - Preserve units and dimensional consistency. Label km, nautical miles, tonnes, TEU, L, kg fuel, kg CO2e, BRL, kg CO2e/tkm, and BRL/tkm.
 - Keep cost and emissions conclusions separate unless a combined decision rule is explicitly defined.

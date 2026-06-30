@@ -15,8 +15,8 @@ This document uses only tracked repository evidence:
 - `docs/validation/tf_validation_batch_001b_results.md`
 - `docs/validation/tf_validation_batch_001_external_references.md`
 - `docs/validation/tf_validation_batch_001_results.md`
-- `docs/tf_literature_audit_implementation_plan.md`
-- `docs/tf_system_boundary.md`
+- `docs/tf_support/audit/tf_literature_audit_implementation_plan.md`
+- `docs/tf_support/methodology/tf_system_boundary.md`
 - `docs/port_ops_model.md`
 - implemented provenance and route-warning hooks in `modules/validation/batch_001b.py`, `modules/multimodal/distance_provenance.py`, and `modules/multimodal/route_quality.py`
 

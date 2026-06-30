@@ -372,7 +372,7 @@ A contribuição principal é metodológica e computacional. O CabotageLens ofer
 
 ## 12. Referências e artefatos
 
-As chaves abaixo seguem o mapa de citações rastreado em `docs/tf_literature_citation_map.md`. A formatação ABNT final será compilada no relatório do TF. Metadados bibliográficos não devem ser inventados. Artefatos internos do projeto, como OpenRouteService/cache Supabase, SeaMatrix, o workbook Gustavo/Costa e os resultados Batch 001B/002, são referidos em prosa pelos respectivos documentos rastreados, sem placeholders bibliográficos novos.
+As chaves abaixo seguem o mapa de citações rastreado em `docs/tf_support/writing/tf_literature_citation_map.md`. A formatação ABNT final será compilada no relatório do TF. Metadados bibliográficos não devem ser inventados. Artefatos internos do projeto, como OpenRouteService/cache Supabase, SeaMatrix, o workbook Gustavo/Costa e os resultados Batch 001B/002, são referidos em prosa pelos respectivos documentos rastreados, sem placeholders bibliográficos novos.
 
 | Chave | Descrição resumida |
 |-------|-------------------|
