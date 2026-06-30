@@ -18,7 +18,7 @@ def build_scenario_payload(session_state: Mapping[str, Any]) -> Dict[str, Any]:
     allocation_mode = str(session_state.get("allocation_mode", "auto")).strip().lower()
     allocation_load_factor = min(max(float(session_state.get("allocation_load_factor", 0.8)), 0.01), 1.0)
 
-    return {
+    payload = {
         "origin": str(session_state.get("origin", "")).strip(),
         "destiny": str(session_state.get("destiny", "")).strip(),
         "cargo_t": float(session_state.get("cargo_t", 0.0)),
@@ -42,6 +42,12 @@ def build_scenario_payload(session_state: Mapping[str, Any]) -> Dict[str, Any]:
         ),
         "port_ops_scenario": str(session_state.get("port_ops_scenario", "")),
     }
+
+    observed_ports = session_state.get("port_ops_observed_ports")
+    if observed_ports:
+        payload["port_ops_observed_ports"] = observed_ports
+
+    return payload
 
 
 def resolve_cargo_teu(payload: Mapping[str, Any]) -> int:
@@ -132,6 +138,7 @@ def run_analysis(
         allocation_load_factor=payload["allocation_load_factor"],
         full_call_mode=payload["full_call_mode"],
         port_ops_scenario=payload["port_ops_scenario"],
+        port_ops_observed_ports=payload.get("port_ops_observed_ports"),
     )
     if not results:
         _log.error("Failed to evaluate route.")

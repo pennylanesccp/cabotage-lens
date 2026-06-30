@@ -5,7 +5,20 @@ from typing import Any, Mapping
 import pandas as pd
 import streamlit as st
 
-from app.main.utils.formatters import fmt_currency_brl, fmt_distance_km, fmt_emissions_kg, safe_float
+from app.main.details.provenance import (
+    basis_label,
+    clean_text,
+    port_ops_source_level,
+    source_level_label,
+    warnings_summary,
+)
+from app.main.utils.formatters import (
+    fmt_currency_brl,
+    fmt_distance_km,
+    fmt_emissions_kg,
+    format_significant,
+    safe_float,
+)
 
 
 def _maritime_component_breakdown(results: Mapping[str, Any]) -> dict[str, float]:
@@ -69,18 +82,21 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
             "Distance": fmt_distance_km(first.get("distance_km")),
             "Cost estimate": fmt_currency_brl(first.get("cost")),
             "TTW CO2e": fmt_emissions_kg(first.get("co2e")),
+            "Data source": "-",
         },
         {
             "Leg": "Sea leg (cabotage)",
             "Distance": fmt_distance_km(sea.get("distance_km")),
             "Cost estimate": fmt_currency_brl(maritime.get("sailing_cost_brl")),
             "TTW CO2e": fmt_emissions_kg(maritime.get("sailing_co2e_kg")),
+            "Data source": clean_text(sea.get("fuel_g_per_tnm_source")) or "-",
         },
         {
             "Leg": "Port ops",
             "Distance": "-",
             "Cost estimate": fmt_currency_brl(maritime.get("port_ops_cost_brl")),
             "TTW CO2e": fmt_emissions_kg(maritime.get("port_ops_co2e_kg")),
+            "Data source": source_level_label(port_ops_source_level(sea)) or "-",
         },
     ]
 
@@ -91,6 +107,7 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
                 "Distance": "-",
                 "Cost estimate": fmt_currency_brl(maritime.get("hoteling_cost_brl")),
                 "TTW CO2e": fmt_emissions_kg(maritime.get("hoteling_co2e_kg")),
+                "Data source": source_level_label(sea.get("hoteling_source_level")) or "-",
             }
         )
 
@@ -100,9 +117,51 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
             "Distance": fmt_distance_km(last.get("distance_km")),
             "Cost estimate": fmt_currency_brl(last.get("cost")),
             "TTW CO2e": fmt_emissions_kg(last.get("co2e")),
+            "Data source": "-",
         }
     )
 
+    return pd.DataFrame(rows)
+
+
+def _port_call_breakdown_table(results: Mapping[str, Any]) -> pd.DataFrame:
+    sea = results.get("multimodal", {}).get("sea", {})
+    port_ops = sea.get("port_ops", {}) if isinstance(sea, Mapping) else {}
+    calls = port_ops.get("port_call_breakdown") if isinstance(port_ops, Mapping) else None
+    if not isinstance(calls, list) or not calls:
+        return pd.DataFrame()
+
+    def _format_optional_kg(value: Any) -> str:
+        if value is None:
+            return "Unavailable"
+        return f"{format_significant(value)} kg"
+
+    def _format_optional_co2e(value: Any) -> str:
+        if value is None:
+            return "Unavailable"
+        return fmt_emissions_kg(value)
+
+    rows: list[dict[str, str]] = []
+    for index, call in enumerate(calls, start=1):
+        if not isinstance(call, Mapping):
+            continue
+        basis = clean_text(call.get("basis"))
+        if not basis:
+            fuel_resolution = call.get("fuel_resolution")
+            if isinstance(fuel_resolution, Mapping):
+                basis = clean_text(fuel_resolution.get("basis"))
+        note = warnings_summary([call.get("warning")], limit=1) or basis_label(basis) or "-"
+        rows.append(
+            {
+                "Port call": clean_text(call.get("port_name")) or f"Port call {index}",
+                "Activity": format_significant(call.get("activity_value")),
+                "Activity unit": clean_text(call.get("activity_unit")) or "-",
+                "Fuel": _format_optional_kg(call.get("fuel_kg")),
+                "CO2e": _format_optional_co2e(call.get("co2e_kg")),
+                "Source": source_level_label(call.get("source_level")) or "-",
+                "Basis / note": note,
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -115,3 +174,7 @@ def render_breakdown(results: Mapping[str, Any]) -> None:
     st.dataframe(_summary_table(results), hide_index=True, width="stretch")
     st.markdown("**Multimodal leg breakdown**")
     st.dataframe(_legs_table(results), hide_index=True, width="stretch")
+    port_call_table = _port_call_breakdown_table(results)
+    if not port_call_table.empty:
+        st.markdown("**Port-call provenance**")
+        st.dataframe(port_call_table, hide_index=True, width="stretch")

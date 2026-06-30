@@ -122,6 +122,20 @@ Available in:
   2. `container_feeder`
   3. first valid class in payload
 - Evaluator aligns hoteling class resolution with resolved sea class and logs if any mismatch occurs.
+- Runtime output exposes hoteling provenance fields such as `hoteling_source_level`, `hoteling_basis`, `hoteling_warning`, and `hoteling_exclusion_reason`.
+- When port-specific hotelling data are available in a future data path, they should be used directly. Missing port-specific values should not be interpreted as zero; they should follow the same transparent hierarchy used for port operations: observed value, weighted observed-port average, existing documented default, or explicit unavailable state.
+- Separate hoteling remains skipped when the selected transport-work intensity already represents observed operational fuel, because adding it again would risk double counting.
+
+## Provenance Interpretation
+
+The source levels have the following interpretation:
+
+- `observed`: observed port-specific data.
+- `estimated_port_average`: weighted average intensity from observed peer ports.
+- `literature_default`: documented model default from the current artifact/methodology.
+- `unavailable`: no defensible observed or documented fallback value is available, so the component is explicitly marked rather than silently set to zero.
+
+Estimated, documented-default, and unavailable states are lower-confidence than observed data and should be shown in thesis result tables or notes where they affect interpretation.
 
 ## Sanity Checks
 

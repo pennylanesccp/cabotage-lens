@@ -5,6 +5,19 @@ from typing import Any, Mapping
 import pandas as pd
 import streamlit as st
 
+from app.main.details.provenance import (
+    basis_label,
+    clean_text,
+    port_ops_calculation_basis,
+    port_ops_denominator_unit,
+    port_ops_observed_record_count,
+    port_ops_source_counts,
+    port_ops_source_level,
+    port_ops_warnings,
+    source_counts_summary,
+    source_level_label,
+    warnings_summary,
+)
 from app.main.utils.formatters import safe_float
 from modules.multimodal.distance_provenance import maritime_distance_source_type
 
@@ -76,6 +89,119 @@ def _maritime_source_rows(results: Mapping[str, Any]) -> list[tuple[str, str, st
     return rows
 
 
+def _port_ops_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
+    sea = results.get("multimodal", {}).get("sea", {})
+    if not isinstance(sea, Mapping):
+        return []
+
+    rows: list[tuple[str, str, str]] = []
+    source_level = source_level_label(port_ops_source_level(sea))
+    if source_level:
+        rows.append(
+            (
+                "Port ops data source",
+                "Provenance level for port-operation fuel and emissions in this route.",
+                source_level,
+            )
+        )
+
+    counts_text = source_counts_summary(port_ops_source_counts(sea))
+    observed_count = port_ops_observed_record_count(sea)
+    coverage_parts = []
+    if counts_text:
+        coverage_parts.append(counts_text)
+    if observed_count is not None:
+        coverage_parts.append(f"observed records available: {observed_count}")
+    if coverage_parts:
+        rows.append(
+            (
+                "Port ops coverage",
+                "Coverage of observed, estimated, documented-default, and unavailable port-operation values.",
+                "; ".join(coverage_parts),
+            )
+        )
+
+    basis = basis_label(port_ops_calculation_basis(sea))
+    denominator_unit = port_ops_denominator_unit(sea)
+    basis_parts = []
+    if basis:
+        basis_parts.append(basis)
+    if denominator_unit:
+        basis_parts.append(f"fallback denominator: {denominator_unit}")
+    if basis_parts:
+        rows.append(
+            (
+                "Port ops fallback basis",
+                "Basis used when port-specific observed data are incomplete or absent.",
+                "; ".join(basis_parts),
+            )
+        )
+
+    warnings_text = warnings_summary(port_ops_warnings(sea))
+    if warnings_text:
+        rows.append(
+            (
+                "Port ops warning",
+                "Fallback or unavailable-data warning retained from the calculation layer.",
+                warnings_text,
+            )
+        )
+
+    return rows
+
+
+def _hoteling_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
+    inputs = results.get("inputs", {})
+    sea = results.get("multimodal", {}).get("sea", {})
+    if not isinstance(inputs, Mapping):
+        inputs = {}
+    if not isinstance(sea, Mapping):
+        sea = {}
+
+    rows: list[tuple[str, str, str]] = []
+    source_level = source_level_label(sea.get("hoteling_source_level") or inputs.get("hoteling_source_level"))
+    if source_level:
+        rows.append(
+            (
+                "Hoteling data source",
+                "Provenance level for berth-side hoteling fuel and emissions.",
+                source_level,
+            )
+        )
+
+    basis = basis_label(sea.get("hoteling_basis") or inputs.get("hoteling_basis"))
+    if basis:
+        rows.append(
+            (
+                "Hoteling basis",
+                "Basis used to resolve hoteling fuel and emissions for this route.",
+                basis,
+            )
+        )
+
+    warning = clean_text(sea.get("hoteling_warning") or inputs.get("hoteling_warning"))
+    if warning:
+        rows.append(
+            (
+                "Hoteling warning",
+                "Fallback warning retained from the hoteling resolver.",
+                warning,
+            )
+        )
+
+    exclusion = clean_text(inputs.get("hoteling_exclusion_reason") or sea.get("hoteling_exclusion_reason"))
+    if exclusion:
+        rows.append(
+            (
+                "Hoteling exclusion reason",
+                "Reason hoteling was not added as a separate component, when applicable.",
+                basis_label(exclusion) or exclusion,
+            )
+        )
+
+    return rows
+
+
 def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -> pd.DataFrame:
     inputs = results.get("inputs", {})
     hoteling_reason = str(inputs.get("hoteling_exclusion_reason") or "").strip()
@@ -138,11 +264,13 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
             "Parameter set used for port handling time, cost, fuel, and emissions assumptions.",
             str(payload.get("port_ops_scenario") or "n/a"),
         ),
+        *_port_ops_rows(results),
         (
             "Hoteling",
             "Whether berth-side auxiliary fuel use and emissions are included while the vessel is in port.",
             hoteling_value,
         ),
+        *_hoteling_rows(results),
     ]
     return pd.DataFrame(rows, columns=["Parameter", "Description", "Value"])
 

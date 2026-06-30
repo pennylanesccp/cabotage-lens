@@ -75,6 +75,8 @@ When optional observed per-port records are available in the backend, the resolv
 
 The runtime payload now exposes the source level, activity unit, weighted denominator, observed sample count, included ports, and warnings for fallback or unavailable values. Existing Santos scenario totals remain the documented default path when no observed per-port records are supplied.
 
+These source levels should be interpreted as result-confidence metadata. `observed` is the strongest basis, `estimated_port_average` and `literature_default` are lower-confidence estimates, and `unavailable` means the component was not included because no defensible value could be assigned.
+
 ## Santos Scenarios
 
 The artifact defines two scenarios:
@@ -119,6 +121,8 @@ Advanced panel includes:
 - Existing `Port calls per voyage`
 
 Result panel and JSON include resolved TEU and move source for traceability.
+
+The single-route details also summarize port-operation provenance using readable source labels, source-level counts, fallback basis, observed-record count, warnings, and per-port-call source levels when `port_call_breakdown` is available.
 
 ### CLI
 
