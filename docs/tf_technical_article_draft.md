@@ -90,7 +90,7 @@ As sensibilidades internas, a rerodada consolidada e o benchmark externo sustent
 
 Como artigo técnico, o resultado central é a estrutura: um modo rastreável de formular comparações multimodais com fronteiras explícitas. Trabalhos futuros devem ampliar a cobertura de distâncias marítimas, melhorar a verificação de portos e serviços, incorporar fronteiras WTW/LCA separadas quando houver fatores compatíveis, e adicionar camadas comerciais apenas quando houver dados de frete, frequência, contrato e confiabilidade adequadamente documentados.
 
-[^rerodada-portops-hoteling]: Nos cenários desta validação, o componente de *hoteling* foi tratado como incorporado à intensidade agregada de transporte marítimo, evitando dupla contagem. As operações portuárias foram incluídas explicitamente por valor-padrão documentado de literatura, sem uso de registros observados por porto ou médias estimadas de portos observados no artefato ativo. As diferenças antigo-novo do Batch 001B não são interpretadas como efeito puro de portops/*hoteling*, pois pernas rodoviárias resolvidas por cache/provedor também mudaram.
+[^rerodada-portops-hoteling]: Nos cenários desta validação, o componente de *hoteling* foi tratado como incorporado à intensidade agregada de transporte marítimo, evitando dupla contagem. As operações portuárias foram incluídas explicitamente por valor-padrão documentado de literatura, sem uso de registros observados por porto ou médias estimadas de portos observados no artefato ativo. As diferenças antigo-novo do Batch 001B não permitem isolar portops/*hoteling* como causa, pois pernas rodoviárias resolvidas por cache/provedor também mudaram.
 
 ## Referências e artefatos pendentes
 
