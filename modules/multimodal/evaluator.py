@@ -540,8 +540,6 @@ def evaluate_path(
         sea_fuel_sailing_kg = ship_fuel_kg * cargo_share
         sailing_fuel_mode = "vessel_fuel_share_fallback"
 
-    hoteling_effective = bool(include_hoteling) and not hoteling_disabled_for_transport_work
-    hoteling_hours_total = hoteling_hours_total_requested if hoteling_effective else 0.0
     hoteling_exclusion_reason: str | None = None
     if hoteling_disabled_for_transport_work:
         hoteling_exclusion_reason = "included_in_transport_work_intensity"
@@ -551,6 +549,18 @@ def evaluate_path(
         )
     elif not include_hoteling:
         hoteling_exclusion_reason = "disabled_by_user"
+    elif hoteling_hours_total_requested <= 0.0:
+        hoteling_exclusion_reason = "zero_activity"
+    elif hoteling_sel is None:
+        hoteling_exclusion_reason = "hoteling_rate_unavailable"
+
+    hoteling_effective = bool(
+        include_hoteling
+        and hoteling_hours_total_requested > 0.0
+        and not hoteling_disabled_for_transport_work
+        and hoteling_sel is not None
+    )
+    hoteling_hours_total = hoteling_hours_total_requested if hoteling_effective else 0.0
 
     hoteling_rate_t_per_h = 0.0
     hoteling_ratio_used = 0.0
@@ -562,6 +572,11 @@ def evaluate_path(
     hoteling_basis: str | None = None
     hoteling_warning: str | None = None
     hoteling_vessel_class = vessel_eff.vessel_class
+    if hoteling_exclusion_reason == "hoteling_rate_unavailable":
+        hoteling_warning = (
+            "Hoteling was requested but no defensible hoteling rate was available; "
+            "the separate hoteling component was excluded from numeric totals."
+        )
 
     if hoteling_effective and hoteling_hours_total > 0 and hoteling_sel is not None:
         hoteling_rate_t_per_h = float(hoteling_sel.fuel_rate_hoteling_t_per_h)
@@ -584,11 +599,14 @@ def evaluate_path(
     sea_fuel_marine_kg = sea_fuel_sailing_kg + hoteling_fuel_kg
     sea_cost_marine = (sea_fuel_marine_kg / _KG_PER_TONNE) * bunker_price_ton
     sea_co2e_marine = sea_fuel_marine_kg * _BUNKER_EF_KG_CO2E_PER_KG
+    hoteling_cost_brl = (hoteling_fuel_kg / _KG_PER_TONNE) * bunker_price_ton
+    hoteling_co2e_kg = hoteling_fuel_kg * _BUNKER_EF_KG_CO2E_PER_KG
 
     port_ops_payload: Dict[str, Any] | None = None
     port_ops_fuel_kg = 0.0
     port_ops_co2e_kg = 0.0
     port_ops_cost_brl = 0.0
+    port_ops_exclusion_reason: str | None = None
 
     if include_port_ops and port_calls > 0:
         try:
@@ -615,10 +633,21 @@ def evaluate_path(
         except Exception as exc:
             _log.error("Failed to resolve/evaluate port-ops artifact: %s", exc)
             return {}
+    elif not include_port_ops:
+        port_ops_exclusion_reason = "disabled_by_user"
+    elif port_calls <= 0:
+        port_ops_exclusion_reason = "zero_activity"
 
     sea_fuel_total_kg = sea_fuel_marine_kg + port_ops_fuel_kg
     sea_cost_total = sea_cost_marine + port_ops_cost_brl
     sea_co2e_total = sea_co2e_marine + port_ops_co2e_kg
+    port_ops_has_unavailable = (
+        False if not isinstance(port_ops_payload, dict) else bool(port_ops_payload.get("has_unavailable_port_ops"))
+    )
+    port_ops_totals_complete = (
+        None if not isinstance(port_ops_payload, dict) else bool(port_ops_payload.get("totals_complete"))
+    )
+    hoteling_status = "included" if hoteling_effective else (hoteling_exclusion_reason or "not_included")
 
     res_sea = {
         "distance_km": float(sea_dist_km),
@@ -666,16 +695,21 @@ def evaluate_path(
         "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
         "hoteling_fuel_ship_kg": float(hoteling_fuel_ship_kg),
         "hoteling_fuel_kg": float(hoteling_fuel_kg),
+        "hoteling_cost": float(hoteling_cost_brl),
+        "hoteling_co2e": float(hoteling_co2e_kg),
         "hoteling_vessel_class": hoteling_vessel_class,
         "hoteling_ratio_used": float(hoteling_ratio_used),
         "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
         "hoteling_source_level": hoteling_source_level,
         "hoteling_basis": hoteling_basis,
         "hoteling_warning": hoteling_warning,
+        "hoteling_status": hoteling_status,
         "fuel_kg_marine": float(sea_fuel_marine_kg),
         "cost_marine": float(sea_cost_marine),
         "co2e_marine": float(sea_co2e_marine),
-        "port_ops_included": bool(include_port_ops),
+        "port_ops_requested": bool(include_port_ops),
+        "port_ops_included": bool(include_port_ops and port_calls > 0 and isinstance(port_ops_payload, dict)),
+        "port_ops_exclusion_reason": port_ops_exclusion_reason,
         "port_ops_scenario_requested": str(port_ops_scenario),
         "port_ops_stat_key": str(port_ops_stat_key),
         "cargo_teu_requested": (None if cargo_teu is None else float(max(float(cargo_teu), 0.0))),
@@ -693,6 +727,8 @@ def evaluate_path(
         "port_ops_source_level_counts": (
             {} if not isinstance(port_ops_payload, dict) else dict(port_ops_payload.get("source_level_counts") or {})
         ),
+        "port_ops_has_unavailable": port_ops_has_unavailable,
+        "port_ops_totals_complete": port_ops_totals_complete,
         "port_ops_warnings": (
             [] if not isinstance(port_ops_payload, dict) else list(port_ops_payload.get("warnings") or [])
         ),
@@ -759,19 +795,27 @@ def evaluate_path(
             "vessel_efficiency_source": str(vessel_eff.source_path),
             "include_hoteling": bool(hoteling_effective),
             "hoteling_requested": bool(include_hoteling),
+            "hoteling_included": bool(hoteling_effective),
             "hoteling_exclusion_reason": hoteling_exclusion_reason,
+            "hoteling_status": hoteling_status,
             "hoteling_hours_per_call": float(hoteling_hours_per_call),
             "port_calls": int(port_calls),
             "hoteling_hours_total": float(hoteling_hours_total),
             "hoteling_hours_total_requested": float(hoteling_hours_total_requested),
             "hoteling_rate_t_per_h": float(hoteling_rate_t_per_h),
+            "hoteling_fuel_kg": float(hoteling_fuel_kg),
+            "hoteling_co2e": float(hoteling_co2e_kg),
             "hoteling_vessel_class": hoteling_vessel_class,
             "hoteling_ratio_used": float(hoteling_ratio_used),
             "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
             "hoteling_source": hoteling_source_path,
             "hoteling_source_level": hoteling_source_level,
             "hoteling_basis": hoteling_basis,
+            "hoteling_warning": hoteling_warning,
             "include_port_ops": bool(include_port_ops),
+            "port_ops_requested": bool(include_port_ops),
+            "port_ops_included": bool(include_port_ops and port_calls > 0 and isinstance(port_ops_payload, dict)),
+            "port_ops_exclusion_reason": port_ops_exclusion_reason,
             "port_ops_scenario_requested": str(port_ops_scenario),
             "port_ops_stat_key": str(port_ops_stat_key),
             "cargo_teu_requested": (None if cargo_teu is None else float(max(float(cargo_teu), 0.0))),
@@ -807,6 +851,8 @@ def evaluate_path(
             "port_ops_source_level_counts": (
                 {} if not isinstance(port_ops_payload, dict) else dict(port_ops_payload.get("source_level_counts") or {})
             ),
+            "port_ops_has_unavailable": port_ops_has_unavailable,
+            "port_ops_totals_complete": port_ops_totals_complete,
             "port_ops_warning_count": (
                 0 if not isinstance(port_ops_payload, dict) else len(port_ops_payload.get("warnings") or [])
             ),

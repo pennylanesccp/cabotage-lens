@@ -10,9 +10,13 @@ from app.main.details.provenance import (
     clean_text,
     port_ops_calculation_basis,
     port_ops_denominator_unit,
+    port_ops_equipment_source_counts,
+    port_ops_has_unavailable,
+    port_ops_missing_value_policy,
     port_ops_observed_record_count,
     port_ops_source_counts,
     port_ops_source_level,
+    port_ops_totals_complete,
     port_ops_warnings,
     source_counts_summary,
     source_level_label,
@@ -106,10 +110,13 @@ def _port_ops_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
         )
 
     counts_text = source_counts_summary(port_ops_source_counts(sea))
+    equipment_counts_text = source_counts_summary(port_ops_equipment_source_counts(sea))
     observed_count = port_ops_observed_record_count(sea)
     coverage_parts = []
     if counts_text:
-        coverage_parts.append(counts_text)
+        coverage_parts.append(f"port calls: {counts_text}")
+    if equipment_counts_text:
+        coverage_parts.append(f"equipment factors: {equipment_counts_text}")
     if observed_count is not None:
         coverage_parts.append(f"observed records available: {observed_count}")
     if coverage_parts:
@@ -118,6 +125,24 @@ def _port_ops_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
                 "Port ops coverage",
                 "Coverage of observed, estimated, documented-default, and unavailable port-operation values.",
                 "; ".join(coverage_parts),
+            )
+        )
+
+    complete = port_ops_totals_complete(sea)
+    policy = port_ops_missing_value_policy(sea)
+    completeness_parts = []
+    if complete is not None:
+        completeness_parts.append("complete" if complete else "incomplete")
+    if port_ops_has_unavailable(sea):
+        completeness_parts.append("unavailable components are flagged")
+    if policy:
+        completeness_parts.append(policy.replace("_", " "))
+    if completeness_parts:
+        rows.append(
+            (
+                "Port ops completeness",
+                "Whether numeric port-operation totals include all represented components.",
+                "; ".join(completeness_parts),
             )
         )
 
@@ -205,10 +230,18 @@ def _hoteling_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
 def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -> pd.DataFrame:
     inputs = results.get("inputs", {})
     hoteling_reason = str(inputs.get("hoteling_exclusion_reason") or "").strip()
-    if bool(inputs.get("include_hoteling")):
-        hoteling_value = "enabled"
+    hoteling_requested = bool(inputs.get("hoteling_requested"))
+    hoteling_included = bool(inputs.get("hoteling_included") or inputs.get("include_hoteling"))
+    if hoteling_included:
+        hoteling_value = "included"
     elif hoteling_reason == "included_in_transport_work_intensity":
         hoteling_value = "skipped (already covered by MRV transport-work intensity)"
+    elif hoteling_reason == "zero_activity":
+        hoteling_value = "zero activity"
+    elif hoteling_reason == "hoteling_rate_unavailable":
+        hoteling_value = "unavailable (not included without defensible data)"
+    elif hoteling_requested:
+        hoteling_value = "requested but not included"
     else:
         hoteling_value = "disabled"
 

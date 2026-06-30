@@ -47,6 +47,7 @@ class MainDetailsTests(unittest.TestCase):
         self.assertIn("Fallback estimate", rows["Maritime distance note"]["Value"])
 
     def test_source_level_labels_are_human_readable(self) -> None:
+        self.assertEqual(source_level_label("zero_activity"), "Zero activity")
         self.assertEqual(source_level_label("observed"), "Observed port-specific data")
         self.assertEqual(
             source_level_label("estimated_port_average"),
@@ -76,6 +77,10 @@ class MainDetailsTests(unittest.TestCase):
                         "calculation_basis": "observed_port_ops_hierarchy",
                         "fallback_denominator_unit": "teu",
                         "observed_port_ops_record_count": 2,
+                        "equipment_source_level_counts": {"literature_default": 1},
+                        "totals_complete": False,
+                        "has_unavailable_port_ops": True,
+                        "missing_value_policy": "unavailable_values_excluded_from_numeric_totals_with_warning",
                     },
                 }
             },
@@ -87,7 +92,10 @@ class MainDetailsTests(unittest.TestCase):
         self.assertIn("Port ops scenario", rows)
         self.assertEqual(rows["Port ops data source"]["Value"], "Estimated from weighted average of observed ports")
         self.assertIn("Observed port-specific data: 1", rows["Port ops coverage"]["Value"])
+        self.assertIn("equipment factors: Documented model default: 1", rows["Port ops coverage"]["Value"])
         self.assertIn("observed records available: 2", rows["Port ops coverage"]["Value"])
+        self.assertIn("incomplete", rows["Port ops completeness"]["Value"])
+        self.assertIn("unavailable components are flagged", rows["Port ops completeness"]["Value"])
         self.assertIn("fallback denominator: teu", rows["Port ops fallback basis"]["Value"])
         self.assertIn("Port-specific observed", rows["Port ops warning"]["Value"])
         self.assertEqual(rows["Hoteling data source"]["Value"], "Documented model default")
@@ -129,6 +137,41 @@ class MainDetailsTests(unittest.TestCase):
         }
         older_table = _legs_table(older_results)
         self.assertIn("Data source", older_table.columns)
+
+    def test_breakdown_marks_unavailable_and_excluded_components(self) -> None:
+        results = {
+            "inputs": {"bunker_price": 3500.0, "marine_ef_kg_per_kg": 3.21},
+            "multimodal": {
+                "first_mile": {"distance_km": 1.0, "cost": 2.0, "co2e": 3.0},
+                "last_mile": {"distance_km": 4.0, "cost": 5.0, "co2e": 6.0},
+                "sea": {
+                    "distance_km": 100.0,
+                    "fuel_kg_sailing": 10.0,
+                    "hoteling_requested": True,
+                    "hoteling_included": False,
+                    "hoteling_exclusion_reason": "included_in_transport_work_intensity",
+                    "hoteling_fuel_kg": 0.0,
+                    "port_ops_fuel_kg": 0.0,
+                    "port_ops_cost": 0.0,
+                    "port_ops_co2e": 0.0,
+                    "port_ops_source_level": "unavailable",
+                    "port_ops_has_unavailable": True,
+                    "port_ops": {
+                        "source_level": "unavailable",
+                        "has_unavailable_port_ops": True,
+                        "missing_value_policy": "unavailable_values_excluded_from_numeric_totals_with_warning",
+                    },
+                },
+            },
+        }
+
+        rows = {row["Leg"]: row for row in _legs_table(results).to_dict("records")}
+
+        self.assertEqual(rows["Port ops"]["Cost estimate"], "Unavailable")
+        self.assertEqual(rows["Port ops"]["TTW CO2e"], "Unavailable")
+        self.assertEqual(rows["Hoteling"]["Cost estimate"], "Excluded")
+        self.assertEqual(rows["Hoteling"]["TTW CO2e"], "Excluded")
+        self.assertEqual(rows["Hoteling"]["Data source"], "Already covered by MRV transport-work intensity")
 
     def test_port_call_breakdown_table_is_compact_and_readable(self) -> None:
         results = {

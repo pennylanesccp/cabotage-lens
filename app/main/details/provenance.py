@@ -4,6 +4,7 @@ from typing import Any, Mapping, Sequence
 
 
 SOURCE_LEVEL_LABELS = {
+    "zero_activity": "Zero activity",
     "observed": "Observed port-specific data",
     "estimated_port_average": "Estimated from weighted average of observed ports",
     "literature_default": "Documented model default",
@@ -19,7 +20,10 @@ _BASIS_LABELS = {
     "vessel_class_hoteling_rate": "Vessel-class hoteling rate",
     "included_in_transport_work_intensity": "Already covered by MRV transport-work intensity",
     "disabled_by_user": "Disabled by user",
+    "zero_activity": "Zero activity",
+    "hoteling_rate_unavailable": "Hoteling rate unavailable",
     "no_observed_or_documented_default": "No observed or documented default basis",
+    "converted_from_resolved_fuel_kg": "CO2e converted from resolved fuel mass",
 }
 
 
@@ -49,7 +53,7 @@ def source_counts_summary(counts: Any) -> str | None:
         return None
 
     parts: list[str] = []
-    for key in ("observed", "estimated_port_average", "literature_default", "unavailable"):
+    for key in ("zero_activity", "observed", "estimated_port_average", "literature_default", "unavailable"):
         value = counts.get(key)
         if not isinstance(value, (int, float)) or int(value) <= 0:
             continue
@@ -91,6 +95,12 @@ def port_ops_source_counts(sea: Mapping[str, Any]) -> Mapping[str, Any]:
     return counts if isinstance(counts, Mapping) else {}
 
 
+def port_ops_equipment_source_counts(sea: Mapping[str, Any]) -> Mapping[str, Any]:
+    payload = extract_port_ops_payload(sea)
+    counts = payload.get("equipment_source_level_counts")
+    return counts if isinstance(counts, Mapping) else {}
+
+
 def port_ops_warnings(sea: Mapping[str, Any]) -> list[str]:
     payload = extract_port_ops_payload(sea)
     warnings = sea.get("port_ops_warnings") or payload.get("warnings") or []
@@ -117,3 +127,22 @@ def port_ops_observed_record_count(sea: Mapping[str, Any]) -> int | None:
     if isinstance(value, (int, float)) and int(value) >= 0:
         return int(value)
     return None
+
+
+def port_ops_has_unavailable(sea: Mapping[str, Any]) -> bool:
+    payload = extract_port_ops_payload(sea)
+    return bool(sea.get("port_ops_has_unavailable") or payload.get("has_unavailable_port_ops"))
+
+
+def port_ops_totals_complete(sea: Mapping[str, Any]) -> bool | None:
+    payload = extract_port_ops_payload(sea)
+    value = sea.get("port_ops_totals_complete")
+    if isinstance(value, bool):
+        return value
+    payload_value = payload.get("totals_complete")
+    return payload_value if isinstance(payload_value, bool) else None
+
+
+def port_ops_missing_value_policy(sea: Mapping[str, Any]) -> str | None:
+    payload = extract_port_ops_payload(sea)
+    return clean_text(payload.get("missing_value_policy"))

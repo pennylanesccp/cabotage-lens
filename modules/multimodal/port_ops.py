@@ -36,7 +36,9 @@ _SOURCE_OBSERVED = "observed"
 _SOURCE_ESTIMATED_AVERAGE = "estimated_port_average"
 _SOURCE_LITERATURE_DEFAULT = "literature_default"
 _SOURCE_UNAVAILABLE = "unavailable"
+_SOURCE_ZERO_ACTIVITY = "zero_activity"
 _SOURCE_LEVELS: tuple[str, ...] = (
+    _SOURCE_ZERO_ACTIVITY,
     _SOURCE_OBSERVED,
     _SOURCE_ESTIMATED_AVERAGE,
     _SOURCE_LITERATURE_DEFAULT,
@@ -73,7 +75,6 @@ _DENOMINATOR_ALIASES = {
         "handled_teu",
         "total_teu",
         "teu",
-        "denominator",
     ),
     "tonne": (
         "observed_cargo_tons",
@@ -85,16 +86,40 @@ _DENOMINATOR_ALIASES = {
         "total_handled_t",
         "tons",
         "tonnes",
-        "denominator",
     ),
     "move": (
         "observed_moves",
         "quay_moves",
         "port_moves",
         "moves",
-        "denominator",
     ),
 }
+_GENERIC_DENOMINATOR_ALIASES = ("denominator", "activity_denominator")
+_DENOMINATOR_UNIT_ALIASES = {
+    "teu": "teu",
+    "teus": "teu",
+    "container": "teu",
+    "containers": "teu",
+    "tonne": "tonne",
+    "tonnes": "tonne",
+    "ton": "tonne",
+    "tons": "tonne",
+    "t": "tonne",
+    "metric_ton": "tonne",
+    "metric_tons": "tonne",
+    "metric_tonne": "tonne",
+    "metric_tonnes": "tonne",
+    "move": "move",
+    "moves": "move",
+    "quay_move": "move",
+    "quay_moves": "move",
+}
+_DENOMINATOR_UNIT_KEYS = (
+    "denominator_unit",
+    "activity_unit",
+    "throughput_unit",
+    "cargo_unit",
+)
 
 _INTENSITY_ALIASES = {
     ("fuel_kg", "teu"): ("kg_fuel_per_teu", "fuel_kg_per_teu"),
@@ -191,12 +216,35 @@ def _first_present(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
     return None
 
 
+def _first_present_item(mapping: Mapping[str, Any], keys: Sequence[str]) -> tuple[str | None, Any]:
+    for key in keys:
+        if key in mapping:
+            return key, mapping.get(key)
+    return None, None
+
+
 def _record_port_label(record: Mapping[str, Any]) -> str:
     for key in ("port_name", "port", "name", "city"):
         value = record.get(key)
         if value is not None and str(value).strip():
             return str(value).strip()
     return ""
+
+
+def _normalize_denominator_unit(value: Any) -> str | None:
+    text = _normalize_text(value).replace(" ", "_")
+    if not text:
+        return None
+    return _DENOMINATOR_UNIT_ALIASES.get(text)
+
+
+def _record_declared_denominator_unit(record: Mapping[str, Any]) -> str | None:
+    return _normalize_denominator_unit(_first_present(record, _DENOMINATOR_UNIT_KEYS))
+
+
+def _record_supports_denominator_unit(record: Mapping[str, Any], denominator_unit: str) -> bool:
+    declared = _record_declared_denominator_unit(record)
+    return declared is None or declared == denominator_unit
 
 
 def _coerce_observed_records(value: Any) -> tuple[dict[str, Any], ...]:
@@ -234,16 +282,47 @@ def _intensity_unit(metric_key: str, denominator_unit: str) -> str:
 
 
 def _record_metric_numerator(record: Mapping[str, Any], metric_key: str) -> float | None:
-    keys = _METRIC_ALIASES.get(metric_key, (metric_key,))
-    return _nonnegative_float_or_none(_first_present(record, keys))
+    for key in _METRIC_ALIASES.get(metric_key, (metric_key,)):
+        if key not in record:
+            continue
+        if key == "value":
+            declared_metric = _normalize_text(
+                _first_present(record, ("metric_key", "metric", "value_metric", "value_unit"))
+            )
+            accepted = {
+                _normalize_text(metric_key),
+                _normalize_text(_metric_unit(metric_key)),
+            }
+            if declared_metric and declared_metric not in accepted:
+                continue
+        return _nonnegative_float_or_none(record.get(key))
+    return None
 
 
 def _record_denominator(record: Mapping[str, Any], denominator_unit: str) -> float | None:
-    keys = _DENOMINATOR_ALIASES.get(denominator_unit, (denominator_unit, "denominator"))
-    return _positive_float_or_none(_first_present(record, keys))
+    if not _record_supports_denominator_unit(record, denominator_unit):
+        return None
+
+    keys = _DENOMINATOR_ALIASES.get(denominator_unit, (denominator_unit,))
+    value = _positive_float_or_none(_first_present(record, keys))
+    if value is not None:
+        return value
+
+    generic_key, generic_value = _first_present_item(record, _GENERIC_DENOMINATOR_ALIASES)
+    if generic_key is None:
+        return None
+
+    # A generic denominator is ambiguous without an explicit unit declaration.
+    declared = _record_declared_denominator_unit(record)
+    if declared != denominator_unit:
+        return None
+    return _positive_float_or_none(generic_value)
 
 
 def _record_intensity(record: Mapping[str, Any], metric_key: str, denominator_unit: str) -> float | None:
+    if not _record_supports_denominator_unit(record, denominator_unit):
+        return None
+
     aliases = _INTENSITY_ALIASES.get((metric_key, denominator_unit), ())
     direct = _nonnegative_float_or_none(_first_present(record, aliases))
     if direct is not None:
@@ -282,6 +361,8 @@ def _observed_samples(
                 "port_name": label,
                 "port_key": _normalize_text(label),
                 "intensity": float(intensity),
+                "metric_key": metric_key,
+                "denominator_unit": denominator_unit,
                 "numerator": None if numerator is None else float(numerator),
                 "denominator": None if denominator is None else float(denominator),
             }
@@ -336,6 +417,11 @@ def resolve_port_ops_intensity(
         "total_denominator": 0.0,
         "ports_included": [],
         "warning": None,
+        "zero_activity": False,
+        "excluded_from_total": True,
+        "available": False,
+        "observed_record_count": len(observed_records),
+        "valid_observed_sample_count": 0,
     }
 
     if activity == 0.0:
@@ -344,13 +430,17 @@ def resolve_port_ops_intensity(
             {
                 "value": 0.0,
                 "intensity": 0.0,
-                "source_level": _SOURCE_OBSERVED,
+                "source_level": _SOURCE_ZERO_ACTIVITY,
                 "basis": "zero_activity",
+                "zero_activity": True,
+                "excluded_from_total": False,
+                "available": True,
             }
         )
         return out
 
     samples = _observed_samples(observed_records, metric_key=metric, denominator_unit=unit)
+    base["valid_observed_sample_count"] = len(samples)
 
     for sample in samples:
         if port_key and sample["port_key"] == port_key:
@@ -365,6 +455,8 @@ def resolve_port_ops_intensity(
                     "observed_ports_used": 1,
                     "total_denominator": float(sample["denominator"] or 0.0),
                     "ports_included": [sample["port_name"]] if sample["port_name"] else [],
+                    "excluded_from_total": False,
+                    "available": True,
                 }
             )
             return out
@@ -396,8 +488,10 @@ def resolve_port_ops_intensity(
                     "ports_included": ports_included,
                     "warning": (
                         "Port-specific observed port-ops data missing; "
-                        "used weighted average from observed peer ports."
+                        f"used {unit}-weighted average from observed peer ports."
                     ),
+                    "excluded_from_total": False,
+                    "available": True,
                 }
             )
             return out
@@ -412,9 +506,11 @@ def resolve_port_ops_intensity(
                 "source_level": _SOURCE_LITERATURE_DEFAULT,
                 "basis": literature_default_basis or "documented_literature_default",
                 "warning": (
-                    "No valid observed port-ops peer data available; "
+                    "Observed port-ops data were unavailable for this basis; "
                     "used existing documented default intensity."
                 ),
+                "excluded_from_total": False,
+                "available": True,
             }
         )
         return out
@@ -427,6 +523,8 @@ def resolve_port_ops_intensity(
                 "Port-specific observed port-ops data missing and no valid "
                 "observed peer or documented default intensity is available."
             ),
+            "excluded_from_total": True,
+            "available": False,
         }
     )
     return out
@@ -600,6 +698,21 @@ def _summarize_source_levels(port_calls: Sequence[Mapping[str, Any]]) -> dict[st
     return {key: value for key, value in counts.items() if value > 0}
 
 
+def _summarize_mapping_source_levels(items: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    counts = {level: 0 for level in _SOURCE_LEVELS}
+    for item in items:
+        source_level = str(item.get("source_level") or _SOURCE_UNAVAILABLE)
+        if source_level not in counts:
+            source_level = _SOURCE_UNAVAILABLE
+        counts[source_level] += 1
+    return {key: value for key, value in counts.items() if value > 0}
+
+
+def _source_count(counts: Mapping[str, int], source_level: str) -> int:
+    value = counts.get(source_level)
+    return int(value) if isinstance(value, (int, float)) and int(value) > 0 else 0
+
+
 def _overall_source_level(source_counts: Mapping[str, int]) -> str:
     if source_counts.get(_SOURCE_UNAVAILABLE):
         return _SOURCE_UNAVAILABLE
@@ -609,6 +722,8 @@ def _overall_source_level(source_counts: Mapping[str, int]) -> str:
         return _SOURCE_LITERATURE_DEFAULT
     if source_counts.get(_SOURCE_OBSERVED):
         return _SOURCE_OBSERVED
+    if source_counts.get(_SOURCE_ZERO_ACTIVITY):
+        return _SOURCE_ZERO_ACTIVITY
     return _SOURCE_UNAVAILABLE
 
 
@@ -720,6 +835,14 @@ def estimate_port_ops(
             diesel_stats=diesel_stats,
             electricity_stats=electricity_stats,
         )
+        equipment_zero_activity = equipment_moves_total <= 0.0
+        equipment_available = bool(equipment_zero_activity or not zero_warning)
+        if equipment_zero_activity:
+            equipment_source_level = _SOURCE_ZERO_ACTIVITY
+        elif zero_warning:
+            equipment_source_level = _SOURCE_UNAVAILABLE
+        else:
+            equipment_source_level = _SOURCE_LITERATURE_DEFAULT
 
         equipment_result = {
             "moves_per_container": float(moves_per_container),
@@ -735,7 +858,10 @@ def estimate_port_ops(
             "cost_brl_fuel": float(diesel_cost_brl),
             "cost_brl_electricity": float(electricity_cost_brl),
             "cost_brl": float(total_cost_brl),
-            "source_level": _SOURCE_UNAVAILABLE if zero_warning else _SOURCE_LITERATURE_DEFAULT,
+            "source_level": equipment_source_level,
+            "available": equipment_available,
+            "excluded_from_total": not equipment_available,
+            "zero_activity": equipment_zero_activity,
             "warning": zero_warning,
         }
         equipment_breakdown[equipment_name] = equipment_result
@@ -766,7 +892,38 @@ def estimate_port_ops(
     totals = {k: float(v) for k, v in scenario_totals.items()}
     calculation_basis = "documented_moves_based_scenario"
 
-    if observed_records:
+    zero_activity = calls == 0 or moves_per_call <= 0.0 or quay_moves_total <= 0.0
+    if zero_activity:
+        calculation_basis = "zero_activity"
+        totals = {
+            "diesel_liters": 0.0,
+            "fuel_kg": 0.0,
+            "electricity_kwh": 0.0,
+            "co2e_kg": 0.0,
+            "cost_brl": 0.0,
+        }
+        if calls > 0:
+            for port_name in port_call_names:
+                port_call_breakdown.append(
+                    {
+                        "port_name": str(port_name),
+                        "activity_value": float(moves_per_call),
+                        "activity_unit": denominator_unit,
+                        "fuel_kg": 0.0,
+                        "co2e_kg": 0.0,
+                        "diesel_liters": 0.0,
+                        "cost_brl": 0.0,
+                        "source_level": _SOURCE_ZERO_ACTIVITY,
+                        "basis": "zero_activity",
+                        "fuel_available": True,
+                        "co2e_available": True,
+                        "available": True,
+                        "excluded_from_total": False,
+                        "zero_activity": True,
+                        "warning": None,
+                    }
+                )
+    elif observed_records:
         calculation_basis = "observed_port_ops_hierarchy"
         totals = {
             "diesel_liters": 0.0,
@@ -813,6 +970,8 @@ def estimate_port_ops(
                     "source_level": str(fuel_resolution.get("source_level") or _SOURCE_UNAVAILABLE),
                     "basis": "converted_from_resolved_fuel_kg",
                     "warning": fuel_resolution.get("warning"),
+                    "available": True,
+                    "excluded_from_total": False,
                 }
             else:
                 co2e_kg = 0.0 if co2e_value is None else float(co2e_value)
@@ -824,9 +983,15 @@ def estimate_port_ops(
             if source_level == _SOURCE_UNAVAILABLE and str(co2e_resolution.get("source_level")) != _SOURCE_UNAVAILABLE:
                 source_level = str(co2e_resolution.get("source_level"))
 
-            call_warning = fuel_resolution.get("warning") or co2e_resolution.get("warning")
-            if call_warning:
-                warnings.append(str(call_warning))
+            call_warnings = list(
+                dict.fromkeys(
+                    str(item)
+                    for item in (fuel_resolution.get("warning"), co2e_resolution.get("warning"))
+                    if str(item or "").strip()
+                )
+            )
+            call_warning = "; ".join(call_warnings) if call_warnings else None
+            warnings.extend(call_warnings)
 
             port_call_breakdown.append(
                 {
@@ -838,6 +1003,10 @@ def estimate_port_ops(
                     "diesel_liters": float(diesel_liters),
                     "cost_brl": float(diesel_cost_brl),
                     "source_level": source_level,
+                    "fuel_available": fuel_value is not None,
+                    "co2e_available": co2e_value is not None or fuel_value is not None,
+                    "available": fuel_value is not None or co2e_value is not None,
+                    "excluded_from_total": fuel_value is None and co2e_value is None,
                     "fuel_resolution": fuel_resolution,
                     "co2e_resolution": co2e_resolution,
                     "warning": call_warning,
@@ -852,38 +1021,62 @@ def estimate_port_ops(
         if calls > 0:
             for port_name in port_call_names:
                 call_share = (moves_per_call / total_denominator) if total_denominator > 0.0 else 0.0
+                call_available = scenario_totals["fuel_kg"] > 0.0 or scenario_totals["co2e_kg"] > 0.0
                 port_call_breakdown.append(
                     {
                         "port_name": str(port_name),
                         "activity_value": float(moves_per_call),
                         "activity_unit": denominator_unit,
-                        "fuel_kg": float(scenario_totals["fuel_kg"] * call_share),
-                        "co2e_kg": float(scenario_totals["co2e_kg"] * call_share),
+                        "fuel_kg": float(scenario_totals["fuel_kg"] * call_share) if call_available else None,
+                        "co2e_kg": float(scenario_totals["co2e_kg"] * call_share) if call_available else None,
                         "diesel_liters": float(scenario_totals["diesel_liters"] * call_share),
                         "cost_brl": float(scenario_totals["cost_brl"] * call_share),
-                        "source_level": _SOURCE_LITERATURE_DEFAULT if scenario_totals["fuel_kg"] > 0.0 else _SOURCE_UNAVAILABLE,
+                        "source_level": _SOURCE_LITERATURE_DEFAULT if call_available else _SOURCE_UNAVAILABLE,
                         "basis": "documented_moves_based_scenario",
+                        "fuel_available": scenario_totals["fuel_kg"] > 0.0,
+                        "co2e_available": scenario_totals["co2e_kg"] > 0.0,
+                        "available": call_available,
+                        "excluded_from_total": not call_available,
                         "warning": (
                             "No port-specific observed port-ops records were available; "
                             "used documented moves-based scenario."
                         )
-                        if scenario_totals["fuel_kg"] > 0.0
+                        if call_available
                         else "No observed port-ops records or valid documented positive default were available.",
                     }
                 )
-        warnings.append(
-            "No port-specific observed port-ops records were available; used documented moves-based scenario."
-        )
+        if scenario_totals["fuel_kg"] > 0.0 or scenario_totals["co2e_kg"] > 0.0:
+            warnings.append(
+                "No port-specific observed port-ops records were available; used documented moves-based scenario."
+            )
+        elif calls > 0:
+            warnings.append("No observed port-ops records or valid documented positive default were available.")
 
     equipment_warnings = [
         str(item.get("warning"))
         for item in equipment_breakdown.values()
         if isinstance(item, dict) and item.get("warning")
     ]
-    warnings.extend(equipment_warnings)
-    deduped_warnings = list(dict.fromkeys(warnings))
     source_counts = _summarize_source_levels(port_call_breakdown)
+    equipment_source_counts = _summarize_mapping_source_levels(list(equipment_breakdown.values()))
     source_level = _overall_source_level(source_counts)
+    if zero_activity and not source_counts:
+        source_level = _SOURCE_ZERO_ACTIVITY
+    uses_documented_scenario_values = (
+        not observed_records
+        or _source_count(source_counts, _SOURCE_LITERATURE_DEFAULT) > 0
+        or source_level == _SOURCE_LITERATURE_DEFAULT
+    ) and not zero_activity
+    if uses_documented_scenario_values:
+        warnings.extend(equipment_warnings)
+    deduped_warnings = list(dict.fromkeys(warnings))
+    unavailable_port_call_count = _source_count(source_counts, _SOURCE_UNAVAILABLE)
+    unavailable_equipment_count = (
+        _source_count(equipment_source_counts, _SOURCE_UNAVAILABLE)
+        if uses_documented_scenario_values
+        else 0
+    )
+    has_unavailable_port_ops = bool(unavailable_port_call_count > 0 or unavailable_equipment_count > 0)
 
     return {
         "requested_scenario": selection.requested_scenario,
@@ -905,10 +1098,18 @@ def estimate_port_ops(
         "electricity_kg_co2e_per_kwh": float(selection.electricity_kg_co2e_per_kwh),
         "source_level": source_level,
         "source_level_counts": source_counts,
+        "equipment_source_level_counts": equipment_source_counts,
         "calculation_basis": calculation_basis,
         "observed_port_ops_record_count": len(observed_records),
         "fallback_denominator_unit": denominator_unit,
         "fallback_total_denominator": float(total_denominator),
+        "unavailable_port_call_count": unavailable_port_call_count,
+        "unavailable_equipment_count": unavailable_equipment_count,
+        "equipment_unavailable_affects_totals": bool(uses_documented_scenario_values and unavailable_equipment_count > 0),
+        "has_unavailable_port_ops": has_unavailable_port_ops,
+        "totals_complete": not has_unavailable_port_ops,
+        "zero_activity": bool(zero_activity),
+        "missing_value_policy": "unavailable_values_excluded_from_numeric_totals_with_warning",
         "port_call_breakdown": port_call_breakdown,
         "warnings": deduped_warnings,
         "equipment": equipment_breakdown,

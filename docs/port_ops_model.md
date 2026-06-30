@@ -73,6 +73,8 @@ When optional observed per-port records are available in the backend, the resolv
 3. `literature_default`: use the existing documented moves-based scenario only when no observed peer basis is available.
 4. `unavailable`: mark the component explicitly when neither observed data nor a documented positive fallback exists.
 
+Zero numeric contribution is valid only for zero activity or for a documented parameter that explicitly supports zero. Zero-activity cases are labeled separately as `zero_activity`, not as observed evidence.
+
 The runtime payload now exposes the source level, activity unit, weighted denominator, observed sample count, included ports, and warnings for fallback or unavailable values. Existing Santos scenario totals remain the documented default path when no observed per-port records are supplied.
 
 These source levels should be interpreted as result-confidence metadata. `observed` is the strongest basis, `estimated_port_average` and `literature_default` are lower-confidence estimates, and `unavailable` means the component was not included because no defensible value could be assigned.
@@ -96,13 +98,13 @@ Default runtime scenario: `santos_diesel_heavy`.
 
 - `rtg_yard`: 4.0 moves/container, 0.3551 L/move
 - `terminal_truck`: 2.0 moves/container, 0.4947 L/move
-- `sts_quay`: 1.0 moves/container, 0.0 L/move (placeholder)
+- `sts_quay`: 1.0 moves/container, no explicit energy factor in the documented artifact; when there is STS activity this gap is flagged as `unavailable` rather than interpreted as a defensible zero contribution.
 
 `Partially-electrified` median equipment factors:
 
 - `rtg_yard`: 4.0 moves/container, 0.2317 L/move
 - `terminal_truck`: 2.0 moves/container, 0.4947 L/move
-- `sts_quay`: 1.0 moves/container, 0.0 L/move (placeholder)
+- `sts_quay`: 1.0 moves/container, no explicit energy factor in the documented artifact; flagged as unavailable when active.
 
 The RTG diesel reduction proxy (relative to base RTG diesel factor) comes from the hybrid RTG reference range (about 27% to 40.6%).
 
@@ -140,7 +142,7 @@ Available in:
 
 ## Limitations
 
-- STS per-move energy was not explicitly parameterized because no direct local per-move value was found in the provided references; STS is currently an explicit zero placeholder.
+- STS per-move energy was not explicitly parameterized because no direct local per-move value was found in the provided references; STS activity is flagged as unavailable instead of being treated as a defensible zero.
 - TEU conversion (`t_per_teu_default`) is a pragmatic assumption (default `14`) and should be replaced by route/customer commodity mix when available.
 - Electricity emission/cost factors are placeholders (0.0) pending local grid/tariff values in the provided references.
 - Reefer loads and non-handling terminal energy were not included.

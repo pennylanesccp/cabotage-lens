@@ -8,6 +8,8 @@ import streamlit as st
 from app.main.details.provenance import (
     basis_label,
     clean_text,
+    extract_port_ops_payload,
+    port_ops_has_unavailable,
     port_ops_source_level,
     source_level_label,
     warnings_summary,
@@ -75,6 +77,26 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
     last = mm.get("last_mile", {})
     sea = mm.get("sea", {})
     maritime = _maritime_component_breakdown(results)
+    port_ops_payload = extract_port_ops_payload(sea) if isinstance(sea, Mapping) else {}
+    port_ops_unavailable = bool(
+        port_ops_source_level(sea) == "unavailable"
+        or (
+            port_ops_has_unavailable(sea)
+            and safe_float(sea.get("port_ops_fuel_kg")) == 0.0
+            and safe_float(sea.get("port_ops_co2e")) == 0.0
+        )
+    )
+    port_ops_partial = bool(
+        port_ops_has_unavailable(sea)
+        and not port_ops_unavailable
+        and port_ops_payload.get("missing_value_policy")
+    )
+
+    def _component_value(value: Any, formatter: Any, *, unavailable: bool = False, partial: bool = False) -> str:
+        if unavailable:
+            return "Unavailable"
+        text = formatter(value)
+        return f"{text} (partial)" if partial else text
 
     rows = [
         {
@@ -94,20 +116,49 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
         {
             "Leg": "Port ops",
             "Distance": "-",
-            "Cost estimate": fmt_currency_brl(maritime.get("port_ops_cost_brl")),
-            "TTW CO2e": fmt_emissions_kg(maritime.get("port_ops_co2e_kg")),
+            "Cost estimate": _component_value(
+                maritime.get("port_ops_cost_brl"),
+                fmt_currency_brl,
+                unavailable=port_ops_unavailable,
+                partial=port_ops_partial,
+            ),
+            "TTW CO2e": _component_value(
+                maritime.get("port_ops_co2e_kg"),
+                fmt_emissions_kg,
+                unavailable=port_ops_unavailable,
+                partial=port_ops_partial,
+            ),
             "Data source": source_level_label(port_ops_source_level(sea)) or "-",
         },
     ]
 
-    if bool(sea.get("hoteling_included")) or safe_float(sea.get("hoteling_fuel_kg")) > 0:
+    hoteling_requested = bool(sea.get("hoteling_requested"))
+    hoteling_included = bool(sea.get("hoteling_included")) or safe_float(sea.get("hoteling_fuel_kg")) > 0
+    hoteling_exclusion = clean_text(sea.get("hoteling_exclusion_reason"))
+    if hoteling_requested or hoteling_included or hoteling_exclusion:
+        if hoteling_included:
+            hoteling_cost = fmt_currency_brl(maritime.get("hoteling_cost_brl"))
+            hoteling_co2e = fmt_emissions_kg(maritime.get("hoteling_co2e_kg"))
+            hoteling_source = source_level_label(sea.get("hoteling_source_level")) or "-"
+        elif hoteling_exclusion == "zero_activity":
+            hoteling_cost = fmt_currency_brl(0.0)
+            hoteling_co2e = fmt_emissions_kg(0.0)
+            hoteling_source = basis_label(hoteling_exclusion) or "-"
+        elif hoteling_exclusion == "hoteling_rate_unavailable":
+            hoteling_cost = "Unavailable"
+            hoteling_co2e = "Unavailable"
+            hoteling_source = basis_label(hoteling_exclusion) or "-"
+        else:
+            hoteling_cost = "Excluded"
+            hoteling_co2e = "Excluded"
+            hoteling_source = basis_label(hoteling_exclusion) or "-"
         rows.append(
             {
                 "Leg": "Hoteling",
                 "Distance": "-",
-                "Cost estimate": fmt_currency_brl(maritime.get("hoteling_cost_brl")),
-                "TTW CO2e": fmt_emissions_kg(maritime.get("hoteling_co2e_kg")),
-                "Data source": source_level_label(sea.get("hoteling_source_level")) or "-",
+                "Cost estimate": hoteling_cost,
+                "TTW CO2e": hoteling_co2e,
+                "Data source": hoteling_source,
             }
         )
 

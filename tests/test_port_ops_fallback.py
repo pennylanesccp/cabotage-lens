@@ -30,6 +30,27 @@ class PortOpsFallbackTests(unittest.TestCase):
             equipment={},
         )
 
+    def _documented_selection(self) -> PortOpsScenarioSelection:
+        return PortOpsScenarioSelection(
+            requested_scenario="test",
+            resolved_scenario="test",
+            source_path=Path("port_ops.json"),
+            default_port_calls=2,
+            default_port_moves_per_call={"p10": 1.0, "median": 1.0, "p90": 1.0},
+            t_per_teu_default=14.0,
+            diesel_density_kg_per_l=0.85,
+            diesel_fuel_type="diesel",
+            electricity_kg_co2e_per_kwh=0.0,
+            electricity_price_brl_per_kwh=0.0,
+            equipment={
+                "documented_terminal_truck": {
+                    "moves_per_container": 1.0,
+                    "diesel_l_per_move": {"p10": 2.0, "median": 2.0, "p90": 2.0},
+                    "electricity_kwh_per_move": {"p10": 0.0, "median": 0.0, "p90": 0.0},
+                }
+            },
+        )
+
     def test_observed_port_uses_direct_intensity(self) -> None:
         resolved = resolve_port_ops_intensity(
             port_name="Porto de Santos",
@@ -84,6 +105,35 @@ class PortOpsFallbackTests(unittest.TestCase):
         self.assertEqual(resolved["source_level"], "estimated_port_average")
         self.assertAlmostEqual(resolved["value"], 12.5)
 
+    def test_denominator_units_are_isolated_for_peer_average(self) -> None:
+        records = [
+            {"port_name": "Tonne Port", "fuel_kg": 100.0, "denominator": 10.0, "denominator_unit": "tonne"},
+            {"port_name": "TEU Port", "fuel_kg": 20.0, "cargo_teu": 2.0},
+            {"port_name": "Move Port", "fuel_kg": 50.0, "moves": 5.0},
+        ]
+
+        teu_resolved = resolve_port_ops_intensity(
+            port_name="Missing Port",
+            denominator=3.0,
+            denominator_unit="teu",
+            metric_key="fuel_kg",
+            observed_port_ops=records,
+        )
+        move_resolved = resolve_port_ops_intensity(
+            port_name="Missing Port",
+            denominator=3.0,
+            denominator_unit="move",
+            metric_key="fuel_kg",
+            observed_port_ops=records,
+        )
+
+        self.assertEqual(teu_resolved["denominator_unit"], "teu")
+        self.assertEqual(move_resolved["denominator_unit"], "move")
+        self.assertAlmostEqual(teu_resolved["intensity"], 10.0)
+        self.assertAlmostEqual(move_resolved["intensity"], 10.0)
+        self.assertEqual(teu_resolved["observed_ports_used"], 1)
+        self.assertEqual(move_resolved["observed_ports_used"], 1)
+
     def test_unavailable_when_no_observed_peer_or_default(self) -> None:
         resolved = resolve_port_ops_intensity(
             port_name="Missing Port",
@@ -95,6 +145,8 @@ class PortOpsFallbackTests(unittest.TestCase):
 
         self.assertEqual(resolved["source_level"], "unavailable")
         self.assertIsNone(resolved["value"])
+        self.assertFalse(resolved["available"])
+        self.assertTrue(resolved["excluded_from_total"])
         self.assertIn("no valid observed peer", resolved["warning"])
 
     def test_literature_default_requires_positive_documented_intensity(self) -> None:
@@ -111,6 +163,29 @@ class PortOpsFallbackTests(unittest.TestCase):
         self.assertEqual(resolved["source_level"], "literature_default")
         self.assertEqual(resolved["basis"], "documented_test_default")
         self.assertAlmostEqual(resolved["value"], 25.0)
+        self.assertIn("documented default", resolved["warning"])
+
+    def test_zero_activity_is_explicit_not_missing_data(self) -> None:
+        resolved = resolve_port_ops_intensity(
+            port_name="Missing Port",
+            denominator=0.0,
+            denominator_unit="teu",
+            metric_key="fuel_kg",
+            observed_port_ops=[],
+        )
+        result = estimate_port_ops(
+            port_calls=0,
+            cargo_teu=1.0,
+            selection=self._empty_selection(),
+        )
+
+        self.assertEqual(resolved["source_level"], "zero_activity")
+        self.assertEqual(resolved["basis"], "zero_activity")
+        self.assertEqual(resolved["value"], 0.0)
+        self.assertTrue(resolved["available"])
+        self.assertEqual(result["source_level"], "zero_activity")
+        self.assertTrue(result["zero_activity"])
+        self.assertEqual(result["totals"]["fuel_kg"], 0.0)
 
     def test_estimate_port_ops_mixes_observed_and_weighted_missing_calls(self) -> None:
         result = estimate_port_ops(
@@ -145,6 +220,8 @@ class PortOpsFallbackTests(unittest.TestCase):
         self.assertAlmostEqual(result["totals"]["fuel_kg"], expected_fuel_kg)
         self.assertEqual(result["source_level"], "literature_default")
         self.assertEqual(result["source_level_counts"], {"literature_default": 2})
+        self.assertTrue(result["has_unavailable_port_ops"])
+        self.assertFalse(result["totals_complete"])
         self.assertIn("warnings", result)
 
 
@@ -195,6 +272,8 @@ class LegacyHotelingFallbackTests(unittest.TestCase):
 
 
 class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
+    _DEFAULT_OBSERVED = object()
+
     def _path_data(
         self,
         *,
@@ -217,12 +296,12 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
             "sea_leg": {"distance_km": sea_km},
         }
 
-    def _fake_vessel(self) -> VesselClassEfficiency:
+    def _fake_vessel(self, *, transport_work_intensity: bool = True) -> VesselClassEfficiency:
         return VesselClassEfficiency(
             requested_class="container_feeder",
             vessel_class="container_feeder",
             fuel_per_nm=800.0,
-            fuel_g_per_tnm=12.0,
+            fuel_g_per_tnm=12.0 if transport_work_intensity else None,
             size_proxy_t_median=12000.0,
             teu_capacity=1200.0,
             lightship_t=8000.0,
@@ -241,6 +320,27 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
             source_path=Path("hoteling.json"),
         )
 
+    def _documented_selection(self) -> PortOpsScenarioSelection:
+        return PortOpsScenarioSelection(
+            requested_scenario="test",
+            resolved_scenario="test",
+            source_path=Path("port_ops.json"),
+            default_port_calls=2,
+            default_port_moves_per_call={"p10": 1.0, "median": 1.0, "p90": 1.0},
+            t_per_teu_default=14.0,
+            diesel_density_kg_per_l=0.85,
+            diesel_fuel_type="diesel",
+            electricity_kg_co2e_per_kwh=0.0,
+            electricity_price_brl_per_kwh=0.0,
+            equipment={
+                "documented_terminal_truck": {
+                    "moves_per_container": 1.0,
+                    "diesel_l_per_move": {"p10": 2.0, "median": 2.0, "p90": 2.0},
+                    "electricity_kwh_per_move": {"p10": 0.0, "median": 0.0, "p90": 0.0},
+                }
+            },
+        )
+
     def _estimate_leg_liters(self, distance_km: float, **_kwargs):
         liters = float(distance_km) / 2.0
         trips = 0 if distance_km <= 0 else 1
@@ -250,8 +350,10 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         self,
         *,
         include_port_ops: bool,
-        observed_port_ops: list[dict] | None = None,
+        observed_port_ops: object = _DEFAULT_OBSERVED,
         path_data: dict | None = None,
+        selection: PortOpsScenarioSelection | None = None,
+        vessel: VesselClassEfficiency | None = None,
     ) -> dict:
         diesel_lookup = DieselPriceLookup(
             source_csv="diesel.csv",
@@ -259,31 +361,37 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
             uf_to_price={"SP": 6.12, "RJ": 6.15},
             row_count=2,
         )
-        observed = observed_port_ops or [
-            {"port_name": "Observed Port", "fuel_kg": 8.0, "cargo_teu": 1.0},
-            {"port_name": "Large Peer", "fuel_kg": 20.0, "cargo_teu": 10.0},
-        ]
+        if observed_port_ops is self._DEFAULT_OBSERVED:
+            observed = [
+                {"port_name": "Observed Port", "fuel_kg": 8.0, "cargo_teu": 1.0},
+                {"port_name": "Large Peer", "fuel_kg": 20.0, "cargo_teu": 10.0},
+            ]
+        else:
+            observed = observed_port_ops
 
-        with patch.object(evaluator, "resolve_vessel_class_efficiency", return_value=self._fake_vessel()), patch.object(
+        selection = selection or PortOpsScenarioSelection(
+            requested_scenario="test",
+            resolved_scenario="test",
+            source_path=Path("port_ops.json"),
+            default_port_calls=2,
+            default_port_moves_per_call={"p10": 1.0, "median": 1.0, "p90": 1.0},
+            t_per_teu_default=14.0,
+            diesel_density_kg_per_l=0.85,
+            diesel_fuel_type="diesel",
+            electricity_kg_co2e_per_kwh=0.0,
+            electricity_price_brl_per_kwh=0.0,
+            equipment={},
+        )
+        vessel = vessel or self._fake_vessel()
+
+        with patch.object(evaluator, "resolve_vessel_class_efficiency", return_value=vessel), patch.object(
             evaluator,
             "resolve_hoteling_rate",
             return_value=self._fake_hoteling(),
         ), patch.object(
             evaluator,
             "resolve_port_ops_scenario",
-            return_value=PortOpsScenarioSelection(
-                requested_scenario="test",
-                resolved_scenario="test",
-                source_path=Path("port_ops.json"),
-                default_port_calls=2,
-                default_port_moves_per_call={"p10": 1.0, "median": 1.0, "p90": 1.0},
-                t_per_teu_default=14.0,
-                diesel_density_kg_per_l=0.85,
-                diesel_fuel_type="diesel",
-                electricity_kg_co2e_per_kwh=0.0,
-                electricity_price_brl_per_kwh=0.0,
-                equipment={},
-            ),
+            return_value=selection,
         ), patch.object(
             evaluator,
             "build_price_lookup",
@@ -322,12 +430,32 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         expected_marine_co2e = (
             float(sea["fuel_kg_sailing"]) + float(sea["hoteling_fuel_kg"])
         ) * marine_ef
+        expected_marine_cost = (float(sea["fuel_kg_marine"]) / 1000.0) * float(result["inputs"]["bunker_price"])
         self.assertAlmostEqual(sea["co2e_marine"], expected_marine_co2e)
+        self.assertAlmostEqual(sea["fuel_kg_marine"], sea["fuel_kg_sailing"] + sea["hoteling_fuel_kg"])
+        self.assertAlmostEqual(sea["fuel_kg"], sea["fuel_kg_marine"] + sea["port_ops_fuel_kg"])
+        self.assertAlmostEqual(sea["cost_marine"], expected_marine_cost)
+        self.assertAlmostEqual(sea["cost"], sea["cost_marine"] + sea["port_ops_cost"])
         self.assertAlmostEqual(sea["co2e"], sea["co2e_marine"] + sea["port_ops_co2e"])
         self.assertAlmostEqual(
             multimodal["total_co2e"],
             multimodal["first_mile"]["co2e"] + sea["co2e"] + multimodal["last_mile"]["co2e"],
         )
+        self.assertAlmostEqual(
+            multimodal["total_cost"],
+            multimodal["first_mile"]["cost"] + sea["cost"] + multimodal["last_mile"]["cost"],
+        )
+        numeric_values = [
+            result["road_only"]["cost"],
+            result["road_only"]["co2e"],
+            multimodal["total_cost"],
+            multimodal["total_co2e"],
+            sea["fuel_kg"],
+            sea["cost"],
+            sea["co2e"],
+        ]
+        for value in numeric_values:
+            self.assertGreaterEqual(float(value), 0.0)
 
     def test_route_total_uses_complete_observed_port_data(self) -> None:
         result = self._run_evaluator(
@@ -344,6 +472,8 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(sea["port_ops_fuel_kg"], 14.0)
         self.assertEqual(sea["port_ops_source_level"], "observed")
         self.assertEqual(sea["port_ops_source_level_counts"], {"observed": 2})
+        self.assertFalse(sea["port_ops_has_unavailable"])
+        self.assertTrue(sea["port_ops_totals_complete"])
         self.assertLess(result["multimodal"]["total_co2e"], result["road_only"]["co2e"])
         self._assert_component_totals_match(result)
 
@@ -357,12 +487,86 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(sea["port_ops_fuel_kg"], 8.0 + weighted_intensity)
         self.assertEqual(sea["port_ops_source_level"], "estimated_port_average")
         self.assertEqual(sea["port_ops_source_level_counts"], {"observed": 1, "estimated_port_average": 1})
+        self.assertIn("teu-weighted average", "; ".join(sea["port_ops_warnings"]))
         self.assertGreater(
             with_port_ops["multimodal"]["total_co2e"],
             without_port_ops["multimodal"]["total_co2e"],
         )
         self.assertLess(with_port_ops["multimodal"]["total_co2e"], with_port_ops["road_only"]["co2e"])
         self._assert_component_totals_match(with_port_ops)
+
+    def test_no_observed_data_uses_documented_scenario(self) -> None:
+        result = self._run_evaluator(
+            include_port_ops=True,
+            observed_port_ops=None,
+            selection=self._documented_selection(),
+        )
+        sea = result["multimodal"]["sea"]
+
+        self.assertAlmostEqual(sea["port_ops_fuel_kg"], 2.0 * 0.85 * 2.0)
+        self.assertEqual(sea["port_ops_source_level"], "literature_default")
+        self.assertEqual(sea["port_ops_source_level_counts"], {"literature_default": 2})
+        self.assertIn("documented moves-based scenario", "; ".join(sea["port_ops_warnings"]))
+        self._assert_component_totals_match(result)
+
+    def test_unavailable_port_ops_are_not_silent_zeroes(self) -> None:
+        result = self._run_evaluator(
+            include_port_ops=True,
+            observed_port_ops=[],
+            selection=PortOpsScenarioSelection(
+                requested_scenario="empty",
+                resolved_scenario="empty",
+                source_path=Path("port_ops.json"),
+                default_port_calls=2,
+                default_port_moves_per_call={"p10": 1.0, "median": 1.0, "p90": 1.0},
+                t_per_teu_default=14.0,
+                diesel_density_kg_per_l=0.85,
+                diesel_fuel_type="diesel",
+                electricity_kg_co2e_per_kwh=0.0,
+                electricity_price_brl_per_kwh=0.0,
+                equipment={},
+            ),
+        )
+        sea = result["multimodal"]["sea"]
+        calls = sea["port_ops"]["port_call_breakdown"]
+
+        self.assertEqual(sea["port_ops_source_level"], "unavailable")
+        self.assertTrue(sea["port_ops_has_unavailable"])
+        self.assertFalse(sea["port_ops_totals_complete"])
+        self.assertEqual(sea["port_ops_fuel_kg"], 0.0)
+        self.assertIsNone(calls[0]["fuel_kg"])
+        self.assertTrue(calls[0]["excluded_from_total"])
+        self.assertIn("No observed port-ops records", "; ".join(sea["port_ops_warnings"]))
+        self._assert_component_totals_match(result)
+
+    def test_hoteling_added_when_transport_work_intensity_absent(self) -> None:
+        result = self._run_evaluator(
+            include_port_ops=True,
+            vessel=self._fake_vessel(transport_work_intensity=False),
+        )
+        sea = result["multimodal"]["sea"]
+
+        self.assertTrue(sea["hoteling_requested"])
+        self.assertTrue(sea["hoteling_included"])
+        self.assertEqual(sea["hoteling_source_level"], "literature_default")
+        self.assertEqual(sea["hoteling_basis"], "mrv_class_rate_scaled_by_emep_ratio")
+        self.assertEqual(sea["hoteling_hours_per_call"], 14.0)
+        self.assertEqual(sea["port_calls"], 2)
+        self.assertEqual(sea["hoteling_hours_total"], 28.0)
+        self.assertGreater(sea["hoteling_fuel_kg"], 0.0)
+        self.assertGreater(sea["hoteling_co2e"], 0.0)
+        self._assert_component_totals_match(result)
+
+    def test_hoteling_excluded_when_transport_work_intensity_used(self) -> None:
+        result = self._run_evaluator(include_port_ops=True)
+        sea = result["multimodal"]["sea"]
+
+        self.assertTrue(sea["hoteling_requested"])
+        self.assertFalse(sea["hoteling_included"])
+        self.assertEqual(sea["hoteling_exclusion_reason"], "included_in_transport_work_intensity")
+        self.assertEqual(sea["hoteling_fuel_kg"], 0.0)
+        self.assertEqual(sea["hoteling_co2e"], 0.0)
+        self._assert_component_totals_match(result)
 
     def test_short_road_route_can_remain_lower_than_multimodal(self) -> None:
         result = self._run_evaluator(
@@ -371,6 +575,15 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         )
 
         self.assertLessEqual(result["road_only"]["co2e"], result["multimodal"]["total_co2e"])
+        self._assert_component_totals_match(result)
+
+    def test_controlled_long_route_can_have_lower_multimodal_emissions(self) -> None:
+        result = self._run_evaluator(
+            include_port_ops=True,
+            path_data=self._path_data(road_direct_km=3000.0, first_mile_km=50.0, last_mile_km=50.0, sea_km=1200.0),
+        )
+
+        self.assertLess(result["multimodal"]["total_co2e"], result["road_only"]["co2e"])
         self._assert_component_totals_match(result)
 
 
