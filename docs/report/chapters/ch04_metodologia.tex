@@ -15,7 +15,7 @@ Nos artefatos de validação e sensibilidade deste TF, a base recorrente de refe
 \small
 \caption{Unidade funcional e alternativas comparadas no TF.}
 \label{tab:unidade-alternativas}
-\begin{tabularx}{\textwidth}{p{0.28\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.28\textwidth}Y Y}
 \toprule
 Elemento & Definição neste TF & Limite de interpretação \\
 \midrule
@@ -41,7 +41,7 @@ O objetivo desta seção é explicitar os grupos de insumos que sustentam rotas,
 \small
 \caption{Grupos de fontes e usos metodológicos.}
 \label{tab:grupos-fontes}
-\begin{tabularx}{\textwidth}{p{0.25\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y Y}
 \toprule
 Grupo de fonte & Uso metodológico & Limite de interpretação \\
 \midrule
@@ -72,7 +72,7 @@ A fronteira econômica é a de custo modelado. Os valores em BRL representam a a
 \small
 \caption{Fronteiras metodológicas de linha de base.}
 \label{tab:fronteiras-metodologicas}
-\begin{tabularx}{\textwidth}{p{0.25\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y Y}
 \toprule
 Dimensão & Definição neste TF & Fora da linha de base \\
 \midrule
@@ -108,7 +108,7 @@ O preset de veículo, a massa de carga, o consumo estimado, a fonte de preço e 
 
 A alternativa rodoviária-cabotagem-rodoviária representa a mesma remessa organizada como uma cadeia porta a porta. A perna marítima não substitui sozinha a viagem rodoviária completa; ela é combinada com os acessos terrestres e, conforme a fronteira selecionada, com componentes explícitos de operações portuárias e \emph{hoteling} associados às chamadas portuárias.
 
-\placeholderfigure{Placeholder: fluxo metodológico da alternativa multimodal, mostrando pre-carriage, porto de origem, port operations/hoteling, perna marítima, porto de destino e on-carriage. A figura final deve indicar onde entram distância, custo, emissões e proveniência.}{Decomposição metodológica da alternativa rodoviária-cabotagem-rodoviária.}{fig:cadeia-multimodal}
+\placeholderfigure{Diagrama metodológico preliminar: fluxo da alternativa multimodal com pre-carriage, porto de origem, port operations/hoteling, perna marítima, porto de destino e on-carriage, indicando os pontos de entrada de distância, custo, emissões e proveniência.}{Decomposição metodológica da alternativa rodoviária-cabotagem-rodoviária.}{fig:cadeia-multimodal}
 
 A Figura~\ref{fig:cadeia-multimodal} evidencia por que a decomposição por perna é indispensável. O resultado agregado da alternativa multimodal só é interpretável quando o leitor consegue identificar os acessos rodoviários, a distância marítima, os portos usados, os componentes portuários incluídos, a regra de alocação da carga e a proveniência das distâncias.
 
@@ -138,7 +138,7 @@ A distância é uma entrada metodológica comum às duas alternativas. Na altern
 \small
 \caption{Hierarquia de proveniência de distâncias.}
 \label{tab:proveniencia-distancias}
-\begin{tabularx}{\textwidth}{p{0.24\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}Y Y}
 \toprule
 Proveniência & Uso metodológico & Limite de interpretação \\
 \midrule
@@ -182,18 +182,17 @@ A metodologia adota uma leitura conservadora da qualidade de rota e da força da
 \small
 \caption{Classificações metodológicas usadas para controlar inferências.}
 \label{tab:classificacoes-metodologia}
-\begin{tabularx}{\textwidth}{p{0.28\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.28\textwidth}Y Y}
 \toprule
 Condição ou classificação & Significado metodológico & Uso seguro \\
 \midrule
-\texttt{historical\_diagnostic} & Resultado preservado para rastreabilidade histórica. & Auditoria e evolução metodológica.\\
-\texttt{reference\_needed} & Falta evidência suficiente para distância ou premissa necessária. & Lacuna e prioridade de validação futura.\\
-\texttt{excluded} & Caso inválido ou fora da fronteira adotada. & Justificativa de exclusão, sem uso numérico conclusivo.\\
-\texttt{sensitivity\_only} / \texttt{sensitive} & Cenário ou resultado sob hipótese condicional. & Discussão condicionada, sem substituir caso-base.\\
-\texttt{headline\_candidate} & Categoria reservada para resultado principal futuro. & Nenhum caso atual deve ser promovido a essa classe.\\
+\codecell{historical\_diagnostic} & Resultado preservado para rastreabilidade histórica. & Auditoria e evolução metodológica.\\
+\codecell{reference\_needed} & Falta evidência suficiente para distância ou premissa necessária. & Lacuna e prioridade de validação futura.\\
+\codecell{excluded} & Caso inválido ou fora da fronteira adotada. & Justificativa de exclusão, sem uso numérico conclusivo.\\
+\codecell{sensitivity\_only} / \codecell{sensitive} & Cenário ou resultado sob hipótese condicional. & Discussão condicionada, sem substituir caso-base.\\
+\codecell{headline\_candidate} & Categoria reservada para resultado principal futuro. & Nenhum caso atual deve ser promovido a essa classe.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 A Tabela~\ref{tab:classificacoes-metodologia} antecipa o uso da validação no Capítulo~\ref{ch:validacao}. Benchmarks externos, incluindo materiais associados a Gustavo/Costa, entram nesse esquema apenas como contexto de comparação e diagnóstico de fronteiras. Eles não definem automaticamente a metodologia do \CabotageLens{}, não substituem o caso-base, não validam magnitudes sem alinhamento metodológico completo e não transformam custos modelados em fretes comerciais.
-

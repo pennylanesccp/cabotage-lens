@@ -13,14 +13,14 @@ O inventário final combina cinco camadas de evidência. A Tabela~\ref{tab:inven
 \small
 \caption{Inventário de evidências no Capítulo~\ref{ch:resultados}.}
 \label{tab:inventario-resultados}
-\begin{tabularx}{\textwidth}{p{0.27\textwidth}p{0.18\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.27\textwidth}L{0.18\textwidth}Y Y}
 \toprule
 Camada & Escala & Situação & Uso permitido \\
 \midrule
-Batch 001 histórico & 5 casos & \texttt{historical\_diagnostic}. & Rastrear evolução do método e problemas originais.\\
+Batch 001 histórico & 5 casos & \codecell{historical\_diagnostic}. & Rastrear evolução do método e problemas originais.\\
 Batch 001B decisão metodológica & 8 linhas & Record-only, planejadas, bloqueadas, excluídas ou preparadas. & Separar limitação, lacuna, bloqueio e sensibilidade.\\
-Sensibilidades executadas & 3 linhas & Todas \texttt{sensitive}. & Mostrar comportamento sob hipóteses documentadas.\\
-Batch 002 benchmark externo & 21 pares OD & Todos \texttt{same\_direction\_large\_gap}. & Apoio direcional externo com lacuna de magnitude.\\
+Sensibilidades executadas & 3 linhas & Todas \codecell{sensitive}. & Mostrar comportamento sob hipóteses documentadas.\\
+Batch 002 benchmark externo & 21 pares OD & Todos \codecell{same\_direction\_large\_gap}. & Apoio direcional externo com lacuna de magnitude.\\
 Células Batch 002 não comparáveis & 15 células & 6 self-pairs e 9 linhas rodoviárias zero ou não positivas. & Registrar limite de comparabilidade.\\
 \bottomrule
 \end{tabularx}
@@ -38,16 +38,16 @@ O Batch 001 preserva cinco resultados históricos executados. O Batch 001B não 
 \small
 \caption{Resultado classificatório Batch 001/001B.}
 \label{tab:resultados-batch001b}
-\begin{tabularx}{\textwidth}{p{0.23\textwidth}p{0.21\textwidth}r p{0.23\textwidth}X}
+\begin{tabularx}{\textwidth}{L{0.21\textwidth}L{0.22\textwidth}r L{0.23\textwidth}Y}
 \toprule
 Grupo & Casos & Qtde. & Classificação & Uso no Capítulo~\ref{ch:resultados} \\
 \midrule
-Batch 001 histórico & \texttt{TF-VAL-001} a \texttt{TF-VAL-005} & 5 & \texttt{historical\_diagnostic} & Preservar saídas iniciais e limitações.\\
-Limitação same-port & \texttt{TF-VAL-001B-001} & 1 & \texttt{limitation\_example} & Registrar Santos/Santos como limite de rota.\\
-Preparação de sensibilidade & \texttt{TF-VAL-001B-002}, \texttt{003B}, \texttt{005B} & 3 & \texttt{sensitivity\_discussion} & Origem das três sensibilidades executadas.\\
-Referência pendente & \texttt{TF-VAL-001B-003A}, \texttt{005A} & 2 & \texttt{reference\_needed} & Lacunas de distância exata.\\
-Caso excluído & \texttt{TF-VAL-001B-004A} & 1 & \texttt{excluded} & Excluir Angra dos Reis/Salvador do uso numérico.\\
-Bloqueio metodológico & \texttt{TF-VAL-001B-004B} & 1 & \texttt{methodology\_blocked} & Registrar decisão de porto ainda pendente.\\
+Batch 001 histórico & \codecell{TF-VAL-001} a \codecell{TF-VAL-005} & 5 & \codecell{historical\_diagnostic} & Preservar saídas iniciais e limitações.\\
+Limitação same-port & \codecell{TF-VAL-001B-001} & 1 & \codecell{limitation\_example} & Registrar Santos/Santos como limite de rota.\\
+Preparação de sensibilidade & \codecell{TF-VAL-001B-002}, \codecell{003B}, \codecell{005B} & 3 & \codecell{sensitivity\_discussion} & Origem das três sensibilidades executadas.\\
+Referência pendente & \codecell{TF-VAL-001B-003A}, \codecell{005A} & 2 & \codecell{reference\_needed} & Lacunas de distância exata.\\
+Caso excluído & \codecell{TF-VAL-001B-004A} & 1 & \codecell{excluded} & Excluir Angra dos Reis/Salvador do uso numérico.\\
+Bloqueio metodológico & \codecell{TF-VAL-001B-004B} & 1 & \codecell{methodology\_blocked} & Registrar decisão de porto ainda pendente.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -59,19 +59,20 @@ O resultado importante da Tabela~\ref{tab:resultados-batch001b} é classificató
 
 Foram executadas três linhas de sensibilidade do Batch 001B: \texttt{TF-VAL-001B-SENS-002-REFDIST}, \texttt{TF-VAL-001B-SENS-003B-ALTPECEM} e \texttt{TF-VAL-001B-SENS-005B-ALTSUAPE}. A Tabela~\ref{tab:resultados-sensibilidades} apresenta apenas os valores já rastreados nos artefatos de validação e mantém a classificação de cada linha como \texttt{sensitive}.
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
-\scriptsize
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
 \caption{Resultados das sensibilidades executadas.}
 \label{tab:resultados-sensibilidades}
-\begin{tabularx}{\textwidth}{p{0.19\textwidth}p{0.18\textwidth}p{0.15\textwidth}r r r r p{0.11\textwidth}}
+\begin{tabularx}{\textwidth}{L{0.18\textwidth}Y L{0.18\textwidth}L{0.20\textwidth}L{0.11\textwidth}}
 \toprule
-Caso & Papel & Portos & Custo rod. & Custo multi. & Emissões rod. & Emissões multi. & Classe \\
- &  &  & (BRL) & (BRL) & (kg \cooe{}) & (kg \cooe{}) & \\
+Caso & Papel e portos & Custo rod./multi. (BRL) & Emissões rod./multi. (kg \cooe{}) & Classe \\
 \midrule
-\texttt{SENS-002-REFDIST} & Distância de referência Santos/Manaus & Santos--Manaus & 18.456,45 & 1.263,50 & 6.961,76 & 1.104,67 & \texttt{sensitive}\\
-\texttt{SENS-003B-ALTPECEM} & Porto alternativo Pecém & Manaus--Pecém & 26.391,03 & 727,33 & 9.989,83 & 573,48 & \texttt{sensitive}\\
-\texttt{SENS-005B-ALTSUAPE} & Porto alternativo Suape & Rio Grande--Suape & 18.121,99 & 2.122,38 & 7.013,27 & 1.127,46 & \texttt{sensitive}\\
+\codecell{SENS-002-REFDIST} & Distância de referência; Santos--Manaus & 18.456,45 / 1.263,50 & 6.961,76 / 1.104,67 & \codecell{sensitive}\\
+\codecell{SENS-003B-ALTPECEM} & Porto alternativo; Manaus--Pecém & 26.391,03 / 727,33 & 9.989,83 / 573,48 & \codecell{sensitive}\\
+\codecell{SENS-005B-ALTSUAPE} & Porto alternativo; Rio Grande--Suape & 18.121,99 / 2.122,38 & 7.013,27 / 1.127,46 & \codecell{sensitive}\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -90,16 +91,16 @@ O Batch 002 registra o benchmark externo Gustavo/Costa como camada comparativa, 
 \small
 \caption{Resultado resumido do benchmark externo Batch 002.}
 \label{tab:resultados-batch002}
-\begin{tabularx}{\textwidth}{p{0.40\textwidth}r X}
+\begin{tabularx}{\textwidth}{L{0.40\textwidth}r Y}
 \toprule
 Métrica & Valor & Classificação ou interpretação \\
 \midrule
 Células da matriz parseadas & 36 & Inventário completo da matriz 6 x 6 lida para o benchmark.\\
 Pares OD positivos e suportados & 21 & Linhas elegíveis para comparação na base reportada do workbook.\\
 Execuções bem-sucedidas & 21 & Todos os pares positivos suportados foram processados.\\
-Células puladas antes da execução & 15 & 6 self-pairs e 9 linhas rodoviárias zero ou não positivas; \texttt{not\_comparable}.\\
+Células puladas antes da execução & 15 & 6 self-pairs e 9 linhas rodoviárias zero ou não positivas; \codecell{not\_comparable}.\\
 Alinhamento direcional & 21/21 & Workbook e \CabotageLens{} apontam emissões menores para cabotagem/multimodal.\\
-Classificação após rerun & 21 x & \texttt{same\_direction\_large\_gap}.\\
+Classificação após rerun & 21 x & \codecell{same\_direction\_large\_gap}.\\
 Validação calibrada de magnitude & 0 & O lote não sustenta reprodução exata nem calibração contra o workbook.\\
 \bottomrule
 \end{tabularx}
@@ -116,17 +117,19 @@ A Tabela~\ref{tab:resultados-rerun-reconciliacao} resume essas duas verificaçõ
 
 \begin{table}[htbp]
 \centering
-\scriptsize
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
 \caption{Rerun/cache e reconciliação rodoviária.}
 \label{tab:resultados-rerun-reconciliacao}
-\begin{tabularx}{\textwidth}{p{0.30\textwidth}p{0.30\textwidth}p{0.19\textwidth}X}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}L{0.28\textwidth}L{0.23\textwidth}Y}
 \toprule
 Verificação & Resultado observado & Classificação & Uso seguro \\
 \midrule
 Rerun Supabase/cache & 21/21 pares executados; 63 route-cache hits; 0 misses; 0 escritas por provedor; 0 falhas. & Rastreabilidade computacional & Mostrar reutilização de distâncias cacheadas, sem validar magnitude.\\
-Divergência rodoviária média/mediana & 201,0\%/150,5\% $\rightarrow$ 199,8\%/149,3\%. & \texttt{benchmark\_methodology\_gap} & Cache/provedor é improvável como causa principal da lacuna road-only.\\
-Divergência multimodal média/mediana & 53,5\%/52,9\% $\rightarrow$ 60,8\%/63,7\%. & \texttt{benchmark\_boundary\_mismatch} & Divergência residual permanece metodológica e de fronteira.\\
-Fator rodoviário diagnóstico & 0,8602944 kg CO$_2$eq/km. & \texttt{benchmark\_supports\_road\_factor\_explanation} & Sensibilidade de alinhamento, não novo fator de linha de base.\\
+Divergência rodoviária média/mediana & 201,0\%/150,5\% $\rightarrow$ 199,8\%/149,3\%. & \codecell{benchmark\_methodology\_gap} & Cache/provedor é improvável como causa principal da lacuna road-only.\\
+Divergência multimodal média/mediana & 53,5\%/52,9\% $\rightarrow$ 60,8\%/63,7\%. & \codecell{benchmark\_boundary\_mismatch} & Divergência residual permanece metodológica e de fronteira.\\
+Fator rodoviário diagnóstico & 0,8602944 kg CO$_2$eq/km. & \codecell{benchmark\_supports\_road\_factor\_explanation} & Sensibilidade de alinhamento, não novo fator de linha de base.\\
 Divergência rodoviária após diagnóstico & 199,8\%/149,3\% $\rightarrow$ 43,9\%/19,6\%. & Diagnóstico de premissa rodoviária & Indicar sensibilidade a premissas rodoviárias.\\
 \bottomrule
 \end{tabularx}
@@ -141,24 +144,24 @@ O Capítulo~\ref{ch:resultados} não produz uma conclusão universal sobre cabot
 
 A Figura~\ref{fig:sintese-resultados-classificados} reserva espaço para uma visualização final que conecte camadas de evidência, categorias e usos permitidos sem substituir a leitura detalhada da Tabela~\ref{tab:sintese-resultados}.
 
-\placeholderfigure{Placeholder: visualização sintética dos resultados classificados, com camadas Batch 001, Batch 001B, sensibilidades, Batch 002, rerun/cache, reconciliação rodoviária e ausência de headline candidate atual.}{Síntese visual dos resultados classificados e seus usos permitidos.}{fig:sintese-resultados-classificados}
+\placeholderfigure{Visualização preliminar: síntese dos resultados classificados, com camadas Batch 001, Batch 001B, sensibilidades, Batch 002, rerun/cache, reconciliação rodoviária e ausência de headline candidate atual.}{Síntese visual dos resultados classificados e seus usos permitidos.}{fig:sintese-resultados-classificados}
 
 \begin{table}[htbp]
 \centering
 \small
 \caption{Síntese dos resultados classificados.}
 \label{tab:sintese-resultados}
-\begin{tabularx}{\textwidth}{p{0.22\textwidth}X p{0.23\textwidth}X}
+\begin{tabularx}{\textwidth}{L{0.20\textwidth}Y L{0.25\textwidth}Y}
 \toprule
 Grupo & Observação obtida & Classificação & O que não sustenta \\
 \midrule
-Batch 001 & 5 casos históricos com limitações. & \texttt{historical\_diagnostic} & Resultado corrigido ou validação final.\\
+Batch 001 & 5 casos históricos com limitações. & \codecell{historical\_diagnostic} & Resultado corrigido ou validação final.\\
 Batch 001B & 8 linhas de decisão. & Diversas categorias metodológicas & Execução numérica de todas as linhas planejadas.\\
-Sensibilidades & 3 linhas com multimodal menor em custo e emissões. & \texttt{sensitive} & Linha de base robusta, validação do porto original ou frete comercial.\\
-Batch 002 & 21/21 pares alinhados em direção. & \texttt{benchmark\_supports\_direction} & Reprodução exata, calibração ou workbook como verdade de referência.\\
-Rerun/cache & 63 cache hits e 0 misses. & \texttt{benchmark\_methodology\_gap} & Validação de magnitude, rota comercial ou serviço disponível.\\
-Reconciliação & Divergência rodoviária reduzida para 43,9\%/19,6\%. & \texttt{benchmark\_supports\_road\_factor\_explanation} & Recalibração da aplicação.\\
-Resultado principal robusto & 0 casos. & Sem \texttt{headline\_candidate}. & Superioridade universal da cabotagem.\\
+Sensibilidades & 3 linhas com multimodal menor em custo e emissões. & \codecell{sensitive} & Linha de base robusta, validação do porto original ou frete comercial.\\
+Batch 002 & 21/21 pares alinhados em direção. & \codecell{benchmark\_supports\_direction} & Reprodução exata, calibração ou workbook como verdade de referência.\\
+Rerun/cache & 63 cache hits e 0 misses. & \codecell{benchmark\_methodology\_gap} & Validação de magnitude, rota comercial ou serviço disponível.\\
+Reconciliação & Divergência rodoviária reduzida para 43,9\%/19,6\%. & \codecell{benchmark\_supports\_road\_factor\_explanation} & Recalibração da aplicação.\\
+Resultado principal robusto & 0 casos. & Sem \codecell{headline\_candidate}. & Superioridade universal da cabotagem.\\
 \bottomrule
 \end{tabularx}
 \end{table}

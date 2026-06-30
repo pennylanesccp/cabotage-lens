@@ -8,7 +8,13 @@ Este apêndice consolida, em formato de consulta, os grupos de insumos e a lógi
 
 A Tabela~\ref{tab:app-fontes-proveniencia} resume as famílias de fontes e artefatos derivados citadas na metodologia. Sempre que uma fonte tiver data, recorte, cobertura ou fronteira limitada, essa limitação deve acompanhar qualquer interpretação de resultado.
 
-\begin{longtable}{p{0.23\textwidth}p{0.24\textwidth}p{0.24\textwidth}p{0.21\textwidth}}
+\begingroup
+\footnotesize
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{L{0.20\textwidth}L{0.25\textwidth}L{0.25\textwidth}L{0.22\textwidth}}
 \caption{Inventário resumido de fontes, usos e limites de interpretação.}
 \label{tab:app-fontes-proveniencia}\\
 \toprule
@@ -31,13 +37,14 @@ Presets de caminhão e fatores & Consumo rodoviário e fatores implementados. & 
 Gustavo/Costa & Pares OD, rotas, fatores ou planilhas usados em benchmark. & Referência externa de plausibilidade e direção. & Não é verdade de referência, nem alvo de reprodução calibrada.\\
 \bottomrule
 \end{longtable}
+\endgroup
 
 \section{Hierarquia de proveniência}
 \label{sec:app-hierarquia-proveniencia}
 
 A Figura~\ref{fig:proveniencia-hierarquia} deve ser substituída, na versão final, por um diagrama de proveniência dos dados. O placeholder é mantido no LaTeX para reservar o ponto de leitura e garantir que a figura final seja referenciada no texto.
 
-\placeholderfigure{Placeholder: hierarquia de proveniência dos insumos, distinguindo dados observados, referências externas específicas, matriz rastreada, médias ponderadas, padrões documentados, fallbacks e valores indisponíveis.}{Hierarquia de proveniência dos principais insumos do \CabotageLens{}.}{fig:proveniencia-hierarquia}
+\placeholderfigure{Esquema preliminar: hierarquia de proveniência dos insumos, distinguindo dados observados, referências externas específicas, matriz rastreada, médias ponderadas, padrões documentados, fallbacks e valores indisponíveis.}{Hierarquia de proveniência dos principais insumos do \CabotageLens{}.}{fig:proveniencia-hierarquia}
 
 A Tabela~\ref{tab:app-proveniencia-distancias} detalha a hierarquia aplicada às distâncias e aos componentes de rota. A leitura mais forte depende de referência específica para o par e para a fronteira analisada; a leitura mais fraca deve permanecer como triagem, lacuna ou sensibilidade.
 
@@ -46,7 +53,7 @@ A Tabela~\ref{tab:app-proveniencia-distancias} detalha a hierarquia aplicada às
 \small
 \caption{Hierarquia de proveniência para distâncias e componentes de rota.}
 \label{tab:app-proveniencia-distancias}
-\begin{tabularx}{\textwidth}{p{0.24\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}Y Y}
 \toprule
 Proveniência & Uso metodológico & Limite de interpretação \\
 \midrule
@@ -70,7 +77,7 @@ Operações portuárias e \emph{hoteling} têm importância metodológica porque
 \small
 \caption{Proveniência de operações portuárias e hoteling.}
 \label{tab:app-portops-proveniencia}
-\begin{tabularx}{\textwidth}{p{0.25\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y Y}
 \toprule
 Proveniência & Uso permitido & Cautela \\
 \midrule
@@ -85,19 +92,19 @@ Proveniência & Uso permitido & Cautela \\
 \section{Parâmetros que permanecem pendentes para a versão final}
 \label{sec:app-parametros-pendentes}
 
-Este primeiro artefato LaTeX preserva TODOs metodológicos onde a versão final ainda exige revisão fina de fonte, citação ou metadado. A Tabela~\ref{tab:app-parametros-pendentes} organiza os pontos que não devem ser resolvidos por inferência nesta etapa.
+Este primeiro artefato LaTeX preserva pendências metodológicas onde a versão final ainda exige revisão fina de fonte, citação ou metadado. A Tabela~\ref{tab:app-parametros-pendentes} organiza os pontos que não devem ser resolvidos por inferência nesta etapa.
 
 \begin{table}[htbp]
 \centering
 \small
 \caption{Pendências de parâmetro e metadado para a produção final.}
 \label{tab:app-parametros-pendentes}
-\begin{tabularx}{\textwidth}{p{0.28\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.28\textwidth}Y Y}
 \toprule
 Item & Pendência & Tratamento até a versão final \\
 \midrule
 Metadados institucionais & Autor, orientador, instituição, curso, local e ano preenchidos no arquivo principal. & Revisar apenas se houver exigência formal da instituição.\\
-Resumo em inglês & O \emph{abstract} existe como placeholder. & Traduzir a versão final do resumo quando o texto estiver congelado.\\
+Resumo em inglês & O \emph{abstract} foi preenchido nesta versão. & Revisar apenas na etapa final de normalização linguística e institucional.\\
 Figuras finais & Diagramas estão como placeholders \LaTeX{}. & Substituir por imagens ou desenhos finais sem alterar o conteúdo metodológico.\\
 Estilo bibliográfico & O arquivo usa estilo simples com \texttt{../references.bib}. & Ajustar ABNT/USP apenas quando a infraestrutura de citação estiver definida.\\
 Parâmetros voláteis & Preços, fatores e dados de mercado podem depender de data e fonte. & Não atualizar sem registro de proveniência e decisão metodológica.\\

@@ -8,7 +8,7 @@ Este apêndice agrupa material de validação que sustenta os Capítulos~\ref{ch
 
 A Figura~\ref{fig:fluxo-classificacao-evidencia} deve ser substituída, na versão final, por um diagrama que mostre como uma execução passa de resultado bruto para categoria de uso. O ponto central do fluxo é que execução numérica e uso conclusivo não são equivalentes.
 
-\placeholderfigure{Placeholder: fluxo de classificação de evidência, mostrando execução histórica, revisão metodológica, sensibilidade, benchmark externo, rerun/cache, reconciliação diagnóstica e categoria de uso permitida.}{Fluxo de classificação de evidências no TF.}{fig:fluxo-classificacao-evidencia}
+\placeholderfigure{Diagrama preliminar: fluxo de classificação de evidência, mostrando execução histórica, revisão metodológica, sensibilidade, benchmark externo, rerun/cache, reconciliação diagnóstica e categoria de uso permitida.}{Fluxo de classificação de evidências no TF.}{fig:fluxo-classificacao-evidencia}
 
 A Tabela~\ref{tab:app-camadas-evidencia} resume as camadas que alimentam o fluxo da Figura~\ref{fig:fluxo-classificacao-evidencia}.
 
@@ -17,7 +17,7 @@ A Tabela~\ref{tab:app-camadas-evidencia} resume as camadas que alimentam o fluxo
 \small
 \caption{Camadas de validação e uso permitido.}
 \label{tab:app-camadas-evidencia}
-\begin{tabularx}{\textwidth}{p{0.25\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y Y}
 \toprule
 Camada & Evidência preservada & Uso permitido \\
 \midrule
@@ -38,17 +38,18 @@ A Tabela~\ref{tab:app-sensibilidades-executadas} repete os valores numéricos pr
 
 \begin{table}[htbp]
 \centering
-\scriptsize
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
 \caption{Sensibilidades executadas e valores rastreados.}
 \label{tab:app-sensibilidades-executadas}
-\begin{tabularx}{\textwidth}{p{0.20\textwidth}p{0.18\textwidth}p{0.16\textwidth}r r r r p{0.11\textwidth}}
+\begin{tabularx}{\textwidth}{L{0.18\textwidth}Y L{0.18\textwidth}L{0.20\textwidth}L{0.11\textwidth}}
 \toprule
-Caso & Papel & Portos & Custo rod. & Custo multi. & Emissões rod. & Emissões multi. & Classe \\
- &  &  & (BRL) & (BRL) & (kg \cooe{}) & (kg \cooe{}) & \\
+Caso & Papel e portos & Custo rod./multi. (BRL) & Emissões rod./multi. (kg \cooe{}) & Classe \\
 \midrule
-\texttt{SENS-002-REFDIST} & Distância de referência Santos/Manaus & Santos--Manaus & 18.456,45 & 1.263,50 & 6.961,76 & 1.104,67 & \texttt{sensitive}\\
-\texttt{SENS-003B-ALTPECEM} & Porto alternativo Pecém & Manaus--Pecém & 26.391,03 & 727,33 & 9.989,83 & 573,48 & \texttt{sensitive}\\
-\texttt{SENS-005B-ALTSUAPE} & Porto alternativo Suape & Rio Grande--Suape & 18.121,99 & 2.122,38 & 7.013,27 & 1.127,46 & \texttt{sensitive}\\
+\codecell{SENS-002-REFDIST} & Distância de referência; Santos--Manaus & 18.456,45 / 1.263,50 & 6.961,76 / 1.104,67 & \codecell{sensitive}\\
+\codecell{SENS-003B-ALTPECEM} & Porto alternativo; Manaus--Pecém & 26.391,03 / 727,33 & 9.989,83 / 573,48 & \codecell{sensitive}\\
+\codecell{SENS-005B-ALTSUAPE} & Porto alternativo; Rio Grande--Suape & 18.121,99 / 2.122,38 & 7.013,27 / 1.127,46 & \codecell{sensitive}\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -63,7 +64,7 @@ A Tabela~\ref{tab:app-batch002-resumo} apresenta o resumo quantitativo do Batch 
 \small
 \caption{Resumo do Batch 002 Gustavo/Costa.}
 \label{tab:app-batch002-resumo}
-\begin{tabularx}{\textwidth}{p{0.38\textwidth}r X}
+\begin{tabularx}{\textwidth}{L{0.38\textwidth}r Y}
 \toprule
 Item & Valor & Interpretação \\
 \midrule
@@ -71,7 +72,7 @@ Células parseadas & 36 & Inventário total da matriz lida.\\
 Pares OD positivos e suportados & 21 & Denominador efetivo da comparação direcional.\\
 Células puladas & 15 & Seis self-pairs e nove linhas rodoviárias zero ou não positivas.\\
 Acordo direcional & 21/21 & Apoio direcional externo para as linhas comparáveis.\\
-Classificação atual & 21 x & \texttt{same\_direction\_large\_gap}.\\
+Classificação atual & 21 x & \codecell{same\_direction\_large\_gap}.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -80,16 +81,18 @@ A Tabela~\ref{tab:app-rerun-reconciliacao} mantém juntos os resultados de rerun
 
 \begin{table}[htbp]
 \centering
-\scriptsize
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
 \caption{Rerun/cache e reconciliação rodoviária do Batch 002.}
 \label{tab:app-rerun-reconciliacao}
-\begin{tabularx}{\textwidth}{p{0.30\textwidth}p{0.28\textwidth}X}
+\begin{tabularx}{\textwidth}{L{0.28\textwidth}L{0.30\textwidth}Y}
 \toprule
 Verificação & Resultado & Uso seguro \\
 \midrule
 Rerun de pares positivos & 21/21 pares executados. & Reprodutibilidade computacional, não validação de magnitude.\\
-\texttt{route-cache hits} & 63 & Todas as pernas rodoviárias diretas, iniciais e finais foram atendidas por cache.\\
-\texttt{route-cache misses} & 0 & Instabilidade de provedor/cache fica menos plausível como explicação principal.\\
+\codecell{route-cache hits} & 63 & Todas as pernas rodoviárias diretas, iniciais e finais foram atendidas por cache.\\
+\codecell{route-cache misses} & 0 & Instabilidade de provedor/cache fica menos plausível como explicação principal.\\
 Escritas por provedor & 0 & O rerun não dependeu de novas distâncias de provedor.\\
 Diferença rodoviária média/mediana & 201,0\%/150,5\% $\rightarrow$ 199,8\%/149,3\% & Lacuna road-only permanece após rerun.\\
 Diferença multimodal média/mediana & 53,5\%/52,9\% $\rightarrow$ 60,8\%/63,7\% & Lacuna multimodal permanece metodológica e de fronteira.\\
@@ -104,7 +107,13 @@ Diferença rodoviária após diagnóstico & 199,8\%/149,3\% $\rightarrow$ 43,9\%
 
 A Tabela~\ref{tab:app-categorias-uso} é o resumo operacional das categorias usadas para controlar afirmações no relatório. Ela deve permanecer alinhada com a Tabela~\ref{tab:categorias-uso}.
 
-\begin{longtable}{p{0.28\textwidth}p{0.32\textwidth}p{0.32\textwidth}}
+\begingroup
+\small
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{L{0.27\textwidth}L{0.34\textwidth}L{0.31\textwidth}}
 \caption{Categorias de uso e usos proibidos.}
 \label{tab:app-categorias-uso}\\
 \toprule
@@ -115,16 +124,17 @@ Categoria & Uso permitido & Uso proibido \\
 Categoria & Uso permitido & Uso proibido \\
 \midrule
 \endhead
-\texttt{headline\_candidate} & Nenhum uso atual; categoria reservada para evidência futura mais forte. & Promover qualquer caso atual a resultado principal robusto.\\
-\texttt{sensitivity\_discussion} & Discutir comportamento sob premissas documentadas. & Tratar como linha de base, validação robusta ou prova geral de vantagem modal.\\
-\texttt{limitation\_example} & Explicar limitações, como casos same-port. & Usar como desempenho normal de cabotagem.\\
-\texttt{excluded} & Justificar exclusão e limite metodológico. & Executar ou interpretar numericamente como evidência de resultado.\\
-\texttt{reference\_needed} & Registrar lacuna e requisito de evidência futura. & Declarar que a lacuna foi resolvida.\\
-\texttt{methodology\_blocked} & Apontar bloqueio e trabalho futuro. & Converter em conclusão numérica sem decisão rastreada.\\
-\texttt{historical\_diagnostic} & Mostrar evolução do método. & Apresentar como resultado corrigido ou calibrado.\\
-\texttt{benchmark\_supports\_direction} & Sustentar consistência direcional cautelosa. & Alegar validação calibrada ou reprodução exata.\\
-\texttt{benchmark\_supports\_road\_factor\_explanation} & Discutir sensibilidade a premissas rodoviárias. & Substituir o modelo de linha de base pelo fator diagnóstico.\\
-\texttt{benchmark\_boundary\_mismatch} & Preservar cautela entre \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. & Misturar fronteiras ou unidades como equivalentes.\\
-\texttt{not\_comparable} & Usar como limitação ou justificativa de não execução. & Transformar em evidência numérica.\\
+\codecell{headline\_candidate} & Nenhum uso atual; categoria reservada para evidência futura mais forte. & Promover qualquer caso atual a resultado principal robusto.\\
+\codecell{sensitivity\_discussion} & Discutir comportamento sob premissas documentadas. & Tratar como linha de base, validação robusta ou prova geral de vantagem modal.\\
+\codecell{limitation\_example} & Explicar limitações, como casos same-port. & Usar como desempenho normal de cabotagem.\\
+\codecell{excluded} & Justificar exclusão e limite metodológico. & Executar ou interpretar numericamente como evidência de resultado.\\
+\codecell{reference\_needed} & Registrar lacuna e requisito de evidência futura. & Declarar que a lacuna foi resolvida.\\
+\codecell{methodology\_blocked} & Apontar bloqueio e trabalho futuro. & Converter em conclusão numérica sem decisão rastreada.\\
+\codecell{historical\_diagnostic} & Mostrar evolução do método. & Apresentar como resultado corrigido ou calibrado.\\
+\codecell{benchmark\_supports\_direction} & Sustentar consistência direcional cautelosa. & Alegar validação calibrada ou reprodução exata.\\
+\codecell{benchmark\_supports\_road\_factor\_explanation} & Discutir sensibilidade a premissas rodoviárias. & Substituir o modelo de linha de base pelo fator diagnóstico.\\
+\codecell{benchmark\_boundary\_mismatch} & Preservar cautela entre \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. & Misturar fronteiras ou unidades como equivalentes.\\
+\codecell{not\_comparable} & Usar como limitação ou justificativa de não execução. & Transformar em evidência numérica.\\
 \bottomrule
 \end{longtable}
+\endgroup

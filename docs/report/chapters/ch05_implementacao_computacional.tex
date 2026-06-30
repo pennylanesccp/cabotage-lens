@@ -6,7 +6,7 @@
 
 O \CabotageLens{} é o protótipo computacional desenvolvido neste trabalho para operacionalizar a metodologia do Capítulo~\ref{ch:metodologia}. Sua função é transformar uma unidade funcional, um par origem-destino, uma base de carga e parâmetros de cenário em uma comparação rastreável entre uma alternativa rodoviária direta e uma cadeia rodoviária-cabotagem-rodoviária. A ferramenta não é apresentada como produto comercial de contratação de transporte, mas como uma estrutura acadêmica para tornar explícitas as escolhas de rota, porto, distância, custo modelado, emissões operacionais \ttw{} de \cooe{}, proveniência e avisos de qualidade.
 
-\placeholderfigure{Placeholder: arquitetura do protótipo, mostrando interface Streamlit, módulos de domínio, provedores de geocodificação/roteamento, matriz marítima, dados processados, Supabase/Postgres, artefatos de validação e saídas CSV/JSON.}{Arquitetura computacional do protótipo \CabotageLens{}.}{fig:arquitetura-cabotagelens}
+\placeholderfigure{Diagrama conceitual preliminar: arquitetura do protótipo com interface Streamlit, módulos de domínio, provedores de geocodificação/roteamento, matriz marítima, dados processados, Supabase/Postgres, artefatos de validação e saídas CSV/JSON.}{Arquitetura computacional do protótipo \CabotageLens{}.}{fig:arquitetura-cabotagelens}
 
 A Figura~\ref{fig:arquitetura-cabotagelens} deve ser substituída por um diagrama final da arquitetura. A contribuição computacional está na operacionalização em um fluxo auditável, sem redefinir o inventário de fontes do Capítulo~\ref{ch:metodologia}. O programa combina entrada do usuário, geocodificação, roteamento por provedores, cache, seleção de portos, matriz marítima, insumos processados, alocação de carga, operações portuárias, \emph{hoteling}, persistência Supabase, interface e artefatos de validação.
 
@@ -24,7 +24,7 @@ O segundo é o fluxo offline de atualização de dados. Ele não roda a cada cen
 \small
 \caption{Fluxos computacionais do \CabotageLens{}.}
 \label{tab:fluxos-computacionais}
-\begin{tabularx}{\textwidth}{p{0.22\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.22\textwidth}Y Y}
 \toprule
 Fluxo & Transformação realizada & Entrega ao TF \\
 \midrule
@@ -64,7 +64,7 @@ Os insumos metodológicos são operacionalizados no protótipo por meio de compo
 \small
 \caption{Componentes computacionais e metadados preservados.}
 \label{tab:componentes-computacionais}
-\begin{tabularx}{\textwidth}{p{0.24\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.24\textwidth}Y Y}
 \toprule
 Componente & Transformação realizada & Metadado preservado \\
 \midrule

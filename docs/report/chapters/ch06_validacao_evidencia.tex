@@ -13,7 +13,7 @@ Essa abordagem é necessária porque as saídas do \CabotageLens{} combinam dist
 \small
 \caption{Camadas de evidência usadas no relatório.}
 \label{tab:camadas-validacao}
-\begin{tabularx}{\textwidth}{p{0.25\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y Y}
 \toprule
 Camada de evidência & Papel no Capítulo~\ref{ch:validacao} & Interpretação segura \\
 \midrule
@@ -39,15 +39,15 @@ O Batch 001 foi a primeira camada histórica de avaliação dos casos de valida�
 \small
 \caption{Casos históricos Batch 001 e uso seguro no TF.}
 \label{tab:batch001-historico}
-\begin{tabularx}{\textwidth}{p{0.18\textwidth}p{0.24\textwidth}p{0.20\textwidth}X}
+\begin{tabularx}{\textwidth}{L{0.18\textwidth}L{0.24\textwidth}L{0.20\textwidth}Y}
 \toprule
 Caso & Par origem-destino & Portos históricos & Uso seguro \\
 \midrule
-\texttt{TF-VAL-001} & São Paulo, SP -- Santos, SP & Santos -- Santos & Diagnóstico de caso same-port e limite de rota.\\
-\texttt{TF-VAL-002} & São Paulo, SP -- Manaus, AM & Santos -- Manaus & Diagnóstico histórico; base para sensibilidade de distância de referência.\\
-\texttt{TF-VAL-003} & Manaus, AM -- Fortaleza, CE & Manaus -- Fortaleza & Diagnóstico histórico; referência exata de Fortaleza permanece faltante.\\
-\texttt{TF-VAL-004} & Brasília, DF -- Salvador, BA & Angra dos Reis -- Salvador & Diagnóstico histórico; cadeia depois excluída para benchmark conteinerizado.\\
-\texttt{TF-VAL-005} & Porto Alegre, RS -- Recife, PE & Rio Grande -- Recife & Diagnóstico histórico; referência exata de Recife permanece faltante.\\
+\codecell{TF-VAL-001} & São Paulo, SP -- Santos, SP & Santos -- Santos & Diagnóstico de caso same-port e limite de rota.\\
+\codecell{TF-VAL-002} & São Paulo, SP -- Manaus, AM & Santos -- Manaus & Diagnóstico histórico; base para sensibilidade de distância de referência.\\
+\codecell{TF-VAL-003} & Manaus, AM -- Fortaleza, CE & Manaus -- Fortaleza & Diagnóstico histórico; referência exata de Fortaleza permanece faltante.\\
+\codecell{TF-VAL-004} & Brasília, DF -- Salvador, BA & Angra dos Reis -- Salvador & Diagnóstico histórico; cadeia depois excluída para benchmark conteinerizado.\\
+\codecell{TF-VAL-005} & Porto Alegre, RS -- Recife, PE & Rio Grande -- Recife & Diagnóstico histórico; referência exata de Recife permanece faltante.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -64,16 +64,16 @@ O Batch 001B deve ser lido como uma camada de decisão metodológica e auditabil
 \small
 \caption{Decisões Batch 001B e categorias associadas.}
 \label{tab:batch001b-decisoes}
-\begin{tabularx}{\textwidth}{p{0.28\textwidth}p{0.26\textwidth}X}
+\begin{tabularx}{\textwidth}{L{0.28\textwidth}L{0.26\textwidth}Y}
 \toprule
 Status ou decisão & Categoria final associada & Uso seguro no TF \\
 \midrule
-Registro histórico preservado & \texttt{historical\_diagnostic} & Mostrar evolução do método; não apresentar como resultado corrigido.\\
-Caso same-port ou aviso de rota & \texttt{limitation\_example} & Explicar limite de construção de rota; não tratar como cabotagem normal.\\
-Caso fora da fronteira atual & \texttt{excluded} & Justificar exclusão metodológica; não executar nem interpretar como resultado.\\
-Referência exata ausente & \texttt{reference\_needed} & Registrar lacuna para o par de portos selecionado.\\
-Decisão metodológica ausente & \texttt{methodology\_blocked} & Registrar bloqueio e trabalho futuro.\\
-Hipótese preparada ou executada como sensibilidade & \texttt{sensitivity\_discussion} / \texttt{sensitive} & Discutir comportamento sob premissa nomeada.\\
+Registro histórico preservado & \codecell{historical\_diagnostic} & Mostrar evolução do método; não apresentar como resultado corrigido.\\
+Caso same-port ou aviso de rota & \codecell{limitation\_example} & Explicar limite de construção de rota; não tratar como cabotagem normal.\\
+Caso fora da fronteira atual & \codecell{excluded} & Justificar exclusão metodológica; não executar nem interpretar como resultado.\\
+Referência exata ausente & \codecell{reference\_needed} & Registrar lacuna para o par de portos selecionado.\\
+Decisão metodológica ausente & \codecell{methodology\_blocked} & Registrar bloqueio e trabalho futuro.\\
+Hipótese preparada ou executada como sensibilidade & \codecell{sensitivity\_discussion} / \codecell{sensitive} & Discutir comportamento sob premissa nomeada.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -92,13 +92,13 @@ Três casos foram executados como sensibilidades do Batch 001B: Santos/Manaus co
 \small
 \caption{Sensibilidades Batch 001B e interpretação segura.}
 \label{tab:sensibilidades-validacao}
-\begin{tabularx}{\textwidth}{p{0.27\textwidth}X X}
+\begin{tabularx}{\textwidth}{L{0.27\textwidth}Y Y}
 \toprule
 Sensibilidade & Interpretação segura & Limitação \\
 \midrule
-\texttt{TF-VAL-001B-SENS-002-REFDIST} & Mostra comportamento do modelo quando a distância Santos/Manaus é tratada como hipótese de sensibilidade documentada. & Não valida todos os casos com \texttt{haversine\_fallback}.\\
-\texttt{TF-VAL-001B-SENS-003B-ALTPECEM} & Permite discutir sensibilidade a porto alternativo, acesso rodoviário e distância marítima. & Pecém não valida Porto de Fortaleza.\\
-\texttt{TF-VAL-001B-SENS-005B-ALTSUAPE} & Permite discutir sensibilidade a porto alternativo, acesso rodoviário e distância marítima. & Suape não valida Porto do Recife.\\
+\codecell{TF-VAL-001B-SENS-002-REFDIST} & Mostra comportamento do modelo quando a distância Santos/Manaus é tratada como hipótese de sensibilidade documentada. & Não valida todos os casos com \codecell{haversine\_fallback}.\\
+\codecell{TF-VAL-001B-SENS-003B-ALTPECEM} & Permite discutir sensibilidade a porto alternativo, acesso rodoviário e distância marítima. & Pecém não valida Porto de Fortaleza.\\
+\codecell{TF-VAL-001B-SENS-005B-ALTSUAPE} & Permite discutir sensibilidade a porto alternativo, acesso rodoviário e distância marítima. & Suape não valida Porto do Recife.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -115,7 +115,7 @@ O Batch 002 acrescenta uma camada de benchmark externo baseada no workbook Gusta
 \small
 \caption{Classificação do Batch 002 Gustavo/Costa.}
 \label{tab:batch002-classificacao}
-\begin{tabularx}{\textwidth}{p{0.38\textwidth}r X}
+\begin{tabularx}{\textwidth}{L{0.38\textwidth}r Y}
 \toprule
 Item de classificação & Valor & Interpretação segura \\
 \midrule
@@ -123,7 +123,7 @@ Células de matriz parseadas & 36 & Inventário inicial do benchmark; nem todas 
 Pares OD positivos e suportados & 21 & Denominador efetivo da comparação direcional.\\
 Células puladas antes da execução & 15 & Seis self-pairs e nove linhas rodoviárias zero ou não positivas.\\
 Pares com acordo direcional & 21 de 21 & Workbook e \CabotageLens{} favorecem cabotagem/multimodal em emissões frente ao road-only.\\
-Classificação rastreada atual & 21 & Todas as linhas são \texttt{same\_direction\_large\_gap}.\\
+Classificação rastreada atual & 21 & Todas as linhas são \codecell{same\_direction\_large\_gap}.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -142,13 +142,13 @@ O rerun Supabase/cache testou uma hipótese operacional específica do Batch 002
 \small
 \caption{Resultados do rerun Supabase/cache.}
 \label{tab:rerun-cache}
-\begin{tabularx}{\textwidth}{p{0.32\textwidth}p{0.24\textwidth}X}
+\begin{tabularx}{\textwidth}{L{0.32\textwidth}L{0.24\textwidth}Y}
 \toprule
 Verificação & Resultado observado & Interpretação \\
 \midrule
 Fonte de distância rodoviária & Distâncias em cache & Reduz hipótese de instabilidade por chamada em tempo real ao provedor.\\
-\texttt{route-cache hits} & 63 & As 21 pernas diretas, 21 pre-carriage e 21 on-carriage foram atendidas por cache.\\
-\texttt{route-cache misses} & 0 & Não houve lacuna de cache rodoviário no rerun.\\
+\codecell{route-cache hits} & 63 & As 21 pernas diretas, 21 pre-carriage e 21 on-carriage foram atendidas por cache.\\
+\codecell{route-cache misses} & 0 & Não houve lacuna de cache rodoviário no rerun.\\
 Escritas de distância por provedor & 0 & O rerun não dependeu de novas distâncias de provedor.\\
 Diferença média/mediana rodoviária & 201,0\%/150,5\% $\rightarrow$ 199,8\%/149,3\% & A lacuna permanece.\\
 \bottomrule
@@ -174,7 +174,7 @@ O diagnóstico manteve fixas as mesmas distâncias rodoviárias em cache do Batc
 \small
 \caption{Reconciliação rodoviária como diagnóstico, não recalibração.}
 \label{tab:reconciliacao}
-\begin{tabularx}{\textwidth}{p{0.34\textwidth}p{0.24\textwidth}X}
+\begin{tabularx}{\textwidth}{L{0.34\textwidth}L{0.24\textwidth}Y}
 \toprule
 Item diagnóstico & Valor ou observação & Limite de interpretação \\
 \midrule
@@ -195,7 +195,13 @@ O efeito resumido na Tabela~\ref{tab:reconciliacao} é metodologicamente relevan
 
 O fechamento do Capítulo~\ref{ch:validacao} transforma as camadas anteriores em uma regra prática de uso da evidência. Um resultado executado não é automaticamente um resultado utilizável como conclusão principal do TF. A classificação atribuída a cada linha controla a força da afirmação permitida e o tipo de ressalva exigida antes que o Capítulo~\ref{ch:resultados} apresente números, tabelas ou sínteses.
 
-\begin{longtable}{p{0.28\textwidth}p{0.32\textwidth}p{0.32\textwidth}}
+\begingroup
+\small
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{L{0.27\textwidth}L{0.34\textwidth}L{0.31\textwidth}}
 \caption{Categorias de uso no TF e usos proibidos.}
 \label{tab:categorias-uso}\\
 \toprule
@@ -206,19 +212,19 @@ Categoria & Uso permitido & Uso proibido \\
 Categoria & Uso permitido & Uso proibido \\
 \midrule
 \endhead
-\texttt{headline\_candidate} & Nenhum uso atual; categoria reservada para evidência futura mais forte. & Promover qualquer caso atual a resultado principal robusto.\\
-\texttt{sensitivity\_discussion} & Discutir comportamento sob premissas documentadas. & Tratar como linha de base, validação robusta ou prova geral de vantagem modal.\\
-\texttt{limitation\_example} & Explicar limitações, como casos same-port. & Usar como desempenho normal de cabotagem.\\
-\texttt{excluded} & Justificar exclusão e limite metodológico. & Executar ou interpretar numericamente como evidência de resultado.\\
-\texttt{reference\_needed} & Registrar lacuna e requisito de evidência futura. & Declarar que a lacuna foi resolvida.\\
-\texttt{methodology\_blocked} & Apontar bloqueio e trabalho futuro. & Converter em conclusão numérica sem decisão rastreada.\\
-\texttt{historical\_diagnostic} & Mostrar evolução do método. & Apresentar como resultado corrigido ou calibrado.\\
-\texttt{benchmark\_supports\_direction} & Sustentar consistência direcional cautelosa. & Alegar validação calibrada ou reprodução exata.\\
-\texttt{benchmark\_supports\_road\_factor\_explanation} & Discutir sensibilidade a premissas rodoviárias. & Substituir o modelo de linha de base pelo fator diagnóstico.\\
-\texttt{benchmark\_boundary\_mismatch} & Preservar cautela entre \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. & Misturar fronteiras ou unidades como equivalentes.\\
-\texttt{not\_comparable} & Usar como limitação ou justificativa de não execução. & Transformar em evidência numérica.\\
+\codecell{headline\_candidate} & Nenhum uso atual; categoria reservada para evidência futura mais forte. & Promover qualquer caso atual a resultado principal robusto.\\
+\codecell{sensitivity\_discussion} & Discutir comportamento sob premissas documentadas. & Tratar como linha de base, validação robusta ou prova geral de vantagem modal.\\
+\codecell{limitation\_example} & Explicar limitações, como casos same-port. & Usar como desempenho normal de cabotagem.\\
+\codecell{excluded} & Justificar exclusão e limite metodológico. & Executar ou interpretar numericamente como evidência de resultado.\\
+\codecell{reference\_needed} & Registrar lacuna e requisito de evidência futura. & Declarar que a lacuna foi resolvida.\\
+\codecell{methodology\_blocked} & Apontar bloqueio e trabalho futuro. & Converter em conclusão numérica sem decisão rastreada.\\
+\codecell{historical\_diagnostic} & Mostrar evolução do método. & Apresentar como resultado corrigido ou calibrado.\\
+\codecell{benchmark\_supports\_direction} & Sustentar consistência direcional cautelosa. & Alegar validação calibrada ou reprodução exata.\\
+\codecell{benchmark\_supports\_road\_factor\_explanation} & Discutir sensibilidade a premissas rodoviárias. & Substituir o modelo de linha de base pelo fator diagnóstico.\\
+\codecell{benchmark\_boundary\_mismatch} & Preservar cautela entre \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. & Misturar fronteiras ou unidades como equivalentes.\\
+\codecell{not\_comparable} & Usar como limitação ou justificativa de não execução. & Transformar em evidência numérica.\\
 \bottomrule
 \end{longtable}
+\endgroup
 
 A Tabela~\ref{tab:categorias-uso} delimita o que o trabalho não demonstra. Nenhuma linha atual prova superioridade universal da cabotagem, viabilidade comercial, disponibilidade de serviço, aceitação por transportador, disponibilidade de slot, frequência de escala, frete contratado, validação operacional ou reprodução calibrada de Gustavo/Costa.
-

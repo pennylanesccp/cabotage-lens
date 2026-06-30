@@ -13,13 +13,10 @@ Este diretório contém a primeira estrutura LaTeX modular do relatório final d
 A partir de `docs/report/`:
 
 ```powershell
-pdflatex main.tex
-bibtex main
-pdflatex main.tex
-pdflatex main.tex
+latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 ```
 
-Se usar outro fluxo, mantenha os caminhos relativos: a bibliografia aponta para `../references.bib`.
+O relatório usa `biblatex` com backend `biber`; se a compilação for manual, execute a sequência equivalente com `pdflatex`, `biber`, `pdflatex` e `pdflatex`. Se usar outro fluxo, mantenha os caminhos relativos: a bibliografia aponta para `../references.bib`.
 
 ## Onde editar
 
@@ -27,11 +24,10 @@ Edite o texto acadêmico nos arquivos de `chapters/`. Edite material denso, list
 
 ## Bibliografia
 
-Esta primeira versão usa `\bibliographystyle{plain}` e `../references.bib`. A formatação ABNT/USP e a revisão completa de metadados bibliográficos permanecem como TODO de produção final.
+Esta versão usa `biblatex` com `../references.bib` e suprime, na renderização, campos internos de nota/arquivo usados apenas como rastreabilidade do repositório. A formatação ABNT/USP e a revisão completa de metadados bibliográficos permanecem como pendências de produção final.
 
-## TODOs conhecidos
+## Pendências conhecidas
 
-- Escrever o abstract final em inglês.
 - Trocar placeholders de figuras por diagramas finais.
 - Revisar captions, labels e paginação após compilação real.
 - Definir estilo bibliográfico final.

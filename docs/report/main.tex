@@ -1,5 +1,6 @@
 \documentclass[12pt,a4paper,oneside]{report}
 
+\usepackage{cmap}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[brazil,english]{babel}
@@ -9,6 +10,10 @@
 \usepackage{array}
 \usepackage{longtable}
 \usepackage{tabularx}
+\usepackage{ragged2e}
+\usepackage{makecell}
+\usepackage{pdflscape}
+\usepackage{seqsplit}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{amsmath}
@@ -17,6 +22,16 @@
 \usepackage{float}
 \usepackage{fancyhdr}
 \usepackage{setspace}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+
+\AtEveryBibitem{%
+  \clearfield{note}%
+  \clearfield{file}%
+}
+\addbibresource{../references.bib}
 
 \geometry{margin=2.5cm}
 \onehalfspacing
@@ -43,6 +58,9 @@
 \newcommand{\cooe}{CO$_2$e}
 \newcommand{\ttw}{TTW}
 \newcommand{\wtw}{WTW}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcommand{\codecell}[1]{\texttt{\seqsplit{#1}}}
 \newcommand{\methodnote}[1]{%
   \begin{center}
   \fcolorbox{clblue}{clgray}{%
@@ -93,22 +111,31 @@
 \pagenumbering{roman}
 
 \chapter*{Resumo}
+\markboth{Resumo}{Resumo}
 \addcontentsline{toc}{chapter}{Resumo}
 Este relatório apresenta o \CabotageLens{}, um framework computacional auditável para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros. A contribuição central é uma estrutura de comparação porta a porta, orientada por rota, que preserva unidade funcional, portos, distâncias, proveniência dos dados, componentes portuários, emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado. O trabalho separa explicitamente emissões \ttw{}, \wtw{} e LCA; distingue custo modelado de frete comercial; e classifica evidências de forma conservadora para evitar extrapolações sobre superioridade modal universal, viabilidade comercial ou validação calibrada. As sensibilidades executadas e o benchmark externo Gustavo/Costa apoiam interpretação direcional cautelosa, mas não substituem validação operacional, disponibilidade de serviço ou reconstrução integral de referências externas. O resultado é uma base metodológica e computacional defensável para discutir quando a cabotagem pode aparecer promissora em cenários específicos e quais lacunas precisam ser resolvidas antes de conclusões mais fortes.
 
 \textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; \cooe{}; custo modelado; rastreabilidade; Brasil.
 
 \chapter*{Abstract}
+\markboth{Abstract}{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 \selectlanguage{english}
-\textbf{TODO:} Prepare the final English abstract after the Portuguese text, figures, and bibliography style are finalized. The English version should preserve the same methodological boundaries: door-to-door comparison, operational TTW \cooe{}, modeled operational cost proxy, conservative evidence classification, and Gustavo/Costa as supporting directional benchmark evidence rather than an absolute reference or calibrated reproduction target.
+This report presents \CabotageLens{}, an auditable computational framework for comparing direct road transport and road-cabotage-road alternatives in Brazilian freight corridors. Its central contribution is a route-aware, door-to-door comparison structure that preserves the functional unit, port choices, distances, data provenance, port-operation components, operational TTW \cooe{} emissions, and a modeled operational cost proxy under explicit methodological boundaries. The work separates TTW emissions from WTW and LCA perspectives, distinguishes modeled cost from commercial freight, and classifies evidence conservatively to avoid extrapolating route-specific results into claims of universal modal superiority, commercial viability, or calibrated validation. The executed sensitivity cases and the Gustavo/Costa external benchmark support a cautious directional interpretation, but they do not replace operational validation, service-availability evidence, or a calibrated reproduction of external references. The result is a defensible methodological and computational basis for discussing when cabotage may appear promising in specific scenarios and which data gaps must be resolved before stronger conclusions can be drawn.
+
+\textbf{Keywords}: coastal shipping; road freight; multimodal freight; operational emissions; \cooe{}; modeled cost; traceability; Brazil.
 \selectlanguage{brazil}
 
+\markboth{Sumário}{Sumário}
 \tableofcontents
+\markboth{Lista de Figuras}{Lista de Figuras}
 \listoffigures
+\markboth{Lista de Tabelas}{Lista de Tabelas}
 \listoftables
 
+\cleardoublepage
 \chapter*{Dicionário de termos, siglas e abreviações}
+\markboth{Dicionário de termos, siglas e abreviações}{Dicionário de termos, siglas e abreviações}
 \phantomsection
 \addcontentsline{toc}{chapter}{Dicionário de termos, siglas e abreviações}
 \small
@@ -168,8 +195,8 @@ Este relatório apresenta o \CabotageLens{}, um framework computacional auditáv
 \input{appendices/appendix_b_validacao}
 \input{appendices/appendix_c_checklist_reprodutibilidade}
 
-% TODO: revisar estilo bibliográfico ABNT/USP na etapa final.
-\bibliographystyle{plain}
-\bibliography{../references}
+% O estilo ABNT/USP e a revisão completa de metadados bibliográficos ficam
+% para a etapa final; os campos internos note/file são suprimidos na renderização.
+\printbibliography[title={Referências}]
 
 \end{document}
