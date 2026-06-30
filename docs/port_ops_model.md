@@ -64,6 +64,17 @@ For each equipment class `e`:
 - Fuel cost uses route diesel price (`R$/L`) already used by road legs.
 - Electricity cost uses `electricity_price_brl_per_kwh` from params (currently 0.0 placeholder).
 
+### 5) Missing port-specific data fallback
+
+When optional observed per-port records are available in the backend, the resolver does not treat missing port operations activity as zero. It applies this hierarchy per port call:
+
+1. `observed`: use the matching port-specific observed intensity.
+2. `estimated_port_average`: if the selected port is missing, use a weighted observed-peer intensity, computed as `sum(observed fuel or emissions) / sum(observed TEU or moves)` according to the active port-ops activity unit.
+3. `literature_default`: use the existing documented moves-based scenario only when no observed peer basis is available.
+4. `unavailable`: mark the component explicitly when neither observed data nor a documented positive fallback exists.
+
+The runtime payload now exposes the source level, activity unit, weighted denominator, observed sample count, included ports, and warnings for fallback or unavailable values. Existing Santos scenario totals remain the documented default path when no observed per-port records are supplied.
+
 ## Santos Scenarios
 
 The artifact defines two scenarios:

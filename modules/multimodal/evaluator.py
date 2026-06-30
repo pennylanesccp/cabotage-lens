@@ -14,7 +14,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional, Sequence
 
 # Path bootstrap
 if __name__ == "__main__":
@@ -85,6 +85,37 @@ def _resolve_uf_from_point(point: Dict[str, Any]) -> str:
             return uf
 
     return ""
+
+
+def _port_name_from_geometry(port: Any) -> str | None:
+    if not isinstance(port, Mapping):
+        return None
+    for key in ("name", "city", "label"):
+        value = port.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return None
+
+
+def _resolve_port_call_names(path_data: Mapping[str, Any], port_calls: int) -> list[str]:
+    names: list[str] = []
+    for key in ("port_origin", "port_destiny"):
+        name = _port_name_from_geometry(path_data.get(key))
+        if name:
+            names.append(name)
+
+    if not names:
+        sea_leg = path_data.get("sea_leg") if isinstance(path_data.get("sea_leg"), Mapping) else {}
+        corridor_ports = sea_leg.get("corridor_port_path") if isinstance(sea_leg, Mapping) else None
+        if isinstance(corridor_ports, list):
+            names = [str(item).strip() for item in corridor_ports if str(item or "").strip()]
+
+    calls = max(int(port_calls), 0)
+    if len(names) >= calls:
+        return names[:calls]
+    while len(names) < calls:
+        names.append(f"port_call_{len(names) + 1}")
+    return names
 
 
 def _clamp(value: float, lo: float, hi: float) -> float:
@@ -325,6 +356,7 @@ def evaluate_path(
     port_ops_scenario: str = DEFAULT_PORT_OPS_SCENARIO,
     port_ops_params_path: Optional[Path] = None,
     port_ops_stat_key: str = "median",
+    port_ops_observed_ports: Optional[Sequence[Mapping[str, Any]]] = None,
     prepared_context: PreparedEvaluationContext | None = None,
     diesel_default_price_r_per_l: float = 6.0,
     diesel_csv_path: Optional[Path] = None,
@@ -526,6 +558,9 @@ def evaluate_path(
     hoteling_fuel_kg = 0.0
     hoteling_fuel_ship_kg = 0.0
     hoteling_source_path: str | None = None
+    hoteling_source_level: str | None = None
+    hoteling_basis: str | None = None
+    hoteling_warning: str | None = None
     hoteling_vessel_class = vessel_eff.vessel_class
 
     if hoteling_effective and hoteling_hours_total > 0 and hoteling_sel is not None:
@@ -534,6 +569,9 @@ def evaluate_path(
         hoteling_aux_main_ratio = float(hoteling_sel.aux_main_ratio)
         hoteling_source_path = str(hoteling_sel.source_path)
         hoteling_vessel_class = hoteling_sel.vessel_class
+        hoteling_source_level = getattr(hoteling_sel, "source_level", "literature_default")
+        hoteling_basis = getattr(hoteling_sel, "basis", "vessel_class_hoteling_rate")
+        hoteling_warning = getattr(hoteling_sel, "warning", None)
         if hoteling_vessel_class != vessel_eff.vessel_class:
             _log.warning(
                 "Hoteling class fallback differs from sea efficiency class: sea=%s hoteling=%s",
@@ -554,6 +592,7 @@ def evaluate_path(
 
     if include_port_ops and port_calls > 0:
         try:
+            port_call_names = _resolve_port_call_names(path_data, port_calls)
             port_ops_payload = estimate_port_ops(
                 scenario=port_ops_scenario,
                 port_calls=port_calls,
@@ -566,6 +605,8 @@ def evaluate_path(
                 diesel_price_per_l=price_l,
                 params_path=port_ops_params_path,
                 selection=context.port_ops_selection,
+                port_names=port_call_names,
+                observed_port_ops=port_ops_observed_ports,
             )
             totals = port_ops_payload.get("totals", {}) if isinstance(port_ops_payload, dict) else {}
             port_ops_fuel_kg = float(totals.get("fuel_kg") or 0.0)
@@ -628,6 +669,9 @@ def evaluate_path(
         "hoteling_vessel_class": hoteling_vessel_class,
         "hoteling_ratio_used": float(hoteling_ratio_used),
         "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
+        "hoteling_source_level": hoteling_source_level,
+        "hoteling_basis": hoteling_basis,
+        "hoteling_warning": hoteling_warning,
         "fuel_kg_marine": float(sea_fuel_marine_kg),
         "cost_marine": float(sea_cost_marine),
         "co2e_marine": float(sea_co2e_marine),
@@ -643,6 +687,15 @@ def evaluate_path(
         "port_ops_fuel_kg": float(port_ops_fuel_kg),
         "port_ops_cost": float(port_ops_cost_brl),
         "port_ops_co2e": float(port_ops_co2e_kg),
+        "port_ops_source_level": (
+            None if not isinstance(port_ops_payload, dict) else port_ops_payload.get("source_level")
+        ),
+        "port_ops_source_level_counts": (
+            {} if not isinstance(port_ops_payload, dict) else dict(port_ops_payload.get("source_level_counts") or {})
+        ),
+        "port_ops_warnings": (
+            [] if not isinstance(port_ops_payload, dict) else list(port_ops_payload.get("warnings") or [])
+        ),
         "port_ops": port_ops_payload,
         "fuel_kg": float(sea_fuel_total_kg),
         "cost": float(sea_cost_total),
@@ -716,6 +769,8 @@ def evaluate_path(
             "hoteling_ratio_used": float(hoteling_ratio_used),
             "hoteling_aux_main_ratio": float(hoteling_aux_main_ratio),
             "hoteling_source": hoteling_source_path,
+            "hoteling_source_level": hoteling_source_level,
+            "hoteling_basis": hoteling_basis,
             "include_port_ops": bool(include_port_ops),
             "port_ops_scenario_requested": str(port_ops_scenario),
             "port_ops_stat_key": str(port_ops_stat_key),
@@ -745,6 +800,15 @@ def evaluate_path(
                 None
                 if not isinstance(port_ops_payload, dict)
                 else int(port_ops_payload.get("cargo_teu_resolved") or 0)
+            ),
+            "port_ops_source_level": (
+                None if not isinstance(port_ops_payload, dict) else port_ops_payload.get("source_level")
+            ),
+            "port_ops_source_level_counts": (
+                {} if not isinstance(port_ops_payload, dict) else dict(port_ops_payload.get("source_level_counts") or {})
+            ),
+            "port_ops_warning_count": (
+                0 if not isinstance(port_ops_payload, dict) else len(port_ops_payload.get("warnings") or [])
             ),
             "route_quality_warning_count": len(route_quality_warnings),
         },

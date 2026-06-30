@@ -35,6 +35,9 @@ class HotelingRateSelection:
     ratio_used: float
     aux_main_ratio: float
     source_path: Path
+    source_level: str = "literature_default"
+    basis: str = "mrv_class_rate_scaled_by_emep_ratio"
+    warning: str | None = None
 
 
 @lru_cache(maxsize=4)
@@ -121,7 +124,12 @@ def resolve_hoteling_rate(
             except (TypeError, ValueError):
                 aux_main_ratio = 0.0
 
+        warning = None
         if class_name != requested:
+            warning = (
+                f"Hoteling rate for vessel class '{requested}' unavailable; "
+                f"used '{class_name}' from the documented class-rate artifact."
+            )
             _log.warning(
                 "Hoteling rate for vessel class '%s' unavailable in %s. Falling back to '%s'.",
                 requested,
@@ -137,6 +145,9 @@ def resolve_hoteling_rate(
             ratio_used=ratio_used,
             aux_main_ratio=aux_main_ratio,
             source_path=source_path,
+            source_level="literature_default",
+            basis="mrv_class_rate_scaled_by_emep_ratio",
+            warning=warning,
         )
 
     raise ValueError(

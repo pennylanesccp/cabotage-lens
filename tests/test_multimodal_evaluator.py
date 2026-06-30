@@ -145,13 +145,14 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             )
 
         self.assertEqual(vessel_mock.call_count, 1)
-        self.assertEqual(hoteling_mock.call_count, 1)
+        self.assertEqual(hoteling_mock.call_count, 0)
         self.assertEqual(port_ops_sel_mock.call_count, 1)
         self.assertEqual(price_lookup_mock.call_count, 1)
         self.assertEqual(bunker_mock.call_count, 1)
         self.assertEqual(truck_mock.call_count, 1)
         self.assertEqual(port_ops_mock.call_count, 2)
         self.assertEqual(result_a["inputs"]["diesel_price_source"], "latest_diesel_prices_csv")
+        self.assertEqual(result_a["inputs"]["hoteling_exclusion_reason"], "included_in_transport_work_intensity")
         self.assertEqual(result_b["inputs"]["bunker_price"], 2572.34)
 
     def test_prepared_context_preserves_evaluation_output(self) -> None:

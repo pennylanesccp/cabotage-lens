@@ -74,6 +74,11 @@ DEFAULT_PORTS_JSON       = Path("data/processed/cabotage_data/ports_br.json")
 DEFAULT_SEA_MATRIX_JSON  = Path("data/sea_matrix.json")
 DEFAULT_HOTEL_JSON       = Path("data/processed/cabotage_data/hotel.json")
 
+_SOURCE_OBSERVED = "observed"
+_SOURCE_ESTIMATED_AVERAGE = "estimated_port_average"
+_SOURCE_LITERATURE_DEFAULT = "literature_default"
+_SOURCE_UNAVAILABLE = "unavailable"
+
 
 @dataclass(frozen=True)
 class CabotageFuelProfile:
@@ -185,6 +190,112 @@ def build_hotel_factor_index(
 
     _log.info("build_hotel_factor_index: cities=%d.", len(idx))
     return idx
+
+
+def _hotel_weighted_average_factor(hotel_data: dict) -> Optional[Dict[str, Any]]:
+    total_fuel_kg = 0.0
+    total_handled_t = 0.0
+    ports: List[str] = []
+
+    for entry in hotel_data.get("entries", []):
+        if not isinstance(entry, dict):
+            continue
+        try:
+            handled_t = float(entry.get("total_handled_t") or 0.0)
+        except (TypeError, ValueError):
+            handled_t = 0.0
+        if handled_t <= 0.0:
+            continue
+
+        try:
+            fuel_kg = float(entry.get("total_hotel_fuel_kg") or 0.0)
+        except (TypeError, ValueError):
+            fuel_kg = 0.0
+        if fuel_kg < 0.0:
+            continue
+        if fuel_kg == 0.0 and isinstance(entry.get("kg_fuel_per_t"), (int, float)):
+            fuel_kg = float(entry["kg_fuel_per_t"]) * handled_t
+
+        total_fuel_kg += fuel_kg
+        total_handled_t += handled_t
+        city = _norm_city(entry.get("city") or "")
+        if city:
+            ports.append(city)
+
+    if total_handled_t <= 0.0:
+        return None
+
+    return {
+        "intensity": total_fuel_kg / total_handled_t,
+        "observed_ports_used": len(ports),
+        "total_denominator": total_handled_t,
+        "ports_included": ports,
+    }
+
+
+def _resolve_hotel_factor(
+    *,
+    city: str,
+    hotel_data: dict,
+    factor_index: Dict[str, float],
+    default_hotel_kg_per_t: float,
+) -> Dict[str, Any]:
+    if city in factor_index:
+        return {
+            "value": float(factor_index[city]),
+            "unit": "kg_fuel_per_tonne",
+            "source_level": _SOURCE_OBSERVED,
+            "basis": "city_specific_observed_hotel_factor",
+            "observed_ports_used": 1,
+            "total_denominator": None,
+            "ports_included": [city],
+            "warning": None,
+        }
+
+    weighted = _hotel_weighted_average_factor(hotel_data)
+    if weighted is not None:
+        return {
+            "value": float(weighted["intensity"]),
+            "unit": "kg_fuel_per_tonne",
+            "source_level": _SOURCE_ESTIMATED_AVERAGE,
+            "basis": "weighted_average_observed_hotel_factors",
+            "observed_ports_used": int(weighted["observed_ports_used"]),
+            "total_denominator": float(weighted["total_denominator"]),
+            "ports_included": list(weighted["ports_included"]),
+            "warning": (
+                "City-specific hoteling factor missing; used weighted average "
+                "from observed hotel.json entries."
+            ),
+        }
+
+    if default_hotel_kg_per_t > 0.0:
+        return {
+            "value": float(default_hotel_kg_per_t),
+            "unit": "kg_fuel_per_tonne",
+            "source_level": _SOURCE_LITERATURE_DEFAULT,
+            "basis": "explicit_default_hotel_kg_per_t",
+            "observed_ports_used": 0,
+            "total_denominator": 0.0,
+            "ports_included": [],
+            "warning": (
+                "No valid observed hoteling factors available; used explicit "
+                "default_hotel_kg_per_t."
+            ),
+        }
+
+    return {
+        "value": None,
+        "unit": "kg_fuel_per_tonne",
+        "source_level": _SOURCE_UNAVAILABLE,
+        "basis": "no_observed_or_documented_hotel_factor",
+        "observed_ports_used": 0,
+        "total_denominator": 0.0,
+        "ports_included": [],
+        "warning": (
+            "City-specific hoteling factor missing and no observed peer or "
+            "positive documented default is available."
+        ),
+    }
 
 
 def port_fuel_from_handled_mass(
@@ -373,8 +484,9 @@ def _ops_and_hotel_fuel_kg(
         (load at origin + discharge at destiny)
       - hotel fuel:
             cargo_t × (k_o + k_d)
-        where k_o / k_d come from hotel.json per-city factors, or fallback
-        to `default_hotel_kg_per_t` when missing.
+        where k_o / k_d come from hotel.json per-city factors, a weighted
+        average across observed hotel.json entries, an explicit positive
+        `default_hotel_kg_per_t`, or explicit unavailable metadata.
     """
     # Port handling (2 calls: load + discharge)
     fuel_port_origin_kg = port_fuel_from_handled_mass(
@@ -389,15 +501,32 @@ def _ops_and_hotel_fuel_kg(
 
     # Hotel factors
     hotel_data = load_hotel_entries(path=str(hotel_json))
-    idx = build_hotel_factor_index(hotel_data=hotel_data)
+    try:
+        idx = build_hotel_factor_index(hotel_data=hotel_data)
+    except ValueError as exc:
+        _log.warning("No direct hoteling city factors available in %s: %s", hotel_json, exc)
+        idx = {}
 
     city_o = _norm_city(p_o.get("city") or "")
     city_d = _norm_city(p_d.get("city") or "")
     uf_o = (p_o.get("state") or "").strip()
     uf_d = (p_d.get("state") or "").strip()
 
-    k_o = float(idx.get(city_o, default_hotel_kg_per_t))
-    k_d = float(idx.get(city_d, default_hotel_kg_per_t))
+    hotel_origin = _resolve_hotel_factor(
+        city=city_o,
+        hotel_data=hotel_data,
+        factor_index=idx,
+        default_hotel_kg_per_t=float(default_hotel_kg_per_t),
+    )
+    hotel_destiny = _resolve_hotel_factor(
+        city=city_d,
+        hotel_data=hotel_data,
+        factor_index=idx,
+        default_hotel_kg_per_t=float(default_hotel_kg_per_t),
+    )
+
+    k_o = 0.0 if hotel_origin["value"] is None else float(hotel_origin["value"])
+    k_d = 0.0 if hotel_destiny["value"] is None else float(hotel_destiny["value"])
 
     fuel_hotel_origin_kg = float(cargo_t) * k_o
     fuel_hotel_destiny_kg = float(cargo_t) * k_d
@@ -427,6 +556,15 @@ def _ops_and_hotel_fuel_kg(
         , "hotel_fuel_total_kg": fuel_hotel_total_kg
         , "hotel_factor_origin_kg_per_t": k_o
         , "hotel_factor_destiny_kg_per_t": k_d
+        , "hotel_factor_origin": hotel_origin
+        , "hotel_factor_destiny": hotel_destiny
+        , "hotel_factor_origin_source_level": hotel_origin["source_level"]
+        , "hotel_factor_destiny_source_level": hotel_destiny["source_level"]
+        , "hotel_factor_warnings": [
+              warning
+              for warning in (hotel_origin.get("warning"), hotel_destiny.get("warning"))
+              if warning
+          ]
     }
     return fuel_total_kg, meta
 
