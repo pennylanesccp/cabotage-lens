@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex main"] 1782789323.84542 "main.aux" "main.bbl" "main" 1782789327.14507 0
+["bibtex main"] 1782789323.84542 "main.aux" "main.bbl" "main" 1782790435.49576 0
   "../references.bib" 1782505138 10609 61701c0324024df1320015a2729f1f57 ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/bibtex/bst/bibtex/plain.bst" 1291864736 20613 bd3fbfa9f64872b81ac57a0dd2ed855f ""
-  "main.aux" 1782789326 37216 944f5b47f5a09d9622386acc61a62fee "pdflatex"
+  "main.aux" 1782790434 37216 944f5b47f5a09d9622386acc61a62fee "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1782789324.16338 "c:/Users/Cliente/Documents/workspaces/personal/cabotage-lens/docs/report/main.tex" "main.pdf" "main" 1782789327.146 0
+["pdflatex"] 1782790430.18785 "c:/Users/Cliente/Documents/workspaces/personal/cabotage-lens/docs/report/main.tex" "main.pdf" "main" 1782790435.49709 0
   "C:/Users/Cliente/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1782789290 80909 eab91d9745dd2edfd62a31d53cd5fe15 ""
   "C:/Users/Cliente/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/ecbi1095.pk" 1782789310 38336 751426b540914a36997125c26635acac ""
   "C:/Users/Cliente/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/ecbi1728.pk" 1782789295 71788 b1306c3dd76e5ad2034ef90204cd5774 ""
@@ -147,10 +147,10 @@
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/tex/latex/tools/tabularx.sty" 1761901070 7243 a2c17f18e2c9b702b84fad03d5f9c78b ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "appendices/appendix_a_parametros.tex" 1782787054 8446 9aba64b3add9342d48881179560ea89d ""
+  "appendices/appendix_a_parametros.tex" 1782790251 8450 c51453a847f442c0941fdb81bcefe94f ""
   "appendices/appendix_b_validacao.tex" 1782786815 8271 cd29ca14d0d3c243adaf74ce7a0dd78e ""
-  "appendices/appendix_c_checklist_reprodutibilidade.tex" 1782787054 4580 95be78fa678bc24778373c576b197827 ""
-  "c:/Users/Cliente/Documents/workspaces/personal/cabotage-lens/docs/report/main.tex" 1782787213 10811 a39fe5fa16706ff974580997250486b8 ""
+  "appendices/appendix_c_checklist_reprodutibilidade.tex" 1782790251 4500 c9201c813e4755282257e4466561befb ""
+  "c:/Users/Cliente/Documents/workspaces/personal/cabotage-lens/docs/report/main.tex" 1782790251 10814 b679a980a3ae6007ccdfa226b4851a5e ""
   "chapters/ch01_introducao.tex" 1782786104 4919 473c0f11fff8aa41733819d328157f80 ""
   "chapters/ch02_objetivos.tex" 1782786104 2408 406d256446e87702ddd014308d2b6728 ""
   "chapters/ch03_revisao_bibliografica.tex" 1782786930 9491 8ccc08cc1e1be6423244f8c7cc089dd8 ""
@@ -161,13 +161,13 @@
   "chapters/ch08_discussao.tex" 1782786703 12611 28948917d1dfc6486c1ea2286a9a03e1 ""
   "chapters/ch09_limitacoes.tex" 1782786703 14132 bbc51d77e4137cf3ae9ade8bea02f516 ""
   "chapters/ch10_conclusoes.tex" 1782786703 8849 6923c75e219a6e559bc9b122e73df1cb ""
-  "main.aux" 1782789326 37216 944f5b47f5a09d9622386acc61a62fee "pdflatex"
+  "main.aux" 1782790434 37216 944f5b47f5a09d9622386acc61a62fee "pdflatex"
   "main.bbl" 1782789324 2677 c1d7c65a33c9861bb0609f88489df335 "bibtex main"
-  "main.lof" 1782789326 1316 7b49a704494e28f3ebb33a23f4a5cb47 "pdflatex"
-  "main.lot" 1782789326 5095 bee8e0ff1302d671ddaea563326856ff "pdflatex"
-  "main.out" 1782789326 24386 ceb388f6fbc0372d21a6b29bdc1bf791 "pdflatex"
-  "main.tex" 1782787213 10811 a39fe5fa16706ff974580997250486b8 ""
-  "main.toc" 1782789326 9151 4b64ecec7f327ac71ad4b212a63484b9 "pdflatex"
+  "main.lof" 1782790434 1316 7b49a704494e28f3ebb33a23f4a5cb47 "pdflatex"
+  "main.lot" 1782790434 5095 bee8e0ff1302d671ddaea563326856ff "pdflatex"
+  "main.out" 1782790434 24386 ceb388f6fbc0372d21a6b29bdc1bf791 "pdflatex"
+  "main.tex" 1782790251 10814 b679a980a3ae6007ccdfa226b4851a5e ""
+  "main.toc" 1782790434 9151 4b64ecec7f327ac71ad4b212a63484b9 "pdflatex"
   (generated)
   "main.aux"
   "main.lof"
