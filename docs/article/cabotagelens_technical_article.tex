@@ -11,6 +11,14 @@
 \usepackage{array}
 \usepackage{microtype}
 \usepackage[hidelinks]{hyperref}
+\usepackage{csquotes}
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+
+\AtEveryBibitem{%
+  \clearfield{note}%
+  \clearfield{file}%
+}
+\addbibresource{../references.bib}
 
 \geometry{margin=2.5cm}
 \setlength{\emergencystretch}{2em}
@@ -311,7 +319,6 @@ Como artigo técnico, o resultado central é a estrutura: um modo rastreável de
 
 % TODO: A bibliografia ainda usa o arquivo preliminar ../references.bib.
 % Revisar metadados e estilo ABNT na etapa final de produção.
-\bibliographystyle{plain}
-\bibliography{../references}
+\printbibliography[title={Referências}]
 
 \end{document}
