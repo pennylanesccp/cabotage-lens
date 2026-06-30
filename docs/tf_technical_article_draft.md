@@ -1,392 +1,93 @@
-# CabotageLens: uma estrutura computacional auditável para comparação entre transporte rodoviário e cabotagem no Brasil
-
-> **Status**: Rascunho do artigo técnico — narrativa-fonte para o relatório final de TF.
-
----
+# CabotageLens: framework computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil
 
 ## Resumo
 
-O transporte de cargas no Brasil depende fortemente do modo rodoviário, mesmo em corredores de longa distância onde a navegação de cabotagem pode oferecer vantagens ambientais e logísticas. Comparações modais simplificadas entre caminhão e navio ignoram etapas terrestres de acesso, seleção de portos, proveniência de distâncias e fronteiras de emissão, comprometendo a interpretação dos resultados. Este artigo apresenta o CabotageLens, uma estrutura computacional auditável e orientada por rota para comparação entre alternativas rodoviárias diretas e alternativas rodoviário-cabotagem-rodoviário no Brasil. A ferramenta opera sob fronteiras explícitas de emissões operacionais TTW CO₂e e custo modelado, preservando a proveniência de cada distância, porto e parâmetro. A estratégia de validação combina sensibilidade interna com um benchmark externo baseado no workbook Gustavo/Costa. Nos 21 pares OD positivos e suportados do benchmark externo, ambas as fontes favorecem a cabotagem/multimodal em emissões frente ao rodoviário direto, indicando consistência direcional. A reconciliação de fator rodoviário mostra que premissas de consumo e fator de emissão explicam grande parte da diferença de magnitude no lado rodoviário. Os resultados sustentam interpretação direcional cautelosa, não validação calibrada de magnitude. A contribuição principal é metodológica e computacional: uma estrutura reprodutível que torna explícitas as hipóteses de rota, porto, distância, custo e emissões, apoiando uma expansão disciplinada para o relatório final de TF.
+Comparações entre transporte rodoviário e cabotagem podem se tornar enganosas quando tratam modos isolados, ignoram acessos terrestres ou misturam fronteiras ambientais e econômicas. Este artigo apresenta o CabotageLens, um framework computacional auditável para comparar alternativas rodoviárias diretas e cadeias rodoviária-cabotagem-rodoviária em corredores brasileiros. A contribuição central é uma implementação rastreável que organiza origem, destino, portos, pernas logísticas, proveniência de distâncias, componentes portuários, emissões operacionais TTW CO2e e proxy de custo operacional modelado sob uma mesma unidade funcional. A estratégia de evidência combina análise de sensibilidade interna e benchmark externo compacto. As sensibilidades executadas indicam que, nos três cenários rastreados, a alternativa multimodal apresentou menor custo modelado e menores emissões operacionais TTW CO2e do que a alternativa rodoviária direta. O benchmark externo acrescenta plausibilidade direcional: nos 21 pares origem-destino positivos e suportados, CabotageLens e o workbook externo apontaram a mesma direção modal para emissões. Esses resultados não constituem validação calibrada de magnitude, não demonstram superioridade universal da cabotagem e não transformam custo modelado em frete comercial. O valor do artigo está em mostrar como comparações rota a rota podem ser formuladas com fronteiras explícitas, metadados de proveniência e classificação conservadora da evidência.
 
-**Palavras-chave**: cabotagem; transporte rodoviário; transporte multimodal; emissões; CO₂e; logística; Brasil; ferramenta computacional.
-
----
+**Palavras-chave**: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; CO2e; logística; Brasil; framework computacional.
 
 ## 1. Introdução
 
-O transporte de cargas no Brasil é historicamente dominado pelo modo rodoviário. Essa configuração permite capilaridade e flexibilidade operacional, mas expõe corredores longos a custos elevados de combustível, maior intensidade de emissões por tonelada transportada e vulnerabilidades de infraestrutura [icct2022]. A navegação de cabotagem aparece como alternativa relevante para parte desses fluxos, especialmente quando origem e destino podem ser conectados por uma cadeia composta de acesso rodoviário, perna marítima e acesso rodoviário final.
+O transporte de cargas no Brasil permanece fortemente dependente do modo rodoviário. Essa configuração oferece capilaridade e flexibilidade, mas também torna corredores longos sensíveis ao consumo de diesel, ao custo operacional e à pressão por redução de emissões. A cabotagem surge como alternativa relevante em parte desses fluxos, especialmente quando uma remessa pode ser organizada como cadeia porta a porta com acesso rodoviário ao porto, perna marítima e acesso rodoviário final [icct2022].
 
-Políticas recentes para expansão da cabotagem brasileira reforçam o interesse em alternativas ao transporte rodoviário de longa distância [icct2022]. No entanto, a competitividade real do transporte marítimo costeiro depende de distância, acesso terrestre, frequência de serviço, disponibilidade de navios, custos portuários, tempo de trânsito, confiabilidade e escala de carga [competitiveness2024] [modalshiftreview2020]. Afirmar simplesmente que "navio emite menos que caminhão" é insuficiente sem uma comparação porta a porta sob unidade funcional e fronteira de emissão explícitas.
+A pergunta técnica, entretanto, não é se "navio é melhor que caminhão" em abstrato. O resultado depende do corredor, dos portos escolhidos, das distâncias terrestres e marítimas, da utilização da embarcação, dos componentes portuários, da alocação de carga e da fronteira adotada [shortsea2019] [modalshiftreview2020]. Comparar uma perna marítima isolada com uma viagem rodoviária completa favorece uma leitura artificial; do mesmo modo, rejeitar a cabotagem com base apenas em médias nacionais perde informação de rota.
 
-A literatura internacional de short sea shipping confirma que a vantagem ambiental do transporte marítimo costeiro não é automática: resultados dependem de corredor, utilização da embarcação, tipo de navio, intensidade de combustível, acessos terrestres e operações portuárias [shortsea2019]. Revisões sobre mudança modal mostram que barreiras logísticas, qualidade do serviço e confiabilidade podem limitar a transferência efetiva de cargas da rodovia para o mar [modalshiftreview2020].
+Este artigo apresenta o CabotageLens como resposta computacional a essa lacuna. O framework compara uma alternativa rodoviária direta e uma alternativa rodoviária-cabotagem-rodoviária para a mesma unidade funcional, preservando a proveniência dos insumos e os limites de uso dos resultados. O objetivo não é criar um cotador de frete, uma plataforma de booking, uma super-rede multimodal nacional ou uma confirmação de disponibilidade operacional. O objetivo é oferecer uma estrutura auditável e rastreável para formular comparações técnicas academicamente defensáveis.
 
-Este artigo apresenta o CabotageLens como contribuição a esse problema. O CabotageLens é uma estrutura computacional auditável para comparação entre alternativas rodoviárias diretas e alternativas rodoviário-cabotagem-rodoviário em corredores brasileiros, sob fronteiras explícitas de emissões operacionais TTW CO₂e e custo modelado. A ferramenta não é um motor de cotação de frete comercial, não implementa uma super-rede multimodal completa e não pretende demonstrar superioridade universal da cabotagem. Sua contribuição é oferecer um método reprodutível que torna explícitas as hipóteses de rota, porto, distância, custo e emissões, permitindo que cada resultado seja rastreado, classificado e interpretado de forma defensável.
+## 2. Contexto e lacuna metodológica
 
----
+A literatura sobre cabotagem brasileira e BR do Mar justifica a relevância do tema, mas não substitui uma avaliação rota a rota [icct2022]. Estudos de competitividade e super-rede mostram que a decisão modal real inclui serviço, frequência, tempo, estoque, risco, terminais, custos comerciais e rede de operadores [competitiveness2024]. Esses elementos são essenciais para a logística real, mas ultrapassam a fronteira atual do CabotageLens.
 
-## 2. Posicionamento na literatura
+Na literatura de short sea shipping, a vantagem ambiental do transporte marítimo costeiro também é condicional. A direção e a magnitude do resultado dependem de distância, acessos terrestres, tipo de navio, utilização e premissas de cálculo [shortsea2019]. Revisões de mudança modal reforçam que custo, qualidade de serviço, confiabilidade e integração terrestre condicionam a adoção efetiva [modalshiftreview2020].
 
-Esta seção posiciona o artigo em relação à literatura existente. Não se trata de uma revisão bibliográfica exaustiva; as fontes são usadas para contexto, definição de fronteira e identificação de limitações, não para substituir distâncias, fatores ou resultados calculados pelo CabotageLens, salvo quando explicitamente rastreados em artefatos de cálculo.
-
-### 2.1 Cabotagem brasileira e BR do Mar
-
-A cabotagem brasileira é frequentemente associada a oportunidades de descarbonização e redução da dependência rodoviária em corredores longos. O Brasil possui extenso litoral e centros urbanos costeiros que favorecem essa alternativa. A discussão sobre BR do Mar, participação modal e emissões setoriais reforça o contexto de política pública, mas valores nacionais não validam diretamente resultados rota a rota [icct2022] [competitiveness2024].
-
-### 2.2 Short sea shipping e mudança modal
-
-A literatura internacional mostra que short sea shipping pode ser ambientalmente favorável em determinados corredores, mas a conclusão não é universal [shortsea2019]. Revisões sobre mudança modal indicam que custo, prazo, variabilidade, disponibilidade, integração terrestre e confiabilidade são determinantes da decisão real [modalshiftreview2020]. Esses trabalhos sustentam a cautela interpretativa adotada neste artigo.
-
-### 2.3 Super-redes e estudos de competitividade
-
-Estudos de competitividade da cabotagem conteinerizada brasileira mostram que a decisão modal real requer uma estrutura de rede mais rica: serviços disponíveis, frequência, tempo de espera, custos comerciais, inventário e alternativas de roteamento [competitiveness2024]. O CabotageLens não implementa uma super-rede comercial e essa limitação é explicitamente reconhecida.
-
-### 2.4 Fronteiras TTW, WTW, LCA, CO₂ e CO₂e
-
-Uma distinção central do trabalho é entre TTW (tank-to-wheel/tank-to-wake), WTW (well-to-wheel/well-to-wake) e LCA (avaliação de ciclo de vida). O CabotageLens reporta emissões operacionais TTW CO₂e. Fontes que reportam WTW, LCA, CO₂ isolado ou CO₂e com fronteira distinta são usadas para contraste e posicionamento, não para calibração do modelo corrente [decarb2024] [maritimelca2024]. Resultados CO₂ por tonelada-quilômetro não devem ser convertidos em TTW CO₂e sem ajuste explícito de fronteira.
-
-### 2.5 Operações portuárias e hoteling
-
-Operações portuárias e hoteling podem afetar o desempenho ambiental da cadeia multimodal. Fontes sobre consumo de combustível em navios atracados [berth2009] [shipops2022] e impacto local de emissões portuárias [berthairquality2010] informam o método e as limitações. No CabotageLens, essas emissões seguem a fronteira operacional TTW CO₂e; valores WTW, LCA ou regionais específicos permanecem como referência para trabalho futuro.
-
----
+Outra fonte recorrente de erro é a fronteira ambiental. Resultados TTW, WTW e LCA não são intercambiáveis. O CabotageLens adota como linha de base emissões operacionais TTW CO2e. Fontes WTW, LCA ou CO2-only são úteis para discutir limites e trabalhos futuros, mas não calibram automaticamente a saída atual [decarb2024] [maritimelca2024]. A mesma disciplina vale para o resultado monetário: a saída é um proxy de custo operacional modelado, não frete comercial, cotação de mercado, tarifa contratada ou viabilidade econômica.
 
 ## 3. Metodologia
 
-### 3.1 Unidade funcional e base de carga
+A unidade funcional é o transporte de uma quantidade especificada de carga conteinerizada entre uma origem e um destino no Brasil. Nos artefatos de validação e sensibilidade usados neste artigo, a configuração recorrente é `1 TEU / 14 t` por remessa. Essa base permite comparar duas alternativas sob a mesma carga e o mesmo par origem-destino, sem transformá-la em valor universal para todos os usos futuros do framework.
 
-A unidade funcional é o transporte de uma massa especificada de carga conteinerizada entre uma origem e um destino no Brasil. Nos artefatos de validação, a base recorrente de benchmark é **1 TEU / 14 t** por remessa. Resultados são expressos por remessa e podem ser normalizados por tonelada, TEU ou tonelada-quilômetro.
+A alternativa rodoviária direta modela uma perna origem-destino por caminhão. A alternativa multimodal decompõe a mesma remessa em quatro blocos: pre-carriage rodoviário da origem ao porto de origem, perna marítima entre portos, operações portuárias e hoteling quando incluídos e com proveniência defensável, e on-carriage rodoviário do porto de destino ao destino final. A comparação, portanto, é porta a porta; a perna marítima nunca é interpretada isoladamente como substituta de toda a viagem rodoviária.
 
-### 3.2 Alternativa rodoviária direta
+As distâncias terrestres são rotas modeladas por provedor e cache, não trajetórias GPS observadas nem rotas contratuais. As distâncias marítimas podem vir de matriz marítima, referência externa documentada, override manual rastreado ou fallback geométrico. O fallback por haversine é mantido como triagem, não como rota navegável confirmada. Portos selecionados, portos forçados e portos alternativos também possuem significados diferentes: Pecém não confirma silenciosamente Porto de Fortaleza, e Suape não confirma Porto do Recife.
 
-A alternativa rodoviária representa o transporte por caminhão da origem ao destino. A distância rodoviária é obtida via OpenRouteService (perfil driving-hgv), com cache em Supabase Postgres conforme os artefatos internos de implementação e validação. Consumo de diesel, custo modelado e emissões TTW CO₂e são calculados a partir da distância, do preset de veículo, da massa da carga, dos parâmetros de combustível e dos fatores de emissão implementados.
-
-### 3.3 Alternativa rodoviário-cabotagem-rodoviário
-
-A alternativa multimodal é composta por:
-
-- **pré-carriage**: transporte rodoviário da origem ao porto de origem;
-- **perna marítima**: cabotagem entre porto de origem e porto de destino;
-- **on-carriage**: transporte rodoviário do porto de destino ao destino final.
-
-Operações portuárias (manuseio de carga e hoteling) são incluídas em ambos os portos quando habilitadas, sob a mesma fronteira operacional TTW CO₂e.
-
-### 3.4 Seleção de portos e construção de rota
-
-A seleção de portos usa uma heurística de porto mais próximo (geodésica) com filtragem de portos elegíveis. Essa abordagem é determinística e auditável, mas não otimiza uma rede de serviços. Um porto geometricamente próximo pode não ser operacionalmente adequado; um porto alternativo forçado cria um cenário de sensibilidade, não uma validação do porto originalmente selecionado.
-
-### 3.5 Proveniência de rotas e distâncias
-
-A metodologia rastreia a proveniência de cada distância:
-
-| Fonte | Uso | Tipo |
-|-------|-----|------|
-| OpenRouteService (ORS) | Distâncias rodoviárias (driving-hgv) | Cache/provedor |
-| SeaMatrix | Distâncias marítimas (par de portos) | Lookup |
-| Haversine fallback | Distâncias marítimas quando SeaMatrix indisponível | Fallback geométrico |
-| Referência externa | Distância documentada para par de portos específico | Override rastreado |
-
-Distâncias marítimas em milhas náuticas são convertidas por 1 nm = 1.852 km. Uma distância de fallback haversine é apenas uma estimativa de triagem e não sustenta conclusões numéricas fortes.
-
-### 3.6 Modelo de emissões rodoviárias
-
-As emissões rodoviárias seguem a cadeia: distância × consumo de combustível × fator de emissão TTW CO₂e. O modelo usa parâmetros de veículo pesado (caminhão combinado), consumo de diesel e fator de emissão implementados na ferramenta.
-
-### 3.7 Modelo de emissões marítimas
-
-As emissões marítimas dependem da distância marítima, da velocidade de serviço, do consumo de combustível da embarcação (classe representativa container feeder) e do fator de emissão TTW CO₂e. Quando disponível, uma intensidade de trabalho de transporte (transport-work intensity) derivada de KPI de rota SeaMatrix é utilizada; caso contrário, aplica-se intensidade por classe de embarcação.
-
-### 3.8 Operações portuárias e hoteling
-
-O modelo de operações portuárias inclui manuseio de carga (componentes fixo e por TEU) e hoteling da embarcação (potência auxiliar × tempo de atracação × consumo específico × fator de emissão). A alocação de hoteling por TEU usa divisão pela capacidade efetiva da embarcação. Os parâmetros são estimativas modeladas, não dados medidos de terminais específicos. Detalhes completos estão documentados no artefato `port_ops_model.md`.
-
-### 3.9 Fronteira de emissões: TTW CO₂e operacional
-
-As emissões reportadas são operacionais TTW CO₂e em kg CO₂e por remessa. A fronteira inclui combustão de combustível nas pernas representadas. Não inclui WTW, LCA, fabricação de veículos/navios, construção de infraestrutura, refrigeração (reefer) ou retorno vazio. A escolha por TTW é documentada para que futuras extensões possam migrar para WTW ou LCA com fatores compatíveis.
-
-### 3.10 Fronteira de custo: estimativa modelada
-
-Os custos são estimativas modeladas em BRL por remessa. Incluem combustível rodoviário, combustível marítimo, custos portuários modelados e pedágios quando aplicáveis. **Não são fretes comerciais.** Tarifas portuárias completas, margens, seguros, inventário, tempo de trânsito, confiabilidade, demurrage, frequência de serviço e custos administrativos estão fora da fronteira.
-
-### 3.11 Classificação de qualidade de resultados
-
-Cada resultado é classificado conservadoramente conforme o uso permitido na síntese final:
-
-| Categoria | Uso no TF |
-|-----------|-----------|
-| `headline_candidate` | Possível resultado principal após validação e sensibilidade; nenhum caso atual se enquadra |
-| `sensitivity_discussion` | Evidência de sensibilidade executada ou planejada, com ressalvas de fronteira |
-| `limitation_example` | Caso útil apenas para ilustrar limitação metodológica |
-| `excluded` | Linha que não deve sustentar resultado ou discussão principal |
-| `reference_needed` | Caso plausível que ainda exige referência externa ou decisão metodológica |
-| `methodology_blocked` | Caso bloqueado por falta de decisão metodológica ou porto defensável |
-| `historical_diagnostic` | Resultado histórico preservado como diagnóstico, não como conclusão |
-| `benchmark_supports_direction` | Benchmark externo apoia apenas consistência direcional de emissões |
-| `benchmark_supports_road_factor_explanation` | Reconciliação diagnóstica explica parte da lacuna rodoviária |
-| `benchmark_methodology_gap` | Diferença atribuída a lacuna metodológica ainda não reconciliada |
-| `benchmark_boundary_mismatch` | Diferença atribuída a fronteiras de comparação distintas |
-| `not_comparable` | Comparação inválida por fronteira, escopo ou célula de matriz sem par OD positivo |
-| `future_work` | Evidência ou extensão reservada para trabalho futuro |
-
-A classe `same_direction_large_gap` é mantida apenas como classificação linha a linha do benchmark Batch 002, não como categoria de resultado principal. As linhas de sensibilidade executadas também carregam a classificação de execução `sensitive`, mas seu uso no artigo é `sensitivity_discussion`.
-
----
+As operações portuárias e o hoteling entram apenas quando o modelo possui base representável. A proveniência desses componentes deve indicar observação disponível, média ponderada de portos observados, default documentado ou indisponibilidade. Dado indisponível não é zero silencioso; é uma limitação de fronteira que impede incorporar o componente sem base defensável.
 
 ## 4. Implementação computacional
 
-O CabotageLens é implementado como aplicação Streamlit com módulos reutilizáveis e suporte a fluxos de linha de comando.
+O CabotageLens é implementado como aplicação Streamlit com lógica de domínio separada em módulos reutilizáveis. A interface recebe origem, destino, carga, parâmetros de veículo, configuração de portos, classe de embarcação e opções de componentes portuários. O backend resolve coordenadas, consulta ou reaproveita rotas terrestres em cache, seleciona portos, resolve distância marítima, calcula combustível, custo modelado e emissões por perna, e preserva avisos de qualidade e metadados de proveniência.
 
-**Entradas**: origem, destino, carga (massa, TEU), parâmetros de rota e modelo (classe de embarcação, fator de carga, operações portuárias, cenário de porto).
+Essa arquitetura foi organizada para auditabilidade. Em vez de apresentar apenas um total rodoviário e um total multimodal, a ferramenta registra pernas, portos, fonte de distância marítima, status de cache, componentes incluídos ou excluídos, razões de fallback e classificação de uso. Supabase/Postgres fornece persistência operacional para lugares, rotas, cenários e resultados; ele melhora reprodutibilidade, mas não transforma uma rota modelada em evidência de serviço real.
 
-**Saídas**: distâncias por perna (rodoviária, pré-carriage, marítima, on-carriage), custos modelados, emissões operacionais TTW CO₂e, portos selecionados, fonte de distância marítima, avisos de qualidade de rota e proveniência de dados.
+O custo é calculado como proxy operacional modelado. Ele pode incluir combustível rodoviário, combustível marítimo e componentes operacionais representados, mas não inclui margem comercial, negociação, seguro, demurrage, detention, inventário, confiabilidade, frequência, disponibilidade de slot ou tarifas completas de mercado. As emissões são reportadas como emissões operacionais TTW CO2e; diferenças entre CO2, CO2e e CO2eq só podem ser tratadas como equivalentes quando a fonte, os gases e a fronteira sustentam essa leitura.
 
-A arquitetura separa responsabilidades:
+## 5. Estratégia de evidência
 
-- `app/` — interface Streamlit e orquestração de sessão;
-- `modules/` — lógica de domínio: roteamento, avaliação multimodal, combustível, emissões, custos, persistência e proveniência;
-- `scripts/` — fluxos reprodutíveis de execução e manutenção;
-- `data/` — insumos estáticos e artefatos processados rastreados;
-- `supabase/migrations/` — esquema do Supabase Postgres.
+A estratégia de evidência não busca um veredito binário de validação. Ela classifica o que cada camada pode sustentar. Os primeiros lotes internos foram usados para diagnosticar problemas de rota, fallback e seleção de portos; em seguida, três sensibilidades foram executadas para testar hipóteses documentadas de distância marítima e portos alternativos. Essas linhas são evidências condicionadas, não resultados principais irrestritos.
 
-Distâncias rodoviárias são obtidas via OpenRouteService com cache em Supabase Postgres. Distâncias marítimas usam SeaMatrix ou fallback haversine conforme a proveniência registrada nos artefatos internos. A persistência garante reprodutibilidade: cenários, resultados, configurações e decisões metodológicas são preservados como artefatos rastreáveis.
+O benchmark externo Gustavo/Costa é usado de forma compacta, como evidência de plausibilidade direcional. A pergunta do artigo não é se o CabotageLens reconstrói o workbook nem se o workbook é verdade de referência. A pergunta é mais restrita: quando há pares comparáveis, o framework aponta a mesma direção modal de emissões que uma referência externa familiar ao problema? A resposta é interpretada junto com lacunas de magnitude e diferenças de fronteira.
 
-A ferramenta não é um motor de cotação de frete, não resolve uma super-rede nacional e não confirma disponibilidade real de serviços de cabotagem.
-
----
-
-## 5. Estratégia de validação e benchmark
-
-A validação do CabotageLens não busca equivalência perfeita com uma operação real. Ela busca plausibilidade, consistência dimensional, proveniência de dados e classificação adequada da incerteza. A estratégia é composta por camadas complementares.
-
-### 5.1 Batch 001: diagnóstico histórico
-
-O Batch 001 foi a primeira camada de avaliação, preservando resultados numéricos para cinco pares OD. Todos os casos ficaram associados a necessidade de referência ou revisão. A principal limitação diagnosticada foi o uso de distâncias marítimas de fallback haversine onde evidência mais forte era necessária.
-
-### 5.2 Batch 001B: camada de auditabilidade e classificação
-
-O Batch 001B reorganizou a evidência em uma camada de auditabilidade: portos selecionados ou forçados, fonte de distância marítima, unidade, conversão, status metodológico e uso permitido no TF. Nenhum caso Batch 001B foi classificado como pronto para conclusão principal. O ganho foi metodológico: separação explícita de casos executáveis, sensíveis, bloqueados, excluídos e registros históricos.
-
-### 5.3 Sensibilidades internas (issue #16)
-
-Três sensibilidades foram executadas:
-
-- Santos/Manaus com distância de referência (3.300 nm / 6.111,6 km);
-- Manaus/Pecém como porto alternativo (1.569 nm / 2.905,788 km);
-- Rio Grande/Suape como porto alternativo (1.844 nm / 3.415,088 km).
-
-Essas linhas têm classificação de execução `sensitive` e uso de síntese `sensitivity_discussion`. São exercícios internos do modelo, não validações externas nem casos `headline_candidate`.
-
-### 5.4 Batch 002: benchmark externo Gustavo/Costa
-
-O Batch 002 introduziu um benchmark externo baseado no workbook Gustavo/Costa rastreado nos artefatos de validação do projeto. O workbook contém uma matriz 6×6 de diferenças de emissões (multimodal menos rodoviário) para cidades brasileiras. O objetivo não foi reproduzir o workbook, mas verificar se o CabotageLens aponta para a mesma direção modal.
-
-### 5.5 Rerun Supabase/cache
-
-O rerun com cache Supabase testou se instabilidade de cache ou provedor de rota explicava a diferença workbook-vs-modelo. O resultado mostrou 63 cache hits, 0 misses e diferença agregada estável, indicando que a instabilidade de cache/provedor é improvável como causa principal da lacuna.
-
-### 5.6 Reconciliação de fator rodoviário
-
-A reconciliação de fator rodoviário testou uma explicação metodológica: se as premissas rodoviárias do workbook Gustavo/Costa fossem aplicadas diagnosticamente, quanto da lacuna road-only seria reduzida. Este é um exercício diagnóstico, não uma recalibração.
-
----
+Assim, a classificação de evidência separa três usos: resultados de sensibilidade, apoio direcional de benchmark e diagnóstico de lacunas metodológicas. Nenhum caso atual é tratado como conclusão principal irrestrita, e nenhum resultado é promovido a conclusão universal sobre cabotagem.
 
 ## 6. Resultados
 
-### 6.1 Resultados de sensibilidade interna
+As sensibilidades internas executadas indicaram menor custo modelado e menores emissões operacionais TTW CO2e para a alternativa multimodal nos três cenários rastreados. A Tabela 1 resume apenas os valores necessários para a leitura do artigo.
 
-As três sensibilidades executadas mostram que, sob a fronteira atual, a alternativa multimodal permanece menor que a rodoviária direta em custo modelado e TTW CO₂e operacional.
+| Sensibilidade | Hipótese testada | Custo rodoviário / multimodal (BRL/remessa) | Emissões rodoviárias / multimodais (kg CO2e/remessa) |
+| --- | --- | ---: | ---: |
+| Santos/Manaus | Distância marítima de referência | 18.456,45 / 1.263,50 | 6.961,76 / 1.104,67 |
+| Manaus/Pecém | Porto alternativo para a região de Fortaleza | 26.391,03 / 727,33 | 9.989,83 / 573,48 |
+| Rio Grande/Suape | Porto alternativo para a região de Recife | 18.121,99 / 2.122,38 | 7.013,27 / 1.127,46 |
 
-| Caso | Par OD | Emissões rodo / multi | Custo rodo / multi | Classificação |
-|------|--------|-----------------------:|-------------------:|---------------|
-| `TF-VAL-001B-SENS-002-REFDIST` | Santos → Manaus | 6961,76 / 1104,67 kg TTW CO₂e | BRL 18456,45 / BRL 1263,50 | `sensitive` |
-| `TF-VAL-001B-SENS-003B-ALTPECEM` | Manaus → Pecém | 9989,83 / 573,48 kg TTW CO₂e | BRL 26391,03 / BRL 727,33 | `sensitive` |
-| `TF-VAL-001B-SENS-005B-ALTSUAPE` | Rio Grande → Suape | 7013,27 / 1127,46 kg TTW CO₂e | BRL 18121,99 / BRL 2122,38 | `sensitive` |
+Essas linhas permanecem classificadas como sensíveis. Elas mostram comportamento do modelo sob hipóteses nomeadas; não confirmam os portos originalmente selecionados, não demonstram disponibilidade de serviço e não substituem evidência operacional externa.
 
-**Ressalvas obrigatórias**:
+O benchmark externo baseado no workbook Gustavo/Costa apresentou alinhamento direcional em todos os 21 pares origem-destino positivos e suportados: tanto o workbook quanto o CabotageLens favoreceram a cabotagem/multimodal em emissões frente ao rodoviário direto. Quinze células da matriz original foram puladas antes da execução por não serem comparáveis na fronteira adotada: seis self-pairs e nove linhas rodoviárias zero ou não positivas.
 
-- Esses resultados têm classificação de execução `sensitive` e uso de síntese `sensitivity_discussion`.
-- Nenhum deles é `headline_candidate`.
-- Pecém não equivale a Porto de Fortaleza; Suape não equivale a Porto do Recife.
-- São exercícios internos do modelo, não evidência externamente validada.
-- A base de carga é 14 t / 1 TEU e a fronteira de custo é modelada.
-
-### 6.2 Benchmark externo Gustavo/Costa
-
-O Batch 002 benchmarkou o CabotageLens contra o workbook Gustavo/Costa rastreado nos artefatos internos de validação.
-
-| Métrica | Valor |
-|---------|------:|
-| Células da matriz do workbook parseadas | 36 |
-| Pares OD positivos e suportados benchmarkados | 21 |
-| Linhas executadas com sucesso | 21 |
-| Células puladas antes da execução | 15 |
-| Alinhamento direcional (cabotagem favorecida em ambos) | 21/21 (100%) |
-| Classificação rastreada | 21 × `same_direction_large_gap` |
-
-As 15 células da matriz do workbook puladas antes da execução correspondem a 6 self-pairs e 9 linhas rodoviárias zero ou não positivas.
-
-**Interpretação**: Todos os 21 pares OD positivos e suportados são direcionalmente alinhados — tanto o workbook quanto o CabotageLens favorecem cabotagem/multimodal em emissões frente ao rodoviário direto. Contudo, as magnitudes de linha de base diferem significativamente. A classificação atual é `same_direction_large_gap` para todas as 21 linhas. O benchmark sustenta consistência direcional, não reprodução exata nem validação calibrada de magnitude. O workbook não é tratado como verdade absoluta.
-
-### 6.3 Reconciliação de fator rodoviário
-
-A reconciliação diagnosticou a lacuna road-only usando as premissas rodoviárias do workbook:
-
-| Parâmetro Gustavo/Costa | Valor | Unidade |
-|-------------------------|------:|---------|
-| Consumo rodoviário (FDc) | 0,28 | L/km |
-| Densidade energética (FDe) | 35,52 | MJ/L |
-| Fator de emissão (FDf) | 86,5 | gCO₂eq/MJ |
-| **Fator diagnóstico** | **0,8602944** | **kgCO₂e/km** |
-
-| Métrica de mismatch rodoviário | Linha de base | Fator diagnóstico |
-|--------------------------------|--------------:|------------------:|
-| Média | 199,8% | 43,9% |
-| Mediana | 149,3% | 19,6% |
-
-**Interpretação**: Premissas de consumo de combustível rodoviário e fator de emissão explicam uma parte grande da diferença de magnitude no lado road-only. A reconciliação é diagnóstica: não substitui o modelo rodoviário de linha de base do CabotageLens, não afirma que o fator diagnóstico é mais correto, e não valida o lado marítimo da comparação. A lacuna residual (~20-44%) é atribuível a diferenças de distância rodoviária, premissas de veículo/carregamento, alocação e fronteira WTW vs TTW.
-
----
+A magnitude, entretanto, permaneceu divergente. A classificação rastreada do benchmark é `same_direction_large_gap`, isto é, apoio direcional com lacuna material de magnitude. O rerun com cache reduziu a hipótese de instabilidade computacional como causa principal, registrando 63 route-cache hits e 0 misses. A reconciliação de fator rodoviário mostrou que premissas de consumo e fator de emissão rodoviários explicam parte importante da lacuna road-only, mas esse teste é diagnóstico e não substitui o modelo de linha de base.
 
 ## 7. Discussão
 
-Os resultados reforçam que o desempenho da cabotagem é específico por corredor. Em corredores longos com acesso portuário coerente e distância marítima documentada, a alternativa multimodal pode apresentar forte redução modelada de emissões TTW CO₂e e custo operacional. No entanto, esse comportamento depende da qualidade da distância marítima, da escolha do porto, da disponibilidade real de serviço e da fronteira de custo. A literatura de short sea shipping confirma que a vantagem ambiental não é automática [shortsea2019] [modalshiftreview2020].
+Os resultados sustentam uma leitura técnica limitada e útil. Primeiro, a comparação porta a porta é indispensável: acessos terrestres, portos e componentes portuários podem alterar o resultado, e por isso a cabotagem não deve ser descrita como intrinsecamente superior. Segundo, a proveniência da distância marítima e da seleção de portos condiciona a força da evidência. Uma sensibilidade com porto alternativo é informativa, mas não resolve automaticamente a lacuna do porto selecionado original.
 
-A consistência direcional do Batch 002 é significativa: 21/21 pares OD positivos apontam na mesma direção em ambas as fontes. Porém, a diferença de magnitude impede afirmação de validação calibrada. Essa diferença não deve ser narrada como falha do modelo nem como indicação de que o workbook é verdade absoluta. Ela deve ser apresentada como transparência metodológica sobre fronteiras, parâmetros e alocações não reconciliados.
+Terceiro, o benchmark externo fortalece a plausibilidade direcional do framework sem transformar o artigo em uma reconstrução de Gustavo/Costa. A concordância de direção sugere que o sinal modal observado não é apenas artefato interno do protótipo. A lacuna de magnitude, por sua vez, é coerente com diferenças de distância, carga, veículo, alocação, serviço, portos, tratamento de port-ops/hoteling e fronteira TTW/WTW/LCA/CO2/CO2e.
 
-A lacuna road-only tornou-se metodologicamente explicável. O rerun com cache mostrou que instabilidade de rota/provedor não é a causa principal. A reconciliação rodoviária reduziu fortemente a diferença quando aplicou o fator diagnóstico Gustavo/Costa. Permanecem lacunas associadas a distância rodoviária, construção de rota, premissas de veículo e carregamento, alocação por contêiner, seleção de portos, tratamento de port-ops/hoteling e diferenças TTW/WTW/LCA/CO₂/CO₂e.
-
-A contribuição do artigo não é um ranking modal universal. É a estrutura auditável e a disciplina de classificação. A ferramenta torna explícitas as fronteiras de rota, porto, distância, custo e emissões, permitindo que cada resultado seja rastreado e interpretado de forma defensável. Essa abordagem apoia, sem exagerar, a defesa do TF final.
-
-É necessário separar custo e emissões. Um resultado com menor custo modelado e menor TTW CO₂e em uma linha de sensibilidade é útil, mas se em outros cenários custo e emissões apontarem para modos diferentes, não há "vencedor" único sem uma regra de decisão explícita. O presente trabalho não define uma função objetivo que combine BRL e kg CO₂e.
-
----
+Quarto, custo e emissões permanecem dimensões separadas. Um menor proxy de custo operacional modelado não implica frete comercial mais barato, e menor emissão operacional TTW CO2e não implica benefício WTW ou LCA. O CabotageLens deve ser lido como ferramenta de triagem técnica e de pesquisa, capaz de organizar perguntas e lacunas antes de uma avaliação comercial, operacional ou ambiental mais ampla.
 
 ## 8. Limitações
 
-O trabalho possui limitações deliberadas e limitações não resolvidas:
+As principais limitações decorrem das fronteiras adotadas. A fronteira ambiental é operacional TTW CO2e; etapas a montante do combustível, fabricação de ativos, infraestrutura, ciclo de vida e poluentes locais completos não estão incorporados. A fronteira econômica é um proxy de custo operacional modelado, não uma análise de frete comercial ou viabilidade econômica.
 
-1. **Fronteira ambiental**: as emissões são operacionais TTW CO₂e, não WTW nem LCA. Etapas upstream, infraestrutura e fabricação não estão incorporadas.
+O framework também não modela uma super-rede multimodal completa. Não há confirmação de frequência de serviço, disponibilidade de navio, slot, terminal, janela operacional, confiabilidade, inventário em trânsito ou contrato. Portos selecionados e distâncias de fallback são controles metodológicos, não evidência de operação disponível.
 
-2. **Fronteira de custo**: os custos são estimativas modeladas, não fretes comerciais. Tarifas, margens, inventário, serviço, frequência, confiabilidade, demurrage e outros custos logísticos não estão incluídos.
-
-3. **Sem super-rede completa**: o CabotageLens não modela horários, frequência de escalas, disponibilidade de serviço, capacidade de navio, tempo de espera ou conexões comerciais.
-
-4. **Seleção de portos simplificada**: a heurística de porto mais próximo é determinística, mas pode não refletir o porto operacionalmente adequado.
-
-5. **Linhas de sensibilidade, não conclusões principais**: os resultados internos têm classificação de execução `sensitive` e uso de síntese `sensitivity_discussion`; não substituem evidência externa nem se tornam `headline_candidate`.
-
-6. **Workbook não totalmente reconstruído**: massa interna de carga, definição de TEU, fator de carga, alocação, base de distância e fronteira de emissões do workbook Gustavo/Costa não foram completamente reconciliados.
-
-7. **Fator diagnóstico é apenas sensibilidade**: a reconciliação rodoviária de `0,8602944 kgCO₂e/km` não substitui o modelo rodoviário de linha de base e não autoriza misturar TTW, WTW, LCA, CO₂ e CO₂e.
-
-8. **Sem afirmação de superioridade universal**: os resultados são específicos por corredor, hipótese e fronteira. O CabotageLens não demonstra que a cabotagem é universalmente superior ao transporte rodoviário.
-
----
+Por fim, o benchmark externo permanece parcial. Gustavo/Costa serve como contraste direcional compacto, não como verdade de referência, alvo de calibração ou reconstrução completa. A análise das diferenças rodoviárias ajuda a explicar parte do desalinhamento, mas não recalibra o CabotageLens nem autoriza misturar TTW, WTW, LCA, CO2 e CO2e.
 
 ## 9. Conclusões
 
-O CabotageLens fornece um método reprodutível e auditável para comparação entre alternativas rodoviárias diretas e alternativas rodoviário-cabotagem-rodoviário em corredores brasileiros. A estrutura torna explícitas as hipóteses de rota, porto, distância, custo modelado, emissões operacionais TTW CO₂e e fronteiras de interpretação.
+O CabotageLens oferece um framework computacional auditável para comparar alternativas rodoviárias diretas e rodoviária-cabotagem-rodoviária em corredores brasileiros. Sua contribuição principal não é demonstrar uma hierarquia modal universal, mas tornar explícitas as condições sob as quais uma comparação é produzida: unidade funcional, rota, portos, distâncias, componentes portuários, proxy de custo operacional modelado, emissões operacionais TTW CO2e e qualidade da evidência.
 
-A evidência de sensibilidade interna e o benchmark externo Gustavo/Costa sustentam interpretação direcional cautelosa. Nas três sensibilidades internas executadas e nos 21 pares positivos e suportados do benchmark externo, a alternativa multimodal apresenta menores emissões TTW CO₂e que a alternativa rodoviária direta. A reconciliação de fator rodoviário explica grande parte da diferença de magnitude no lado road-only por premissas de consumo de combustível e fator de emissão.
+As sensibilidades internas e o benchmark externo sustentam interpretação direcional cautelosa. Nos três cenários de sensibilidade, a alternativa multimodal foi menor em custo modelado e emissões operacionais TTW CO2e; nos 21 pares comparáveis do benchmark, a direção modal de emissões coincidiu com a referência externa. Essas evidências são suficientes para mostrar plausibilidade metodológica e utilidade do framework, mas não para afirmar validação calibrada, reconstrução de Gustavo/Costa, disponibilidade operacional ou superioridade universal da cabotagem.
 
-A contribuição principal é metodológica e computacional. O CabotageLens oferece uma estrutura que classifica e documenta cada resultado de forma conservadora, distinguindo consistência direcional de validação calibrada, sensibilidade interna de evidência externa, e exercício diagnóstico de recalibração. Essa disciplina apoia uma expansão fundamentada para o relatório final de TF.
+Como artigo técnico, o resultado central é a estrutura: um modo rastreável de formular comparações multimodais com fronteiras explícitas. Trabalhos futuros devem ampliar a cobertura de distâncias marítimas, melhorar a verificação de portos e serviços, incorporar fronteiras WTW/LCA separadas quando houver fatores compatíveis, e adicionar camadas comerciais apenas quando houver dados de frete, frequência, contrato e confiabilidade adequadamente documentados.
 
----
+## Referências e artefatos pendentes
 
-## 10. Trabalhos futuros
-
-- Expandir a fronteira ambiental para WTW/LCA com fatores, unidades e documentação compatíveis.
-- Reconciliar mais completamente a lógica de carga, alocação, rota e serviço do workbook Gustavo/Costa.
-- Melhorar a evidência de distância marítima e validação de portos selecionados.
-- Incorporar frete comercial, tarifas, frequência, tempo, confiabilidade e custo de inventário.
-- Evoluir para uma super-rede multimodal com serviços, frequências e operadores.
-- Ampliar validação contra referências independentes de distância, custo e emissão.
-
----
-
-## 11. Tabelas de apoio
-
-### Tabela A — Resumo de proveniência e metodologia
-
-| Componente | Fonte ou método | Fronteira | Rastreabilidade |
-|------------|-----------------|-----------|-----------------|
-| Distância rodoviária | ORS driving-hgv + cache Supabase | Rota modelada | Provedor e cache rastreados |
-| Distância marítima | SeaMatrix / haversine fallback / referência externa | Estimativa de rota | Tipo de fonte registrado |
-| Emissões rodoviárias | Modelo TTW CO₂e: distância × consumo × fator | Operacional TTW | Parâmetros implementados |
-| Emissões marítimas | Modelo TTW CO₂e: classe de embarcação / KPI de rota | Operacional TTW | Classe e intensidade rastreadas |
-| Operações portuárias | Modelo fixo + por-TEU + hoteling | Operacional TTW | Parâmetros documentados |
-| Custo | Estimativa modelada: combustível + operacional | Custo operacional parcial | Não é frete comercial |
-
-### Tabela B — Resultados de sensibilidade interna
-
-| Caso | Portos | Emissões rodo / multi | Custo rodo / multi | Classificação |
-|------|--------|-----------------------:|-------------------:|---------------|
-| `TF-VAL-001B-SENS-002-REFDIST` | Santos → Manaus | 6961,76 / 1104,67 kg TTW CO₂e | BRL 18456,45 / BRL 1263,50 | `sensitive` |
-| `TF-VAL-001B-SENS-003B-ALTPECEM` | Manaus → Pecém | 9989,83 / 573,48 kg TTW CO₂e | BRL 26391,03 / BRL 727,33 | `sensitive` |
-| `TF-VAL-001B-SENS-005B-ALTSUAPE` | Rio Grande → Suape | 7013,27 / 1127,46 kg TTW CO₂e | BRL 18121,99 / BRL 2122,38 | `sensitive` |
-
-### Tabela C — Resumo do benchmark externo Batch 002
-
-| Métrica | Valor |
-|---------|------:|
-| Células da matriz parseadas | 36 |
-| Células puladas antes da execução | 15: 6 self-pairs e 9 linhas rodoviárias zero ou não positivas |
-| Pares OD positivos e suportados | 21 |
-| Linhas executadas com sucesso | 21 |
-| Alinhamento direcional | 21/21 (100%) |
-| Classificação | 21 × `same_direction_large_gap` |
-| Mismatch rodo médio (linha de base) | 199,8% |
-| Mismatch rodo mediano (linha de base) | 149,3% |
-| Mismatch rodo médio (diagnóstico) | 43,9% |
-| Mismatch rodo mediano (diagnóstico) | 19,6% |
-
-### Tabela D — Reconciliação de fator rodoviário
-
-| Fator | Gustavo/Costa | Unidade |
-|-------|-------------:|---------|
-| FDc (consumo de combustível) | 0,28 | L/km |
-| FDe (densidade energética) | 35,52 | MJ/L |
-| FDf (fator de emissão) | 86,5 | gCO₂eq/MJ |
-| Fator diagnóstico | 0,8602944 | kgCO₂e/km |
-
-### Tabela E — Afirmações permitidas e não permitidas
-
-| Afirmação permitida | Evidência | Ressalva |
-|---------------------|-----------|----------|
-| CabotageLens fornece estrutura auditável para comparação rodo vs cabotagem | Arquitetura e metodologia | — |
-| Linhas avaliadas mostram vantagem direcional da cabotagem em emissões | Sensibilidade #16 (`sensitivity_discussion`) + Batch 002 (`benchmark_supports_direction`) | Sensibilidade interna + direcional externo |
-| 100% de alinhamento direcional nos 21 pares OD do benchmark | Batch 002, com classificação linha a linha `same_direction_large_gap` | Direcional apenas; magnitudes divergem |
-| Premissas rodoviárias explicam grande parte da lacuna road-only | Reconciliação de fator (`benchmark_supports_road_factor_explanation`) | Diagnóstico apenas; não substitui modelo de linha de base |
-
-| **Afirmação NÃO permitida** | **Motivo** |
-|------------------------------|------------|
-| Cabotagem é universalmente superior | Resultados são corredor-específicos e fronteira-dependentes |
-| CabotageLens reproduz o workbook Gustavo/Costa | Magnitudes divergem; metodologia não totalmente reconstruída |
-| Custos do modelo são fretes comerciais | Custos são estimativas modeladas |
-| Emissões TTW são equivalentes a WTW ou LCA | Fronteiras distintas |
-| Resultados de sensibilidade são externamente validados | São exercícios internos |
-| O fator diagnóstico deve substituir o modelo rodoviário | É análise diagnóstica apenas |
-| Pecém equivale a Fortaleza | Portos diferentes |
-| Suape equivale a Recife | Portos diferentes |
-
----
-
-## 12. Referências e artefatos
-
-As chaves abaixo seguem o mapa de citações rastreado em `docs/tf_support/writing/tf_literature_citation_map.md`. A formatação ABNT final será compilada no relatório do TF. Metadados bibliográficos não devem ser inventados. Artefatos internos do projeto, como OpenRouteService/cache Supabase, SeaMatrix, o workbook Gustavo/Costa e os resultados Batch 001B/002, são referidos em prosa pelos respectivos documentos rastreados, sem placeholders bibliográficos novos.
-
-| Chave | Descrição resumida |
-|-------|-------------------|
-| `[icct2022]` | Cabotagem brasileira, BR do Mar, contexto de emissões e modal share |
-| `[competitiveness2024]` | Competitividade da cabotagem conteinerizada brasileira e super-rede |
-| `[shortsea2019]` | Eficiência comparativa CO₂ de short sea container transport |
-| `[modalshiftreview2020]` | Revisão sistemática sobre mudança modal rodoviário-SSS |
-| `[decarb2024]` | Caminhos de descarbonização da cabotagem brasileira |
-| `[maritimelca2024]` | Revisão de LCA de combustíveis marítimos |
-| `[berth2009]` | Consumo de combustível de navios atracados |
-| `[shipops2022]` | Emissões em hoteling e carga/descarga em portos |
-| `[berthairquality2010]` | Impacto de emissões portuárias na qualidade do ar |
-| `[isoemission2019]` | Iso-emission map, apenas como futuro/pending-audit se necessário |
-
----
-
-*Este artigo é a narrativa-fonte concisa para o relatório final de TF. Ele não substitui o scaffold expandido em `tf_final_report_draft.md` e não é o relatório final.*
+As chaves de citação preservadas neste rascunho seguem o mapa de citações rastreado do projeto: `[icct2022]`, `[competitiveness2024]`, `[shortsea2019]`, `[modalshiftreview2020]`, `[decarb2024]` e `[maritimelca2024]`. A formatação ABNT, a conversão para LaTeX, figuras, legendas de tabelas e metadados bibliográficos completos permanecem pendentes para a etapa final de produção. Artefatos internos de validação, cache, SeaMatrix, port-ops e benchmark Gustavo/Costa devem ser referidos por seus documentos rastreados, sem inventar novas chaves bibliográficas.
