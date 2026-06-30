@@ -392,7 +392,35 @@ def evaluate_path(
         _log.error("Failed to prepare evaluation context: %s", exc)
         return {}
 
-    cargo_t = float(cargo_t)
+    try:
+        cargo_t = float(cargo_t)
+    except (TypeError, ValueError):
+        _log.error("Invalid cargo_t for path evaluation: %r", cargo_t)
+        return {}
+
+    calculation_warnings: list[str] = []
+    if cargo_t < 0.0:
+        calculation_warnings.append(
+            "Negative cargo_t is invalid for emissions allocation; cargo mass was treated as zero activity."
+        )
+        cargo_t = 0.0
+
+    cargo_mass_positive = cargo_t > 0.0
+    cargo_teu_positive = _positive_float_or_none(cargo_teu) is not None
+    if cargo_mass_positive:
+        cargo_activity_status = "positive_cargo_mass"
+    elif cargo_teu_positive:
+        cargo_activity_status = "positive_teu_without_positive_cargo_mass"
+        calculation_warnings.append(
+            "Cargo TEU was positive but cargo_t was not; mass-based road, navigation, and hoteling emissions "
+            "cannot be interpreted as a loaded-cargo movement."
+        )
+    else:
+        cargo_activity_status = "zero_cargo_activity"
+        calculation_warnings.append(
+            "No positive cargo mass or TEU activity was provided; cargo-scaled emissions are treated as zero activity."
+        )
+
     truck_spec = context.truck_spec
     vessel_eff = context.vessel_eff
     hoteling_sel = context.hoteling_sel
@@ -511,6 +539,9 @@ def evaluate_path(
             "lightship_t": vessel_eff.lightship_t,
         },
     )
+    if not cargo_mass_positive:
+        cargo_share = 0.0
+        allocation_debug["cargo_allocation_suppressed_reason"] = "nonpositive_cargo_mass"
 
     sea_leg_fuel_g_per_tnm = _positive_float_or_none(sea_leg_data.get("fuel_g_per_tnm"))
     vessel_fuel_g_per_tnm = _positive_float_or_none(vessel_eff.fuel_g_per_tnm)
@@ -547,6 +578,8 @@ def evaluate_path(
             "Skipping separate hoteling because MRV transport-work intensity is available for vessel class '%s'.",
             vessel_eff.vessel_class,
         )
+    elif not cargo_mass_positive:
+        hoteling_exclusion_reason = "zero_cargo_activity"
     elif not include_hoteling:
         hoteling_exclusion_reason = "disabled_by_user"
     elif hoteling_hours_total_requested <= 0.0:
@@ -559,6 +592,7 @@ def evaluate_path(
         and hoteling_hours_total_requested > 0.0
         and not hoteling_disabled_for_transport_work
         and hoteling_sel is not None
+        and cargo_mass_positive
     )
     hoteling_hours_total = hoteling_hours_total_requested if hoteling_effective else 0.0
 
@@ -608,13 +642,24 @@ def evaluate_path(
     port_ops_cost_brl = 0.0
     port_ops_exclusion_reason: str | None = None
 
+    port_moves_per_call_effective = port_moves_per_call
+    if (
+        include_port_ops
+        and port_calls > 0
+        and not full_call_mode
+        and port_moves_per_call is None
+        and not cargo_mass_positive
+        and not cargo_teu_positive
+    ):
+        port_moves_per_call_effective = 0.0
+
     if include_port_ops and port_calls > 0:
         try:
             port_call_names = _resolve_port_call_names(path_data, port_calls)
             port_ops_payload = estimate_port_ops(
                 scenario=port_ops_scenario,
                 port_calls=port_calls,
-                port_moves_per_call=port_moves_per_call,
+                port_moves_per_call=port_moves_per_call_effective,
                 cargo_t=cargo_t,
                 cargo_teu=cargo_teu,
                 t_per_teu_default=t_per_teu_default,
@@ -682,6 +727,9 @@ def evaluate_path(
         "share_new_teu": allocation_debug.get("share_new_teu"),
         "ratio_new_vs_old": allocation_debug.get("ratio_new_vs_old"),
         "eff_t_per_teu": allocation_debug.get("eff_t_per_teu"),
+        "cargo_activity_status": cargo_activity_status,
+        "cargo_activity_warnings": list(calculation_warnings),
+        "cargo_allocation_suppressed_reason": allocation_debug.get("cargo_allocation_suppressed_reason"),
         "cargo_allocation_share": float(cargo_share),
         "sailing_fuel_calc_mode": sailing_fuel_mode,
         "fuel_kg_sailing": float(sea_fuel_sailing_kg),
@@ -717,6 +765,11 @@ def evaluate_path(
         "full_call_mode": bool(full_call_mode),
         "port_moves_per_call_requested": (
             None if port_moves_per_call is None else float(max(float(port_moves_per_call), 0.0))
+        ),
+        "port_moves_per_call_effective": (
+            None
+            if port_moves_per_call_effective is None
+            else float(max(float(port_moves_per_call_effective), 0.0))
         ),
         "port_ops_fuel_kg": float(port_ops_fuel_kg),
         "port_ops_cost": float(port_ops_cost_brl),
@@ -789,6 +842,9 @@ def evaluate_path(
             "share_new_teu": allocation_debug.get("share_new_teu"),
             "ratio_new_vs_old": allocation_debug.get("ratio_new_vs_old"),
             "eff_t_per_teu": allocation_debug.get("eff_t_per_teu"),
+            "cargo_activity_status": cargo_activity_status,
+            "cargo_activity_warnings": list(calculation_warnings),
+            "cargo_allocation_suppressed_reason": allocation_debug.get("cargo_allocation_suppressed_reason"),
             "cargo_allocation_share": float(cargo_share),
             "sailing_fuel_calc_mode": sailing_fuel_mode,
             "vessel_sample_size": int(vessel_eff.sample_size),
@@ -824,6 +880,11 @@ def evaluate_path(
             "port_moves_per_call_requested": (
                 None if port_moves_per_call is None else float(max(float(port_moves_per_call), 0.0))
             ),
+            "port_moves_per_call_effective": (
+                None
+                if port_moves_per_call_effective is None
+                else float(max(float(port_moves_per_call_effective), 0.0))
+            ),
             "port_ops_source": (
                 None
                 if not isinstance(port_ops_payload, dict)
@@ -857,7 +918,9 @@ def evaluate_path(
                 0 if not isinstance(port_ops_payload, dict) else len(port_ops_payload.get("warnings") or [])
             ),
             "route_quality_warning_count": len(route_quality_warnings),
+            "calculation_warning_count": len(calculation_warnings),
         },
+        "calculation_warnings": calculation_warnings,
         "route_quality_warnings": route_quality_warnings,
         "road_only": res_direct,
         "multimodal": {

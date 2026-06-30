@@ -768,16 +768,16 @@ def estimate_port_ops(
     cargo_teu_resolved = _resolve_cargo_teu(cargo_t=cargo_t, cargo_teu=cargo_teu, t_per_teu_default=t_per_teu)
 
     if full_call_mode:
-        if requested_moves is None or requested_moves <= 0.0:
+        if requested_moves is None:
             moves_per_call = float(selection.default_port_moves_per_call.get("median", 0.0))
             moves_source = "scenario_default_full_call"
         else:
             moves_per_call = requested_moves
-            moves_source = "explicit_override"
+            moves_source = "explicit_override" if requested_moves > 0.0 else "explicit_zero_override"
     else:
-        if requested_moves is not None and requested_moves > 0.0:
+        if requested_moves is not None:
             moves_per_call = requested_moves
-            moves_source = "explicit_override"
+            moves_source = "explicit_override" if requested_moves > 0.0 else "explicit_zero_override"
         elif cargo_teu_resolved is not None:
             moves_per_call = float(cargo_teu_resolved)
             moves_source = "cargo_teu_derived"

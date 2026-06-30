@@ -187,6 +187,19 @@ class PortOpsFallbackTests(unittest.TestCase):
         self.assertTrue(result["zero_activity"])
         self.assertEqual(result["totals"]["fuel_kg"], 0.0)
 
+    def test_explicit_zero_moves_do_not_fall_back_to_default_call(self) -> None:
+        result = estimate_port_ops(
+            port_calls=2,
+            port_moves_per_call=0.0,
+            selection=self._documented_selection(),
+        )
+
+        self.assertEqual(result["port_moves_source"], "explicit_zero_override")
+        self.assertEqual(result["source_level"], "zero_activity")
+        self.assertTrue(result["zero_activity"])
+        self.assertEqual(result["totals"]["fuel_kg"], 0.0)
+        self.assertEqual(result["totals"]["co2e_kg"], 0.0)
+
     def test_estimate_port_ops_mixes_observed_and_weighted_missing_calls(self) -> None:
         result = estimate_port_ops(
             port_calls=2,
@@ -342,8 +355,9 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         )
 
     def _estimate_leg_liters(self, distance_km: float, **_kwargs):
-        liters = float(distance_km) / 2.0
-        trips = 0 if distance_km <= 0 else 1
+        cargo_t = float(_kwargs.get("cargo_t") or 0.0)
+        liters = 0.0 if cargo_t <= 0.0 or distance_km <= 0 else float(distance_km) / 2.0
+        trips = 0 if liters <= 0.0 else 1
         return liters, 0.0, 0.0, trips, 0.0, 0.0
 
     def _run_evaluator(
@@ -354,6 +368,8 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         path_data: dict | None = None,
         selection: PortOpsScenarioSelection | None = None,
         vessel: VesselClassEfficiency | None = None,
+        cargo_t: float = 14.0,
+        cargo_teu: float | None = 1.0,
     ) -> dict:
         diesel_lookup = DieselPriceLookup(
             source_csv="diesel.csv",
@@ -411,8 +427,8 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         ):
             return evaluator.evaluate_path(
                 path_data or self._path_data(),
-                cargo_t=14.0,
-                cargo_teu=1.0,
+                cargo_t=cargo_t,
+                cargo_teu=cargo_teu,
                 truck_key="semi_27t",
                 include_hoteling=True,
                 hoteling_hours_per_call=14.0,
@@ -566,6 +582,31 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         self.assertEqual(sea["hoteling_exclusion_reason"], "included_in_transport_work_intensity")
         self.assertEqual(sea["hoteling_fuel_kg"], 0.0)
         self.assertEqual(sea["hoteling_co2e"], 0.0)
+        self._assert_component_totals_match(result)
+
+    def test_zero_cargo_activity_does_not_use_default_port_ops_or_hoteling(self) -> None:
+        result = self._run_evaluator(
+            include_port_ops=True,
+            observed_port_ops=None,
+            selection=self._documented_selection(),
+            vessel=self._fake_vessel(transport_work_intensity=False),
+            cargo_t=0.0,
+            cargo_teu=None,
+        )
+        sea = result["multimodal"]["sea"]
+
+        self.assertEqual(result["inputs"]["cargo_activity_status"], "zero_cargo_activity")
+        self.assertEqual(sea["cargo_allocation_share"], 0.0)
+        self.assertEqual(sea["hoteling_exclusion_reason"], "zero_cargo_activity")
+        self.assertFalse(sea["hoteling_included"])
+        self.assertEqual(sea["hoteling_fuel_kg"], 0.0)
+        self.assertEqual(sea["port_moves_per_call_effective"], 0.0)
+        self.assertEqual(sea["port_ops"]["port_moves_source"], "explicit_zero_override")
+        self.assertEqual(sea["port_ops_source_level"], "zero_activity")
+        self.assertEqual(sea["port_ops_fuel_kg"], 0.0)
+        self.assertEqual(result["road_only"]["co2e"], 0.0)
+        self.assertEqual(result["multimodal"]["total_co2e"], 0.0)
+        self.assertIn("zero activity", "; ".join(result["calculation_warnings"]))
         self._assert_component_totals_match(result)
 
     def test_short_road_route_can_remain_lower_than_multimodal(self) -> None:

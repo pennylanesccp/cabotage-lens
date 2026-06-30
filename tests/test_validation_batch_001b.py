@@ -283,6 +283,56 @@ class Batch001BValidationTests(unittest.TestCase):
         self.assertEqual(row["multimodal_emissions_kgco2e"], 120.0)
         self.assertEqual(row["validation_status"], "sensitivity_executed")
 
+    def test_result_row_report_components_reconcile_to_total(self) -> None:
+        case = {
+            "case_id": "TF-VAL-001B-COMPONENTS",
+            "origin": "Origin, SP",
+            "destination": "Destination, AM",
+        }
+        geometry = self._geometry()
+        original = dict(geometry["sea_leg"])
+        results = {
+            "inputs": {"marine_ef_kg_per_kg": 3.21},
+            "road_only": {"cost": 100.0, "co2e": 300.0},
+            "multimodal": {
+                "first_mile": {"co2e": 10.0},
+                "last_mile": {"co2e": 5.0},
+                "sea": {
+                    "fuel_kg_sailing": 20.0,
+                    "hoteling_fuel_kg": 0.0,
+                    "co2e_marine": 64.2,
+                    "port_ops_co2e": 7.0,
+                    "hoteling_requested": True,
+                    "hoteling_included": False,
+                    "hoteling_exclusion_reason": "included_in_transport_work_intensity",
+                    "port_ops_included": True,
+                    "port_ops_source_level": "literature_default",
+                    "port_ops_source_level_counts": {"literature_default": 2},
+                    "port_ops_warnings": ["used documented moves-based scenario"],
+                    "sailing_fuel_calc_mode": "transport_work_intensity",
+                },
+                "total_cost": 80.0,
+                "total_co2e": 86.2,
+            },
+        }
+
+        row = build_result_row(
+            self._config(),
+            case,
+            geometry=geometry,
+            results=results,
+            original_sea_leg=original,
+            include_report_components=True,
+        )
+
+        self.assertAlmostEqual(row["navigation_emissions_kgco2e"], 64.2)
+        self.assertEqual(row["hoteling_emissions_kgco2e"], 0.0)
+        self.assertEqual(row["port_ops_emissions_kgco2e"], 7.0)
+        self.assertAlmostEqual(row["component_total_emissions_kgco2e"], 86.2)
+        self.assertAlmostEqual(row["component_total_delta_kgco2e"], 0.0)
+        self.assertAlmostEqual(row["cabotage_emissions_savings_pct"], 71.2666666667)
+        self.assertEqual(row["emissions_winner"], "cabotage_lower_emissions")
+
     def test_csv_writer_uses_full_output_header(self) -> None:
         row = {field: None for field in ALL_OUTPUT_FIELDS}
         row["case_id"] = "TF-VAL-001B-TEST"
