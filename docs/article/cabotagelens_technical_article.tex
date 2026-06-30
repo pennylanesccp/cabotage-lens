@@ -16,7 +16,7 @@
 \newcommand{\wtw}{WTW}
 
 \title{CabotageLens: framework computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil}
-\author{Autor a definir}
+\author{Felipe de Sá Proença}
 \date{\today}
 
 \begin{document}
@@ -28,6 +28,47 @@ Comparações entre transporte rodoviário e cabotagem podem se tornar enganosas
 
 \textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; \cooe{}; logística; Brasil; framework computacional.
 \end{abstract}
+
+\tableofcontents
+
+\section*{Dicionário de termos, siglas e abreviações}
+\phantomsection
+\addcontentsline{toc}{section}{Dicionário de termos, siglas e abreviações}
+\small
+\begin{description}
+  \item[CabotageLens] Framework computacional auditável desenvolvido para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário sob fronteiras metodológicas explícitas; não é ferramenta de frete comercial, booking, despacho ou confirmação de disponibilidade operacional.
+  \item[OD] Par origem-destino usado para definir a remessa e construir as alternativas comparadas.
+  \item[Cabotagem] Navegação costeira entre portos brasileiros, tratada neste artigo como componente de uma cadeia porta a porta e não como substituto isolado da viagem rodoviária completa.
+  \item[Transporte rodoviário direto] Alternativa porta a porta formada por uma perna rodoviária entre origem e destino.
+  \item[Transporte rodoviário-cabotagem-rodoviário] Alternativa multimodal composta por acesso rodoviário inicial, perna marítima de cabotagem, componentes portuários quando representáveis e acesso rodoviário final.
+  \item[Pre-carriage] Trecho rodoviário que conecta a origem ao porto de embarque.
+  \item[On-carriage] Trecho rodoviário que conecta o porto de desembarque ao destino final.
+  \item[Hoteling/hotelling] Permanência e consumo operacional associados ao navio em porto, incluídos apenas quando há proveniência defensável; ausência de dado não é tratada como zero.
+  \item[Operações portuárias] Componentes de terminal e porto representados na cadeia multimodal conforme dado observado, média ponderada, default documentado ou indisponibilidade.
+  \item[\ttw{}] Fronteira operacional \textit{tank-to-wheel}/\textit{tank-to-wake} usada como referência para as emissões de \cooe{} no artigo.
+  \item[\wtw{}] Perspectiva mais ampla \textit{well-to-wheel}/\textit{well-to-wake}, útil para contexto e trabalhos futuros, mas não a linha de base atual do CabotageLens.
+  \item[LCA/ACV] Avaliação de ciclo de vida; fronteira mais ampla que a linha operacional \ttw{} adotada neste artigo.
+  \item[CO$_2$] Dióxido de carbono. Não deve ser tratado como equivalente a \cooe{} ou CO$_2$eq sem alinhamento de gases, fator e fronteira.
+  \item[\cooe{}] Dióxido de carbono equivalente conforme fatores e fronteira implementados.
+  \item[CO$_2$eq] Notação mantida quando aparece vinculada a fonte ou benchmark externo; não é intercambiável automaticamente com \cooe{}.
+  \item[GEE/GHG] Gases de efeito estufa; categoria ambiental mais ampla que depende dos gases incluídos no fator usado.
+  \item[SSS] \textit{Short sea shipping}; literatura de navegação marítima costeira usada para contextualizar mudança modal e cautelas de comparação.
+  \item[BR do Mar] Política brasileira associada ao estímulo da cabotagem, usada como contexto institucional, não como validação de corredor.
+  \item[Fallback] Uso de aproximação ou fonte alternativa quando falta dado mais forte; deve permanecer explícito na interpretação.
+  \item[Proveniência] Registro da origem e força do dado usado no cálculo, como observado, referência externa, matriz, default documentado, fallback ou indisponível.
+  \item[Benchmark] Comparação externa usada como evidência de plausibilidade ou direção, não como verdade absoluta.
+  \item[Gustavo/Costa] Benchmark externo usado de forma compacta como evidência direcional/plausibilidade; não é referência absoluta, alvo de calibração ou reprodução completa.
+  \item[Evidência direcional] Evidência de que duas fontes apontam o mesmo sentido de resultado, sem validar magnitude calibrada.
+  \item[Reclassificação conservadora] Atribuição de uso permitido a uma evidência para evitar extrapolação além da rota, cenário e fronteira analisados.
+  \item[Proxy de custo operacional modelado] Resultado monetário parcial do modelo para componentes representados; não equivale a frete comercial, cotação, tarifa ou viabilidade econômica.
+  \item[Frete comercial] Valor negociado ou cotado de mercado, fora da fronteira atual do artigo.
+  \item[Carga útil] Massa de carga efetivamente transportada na remessa ou cenário, distinta da capacidade nominal do veículo ou embarcação.
+  \item[Unidade funcional] Base comum da comparação, definida como uma remessa de carga conteinerizada entre origem e destino.
+  \item[Fator de emissão] Coeficiente que relaciona consumo ou atividade a emissões sob determinada unidade, gases e fronteira.
+  \item[Análise de sensibilidade] Execução sob hipótese documentada para avaliar dependência do resultado a rota, porto, distância ou parâmetro.
+  \item[Reprodutibilidade] Capacidade de rastrear entradas, cache, rotas, parâmetros e classificação para repetir ou auditar uma execução.
+\end{description}
+\normalsize
 
 \section{Introdução}
 \label{sec:introducao}

@@ -1,0 +1,63 @@
+\chapter{Conclusões e trabalhos futuros}
+\label{ch:conclusoes}
+
+\section{Conclusão principal}
+\label{sec:conclusao-principal}
+
+Este trabalho desenvolveu e documentou o \CabotageLens{} como um framework computacional auditável, reprodutível e orientado por rota para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros. A conclusão principal não é uma afirmação universal de superioridade da cabotagem. A contribuição central é mostrar que a comparação modal pode ser construída com unidade funcional explícita, cadeia porta a porta, proveniência de dados, fronteiras metodológicas declaradas e classificação conservadora da força da evidência.
+
+Sob essa formulação, os resultados do \CabotageLens{} devem ser lidos como estimativas de cenário. Custos permanecem custos modelados, não fretes comerciais, tarifas ou cotações. Emissões permanecem operacionais \ttw{} de \cooe{}, não \wtw{} nem LCA. A seleção de portos, a distância marítima, os acessos terrestres, os componentes portuários, os parâmetros de carga e a classificação de validação condicionam o alcance de cada conclusão.
+
+Assim, o resultado mais defensável do TF é metodológico e computacional: o \CabotageLens{} torna visíveis as hipóteses que normalmente ficam implícitas em uma comparação entre rodovia e cabotagem. A ferramenta não substitui validação comercial ou operacional, mas organiza uma base rastreável para discutir quando uma alternativa multimodal aparece promissora, quando a evidência é apenas sensível ou diagnóstica, e quais lacunas precisam ser fechadas antes de afirmações mais fortes.
+
+\section{Contribuição metodológica e computacional do \CabotageLens{}}
+\label{sec:contribuicao-conclusao}
+
+A contribuição do \CabotageLens{} está na integração entre construção explícita de rotas, cálculo de custo modelado, estimativa de emissões operacionais \ttw{} de \cooe{}, preservação de proveniência e classificação de evidência. O framework separa a alternativa rodoviária direta da cadeia rodoviária-cabotagem-rodoviária, registra portos selecionados ou forçados, mantém a origem das distâncias e associa cada resultado ao cenário e aos parâmetros que o produziram.
+
+Essa integração é importante porque a comparação modal depende de escolhas técnicas que alteram a interpretação. Distâncias marítimas com referência externa, matriz rastreada ou \texttt{haversine\_fallback} não têm a mesma força. Portos alternativos, como Pecém ou Suape, podem ser úteis para sensibilidade, mas não validam silenciosamente Porto de Fortaleza ou Porto do Recife. Casos \texttt{same-port}, linhas bloqueadas, registros excluídos e resultados sensíveis têm valor acadêmico quando preservados como controles interpretativos, não como conclusões principais.
+
+O valor do framework, portanto, não está apenas em gerar números de BRL e \cooe{}. Está em vincular esses números a uma trilha de auditoria: rota, porto, distância, fonte, parâmetro, aviso, categoria de uso e artefato de validação. Essa disciplina permite defender o trabalho sem transformar resultados condicionais em prova de viabilidade comercial, superioridade modal universal ou reprodução calibrada de um benchmark externo.
+
+\section{Alcance das evidências e interpretação segura}
+\label{sec:alcance-evidencias-conclusao}
+
+A evidência consolidada neste TF sustenta uma interpretação cautelosa, específica por corredor e dependente da fronteira adotada. As linhas históricas do Batch 001 permanecem como diagnóstico de evolução metodológica. O Batch 001B organiza decisões, bloqueios, lacunas e sensibilidades. As sensibilidades executadas mostram comportamento do modelo sob hipóteses rastreadas, mas não substituem baselines validados e não criam \texttt{headline\_candidate}.
+
+O Batch 002 acrescenta uma camada externa importante ao confrontar o \CabotageLens{} com o workbook/paper Gustavo/Costa nos pares comparáveis. Esse benchmark é útil para a defesa acadêmica porque testa se o framework aponta a mesma direção modal em uma referência externa familiar ao tema. A leitura segura, porém, é direcional: Gustavo/Costa não é verdade absoluta, não foi reconstruído integralmente em suas premissas internas e não valida magnitude calibrada de emissões, custos, rotas, serviços, portos ou alocação.
+
+O rerun Supabase/cache reforça a reprodutibilidade computacional ao reduzir a hipótese de instabilidade de provedor ou cache como causa principal das lacunas observadas. A reconciliação de fator rodoviário explica parte relevante da diferença no lado \emph{road-only}, mas permanece diagnóstico de alinhamento com o benchmark. Ela não recalibra o \CabotageLens{}, não substitui o modelo rodoviário de linha de base e não altera a fronteira operacional \ttw{} do trabalho.
+
+As limitações apresentadas no Capítulo~\ref{ch:limitacoes}, portanto, não enfraquecem a conclusão; elas definem seu uso correto. O TF pode concluir que o \CabotageLens{} produz comparações rastreáveis, auditáveis e academicamente defensáveis sob fronteiras explícitas. Não pode concluir que a cabotagem seja universalmente superior, que custos modelados sejam fretes comerciais, que emissões operacionais \ttw{} de \cooe{} sejam \wtw{}/LCA, que sensibilidades sejam resultados robustos de baseline ou que Gustavo/Costa tenha sido plenamente reproduzido.
+
+\section{Agenda prioritária de trabalhos futuros}
+\label{sec:trabalhos-futuros}
+
+Os trabalhos futuros devem ampliar o \CabotageLens{} sem apagar a disciplina de fronteira que tornou o TF defensável. A Tabela~\ref{tab:agenda-futura} organiza as prioridades por eixo, sempre vinculando a próxima etapa à limitação que ela deve enfrentar.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Agenda prioritária de trabalhos futuros.}
+\label{tab:agenda-futura}
+\begin{tabularx}{\textwidth}{p{0.22\textwidth}X X}
+\toprule
+Eixo & Prioridade & Condição metodológica \\
+\midrule
+Ambiental & Separar expansões \wtw{}, WTT, LCA, CO$_2$-only, \cooe{} ampliado, combustíveis alternativos, emissões locais em porto e qualidade do ar. & Cada nova fronteira deve ter fatores, gases, unidades, energia, alocação e documentação próprios.\\
+Rota e operação & Fechar lacunas de distância marítima, seleção de portos, serviço, frequência, janela operacional, capacidade, terminal, slot, tempo de trânsito e confiabilidade. & Portos alternativos devem continuar como cenários próprios até que exista evidência específica.\\
+Econômico & Distinguir custo modelado, custo operacional alocado e frete comercial. & Viabilidade econômica exigirá tarifas, margens, contratos, demurrage, detention, seguro, inventário, confiabilidade, risco e disponibilidade de serviço.\\
+Validação e benchmark & Reconciliar carga, TEU, fator de carga, alocação, distância, rota, porto, serviço, operações portuárias e fronteira ambiental. & Gustavo/Costa pode continuar como benchmark, mas não deve ocupar o centro da contribuição.\\
+Publicação & Separar relatório final e artigo técnico. & O artigo deve apresentar benchmark de modo compacto, mantendo o \CabotageLens{} como contribuição principal.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Uma evolução de maior fidelidade poderia incluir super-rede multimodal, operadores, transbordos, frequência, capacidade e confiabilidade. Essa evolução deve ser tratada como etapa futura, não como capacidade implícita do protótipo atual. Do mesmo modo, uma avaliação econômica de mercado exigiria dados comerciais e operacionais que este TF não pretende substituir.
+
+\section{Fechamento}
+\label{sec:fechamento}
+
+O \CabotageLens{} não encerra a pergunta sobre a superioridade da cabotagem no Brasil, nem pretende substituir dados comerciais, operacionais ou ambientais mais completos. Sua contribuição é criar uma forma mais rigorosa de formular essa pergunta. Ao tornar explícitas as rotas, portos, distâncias, custos modelados, emissões operacionais, avisos e categorias de evidência, o framework permite comparar cenários com rastreabilidade e evitar conclusões mais fortes do que os dados sustentam.
+
+Essa é a principal contribuição do TF: transformar uma comparação modal potencialmente opaca em uma análise auditável, conservadora e extensível. O trabalho mostra que a utilidade acadêmica do \CabotageLens{} está tanto nos resultados que ele calcula quanto nos limites que ele preserva. A partir dessa base, trabalhos futuros podem ampliar fronteiras ambientais, operacionais, econômicas e de validação sem perder a condição essencial de defensibilidade: cada nova afirmação deve permanecer vinculada a fonte, método, unidade, cenário e evidência rastreados.

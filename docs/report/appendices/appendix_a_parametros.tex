@@ -1,0 +1,106 @@
+\chapter{Parâmetros, fontes e proveniência}
+\label{app:parametros}
+
+Este apêndice consolida, em formato de consulta, os grupos de insumos e a lógica de proveniência usados no relatório. Ele não substitui os artefatos rastreados do repositório nem introduz novos coeficientes; sua função é ajudar a leitura do Capítulo~\ref{ch:metodologia} e separar fonte, uso e limite de interpretação.
+
+\section{Inventário resumido de fontes}
+\label{sec:app-inventario-fontes}
+
+A Tabela~\ref{tab:app-fontes-proveniencia} resume as famílias de fontes e artefatos derivados citadas na metodologia. Sempre que uma fonte tiver data, recorte, cobertura ou fronteira limitada, essa limitação deve acompanhar qualquer interpretação de resultado.
+
+\begin{longtable}{p{0.23\textwidth}p{0.24\textwidth}p{0.24\textwidth}p{0.21\textwidth}}
+\caption{Inventário resumido de fontes, usos e limites de interpretação.}
+\label{tab:app-fontes-proveniencia}\\
+\toprule
+Fonte ou origem & Artefato ou dado derivado & Uso metodológico & Limite de interpretação \\
+\midrule
+\endfirsthead
+\toprule
+Fonte ou origem & Artefato ou dado derivado & Uso metodológico & Limite de interpretação \\
+\midrule
+\endhead
+ANTAQ & Viagens, paradas, cargas e chamadas portuárias quando aplicáveis. & Evidência observada de cabotagem e apoio à reconstrução de movimentos. & Base histórica; não prova disponibilidade atual de serviço, frequência ou slot.\\
+EU MRV & Classes de eficiência, taxas de combustível em navegação e hoteling, médias por IMO quando aplicável. & Aproximações técnicas para eficiência marítima e parâmetros por classe de embarcação. & Proxy europeu; pode não representar integralmente a frota brasileira.\\
+OpenRouteService & Distâncias rodoviárias, geocodificação e metadados de rota. & Rotas terrestres da alternativa direta, \emph{pre-carriage} e \emph{on-carriage}. & Rota modelada por API, não viagem GPS observada nem rota comercial contratual.\\
+LocationIQ & Saídas alternativas de geocodificação ou roteamento quando configuradas. & Fallback de resolução de localidade ou rota. & Deve permanecer rastreável e não substituir silenciosamente a fonte principal.\\
+Ship \& Bunker / VLSFO Santos & Preço processado de combustível marítimo. & Insumo do proxy de custo operacional marítimo. & Fonte volátil e sensível à data; Santos pode funcionar apenas como proxy.\\
+CSV de diesel processado & Preços de diesel por UF usados pelo avaliador. & Insumo de custo de combustível rodoviário. & Custo permanece proxy operacional; data e método de extração devem continuar visíveis quando disponíveis.\\
+SeaMatrix e referências de distância & Distâncias porto a porto com proveniência. & Definição da perna marítima e da confiança da rota. & \texttt{haversine\_fallback} é triagem, não rota marítima validada.\\
+Literatura e notas técnicas de portos & Valores observados, média ponderada, padrão documentado ou indisponibilidade. & Componentes de operações portuárias e \emph{hoteling}. & Dados ausentes não devem ser interpretados como zero silencioso.\\
+Presets de caminhão e fatores & Consumo rodoviário e fatores implementados. & Emissões operacionais \ttw{} de \cooe{} nas pernas terrestres. & Fonte, unidade e fronteira devem permanecer explícitas.\\
+Gustavo/Costa & Pares OD, rotas, fatores ou planilhas usados em benchmark. & Referência externa de plausibilidade e direção. & Não é verdade de referência, nem alvo de reprodução calibrada.\\
+\bottomrule
+\end{longtable}
+
+\section{Hierarquia de proveniência}
+\label{sec:app-hierarquia-proveniencia}
+
+A Figura~\ref{fig:proveniencia-hierarquia} deve ser substituída, na versão final, por um diagrama de proveniência dos dados. O placeholder é mantido no LaTeX para reservar o ponto de leitura e garantir que a figura final seja referenciada no texto.
+
+\placeholderfigure{Placeholder: hierarquia de proveniência dos insumos, distinguindo dados observados, referências externas específicas, matriz rastreada, médias ponderadas, padrões documentados, fallbacks e valores indisponíveis.}{Hierarquia de proveniência dos principais insumos do \CabotageLens{}.}{fig:proveniencia-hierarquia}
+
+A Tabela~\ref{tab:app-proveniencia-distancias} detalha a hierarquia aplicada às distâncias e aos componentes de rota. A leitura mais forte depende de referência específica para o par e para a fronteira analisada; a leitura mais fraca deve permanecer como triagem, lacuna ou sensibilidade.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Hierarquia de proveniência para distâncias e componentes de rota.}
+\label{tab:app-proveniencia-distancias}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}X X}
+\toprule
+Proveniência & Uso metodológico & Limite de interpretação \\
+\midrule
+Roteamento rodoviário/cache & Distância terrestre para rota direta, \emph{pre-carriage} e \emph{on-carriage}. & Não é trajetória GPS medida nem rota comercial efetivamente usada.\\
+\texttt{seamatrix} & Distância marítima matricial para par de portos aplicável. & Não comprova escala, frequência, serviço ou contrato.\\
+\texttt{external\_reference} & Referência documentada para o par de portos do cenário. & Só vale para o par e a unidade informados.\\
+\texttt{manual\_override} & Correção documentada ou entrada forçada para cenário rastreado. & Deve permanecer explícita como decisão metodológica.\\
+\texttt{haversine\_fallback} & Aproximação geométrica quando falta fonte melhor. & Triagem; não valida rota marítima operacional.\\
+\texttt{unavailable} & Ausência de valor defensável. & Não deve ser tratado como zero silencioso.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Operações portuárias e hoteling}
+\label{sec:app-portops-hoteling}
+
+Operações portuárias e \emph{hoteling} têm importância metodológica porque a alternativa multimodal não é apenas uma perna marítima. A Tabela~\ref{tab:app-portops-proveniencia} registra a regra de interpretação para os níveis de proveniência usados nesses componentes.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Proveniência de operações portuárias e hoteling.}
+\label{tab:app-portops-proveniencia}
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}X X}
+\toprule
+Proveniência & Uso permitido & Cautela \\
+\midrule
+\texttt{observed} & Usar como dado observado para porto, chamada ou condição documentada. & Ainda não equivale a inventário terminal-específico completo.\\
+\texttt{estimated\_port\_average} & Usar como média ponderada quando observações específicas sustentam a estimativa. & Menor confiança que observação direta do caso.\\
+\texttt{literature\_default} & Usar como padrão documentado quando não há valor observado defensável. & Deve ser identificado como aproximação.\\
+\texttt{unavailable} & Registrar ausência de dado. & Não converter ausência em zero emissões, zero custo ou zero tempo.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Parâmetros que permanecem pendentes para a versão final}
+\label{sec:app-parametros-pendentes}
+
+Este primeiro artefato LaTeX preserva TODOs metodológicos onde a versão final ainda exige revisão fina de fonte, citação ou metadado. A Tabela~\ref{tab:app-parametros-pendentes} organiza os pontos que não devem ser resolvidos por inferência nesta etapa.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Pendências de parâmetro e metadado para a produção final.}
+\label{tab:app-parametros-pendentes}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}X X}
+\toprule
+Item & Pendência & Tratamento até a versão final \\
+\midrule
+Metadados institucionais & Orientador, instituição, curso, local e ano permanecem como placeholders no arquivo principal. & Preencher apenas com dados finais confirmados.\\
+Resumo em inglês & O \emph{abstract} existe como placeholder. & Traduzir a versão final do resumo quando o texto estiver congelado.\\
+Figuras finais & Diagramas estão como placeholders \LaTeX{}. & Substituir por imagens ou desenhos finais sem alterar o conteúdo metodológico.\\
+Estilo bibliográfico & O arquivo usa estilo simples com \texttt{../references.bib}. & Ajustar ABNT/USP apenas quando a infraestrutura de citação estiver definida.\\
+Parâmetros voláteis & Preços, fatores e dados de mercado podem depender de data e fonte. & Não atualizar sem registro de proveniência e decisão metodológica.\\
+\bottomrule
+\end{tabularx}
+\end{table}

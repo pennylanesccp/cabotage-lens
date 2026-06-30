@@ -1,0 +1,80 @@
+\chapter{Checklist de reprodutibilidade e produção final}
+\label{app:checklist-reprodutibilidade}
+
+Este apêndice registra os itens mínimos para transformar esta primeira versão LaTeX em PDF final de entrega. A lista não substitui os comandos de validação do repositório; ela organiza o que precisa permanecer verificável antes da submissão.
+
+\section{Checklist técnico}
+\label{sec:app-checklist-tecnico}
+
+A Tabela~\ref{tab:app-checklist-tecnico} cobre os itens estruturais do artefato LaTeX.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Checklist técnico do relatório LaTeX.}
+\label{tab:app-checklist-tecnico}
+\begin{tabularx}{\textwidth}{p{0.30\textwidth}p{0.24\textwidth}X}
+\toprule
+Item & Situação nesta versão & Ação antes da entrega final \\
+\midrule
+Documento principal & Criado em \texttt{docs/report/main.tex}. & Compilar com ferramenta LaTeX disponível no ambiente final.\\
+Capítulos modulares & Capítulos 1 a 10 separados em \texttt{docs/report/chapters/}. & Revisar paginação, quebras e referências cruzadas após compilação.\\
+Apêndices & Apêndices A, B e C separados em \texttt{docs/report/appendices/}. & Ajustar densidade ou mover material conforme orientação institucional.\\
+Figuras & Placeholders com legenda, rótulo e referência textual. & Substituir por figuras finais ou manter placeholders explicitamente autorizados.\\
+Tabelas & Tabelas principais convertidas com \texttt{booktabs}, \texttt{tabularx} e \texttt{longtable}. & Verificar largura e quebra de página no PDF.\\
+Bibliografia & \texttt{../references.bib} referenciado por \texttt{main.tex}. & Ajustar estilo ABNT/USP e chaves faltantes, se houver.\\
+Metadados & Placeholders para orientador, instituição, curso, local e ano. & Preencher somente com metadados finais confirmados.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Checklist metodológico}
+\label{sec:app-checklist-metodologico}
+
+A Tabela~\ref{tab:app-checklist-metodologico} preserva os controles de interpretação que devem sobreviver à revisão de estilo, diagramação e normalização bibliográfica.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Checklist metodológico para revisão final.}
+\label{tab:app-checklist-metodologico}
+\begin{tabularx}{\textwidth}{p{0.32\textwidth}X}
+\toprule
+Controle & Verificação antes da submissão \\
+\midrule
+Comparação porta a porta & Confirmar que nenhuma seção compara navio isolado contra caminhão completo.\\
+Fronteira ambiental & Confirmar que a linha de base continua como emissões operacionais \ttw{} de \cooe{}.\\
+Unidades ambientais & Confirmar que CO$_2$, \cooe{} e CO$_2$eq aparecem apenas quando a fronteira de fonte permite.\\
+Fronteira econômica & Confirmar que custo modelado não é descrito como frete comercial, cotação, tarifa ou viabilidade econômica.\\
+Cabotagem & Confirmar que não há afirmação de superioridade universal sobre o modo.\\
+Benchmark Gustavo/Costa & Confirmar que o benchmark permanece externo, direcional e não calibrado.\\
+Port operations e hoteling & Confirmar que proveniência, fallback e indisponibilidade continuam explícitos.\\
+Dados ausentes & Confirmar que ausência de dado não é interpretada como zero.\\
+Evidência atual & Confirmar que nenhum caso atual foi promovido a \texttt{headline\_candidate}.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{TODOs finais}
+\label{sec:app-todos-finais}
+
+A Tabela~\ref{tab:app-todos-finais} lista os TODOs assumidos por este primeiro artefato LaTeX. Eles são deixados visíveis porque dependem de decisão institucional, normalização final ou produção visual, não de inferência técnica.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{TODOs antes da submissão do PDF final.}
+\label{tab:app-todos-finais}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}X}
+\toprule
+TODO & Motivo \\
+\midrule
+Preencher metadados institucionais & Orientador, instituição, curso, local e ano precisam ser confirmados.\\
+Finalizar resumo em inglês & O \emph{abstract} deve refletir a versão final do resumo em português.\\
+Substituir placeholders visuais & As figuras metodológicas precisam de arte final ou autorização para permanecerem como placeholders.\\
+Revisar estilo bibliográfico & A versão atual usa estilo simples; ABNT/USP pode exigir ajuste posterior.\\
+Executar compilação LaTeX no ambiente final & O ambiente local precisa ter compilador instalado para validação visual completa.\\
+Revisar quebras de página e tabelas largas & A revisão visual só é confiável após compilação.\\
+\bottomrule
+\end{tabularx}
+\end{table}

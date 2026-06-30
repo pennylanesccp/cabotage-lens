@@ -1,0 +1,73 @@
+\chapter{Revisão bibliográfica}
+\label{ch:revisao}
+
+Este capítulo revisa apenas a literatura necessária para sustentar a metodologia e a interpretação do \CabotageLens{}. As fontes são usadas para justificar o problema, delimitar fronteiras e apontar cautelas de uso; não substituem distâncias, fatores, custos, rotas, portos ou resultados calculados pelos artefatos rastreados do projeto.
+
+\section{Cabotagem brasileira, matriz de transporte e BR do Mar}
+\label{sec:cabotagem-br}
+
+A literatura sobre cabotagem brasileira situa o trabalho em um contexto de forte dependência rodoviária, extensão litorânea relevante e interesse público em alternativas para corredores longos. A agenda associada ao BR do Mar reforça esse enquadramento, pois trata a navegação costeira como componente potencial de uma matriz de transporte mais diversificada \cite{icct2022}. Esse contexto justifica estudar a cabotagem em pares origem-destino brasileiros, mas não permite transformar médias nacionais ou argumentos setoriais em conclusão rota a rota.
+
+No \CabotageLens{}, essa literatura cumpre função de motivação. Ela explica por que a pergunta é relevante para o Brasil, mas a comparação efetiva permanece condicionada a origem, destino, portos, acessos terrestres, distância marítima, unidade funcional e fronteira de cálculo. Assim, a revisão parte da cabotagem como possibilidade logística e ambiental, não como resposta pré-definida.
+
+\section{Mudança modal e short sea shipping}
+\label{sec:sss-modal-shift}
+
+A literatura de mudança modal mostra que deslocar carga da rodovia para o transporte marítimo costeiro depende de fatores técnicos, econômicos e operacionais. Revisões sobre \emph{short sea shipping} destacam custo, tempo, confiabilidade, integração terrestre, qualidade de serviço, características portuárias e barreiras institucionais como condicionantes da adoção modal \cite{modalshiftreview2020}. Estudos comparativos de emissões também indicam que a direção e a magnitude do resultado dependem do corredor, da utilização da embarcação, dos acessos terrestres, da distância, do tipo de navio e das hipóteses de cálculo \cite{shortsea2019}.
+
+Essa literatura é central para o argumento metodológico do TF. Ela mostra que não basta contrastar caminhão e navio como modos abstratos: o resultado depende da cadeia construída. Para o \CabotageLens{}, isso implica tratar cada cenário como uma comparação condicionada entre uma alternativa rodoviária direta e uma alternativa rodoviário-cabotagem-rodoviária, sem extrapolar achados favoráveis para todos os corredores.
+
+\section{Comparações porta a porta e modelos de rede multimodal}
+\label{sec:porta-a-porta}
+
+Comparações modais tornam-se frágeis quando contrastam apenas a perna marítima com a rota rodoviária completa. A literatura de competitividade da cabotagem conteinerizada e de modelos multimodais mostra que decisões reais envolvem rede, frequência, tempo de espera, serviço disponível, capacidade, terminais, integração entre pernas, custo de inventário e componentes comerciais \cite{competitiveness2024}. Esses elementos motivam a necessidade de comparação porta a porta e deixam claro que a perna marítima só é interpretável junto dos acessos terrestres e das operações em porto.
+
+Ao mesmo tempo, essa literatura define uma limitação deliberada do \CabotageLens{}. O protótipo não resolve uma super-rede nacional, não escolhe entre operadores, não representa agenda de escalas, não confirma disponibilidade de slot e não produz preço de mercado. Seu papel é mais estreito: construir cenários auditáveis e orientados por rota, nos quais a alternativa direta e a alternativa multimodal sejam comparadas sob a mesma unidade funcional e com fronteiras explícitas.
+
+\section{Emissões operacionais, \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}}
+\label{sec:fronteiras-emissoes-literatura}
+
+A literatura ambiental de transporte marítimo e rodoviário usa fronteiras distintas. Resultados \ttw{} concentram-se nas emissões operacionais associadas ao consumo de combustível no uso do veículo ou da embarcação; resultados \wtw{} incluem etapas a montante do combustível; estudos de LCA ampliam ainda mais a fronteira para ciclo de vida de combustíveis, ativos e infraestrutura \cite{decarb2024,maritimelca2024}. Essas diferenças tornam inadequado combinar números de fontes distintas sem reconciliação explícita de unidade funcional, gases, fator de emissão e escopo.
+
+Por isso, a linha de base do \CabotageLens{} é de emissões operacionais \ttw{} de \cooe{}. A literatura \wtw{}, LCA ou CO$_2$-only é útil para contextualizar limites, comparar abordagens e orientar trabalhos futuros, mas não corrige automaticamente os resultados atuais. Também é necessário distinguir CO$_2$, \cooe{} e CO$_2$eq: a notação só é equivalente quando os gases incluídos, o potencial de aquecimento global, o fator implementado e a fronteira ambiental são compatíveis.
+
+\section{Operações portuárias e hoteling}
+\label{sec:portos-hoteling-literatura}
+
+Operações portuárias e \emph{hoteling} podem alterar a leitura ambiental e econômica da cadeia multimodal. Fontes sobre emissões em berço, consumo auxiliar e atividades de carga e descarga mostram que a permanência em porto e a operação de terminal são componentes relevantes para uma comparação completa \cite{berth2009,shipops2022,berthairquality2010}. Para este TF, essas fontes justificam tratar porto como parte da cadeia, e não como detalhe externo à perna marítima.
+
+Essa inclusão exige disciplina de proveniência. Um valor observado para porto específico tem força distinta de uma média ponderada de portos observados, de um padrão documentado ou de uma marcação de indisponibilidade. A literatura portuária não autoriza inserir fatores novos sem alinhamento de fronteira, unidade, tipo de operação e implementação. Do mesmo modo, dado ausente não deve ser lido como emissão nula; deve aparecer como lacuna, \emph{fallback} documentado ou componente indisponível.
+
+\section{Fronteira econômica e custo modelado}
+\label{sec:custo-modelado-literatura}
+
+A literatura de competitividade e mudança modal também mostra que decisão logística real envolve preço contratado, margem, tarifas, confiabilidade, tempo, inventário, risco, frequência e disponibilidade de serviço \cite{competitiveness2024,modalshiftreview2020}. Esses elementos são relevantes para interpretação, mas não pertencem integralmente à fronteira econômica atual do \CabotageLens{}.
+
+No TF, o resultado monetário é um proxy de custo operacional modelado. Ele permite comparar componentes representados sob uma mesma lógica de cenário, como combustível e parcelas operacionais documentadas, mas não equivale a cotação comercial, tarifa praticada, contrato, decisão de compra ou análise econômica completa. Portanto, um cenário com menor custo modelado deve ser lido como hipótese técnica dentro da fronteira do modelo, não como conclusão de mercado.
+
+\section{Síntese da lacuna metodológica}
+\label{sec:lacuna-metodologica}
+
+Em conjunto, a literatura revisada aponta uma lacuna compatível com a contribuição do \CabotageLens{}. Há base suficiente para motivar a cabotagem brasileira, cautela suficiente para rejeitar comparações simplificadas entre modos isolados e referências suficientes para mostrar que redes comerciais completas exigem informação além do escopo deste TF. O espaço metodológico do trabalho está entre esses extremos.
+
+O \CabotageLens{} responde a essa lacuna como um framework acadêmico auditável, orientado por rota e com fronteiras explícitas. A ferramenta compara alternativas porta a porta, preserva proveniência de distâncias e portos, explicita operações portuárias e \emph{hoteling} quando aplicáveis, separa emissões operacionais \ttw{} de \cooe{} de \wtw{}/LCA/CO$_2$-only, separa custo modelado de preço comercial e classifica evidências de forma conservadora. A literatura, portanto, sustenta a necessidade do framework e seus limites; os capítulos seguintes demonstram como essa disciplina é implementada, avaliada e interpretada.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Uso seguro das principais famílias de literatura no relatório.}
+\label{tab:uso-literatura}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}X X}
+\toprule
+Família de literatura & Uso no TF & Limite de uso \\
+\midrule
+Cabotagem brasileira e BR do Mar & Motivar o problema e o contexto nacional. & Não valida resultados rota a rota.\\
+Short sea shipping e mudança modal & Justificar comparação condicional, porta a porta e por corredor. & Não prova vantagem universal da cabotagem.\\
+Super-rede e competitividade & Mostrar que mercado real inclui rede, serviço, frequência e custo comercial. & Não transforma custo modelado em frete comercial.\\
+WTW/LCA e combustíveis & Contextualizar limites e trabalhos futuros. & Não calibra a linha de base \ttw{} de \cooe{}.\\
+Portos e hoteling & Justificar que componentes portuários importam. & Não fornece fator terminal-específico sem decisão metodológica.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A Tabela~\ref{tab:uso-literatura} antecipa a regra de citação usada nos capítulos seguintes: literatura serve para enquadrar, comparar e delimitar; resultados numéricos e classificações de uso vêm dos artefatos rastreados do \CabotageLens{}.

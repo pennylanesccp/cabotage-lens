@@ -1,0 +1,199 @@
+\chapter{Metodologia}
+\label{ch:metodologia}
+
+\section{Unidade funcional e alternativas comparadas}
+\label{sec:unidade-funcional}
+
+A unidade funcional adotada neste trabalho é o transporte de uma massa especificada de carga conteinerizada entre uma origem e um destino no Brasil. Essa definição mantém constante o serviço a ser atendido: o objeto de comparação não é um modo isolado, mas a entrega da mesma remessa sob duas alternativas metodologicamente comparáveis.
+
+A primeira alternativa é a rota rodoviária direta, na qual a remessa é transportada por caminhão entre origem e destino. A segunda é a cadeia rodoviária-cabotagem-rodoviária, composta pelo acesso rodoviário ao porto de origem, pela perna marítima de cabotagem, por componentes de operações portuárias e \emph{hoteling} conforme a fronteira selecionada do modelo, e pelo acesso rodoviário final ao destino. Quando esses componentes dependem de dados portuários incompletos, a hierarquia de fonte e \emph{fallback} permanece registrada e acompanha a interpretação do resultado.
+
+Nos artefatos de validação e sensibilidade deste TF, a base recorrente de referência é \texttt{1 TEU / 14 t} por remessa. Essa base deve ser lida como configuração recorrente do estudo, não como hipótese universal de carga para todo uso possível do \CabotageLens{}. Os resultados são interpretados por remessa. Normalizações por tonelada, TEU, contêiner ou tonelada-quilômetro podem ser úteis, mas somente quando preservam a base de carga, a distância considerada, a regra de alocação e a fronteira ambiental e econômica do cenário.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Unidade funcional e alternativas comparadas no TF.}
+\label{tab:unidade-alternativas}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}X X}
+\toprule
+Elemento & Definição neste TF & Limite de interpretação \\
+\midrule
+Unidade funcional & Movimento de uma quantidade especificada de carga conteinerizada entre origem e destino no Brasil. & Não representa todos os perfis de carga, serviço logístico ou contrato de transporte.\\
+Base recorrente & \texttt{1 TEU / 14 t} por remessa nos artefatos de validação e sensibilidade. & Base recorrente, não valor obrigatório para todo cenário.\\
+Rodovia direta & Cadeia porta a porta formada por uma perna rodoviária origem-destino. & Rota modelada para comparação, não reconstrução de uma operação real específica.\\
+Rodovia-cabotagem-rodovia & Cadeia com acesso terrestre inicial, perna marítima, portos/hoteling conforme fronteira e acesso final. & Não equivale a comparar apenas navio contra caminhão.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A Tabela~\ref{tab:unidade-alternativas} resume a disciplina comparativa adotada. Uma conclusão só é válida para a carga, a rota, os portos, os componentes e as fronteiras que foram efetivamente modelados.
+
+\section{Fontes primárias de dados e insumos derivados}
+\label{sec:fontes-dados}
+
+A metodologia do \CabotageLens{} combina fontes primárias, fontes externas, bases observadas, APIs de roteamento, fontes de mercado, fatores técnicos e hipóteses de modelagem. Esses elementos não entram no modelo com a mesma força evidenciária. Uma base observada histórica, um insumo processado a partir de literatura técnica, uma distância retornada por API e um preço de mercado volátil têm usos metodológicos diferentes e, por isso, devem preservar origem, artefato derivado e limite de interpretação.
+
+O objetivo desta seção é explicitar os grupos de insumos que sustentam rotas, custos, emissões, seleção de portos, operações portuárias, \emph{hoteling} e validação posterior. O inventário mais detalhado aparece no Apêndice~\ref{app:parametros}. A regra metodológica principal é que cada resultado deve carregar a proveniência do insumo e ser interpretado conforme a força da fonte: base observada, API de roteamento, fonte de mercado, fator técnico, insumo processado ou hipótese de modelagem.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Grupos de fontes e usos metodológicos.}
+\label{tab:grupos-fontes}
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}X X}
+\toprule
+Grupo de fonte & Uso metodológico & Limite de interpretação \\
+\midrule
+ANTAQ e artefatos observados & Evidência histórica de cabotagem, viagens, paradas e chamadas portuárias. & Não prova disponibilidade atual de serviço ou slot comercial.\\
+MRV e literatura técnica & Aproximações de eficiência marítima, hoteling e classes de embarcação. & Proxy técnico; não substitui dados específicos brasileiros sem revisão.\\
+Roteamento terrestre & Distâncias rodoviárias diretas, pre-carriage e on-carriage. & Rota modelada por provedor, não GPS observado nem rota contratual.\\
+Matriz marítima e referências & Distância porto-a-porto e proveniência da perna marítima. & A força depende de \texttt{seamatrix}, \texttt{external\_reference}, \texttt{manual\_override} ou \texttt{haversine\_fallback}.\\
+Preços e fatores & Insumos de custo modelado e emissões implementadas. & Voláteis e condicionados à fronteira; não são cotações comerciais completas.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A Tabela~\ref{tab:grupos-fontes} mostra por que os capítulos seguintes usam avisos de rota, rótulos de sensibilidade, categorias de benchmark e classificação conservadora de evidência antes de transformar resultados calculados em conclusões acadêmicas.
+
+\section{Fronteiras metodológicas do estudo}
+\label{sec:fronteiras-metodologicas}
+
+O \CabotageLens{} é tratado neste TF como uma ferramenta de comparação metodológica entre alternativas de transporte. Sua função é tornar explícitas as premissas de rota, distância, carga, custo modelado, emissões operacionais e qualidade da evidência. A ferramenta não é apresentada como cotador de frete, otimizador comercial de rede, sistema de contratação logística ou validação de disponibilidade real de serviço.
+
+A fronteira ambiental de linha de base é operacional. Nas pernas rodoviárias, ela corresponde às emissões diretas associadas ao uso de combustível no veículo, isto é, uma leitura tank-to-wheel. Na perna marítima, corresponde às emissões diretas da combustão a bordo, isto é, uma leitura tank-to-wake. O emprego da mesma sigla \ttw{} para modos distintos exige essa explicitação, pois uma comparação multimodal combina componentes terrestres e marítimos.
+
+As emissões de linha de base são reportadas como \cooe{}. Variantes como CO$_2$eq aparecem apenas quando reproduzem a notação de uma fonte ou de um benchmark externo. Resultados CO$_2$-only, fatores \wtw{}, estudos de LCA ou inventários com outro escopo de gases não são automaticamente comparáveis à linha de base deste TF sem alinhamento explícito de unidade funcional, fonte de fator, gases incluídos, regra de equivalência climática, distância e alocação.
+
+A fronteira econômica é a de custo modelado. Os valores em BRL representam a agregação dos componentes incluídos no cenário, como combustível, custos operacionais representados e componentes portuários conforme a fronteira selecionada e a proveniência disponível. Eles não representam frete comercial, tarifa contratada, cotação spot, preço de armador, tabela terminal completa, contrato logístico, custo de inventário, confiabilidade, seguro, margem comercial ou todos os encargos locais.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Fronteiras metodológicas de linha de base.}
+\label{tab:fronteiras-metodologicas}
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}X X}
+\toprule
+Dimensão & Definição neste TF & Fora da linha de base \\
+\midrule
+Emissões rodoviárias & Emissões operacionais \ttw{} associadas ao combustível consumido nas pernas terrestres. & \wtw{}, LCA, infraestrutura, fabricação de veículos e fatores de outra fronteira.\\
+Emissões marítimas & Emissões operacionais \ttw{} associadas ao combustível na perna marítima e componentes habilitados. & Ciclo de vida completo, combustíveis alternativos futuros ou fatores \wtw{} importados sem alinhamento.\\
+CO$_2$, \cooe{} e CO$_2$eq & Métrica reportada conforme fatores implementados e documentados. & Equivalência automática com CO$_2$-only ou fontes de outro escopo.\\
+Custo modelado & Estimativa dos componentes representados no cenário. & Frete comercial, tarifa, cotação, margem, serviço real ou decisão de compra.\\
+Escopo operacional & Comparação de alternativas modeladas para uma remessa e um par origem-destino. & Otimização nacional de rede, cronograma, frequência e viabilidade comercial.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A Tabela~\ref{tab:fronteiras-metodologicas} delimita o uso das evidências externas. Literatura, referências externas e artefatos de validação podem apoiar comparação, diagnóstico, discussão ou identificação de lacunas, mas não substituem automaticamente a metodologia implementada.
+
+\section{Construção da alternativa rodoviária direta}
+\label{sec:metodologia-rodovia}
+
+A alternativa rodoviária direta representa o transporte da mesma remessa por uma perna rodoviária origem-destino. Ela funciona como a referência terrestre da comparação: a origem, o destino, a carga e a unidade funcional permanecem constantes, enquanto a cadeia logística é limitada ao deslocamento por caminhão.
+
+A distância dessa alternativa é expressa em quilômetros e deriva da lógica de roteamento rodoviário e de cache disponível para o cenário. Ela deve ser interpretada como distância roteada/modelada sob provedor, perfil e configuração definidos, não como trajetória GPS observada nem como registro de uma viagem executada.
+
+\begin{equation}
+E_{\mathrm{road}} = f(d_{\mathrm{road}}, v, m, FE)
+\label{eq:road-emissions-concept}
+\end{equation}
+
+Na Equação~\ref{eq:road-emissions-concept}, \(E_{\mathrm{road}}\) representa as emissões operacionais rodoviárias em kg \cooe{} por remessa; \(d_{\mathrm{road}}\) é a distância rodoviária modelada; \(v\) representa a configuração de veículo; \(m\) é a carga transportada; e \(FE\) representa o fator implementado na fronteira operacional. A equação é conceitual: ela não introduz novo fator nem altera a linha de base implementada.
+
+O preset de veículo, a massa de carga, o consumo estimado, a fonte de preço e o fator de emissão devem permanecer rastreáveis aos módulos e dados implementados, sem substituição por valores externos não incorporados à linha de base.
+
+\section{Construção da alternativa rodoviária-cabotagem-rodoviária}
+\label{sec:metodologia-multimodal}
+
+A alternativa rodoviária-cabotagem-rodoviária representa a mesma remessa organizada como uma cadeia porta a porta. A perna marítima não substitui sozinha a viagem rodoviária completa; ela é combinada com os acessos terrestres e, conforme a fronteira selecionada, com componentes explícitos de operações portuárias e \emph{hoteling} associados às chamadas portuárias.
+
+\placeholderfigure{Placeholder: fluxo metodológico da alternativa multimodal, mostrando pre-carriage, porto de origem, port operations/hoteling, perna marítima, porto de destino e on-carriage. A figura final deve indicar onde entram distância, custo, emissões e proveniência.}{Decomposição metodológica da alternativa rodoviária-cabotagem-rodoviária.}{fig:cadeia-multimodal}
+
+A Figura~\ref{fig:cadeia-multimodal} evidencia por que a decomposição por perna é indispensável. O resultado agregado da alternativa multimodal só é interpretável quando o leitor consegue identificar os acessos rodoviários, a distância marítima, os portos usados, os componentes portuários incluídos, a regra de alocação da carga e a proveniência das distâncias.
+
+\begin{equation}
+R_{\mathrm{multi}} = R_{\mathrm{pre}} + R_{\mathrm{mar}} + R_{\mathrm{port}} + R_{\mathrm{on}}
+\label{eq:multimodal-aggregation}
+\end{equation}
+
+Na Equação~\ref{eq:multimodal-aggregation}, \(R_{\mathrm{multi}}\) representa o resultado agregado da alternativa multimodal para uma dimensão de saída, como custo modelado ou emissões operacionais; \(R_{\mathrm{pre}}\) é o acesso rodoviário inicial; \(R_{\mathrm{mar}}\) é a perna marítima; \(R_{\mathrm{port}}\) representa operações portuárias e \emph{hoteling} incluídos; e \(R_{\mathrm{on}}\) é o acesso rodoviário final. A fórmula explicita a agregação por componentes, sem criar coeficientes novos.
+
+\section{Seleção de portos e definição de cenários}
+\label{sec:selecao-portos}
+
+A seleção de portos transforma a unidade funcional em uma cadeia multimodal concreta. Para cada cenário, a origem, o destino e a carga permanecem os mesmos; o que muda é a forma de construir a alternativa multimodal, incluindo os portos escolhidos, as distâncias de acesso e a perna marítima.
+
+Em cenários ordinários, a ferramenta pode selecionar portos elegíveis por uma lógica determinística e auditável, como proximidade geográfica dentro do conjunto de portos configurados. Em cenários definidos para estudo, validação ou sensibilidade, portos específicos podem ser forçados. A seleção automática e a imposição manual são situações metodológicas diferentes e devem permanecer identificáveis no texto, nas saídas e nos artefatos de validação.
+
+Essa lógica não é uma otimização completa de super-rede multimodal. O método não modela grade de navegação, frequência de escalas, disponibilidade de armador, slot, tempo de trânsito, confiabilidade, estoque em trânsito ou decisão comercial de roteamento. Portos alternativos exigem disciplina de nomenclatura: Pecém não valida Porto de Fortaleza, e Suape não valida Porto do Recife.
+
+\section{Proveniência das distâncias e hierarquia de confiança}
+\label{sec:proveniencia-distancias}
+
+A distância é uma entrada metodológica comum às duas alternativas. Na alternativa rodoviária direta, ela define a perna origem-destino. Na alternativa multimodal, aparece no \emph{pre-carriage}, na perna marítima e no \emph{on-carriage}. Por isso, a confiança no resultado depende da proveniência de cada distância, não apenas do total agregado.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Hierarquia de proveniência de distâncias.}
+\label{tab:proveniencia-distancias}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}X X}
+\toprule
+Proveniência & Uso metodológico & Limite de interpretação \\
+\midrule
+Roteamento rodoviário/cache & Distância modelada para pernas terrestres. & Não é trajetória GPS medida nem rota comercial efetivamente usada.\\
+\texttt{seamatrix} & Distância marítima matricial para par de portos aplicável. & Não comprova escala, frequência, serviço ou contrato.\\
+\texttt{external\_reference} & Referência documentada para o par de portos do cenário. & Só vale para o par e a unidade documentados.\\
+\texttt{manual\_override} & Substituição explícita e rastreável para um cenário. & Exige motivação documentada; não deve ser generalizada.\\
+\texttt{haversine\_fallback} & Estimativa geométrica quando falta distância marítima documentada. & Triagem ou lacuna de evidência; não valida rota marítima.\\
+Referência ausente & Indica que a distância necessária não está suficientemente documentada. & Pode bloquear conclusão ou limitar o caso a sensibilidade.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A Tabela~\ref{tab:proveniencia-distancias} mostra que a hierarquia de proveniência afeta a classificação da evidência, mas não altera a fronteira ambiental ou econômica. Uma distância bem documentada melhora a rastreabilidade da rota; não prova disponibilidade real de serviço. Uma distância frágil pode tornar inadequada uma conclusão numérica forte mesmo que o cálculo tenha sido executado corretamente.
+
+\section{Cadeias conceituais de cálculo de emissões e custos}
+\label{sec:cadeias-calculo}
+
+Os cálculos do \CabotageLens{} devem ser lidos como cadeias conceituais auditáveis, não como caixas-pretas nem como ajustes de linha de base a partir de referências externas. Para as pernas rodoviárias, a sequência conceitual é: distância rodoviária, veículo e carga definem combustível estimado; combustível e fator implementado definem emissões operacionais; combustível e insumos de custo definem o custo modelado.
+
+Para a perna marítima, a distância marítima, carga/alocação e parâmetros implementados definem combustível marítimo alocado; combustível e fator implementado definem emissões operacionais marítimas; combustível e insumos aplicáveis definem custo marítimo modelado. Para a alternativa multimodal, os resultados são agregados por perna e componente, preservando a distinção entre distância, consumo, custo e emissões.
+
+Custos e emissões são dimensões diferentes e não definem, por si só, um vencedor único sem regra de decisão explícita. A consistência metodológica exige que os dois lados da comparação mantenham a mesma unidade funcional e que os componentes incluídos no total sejam declarados.
+
+\section{Operações portuárias, hoteling e proveniência dos dados}
+\label{sec:portops-metodologia}
+
+As operações portuárias e o \emph{hoteling} entram na metodologia como componentes explícitos dentro da fronteira operacional selecionada, não como camada automática de validação operacional. Eles acrescentam custo modelado, combustível e emissões apenas quando o caminho do modelo possui base representável e registra a fonte usada para cada componente.
+
+Quando há dados específicos de operações portuárias ou \emph{hoteling} para o porto selecionado, esses valores são usados diretamente como \texttt{observed}. Quando os dados específicos faltam, o modelo evita interpretar a ausência como zero e aplica uma hierarquia transparente de proveniência: \texttt{estimated\_port\_average}, quando há média ponderada defensável de portos observados; \texttt{literature\_default}, quando só existe um padrão documentado do modelo; ou \texttt{unavailable}, quando nenhum valor observado ou documentado pode ser atribuído.
+
+A regra metodológica central também é evitar dupla contagem. Se a intensidade marítima ou o fator agregado usado em um cenário já incorpora consumo operacional associado ao navio em porto, acrescentar \emph{hoteling} separado pode superestimar emissões e custos. Se o cenário separa navegação, permanência em porto e operação de terminal, essa decomposição deve permanecer explícita na interpretação.
+
+\section{Qualidade de rota, classificação de evidências e limites de uso}
+\label{sec:qualidade-evidencias}
+
+A metodologia adota uma leitura conservadora da qualidade de rota e da força da evidência. Um resultado calculado não é automaticamente um resultado adequado para conclusão principal. Antes de interpretar uma linha, é necessário verificar se a cadeia representa uma alternativa comparável, se a distância tem proveniência suficiente, se os portos pertencem ao cenário declarado, se a fronteira de custo e emissões foi preservada e se há avisos que limitem o uso acadêmico do resultado.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Classificações metodológicas usadas para controlar inferências.}
+\label{tab:classificacoes-metodologia}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}X X}
+\toprule
+Condição ou classificação & Significado metodológico & Uso seguro \\
+\midrule
+\texttt{historical\_diagnostic} & Resultado preservado para rastreabilidade histórica. & Auditoria e evolução metodológica.\\
+\texttt{reference\_needed} & Falta evidência suficiente para distância ou premissa necessária. & Lacuna e prioridade de validação futura.\\
+\texttt{excluded} & Caso inválido ou fora da fronteira adotada. & Justificativa de exclusão, sem uso numérico conclusivo.\\
+\texttt{sensitivity\_only} / \texttt{sensitive} & Cenário ou resultado sob hipótese condicional. & Discussão condicionada, sem substituir caso-base.\\
+\texttt{headline\_candidate} & Categoria reservada para resultado principal futuro. & Nenhum caso atual deve ser promovido a essa classe.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A Tabela~\ref{tab:classificacoes-metodologia} antecipa o uso da validação no Capítulo~\ref{ch:validacao}. Benchmarks externos, incluindo materiais associados a Gustavo/Costa, entram nesse esquema apenas como contexto de comparação e diagnóstico de fronteiras. Eles não definem automaticamente a metodologia do \CabotageLens{}, não substituem o caso-base, não validam magnitudes sem alinhamento metodológico completo e não transformam custos modelados em fretes comerciais.
+

@@ -1,0 +1,84 @@
+\chapter{Discussão}
+\label{ch:discussao}
+
+\section{Pergunta interpretativa e fronteiras de leitura}
+\label{sec:pergunta-discussao}
+
+O Capítulo~\ref{ch:discussao} responde a uma pergunta diferente daquela tratada no Capítulo~\ref{ch:resultados}: qual é o significado da evidência sob as fronteiras adotadas? O capítulo anterior registrou resultados, categorias de uso e valores observados; a discussão interpreta o alcance desses achados sem acrescentar novas linhas, recalcular cenários ou promover classificações além daquelas já rastreadas.
+
+A leitura defensável é deliberadamente estreita. As sensibilidades executadas, o benchmark Gustavo/Costa, o rerun Supabase/cache e a reconciliação rodoviária tornam a evidência mais interpretável, mas não mudam sua natureza. O conjunto atual sustenta discussão direcional, metodológica e condicionada; não sustenta validação calibrada, conclusão comercial, disponibilidade operacional real ou superioridade universal da cabotagem. Nenhum resultado corrente deve ser tratado como \texttt{headline\_candidate}.
+
+Essa separação organiza o fechamento do relatório. O Capítulo~\ref{ch:resultados} mostra o que foi observado; o Capítulo~\ref{ch:discussao} discute por que esses achados importam; o Capítulo~\ref{ch:limitacoes} detalha as limitações que impedem leituras mais fortes; e o Capítulo~\ref{ch:conclusoes} conclui sem transformar evidência condicionada em afirmação universal.
+
+\section{Por que a comparação rota a rota e porta a porta importa}
+\label{sec:porta-a-porta-discussao}
+
+A principal implicação metodológica do \CabotageLens{} é que a comparação modal não pode ser reduzida a caminhão contra navio em trechos isolados. A alternativa multimodal combina acesso rodoviário ao porto, perna marítima, operações portuárias e \emph{hoteling} conforme a fronteira e a proveniência disponíveis, e acesso rodoviário final. Assim, os resultados de custo modelado e emissões operacionais \ttw{} de \cooe{} emergem da cadeia porta a porta, não de uma propriedade abstrata da cabotagem.
+
+Essa leitura é coerente com a literatura de \emph{short sea shipping} e mudança modal, que trata a vantagem marítima como dependente de corredor, acesso terrestre, utilização, serviço, frequência, confiabilidade e custo total \cite{shortsea2019,modalshiftreview2020}. O papel da literatura aqui é interpretativo: ela ajuda a explicar por que uma comparação rota a rota é necessária, mas não substitui as categorias de validação do projeto nem valida numericamente qualquer corredor brasileiro específico.
+
+O valor analítico da fronteira porta a porta está em impedir duas simplificações. A primeira seria favorecer artificialmente a cabotagem ao ignorar acessos terrestres e portos. A segunda seria descartar a cabotagem por comparar apenas médias nacionais ou trechos genéricos. O \CabotageLens{} se posiciona entre esses extremos: compara cenários completos sob premissas explícitas e obriga cada interpretação a carregar suas escolhas de rota, porto, distância, custo e emissão.
+
+\section{Corredores, portos e proveniência da distância marítima}
+\label{sec:corredores-portos-discussao}
+
+Os resultados precisam ser lidos por corredor porque porto e distância marítima mudam o significado da comparação. Alterar um porto não muda apenas um rótulo; muda as pernas rodoviárias de acesso, a perna marítima, a coerência operacional da cadeia e a relação entre o cenário modelado e o caso que se deseja discutir. Por isso, sensibilidades com Pecém ou Suape podem ser úteis para entender comportamento sob hipótese alternativa, mas não validam silenciosamente Porto de Fortaleza ou Porto do Recife.
+
+A proveniência da distância marítima cumpre função semelhante. Uma distância com referência rastreada permite uma leitura mais forte do que uma distância de triagem, enquanto \texttt{haversine\_fallback} preserva histórico e diagnóstico, mas não deve ser tratado como evidência robusta de rota navegável. O caso \texttt{same-port} também tem valor interpretativo porque mostra uma fronteira da lógica de seleção: quando origem e destino marítimos coincidem, o registro pode documentar aviso, exclusão ou limitação de rota, mas não desempenho normal da cabotagem.
+
+Essa disciplina muda a pergunta da discussão. Em vez de perguntar se a cabotagem é superior em sentido geral, o relatório deve perguntar o que acontece quando uma cadeia específica, com portos específicos e distância de proveniência conhecida, é comparada com a rota rodoviária direta sob a mesma unidade funcional. A resposta continua condicional, mas é tecnicamente mais defensável.
+
+\section{Benchmark Gustavo/Costa: apoio direcional, não calibração}
+\label{sec:benchmark-discussao}
+
+O benchmark Gustavo/Costa é uma camada importante para o TF porque introduz uma referência externa ao próprio \CabotageLens{}. No relatório final, ele pode receber tratamento mais amplo do que no artigo técnico, pois ajuda a explicar ao leitor da banca como o modelo se comporta diante de um comparador familiar ao contexto da pesquisa. Ainda assim, seu papel deve permanecer subordinado à contribuição principal do trabalho: o framework auditável, não a reprodução do workbook.
+
+O significado seguro do Batch 002 é apoio direcional com lacunas de magnitude. Nos pares comparáveis, o workbook e o \CabotageLens{} apontam na mesma direção modal de emissões, mas a classificação \texttt{same\_direction\_large\_gap} preserva que a magnitude não foi calibrada. Isso não é uma falha a esconder nem uma prova de que o workbook seja verdade absoluta. É evidência de que os dois artefatos compartilham um sinal interpretativo, enquanto permanecem separados por fronteiras, premissas e métodos ainda não reconciliados.
+
+A Tabela~\ref{tab:benchmark-discussao} resume como cada camada associada ao benchmark deve ser interpretada na discussão.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Leitura interpretativa das camadas associadas ao benchmark externo.}
+\label{tab:benchmark-discussao}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}X X}
+\toprule
+Camada de evidência & Significado para a discussão & Leitura que deve ser evitada \\
+\midrule
+Benchmark Gustavo/Costa & Acrescenta contraste externo e apoio direcional nas linhas comparáveis. & Tratar o workbook como verdade de referência ou reprodução calibrada.\\
+Rerun Supabase/cache & Reduz a plausibilidade de instabilidade computacional como explicação principal da lacuna. & Converter estabilidade de cache em validação de rota, serviço ou magnitude.\\
+Reconciliação rodoviária & Mostra que premissas rodoviárias explicam parte relevante da lacuna \emph{road-only}. & Substituir o baseline do \CabotageLens{} pelo fator diagnóstico.\\
+Lacunas remanescentes & Tornam visíveis diferenças de distância, veículo, carga, alocação, porto, serviço, port-ops/hoteling e fronteira ambiental. & Fechar a validação como se as diferenças já estivessem reconciliadas.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A discussão deve explicar essas lacunas de forma causal, mas sem inventar precisão. No lado rodoviário, a diferença pode estar associada a base de distância, consumo, fator de emissão, veículo, carga e alocação. No lado multimodal, pode envolver distância marítima, seleção de portos, lógica de serviço, port-ops/hoteling, alocação por contêiner e fronteira ambiental. A reconciliação rodoviária torna parte do desvio mais inteligível, mas não resolve a comparação completa nem autoriza recalibrar o aplicativo.
+
+\section{Fronteiras econômica, ambiental e portuária na interpretação}
+\label{sec:fronteiras-discussao}
+
+As fronteiras de custo e emissão não são apenas ressalvas defensivas; elas definem o tipo de significado que os resultados podem ter. Custos modelados permitem comparar componentes representados sob a mesma lógica de cenário, mas não são fretes comerciais, tarifas contratadas ou evidência de preço de mercado. A literatura de competitividade e super-rede ajuda a mostrar que a decisão real inclui frequência, inventário, confiabilidade, margens e estrutura de serviço \cite{competitiveness2024}, mas esses elementos não entram como validação automática dos custos do \CabotageLens{}.
+
+No mesmo sentido, emissões operacionais \ttw{} de \cooe{} não devem ser lidas como \wtw{} ou LCA. Quando aplicado à cadeia multimodal, o rótulo operacional \ttw{} deve ser entendido de forma modalmente específica: \emph{tank-to-wheel} nas pernas rodoviárias e \emph{tank-to-wake} na perna marítima. Fontes que discutem \wtw{}, LCA, combustíveis alternativos ou CO$_2$-only são relevantes para enquadrar a fronteira e trabalhos futuros \cite{decarb2024,maritimelca2024}, mas não corrigem nem substituem os resultados operacionais atuais sem reconciliação explícita de unidade, gases e escopo.
+
+As operações portuárias reforçam essa leitura de fronteira. \emph{Hoteling} e componentes portuários importam porque a cadeia multimodal não termina na distância marítima; há consumo associado à permanência e operação do navio no porto \cite{berth2009,shipops2022}. Ao mesmo tempo, incluir esses componentes como aproximações modeladas não transforma o estudo em inventário terminal-específico nem em análise completa de qualidade do ar. A interpretação segura é reconhecer que portos e berços afetam a comparação, mantendo-os como componentes condicionais dentro da fronteira declarada.
+
+\section{Valor prático do \CabotageLens{} como triagem}
+\label{sec:valor-pratico-triagem}
+
+O valor prático do \CabotageLens{} está em estruturar uma triagem técnica, não em decidir uma contratação. A ferramenta permite comparar cenários, observar como escolhas de porto e distância alteram o resultado, identificar dependência de premissas frágeis e separar resultados executados, sensibilidades, diagnósticos, bloqueios e exemplos de limitação. Isso ajuda a formular perguntas melhores antes de buscar evidência comercial ou operacional externa.
+
+Essa utilidade é mais forte quando o resultado é lido junto com seus metadados. Um cenário com distância marítima de referência comunica algo diferente de um cenário com \texttt{haversine\_fallback}; uma sensibilidade com porto alternativo comunica algo diferente de um baseline validado; um benchmark direcional com lacuna de magnitude comunica algo diferente de uma calibração. A contribuição prática está justamente em preservar essas diferenças, não em esconder a incerteza atrás de um número final.
+
+Assim, o \CabotageLens{} pode apoiar triagem de corredores, comparação técnica entre alternativas, exposição de premissas e identificação de lacunas para validação futura com operadores, terminais ou bases comerciais. Ele não deve ser apresentado como cotador de frete, motor de booking, otimizador nacional de super-rede ou prova de disponibilidade de serviço. A passagem de um cenário favorável para uma decisão logística real exige evidência externa que este TF não pretende substituir.
+
+\section{Contribuição metodológica do framework auditável}
+\label{sec:contribuicao-framework-discussao}
+
+A contribuição metodológica do trabalho está na combinação de cálculo, rastreabilidade e controle de inferência. O \CabotageLens{} não entrega apenas um valor de custo ou emissão; ele organiza uma cadeia de evidências que inclui construção de rota, seleção de portos, fonte de distância marítima, fronteira de custo, fronteira de emissão, avisos de qualidade, classificação de validação, sensibilidades e benchmark externo.
+
+Essa estrutura torna a discussão mais forte porque transforma incertezas em objetos explícitos de análise. Um resultado favorável pode ser reconhecido como favorável sem ser promovido indevidamente; uma lacuna de magnitude pode ser discutida como diferença metodológica sem ser tratada como erro opaco; uma sensibilidade pode informar comportamento do modelo sem substituir o caso-base; e uma referência externa pode apoiar direção sem virar verdade absoluta.
+
+Com isso, o Capítulo~\ref{ch:discussao} encerra em uma posição analítica, não conclusiva em excesso: a evidência atual mostra que o framework permite comparar cenários de forma auditável e interpretar resultados sob fronteiras controladas. O Capítulo~\ref{ch:limitacoes} detalha as limitações que ainda impedem transformar essa estrutura em validação operacional, comercial ou universal.

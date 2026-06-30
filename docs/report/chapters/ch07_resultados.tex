@@ -1,0 +1,166 @@
+\chapter{Resultados}
+\label{ch:resultados}
+
+\section{Inventário de evidências e categorias de uso}
+\label{sec:inventario-resultados}
+
+Este capítulo apresenta os resultados observados sob as categorias de evidência definidas no Capítulo~\ref{ch:validacao}. A pergunta aqui é descritiva: quais resultados foram obtidos, quais linhas ficaram planejadas, bloqueadas, excluídas ou não comparáveis, e qual uso cada grupo pode ter no TF. A interpretação logística, política ou decisória mais ampla fica para o Capítulo~\ref{ch:discussao}.
+
+O inventário final combina cinco camadas de evidência. A Tabela~\ref{tab:inventario-resultados} resume a escala de cada camada sem reproduzir integralmente os artefatos de validação.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Inventário de evidências no Capítulo~\ref{ch:resultados}.}
+\label{tab:inventario-resultados}
+\begin{tabularx}{\textwidth}{p{0.27\textwidth}p{0.18\textwidth}X X}
+\toprule
+Camada & Escala & Situação & Uso permitido \\
+\midrule
+Batch 001 histórico & 5 casos & \texttt{historical\_diagnostic}. & Rastrear evolução do método e problemas originais.\\
+Batch 001B decisão metodológica & 8 linhas & Record-only, planejadas, bloqueadas, excluídas ou preparadas. & Separar limitação, lacuna, bloqueio e sensibilidade.\\
+Sensibilidades executadas & 3 linhas & Todas \texttt{sensitive}. & Mostrar comportamento sob hipóteses documentadas.\\
+Batch 002 benchmark externo & 21 pares OD & Todos \texttt{same\_direction\_large\_gap}. & Apoio direcional externo com lacuna de magnitude.\\
+Células Batch 002 não comparáveis & 15 células & 6 self-pairs e 9 linhas rodoviárias zero ou não positivas. & Registrar limite de comparabilidade.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+As categorias preservam as fronteiras materiais dos resultados. Custos são estimativas modeladas por remessa, não tarifas, cotações, contratos ou fretes comerciais. A saída ambiental é reportada como emissões operacionais \ttw{} de \cooe{}, salvo indicação explícita em contrário; valores \wtw{}, LCA ou CO$_2$-only não devem ser misturados com a saída atual sem reconciliação metodológica.
+
+\section{Resultados históricos e decisões metodológicas Batch 001/001B}
+\label{sec:resultados-batch001}
+
+O Batch 001 preserva cinco resultados históricos executados. O Batch 001B não converteu essas linhas em validação final; ele reorganizou a evidência em registros de limitação, exclusão, lacuna de referência, bloqueio metodológico e preparação de sensibilidade. Essa separação é necessária para impedir que resultados históricos ou planejados sejam tratados como conclusões numéricas principais.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Resultado classificatório Batch 001/001B.}
+\label{tab:resultados-batch001b}
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}p{0.21\textwidth}r p{0.23\textwidth}X}
+\toprule
+Grupo & Casos & Qtde. & Classificação & Uso no Capítulo~\ref{ch:resultados} \\
+\midrule
+Batch 001 histórico & \texttt{TF-VAL-001} a \texttt{TF-VAL-005} & 5 & \texttt{historical\_diagnostic} & Preservar saídas iniciais e limitações.\\
+Limitação same-port & \texttt{TF-VAL-001B-001} & 1 & \texttt{limitation\_example} & Registrar Santos/Santos como limite de rota.\\
+Preparação de sensibilidade & \texttt{TF-VAL-001B-002}, \texttt{003B}, \texttt{005B} & 3 & \texttt{sensitivity\_discussion} & Origem das três sensibilidades executadas.\\
+Referência pendente & \texttt{TF-VAL-001B-003A}, \texttt{005A} & 2 & \texttt{reference\_needed} & Lacunas de distância exata.\\
+Caso excluído & \texttt{TF-VAL-001B-004A} & 1 & \texttt{excluded} & Excluir Angra dos Reis/Salvador do uso numérico.\\
+Bloqueio metodológico & \texttt{TF-VAL-001B-004B} & 1 & \texttt{methodology\_blocked} & Registrar decisão de porto ainda pendente.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+O resultado importante da Tabela~\ref{tab:resultados-batch001b} é classificatório. Nenhuma linha dessa camada é \texttt{headline\_candidate}, e nenhuma linha planejada do Batch 001B deve ser lida como execução numérica.
+
+\section{Resultados das sensibilidades executadas}
+\label{sec:resultados-sensibilidades}
+
+Foram executadas três linhas de sensibilidade do Batch 001B: \texttt{TF-VAL-001B-SENS-002-REFDIST}, \texttt{TF-VAL-001B-SENS-003B-ALTPECEM} e \texttt{TF-VAL-001B-SENS-005B-ALTSUAPE}. A Tabela~\ref{tab:resultados-sensibilidades} apresenta apenas os valores já rastreados nos artefatos de validação e mantém a classificação de cada linha como \texttt{sensitive}.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Resultados das sensibilidades executadas.}
+\label{tab:resultados-sensibilidades}
+\begin{tabularx}{\textwidth}{p{0.19\textwidth}p{0.18\textwidth}p{0.15\textwidth}r r r r p{0.11\textwidth}}
+\toprule
+Caso & Papel & Portos & Custo rod. & Custo multi. & Emissões rod. & Emissões multi. & Classe \\
+ &  &  & (BRL) & (BRL) & (kg \cooe{}) & (kg \cooe{}) & \\
+\midrule
+\texttt{SENS-002-REFDIST} & Distância de referência Santos/Manaus & Santos--Manaus & 18.456,45 & 1.263,50 & 6.961,76 & 1.104,67 & \texttt{sensitive}\\
+\texttt{SENS-003B-ALTPECEM} & Porto alternativo Pecém & Manaus--Pecém & 26.391,03 & 727,33 & 9.989,83 & 573,48 & \texttt{sensitive}\\
+\texttt{SENS-005B-ALTSUAPE} & Porto alternativo Suape & Rio Grande--Suape & 18.121,99 & 2.122,38 & 7.013,27 & 1.127,46 & \texttt{sensitive}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Nos três cenários de sensibilidade executados, a alternativa multimodal apresentou menor custo modelado e menores emissões operacionais \ttw{} de \cooe{} do que a alternativa rodoviária direta. Essa afirmação vale apenas para essas hipóteses nomeadas de distância ou porto alternativo, e cada linha continua \texttt{sensitive}, não linha de base validada nem \texttt{headline\_candidate}.
+
+A diferença entre os custos rodoviários e multimodais deve ser lida dentro da fronteira de custo do modelo. Na alternativa rodoviária direta, a remessa é atribuída a um veículo rodoviário dedicado; na alternativa multimodal, a perna marítima distribui custos e consumo de navio pela capacidade/carga representada no cenário. Essa estrutura explica por que o custo multimodal modelado pode ficar muito menor, mas não transforma o valor em frete comercial, tarifa portuária completa ou cotação contratável.
+
+\section{Resultados do benchmark externo Batch 002}
+\label{sec:resultados-batch002}
+
+O Batch 002 registra o benchmark externo Gustavo/Costa como camada comparativa, não como verdade de referência. A função desta seção é apresentar o inventário e a classificação do lote; as causas e implicações das diferenças de magnitude são discutidas no Capítulo~\ref{ch:discussao}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Resultado resumido do benchmark externo Batch 002.}
+\label{tab:resultados-batch002}
+\begin{tabularx}{\textwidth}{p{0.40\textwidth}r X}
+\toprule
+Métrica & Valor & Classificação ou interpretação \\
+\midrule
+Células da matriz parseadas & 36 & Inventário completo da matriz 6 x 6 lida para o benchmark.\\
+Pares OD positivos e suportados & 21 & Linhas elegíveis para comparação na base reportada do workbook.\\
+Execuções bem-sucedidas & 21 & Todos os pares positivos suportados foram processados.\\
+Células puladas antes da execução & 15 & 6 self-pairs e 9 linhas rodoviárias zero ou não positivas; \texttt{not\_comparable}.\\
+Alinhamento direcional & 21/21 & Workbook e \CabotageLens{} apontam emissões menores para cabotagem/multimodal.\\
+Classificação após rerun & 21 x & \texttt{same\_direction\_large\_gap}.\\
+Validação calibrada de magnitude & 0 & O lote não sustenta reprodução exata nem calibração contra o workbook.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+O resultado central da Tabela~\ref{tab:resultados-batch002} é direcional: nos 21 pares OD positivos e suportados, o workbook e o \CabotageLens{} apontam a mesma direção modal de emissões. Essa concordância deve aparecer sempre junto da classificação \texttt{same\_direction\_large\_gap}, porque a magnitude permanece divergente e impede tratar o benchmark como calibração, reprodução exata, validação plena de rota ou prova de premissas internas do workbook.
+
+\section{Resultados do rerun/cache e da reconciliação rodoviária}
+\label{sec:resultados-rerun-reconciliacao}
+
+O rerun Supabase/cache e a reconciliação rodoviária qualificam o resultado do Batch 002. O primeiro testa se a lacuna de magnitude poderia ser explicada principalmente por instabilidade de provedor ou cache. A segunda testa, apenas como diagnóstico, quanto a lacuna de emissões rodoviárias observada seria reduzida ao aplicar o fator rodoviário da família Gustavo/Costa às mesmas distâncias cacheadas.
+
+A Tabela~\ref{tab:resultados-rerun-reconciliacao} resume essas duas verificações, mantendo explícito que o fator rodoviário é diagnóstico e não substitui a linha de base do \CabotageLens{}.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Rerun/cache e reconciliação rodoviária.}
+\label{tab:resultados-rerun-reconciliacao}
+\begin{tabularx}{\textwidth}{p{0.30\textwidth}p{0.30\textwidth}p{0.19\textwidth}X}
+\toprule
+Verificação & Resultado observado & Classificação & Uso seguro \\
+\midrule
+Rerun Supabase/cache & 21/21 pares executados; 63 route-cache hits; 0 misses; 0 escritas por provedor; 0 falhas. & Rastreabilidade computacional & Mostrar reutilização de distâncias cacheadas, sem validar magnitude.\\
+Divergência rodoviária média/mediana & 201,0\%/150,5\% $\rightarrow$ 199,8\%/149,3\%. & \texttt{benchmark\_methodology\_gap} & Cache/provedor é improvável como causa principal da lacuna road-only.\\
+Divergência multimodal média/mediana & 53,5\%/52,9\% $\rightarrow$ 60,8\%/63,7\%. & \texttt{benchmark\_boundary\_mismatch} & Divergência residual permanece metodológica e de fronteira.\\
+Fator rodoviário diagnóstico & 0,8602944 kg CO$_2$eq/km. & \texttt{benchmark\_supports\_road\_factor\_explanation} & Sensibilidade de alinhamento, não novo fator de linha de base.\\
+Divergência rodoviária após diagnóstico & 199,8\%/149,3\% $\rightarrow$ 43,9\%/19,6\%. & Diagnóstico de premissa rodoviária & Indicar sensibilidade a premissas rodoviárias.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+O rerun fortalece a reprodutibilidade computacional do Batch 002, mas não valida a magnitude exata das emissões. A reconciliação rodoviária reduziu a lacuna observada no lado road-only, mas não a eliminou. O resultado indica sensibilidade forte a premissas de consumo e fator de emissão rodoviários, sem recalibrar o \CabotageLens{}, sem substituir o modelo rodoviário de linha de base e sem transformar o workbook em referência normativa.
+
+\section{Síntese dos resultados classificados e transição para a discussão}
+\label{sec:sintese-resultados}
+
+O Capítulo~\ref{ch:resultados} não produz uma conclusão universal sobre cabotagem. Ele organiza resultados observados e classificações de uso. A síntese segura é que há evidência de sensibilidade favorável em três cenários nomeados, apoio direcional externo no Batch 002, estabilidade computacional no rerun e redução diagnóstica da lacuna rodoviária quando se aplica uma premissa de benchmark. Nenhum desses grupos, isolado ou em conjunto, autoriza validação calibrada, superioridade universal ou uso comercial direto.
+
+A Figura~\ref{fig:sintese-resultados-classificados} reserva espaço para uma visualização final que conecte camadas de evidência, categorias e usos permitidos sem substituir a leitura detalhada da Tabela~\ref{tab:sintese-resultados}.
+
+\placeholderfigure{Placeholder: visualização sintética dos resultados classificados, com camadas Batch 001, Batch 001B, sensibilidades, Batch 002, rerun/cache, reconciliação rodoviária e ausência de headline candidate atual.}{Síntese visual dos resultados classificados e seus usos permitidos.}{fig:sintese-resultados-classificados}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Síntese dos resultados classificados.}
+\label{tab:sintese-resultados}
+\begin{tabularx}{\textwidth}{p{0.22\textwidth}X p{0.23\textwidth}X}
+\toprule
+Grupo & Observação obtida & Classificação & O que não sustenta \\
+\midrule
+Batch 001 & 5 casos históricos com limitações. & \texttt{historical\_diagnostic} & Resultado corrigido ou validação final.\\
+Batch 001B & 8 linhas de decisão. & Diversas categorias metodológicas & Execução numérica de todas as linhas planejadas.\\
+Sensibilidades & 3 linhas com multimodal menor em custo e emissões. & \texttt{sensitive} & Linha de base robusta, validação do porto original ou frete comercial.\\
+Batch 002 & 21/21 pares alinhados em direção. & \texttt{benchmark\_supports\_direction} & Reprodução exata, calibração ou workbook como verdade de referência.\\
+Rerun/cache & 63 cache hits e 0 misses. & \texttt{benchmark\_methodology\_gap} & Validação de magnitude, rota comercial ou serviço disponível.\\
+Reconciliação & Divergência rodoviária reduzida para 43,9\%/19,6\%. & \texttt{benchmark\_supports\_road\_factor\_explanation} & Recalibração da aplicação.\\
+Resultado principal robusto & 0 casos. & Sem \texttt{headline\_candidate}. & Superioridade universal da cabotagem.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A Tabela~\ref{tab:sintese-resultados} responde ao que foi obtido e como cada evidência deve ser usada. O Capítulo~\ref{ch:discussao} parte desses resultados para discutir significado, lacunas metodológicas, relação com a literatura, implicações para uso do \CabotageLens{} e limites para trabalho futuro, sem alterar a classificação conservadora apresentada aqui.

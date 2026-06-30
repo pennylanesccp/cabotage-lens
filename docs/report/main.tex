@@ -1,0 +1,175 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil,english]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+
+\geometry{margin=2.5cm}
+\onehalfspacing
+
+\definecolor{clblue}{RGB}{32,68,112}
+\definecolor{clgray}{RGB}{245,247,250}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=clblue,
+  citecolor=clblue,
+  urlcolor=clblue,
+  pdftitle={CabotageLens: Relatorio final de TF},
+  pdfauthor={Felipe de Sá Proença}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\nouppercase{\leftmark}}
+\rhead{\thepage}
+\setlength{\headheight}{15pt}
+
+\newcommand{\CabotageLens}{\textit{CabotageLens}}
+\newcommand{\cooe}{CO$_2$e}
+\newcommand{\ttw}{TTW}
+\newcommand{\wtw}{WTW}
+\newcommand{\methodnote}[1]{%
+  \begin{center}
+  \fcolorbox{clblue}{clgray}{%
+    \parbox{0.90\textwidth}{\small #1}%
+  }
+  \end{center}
+}
+\newcommand{\placeholderfigure}[3]{%
+  \begin{figure}[htbp]
+  \centering
+  \fbox{\parbox{0.86\textwidth}{\centering\small #1}}
+  \caption{#2}
+  \label{#3}
+  \end{figure}
+}
+
+\newcommand{\reporttitle}{CabotageLens: framework computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil}
+\newcommand{\reportauthor}{Felipe de Sá Proença}
+\newcommand{\reportadvisor}{Orientador(a) a definir}
+\newcommand{\reportinstitution}{Instituição a definir}
+\newcommand{\reportcourse}{Curso a definir}
+\newcommand{\reportlocation}{Cidade a definir}
+\newcommand{\reportyear}{2026}
+
+\begin{document}
+
+\selectlanguage{brazil}
+
+\begin{titlepage}
+\centering
+{\large \reportinstitution\par}
+\vspace{0.5cm}
+{\large \reportcourse\par}
+\vfill
+{\Large\bfseries \reporttitle\par}
+\vspace{1.5cm}
+{\large \reportauthor\par}
+\vfill
+\begin{flushleft}
+\textbf{Orientador(a):} \reportadvisor\\
+\textbf{Local:} \reportlocation\\
+\textbf{Ano:} \reportyear
+\end{flushleft}
+\vspace{1cm}
+{\reportlocation\\\reportyear\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+
+\chapter*{Resumo}
+\addcontentsline{toc}{chapter}{Resumo}
+Este relatório apresenta o \CabotageLens{}, um framework computacional auditável para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros. A contribuição central é uma estrutura de comparação porta a porta, orientada por rota, que preserva unidade funcional, portos, distâncias, proveniência dos dados, componentes portuários, emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado. O trabalho separa explicitamente emissões \ttw{}, \wtw{} e LCA; distingue custo modelado de frete comercial; e classifica evidências de forma conservadora para evitar extrapolações sobre superioridade modal universal, viabilidade comercial ou validação calibrada. As sensibilidades executadas e o benchmark externo Gustavo/Costa apoiam interpretação direcional cautelosa, mas não substituem validação operacional, disponibilidade de serviço ou reconstrução integral de referências externas. O resultado é uma base metodológica e computacional defensável para discutir quando a cabotagem pode aparecer promissora em cenários específicos e quais lacunas precisam ser resolvidas antes de conclusões mais fortes.
+
+\textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; \cooe{}; custo modelado; rastreabilidade; Brasil.
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\selectlanguage{english}
+\textbf{TODO:} Prepare the final English abstract after the Portuguese text, institutional metadata, figures, and bibliography style are finalized. The English version should preserve the same methodological boundaries: door-to-door comparison, operational TTW \cooe{}, modeled operational cost proxy, conservative evidence classification, and Gustavo/Costa as supporting directional benchmark evidence rather than an absolute reference or calibrated reproduction target.
+\selectlanguage{brazil}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter*{Dicionário de termos, siglas e abreviações}
+\phantomsection
+\addcontentsline{toc}{chapter}{Dicionário de termos, siglas e abreviações}
+\small
+\begin{description}
+  \item[\CabotageLens{}] Framework computacional auditável desenvolvido neste TF para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário sob unidade funcional, rota, portos, proveniência, custo modelado, emissões operacionais e classificação de evidência.
+  \item[ANTAQ] Agência Nacional de Transportes Aquaviários, fonte de dados e contexto para cabotagem e chamadas portuárias quando aplicável.
+  \item[OD] Par origem-destino usado para definir a remessa, construir rotas e organizar resultados.
+  \item[TEU] Unidade equivalente a contêiner de 20 pés, usada como referência de carga conteinerizada nos cenários rastreados.
+  \item[BRL] Real brasileiro, unidade monetária usada para expressar o proxy de custo operacional modelado.
+  \item[BR do Mar] Programa/política brasileira de estímulo à cabotagem, usado como contexto institucional e não como validação de corredor específico.
+  \item[Cabotagem] Navegação costeira entre portos brasileiros; no relatório, aparece como componente de uma cadeia porta a porta, não como comparação isolada navio-versus-caminhão.
+  \item[SSS] \textit{Short sea shipping}; literatura de navegação marítima costeira usada para contextualizar mudança modal, benefícios condicionais e cautelas metodológicas.
+  \item[Transporte rodoviário direto] Alternativa porta a porta formada por uma perna rodoviária origem-destino para a mesma unidade funcional.
+  \item[Transporte rodoviário-cabotagem-rodoviário] Alternativa multimodal com acesso rodoviário inicial, porto de origem, perna marítima, porto de destino, componentes portuários quando representáveis e acesso rodoviário final.
+  \item[Pre-carriage] Trecho rodoviário inicial entre a origem da carga e o porto de embarque.
+  \item[On-carriage] Trecho rodoviário final entre o porto de desembarque e o destino da carga.
+  \item[Operações portuárias] Componentes operacionais de porto ou terminal incluídos apenas quando há proveniência defensável; dado ausente deve permanecer como lacuna, não como zero silencioso.
+  \item[Hoteling/hotelling] Permanência e consumo operacional associados ao navio em porto. A inclusão depende de dado observado, média ponderada, default documentado ou marcação explícita de indisponibilidade.
+  \item[\ttw{}] Fronteira operacional \textit{tank-to-wheel}/\textit{tank-to-wake} usada como referência ambiental de linha de base para emissões de \cooe{} no \CabotageLens{}.
+  \item[\wtw{}] Perspectiva \textit{well-to-wheel}/\textit{well-to-wake}, mais ampla que a fronteira operacional de linha de base e usada apenas como contexto, limitação ou trabalho futuro quando não reconciliada.
+  \item[LCA/ACV] Avaliação de ciclo de vida; fronteira ambiental mais ampla que inclui etapas fora da linha operacional \ttw{} atual.
+  \item[CO$_2$] Dióxido de carbono. Não é automaticamente equivalente a \cooe{} ou CO$_2$eq sem alinhamento de gases, fator, unidade e fronteira.
+  \item[\cooe{}] Dióxido de carbono equivalente conforme fatores e fronteira implementados no projeto.
+  \item[CO$_2$eq] Notação preservada quando vinculada a benchmark ou fonte externa; não deve ser tratada como intercambiável com \cooe{} sem suporte de fronteira.
+  \item[GEE/GHG] Gases de efeito estufa; categoria ambiental dependente dos gases incluídos no fator de emissão.
+  \item[Unidade funcional] Base comum da comparação: movimento de uma quantidade especificada de carga conteinerizada entre origem e destino.
+  \item[Carga útil] Massa de carga efetivamente transportada na remessa ou cenário, distinta da capacidade nominal do veículo ou embarcação.
+  \item[Fator de emissão] Coeficiente que converte consumo de combustível, energia ou atividade em emissões sob uma unidade, gases incluídos e fronteira específica.
+  \item[Proxy de custo operacional modelado] Resultado monetário parcial calculado para componentes representados no cenário; não equivale a frete comercial, cotação, tarifa, contrato ou viabilidade econômica.
+  \item[Frete comercial] Preço de mercado negociado, cotado ou contratado para transporte; está fora da fronteira de saída monetária do \CabotageLens{}.
+  \item[Fallback] Uso de aproximação, matriz, referência indireta ou fonte alternativa quando não há dado mais forte; deve permanecer explícito e reduzir a força da evidência quando material.
+  \item[Proveniência] Registro da origem, método e confiabilidade do dado usado no cálculo, como observado, referência externa, matriz, default documentado, fallback ou indisponível.
+  \item[Benchmark] Referência externa usada para plausibilidade, contraste ou evidência direcional; não é verdade absoluta nem alvo automático de calibração.
+  \item[Gustavo/Costa] Família de benchmark externo usada para comparação direcional e diagnóstico de lacunas; não é verdade de referência, não é reprodução calibrada e não substitui a linha de base do \CabotageLens{}.
+  \item[Evidência direcional] Evidência de que duas fontes ou execuções apontam o mesmo sentido de resultado, sem demonstrar equivalência de magnitude.
+  \item[Reclassificação conservadora] Atribuição de uma categoria de uso à evidência para impedir que resultados sensíveis, diagnósticos ou não comparáveis sejam promovidos a conclusão principal.
+  \item[Análise de sensibilidade] Execução sob hipótese documentada para avaliar dependência do resultado a distância, porto, parâmetro, fronteira ou fonte.
+  \item[Reprodutibilidade] Capacidade de rastrear entradas, cache, rotas, parâmetros, resultados e classificações para repetir ou auditar uma execução.
+\end{description}
+\normalsize
+\clearpage
+\pagenumbering{arabic}
+
+\input{chapters/ch01_introducao}
+\input{chapters/ch02_objetivos}
+\input{chapters/ch03_revisao_bibliografica}
+\input{chapters/ch04_metodologia}
+\input{chapters/ch05_implementacao_computacional}
+\input{chapters/ch06_validacao_evidencia}
+\input{chapters/ch07_resultados}
+\input{chapters/ch08_discussao}
+\input{chapters/ch09_limitacoes}
+\input{chapters/ch10_conclusoes}
+
+\appendix
+\input{appendices/appendix_a_parametros}
+\input{appendices/appendix_b_validacao}
+\input{appendices/appendix_c_checklist_reprodutibilidade}
+
+% TODO: revisar metadados e estilo bibliográfico ABNT/USP na etapa final.
+\bibliographystyle{plain}
+\bibliography{../references}
+
+\end{document}
