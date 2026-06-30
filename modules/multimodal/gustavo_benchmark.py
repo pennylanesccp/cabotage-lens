@@ -331,7 +331,21 @@ def _evaluate_pair(
     cabotage_model_kg = float(result["multimodal"]["total_co2e"])
     model_savings_pct = ((1.0 - (cabotage_model_kg / road_model_kg)) * 100.0) if road_model_kg > 0.0 else None
     sea_inputs = result.get("inputs", {})
+    multimodal = result.get("multimodal", {})
+    first_mile = multimodal.get("first_mile", {})
+    last_mile = multimodal.get("last_mile", {})
     sea_result = result.get("multimodal", {}).get("sea", {})
+    component_payload = _component_payload_from_result(result)
+    workbook_winner = _emissions_winner(
+        pair.workbook_road_kg_co2e_per_container,
+        pair.workbook_cabotage_kg_co2e_per_container,
+    )
+    component_payload["workbook_emissions_winner"] = workbook_winner
+    component_payload["modal_conclusion_matches_workbook"] = (
+        component_payload.get("model_emissions_winner") == workbook_winner
+        if component_payload.get("model_emissions_winner") and workbook_winner
+        else None
+    )
 
     return {
         "origin_label": geometry["origin"]["label"],
@@ -355,8 +369,108 @@ def _evaluate_pair(
         "sea_route_corridor_port_path": sea_inputs.get("sea_route_corridor_port_path"),
         "road_cost_brl": float(result["road_only"]["cost"]),
         "multimodal_cost_brl": float(result["multimodal"]["total_cost"]),
+        "pre_carriage_emissions_kgco2e": _float_or_none(first_mile.get("co2e")),
+        "on_carriage_emissions_kgco2e": _float_or_none(last_mile.get("co2e")),
         "sea_sailing_fuel_kg": float(sea_result.get("fuel_kg_sailing") or 0.0),
         "sea_total_fuel_kg": float(sea_result.get("fuel_kg") or 0.0),
+        **component_payload,
+    }
+
+
+def _component_sum(values: Iterable[float | None]) -> float | None:
+    parsed = [_float_or_none(value) for value in values]
+    if any(value is None for value in parsed):
+        return None
+    return float(sum(value for value in parsed if value is not None))
+
+
+def _emissions_winner(road_total: float | None, cabotage_total: float | None) -> str | None:
+    if road_total is None or cabotage_total is None:
+        return None
+    if abs(cabotage_total - road_total) <= 1e-9:
+        return "tie"
+    return "cabotage_lower_emissions" if cabotage_total < road_total else "road_lower_emissions"
+
+
+def _component_payload_from_result(result: dict[str, Any]) -> dict[str, Any]:
+    road = result.get("road_only", {})
+    multimodal = result.get("multimodal", {})
+    first_mile = multimodal.get("first_mile", {})
+    sea = multimodal.get("sea", {})
+    last_mile = multimodal.get("last_mile", {})
+    inputs = result.get("inputs", {})
+
+    road_total = _float_or_none(road.get("co2e"))
+    cabotage_total = _float_or_none(multimodal.get("total_co2e"))
+    pre_carriage = _float_or_none(first_mile.get("co2e"))
+    on_carriage = _float_or_none(last_mile.get("co2e"))
+    marine_ef = _float_or_none(inputs.get("marine_ef_kg_per_kg"))
+    sailing_fuel = _float_or_none(sea.get("fuel_kg_sailing"))
+    hoteling_fuel = _float_or_none(sea.get("hoteling_fuel_kg"))
+
+    navigation = sailing_fuel * marine_ef if sailing_fuel is not None and marine_ef is not None else None
+    hoteling = hoteling_fuel * marine_ef if hoteling_fuel is not None and marine_ef is not None else None
+    port_ops = _float_or_none(sea.get("port_ops_co2e"))
+    marine = _float_or_none(sea.get("co2e_marine"))
+    component_total = _component_sum([pre_carriage, navigation, hoteling, port_ops, on_carriage])
+    component_delta = (
+        cabotage_total - component_total
+        if cabotage_total is not None and component_total is not None
+        else None
+    )
+    road_vs_cabotage_delta = (
+        cabotage_total - road_total
+        if cabotage_total is not None and road_total is not None
+        else None
+    )
+    road_vs_cabotage_pct = (
+        (road_vs_cabotage_delta / road_total) * 100.0
+        if road_vs_cabotage_delta is not None and road_total not in (None, 0.0)
+        else None
+    )
+
+    hoteling_included = bool(sea.get("hoteling_included"))
+    hoteling_source_level = sea.get("hoteling_source_level")
+    port_ops_included = bool(sea.get("port_ops_included"))
+    port_ops_source_level = sea.get("port_ops_source_level")
+    port_ops_warnings = sea.get("port_ops_warnings") or []
+
+    return {
+        "navigation_emissions_kgco2e": navigation,
+        "hoteling_emissions_kgco2e": hoteling,
+        "marine_emissions_kgco2e": marine,
+        "port_ops_emissions_kgco2e": port_ops,
+        "component_total_emissions_kgco2e": component_total,
+        "component_total_delta_kgco2e": component_delta,
+        "road_vs_cabotage_delta_kgco2e": road_vs_cabotage_delta,
+        "road_vs_cabotage_pct_difference": road_vs_cabotage_pct,
+        "cabotage_emissions_savings_pct": (
+            (1.0 - (cabotage_total / road_total)) * 100.0
+            if cabotage_total is not None and road_total not in (None, 0.0)
+            else None
+        ),
+        "model_emissions_winner": _emissions_winner(road_total, cabotage_total),
+        "workbook_emissions_winner": None,
+        "modal_conclusion_matches_workbook": None,
+        "hoteling_requested": bool(sea.get("hoteling_requested")),
+        "hoteling_included": hoteling_included,
+        "hoteling_exclusion_reason": sea.get("hoteling_exclusion_reason"),
+        "hoteling_hours_total": _float_or_none(sea.get("hoteling_hours_total")),
+        "hoteling_source_level": hoteling_source_level,
+        "hoteling_basis": sea.get("hoteling_basis"),
+        "hoteling_warning": sea.get("hoteling_warning"),
+        "hoteling_fallback_flag": bool(
+            hoteling_included and hoteling_source_level not in (None, "", "observed")
+        ),
+        "port_ops_included": port_ops_included,
+        "port_ops_source_level": port_ops_source_level,
+        "port_ops_source_level_counts": sea.get("port_ops_source_level_counts"),
+        "port_ops_warning_count": len(port_ops_warnings),
+        "port_ops_warnings": port_ops_warnings,
+        "port_ops_fallback_flag": bool(
+            port_ops_included and port_ops_source_level not in (None, "", "observed")
+        ),
+        "sailing_fuel_calc_mode": sea.get("sailing_fuel_calc_mode"),
     }
 
 

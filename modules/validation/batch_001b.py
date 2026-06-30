@@ -78,6 +78,39 @@ EXTRA_OUTPUT_FIELDS = [
 
 ALL_OUTPUT_FIELDS = [*OUTPUT_FIELDS, *EXTRA_OUTPUT_FIELDS]
 
+REPORT_COMPONENT_FIELDS = [
+    "pre_carriage_emissions_kgco2e",
+    "on_carriage_emissions_kgco2e",
+    "multimodal_road_emissions_kgco2e",
+    "navigation_emissions_kgco2e",
+    "hoteling_emissions_kgco2e",
+    "marine_emissions_kgco2e",
+    "port_ops_emissions_kgco2e",
+    "component_total_emissions_kgco2e",
+    "component_total_delta_kgco2e",
+    "road_vs_cabotage_delta_kgco2e",
+    "road_vs_cabotage_pct_difference",
+    "cabotage_emissions_savings_pct",
+    "emissions_winner",
+    "hoteling_requested",
+    "hoteling_included",
+    "hoteling_exclusion_reason",
+    "hoteling_hours_total",
+    "hoteling_source_level",
+    "hoteling_basis",
+    "hoteling_warning",
+    "hoteling_fallback_flag",
+    "port_ops_included",
+    "port_ops_source_level",
+    "port_ops_source_level_counts",
+    "port_ops_warning_count",
+    "port_ops_warnings",
+    "port_ops_fallback_flag",
+    "sailing_fuel_calc_mode",
+]
+
+REPORT_OUTPUT_FIELDS = [*ALL_OUTPUT_FIELDS, *REPORT_COMPONENT_FIELDS]
+
 RECORD_ONLY_MODES = {"record_only", "excluded", "invalid", "warning_only"}
 MODEL_RERUN_MODE = "model_rerun"
 PLANNED_MODES = {"planned", "not_run"}
@@ -650,6 +683,124 @@ def build_exclusion_row(config: Mapping[str, Any], case: Mapping[str, Any]) -> d
     return row
 
 
+def _as_float_value(value: Any) -> float | None:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out
+
+
+def _json_cell(value: Any) -> str | None:
+    if value in (None, "", [], {}):
+        return None
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def _component_sum(values: Iterable[float | None]) -> float | None:
+    parsed = [_as_float_value(value) for value in values]
+    if any(value is None for value in parsed):
+        return None
+    return float(sum(value for value in parsed if value is not None))
+
+
+def _emissions_winner(road_total: float | None, cabotage_total: float | None) -> str | None:
+    if road_total is None or cabotage_total is None:
+        return None
+    if abs(cabotage_total - road_total) <= 1e-9:
+        return "tie"
+    return "cabotage_lower_emissions" if cabotage_total < road_total else "road_lower_emissions"
+
+
+def _report_component_payload(results: Mapping[str, Any]) -> dict[str, Any]:
+    row = {field: None for field in REPORT_COMPONENT_FIELDS}
+    road = results.get("road_only") or {}
+    multimodal = results.get("multimodal") or {}
+    first_mile = multimodal.get("first_mile") or {}
+    sea = multimodal.get("sea") or {}
+    last_mile = multimodal.get("last_mile") or {}
+    inputs = results.get("inputs") or {}
+
+    road_total = _as_float_value(road.get("co2e"))
+    cabotage_total = _as_float_value(multimodal.get("total_co2e"))
+    pre_carriage = _as_float_value(first_mile.get("co2e"))
+    on_carriage = _as_float_value(last_mile.get("co2e"))
+    marine_ef = _as_float_value(inputs.get("marine_ef_kg_per_kg"))
+    sailing_fuel = _as_float_value(sea.get("fuel_kg_sailing"))
+    hoteling_fuel = _as_float_value(sea.get("hoteling_fuel_kg"))
+
+    navigation = sailing_fuel * marine_ef if sailing_fuel is not None and marine_ef is not None else None
+    hoteling = hoteling_fuel * marine_ef if hoteling_fuel is not None and marine_ef is not None else None
+    port_ops = _as_float_value(sea.get("port_ops_co2e"))
+    marine = _as_float_value(sea.get("co2e_marine"))
+    multimodal_road = _component_sum([pre_carriage, on_carriage])
+    component_total = _component_sum([pre_carriage, navigation, hoteling, port_ops, on_carriage])
+    component_delta = (
+        cabotage_total - component_total
+        if cabotage_total is not None and component_total is not None
+        else None
+    )
+    road_vs_cabotage_delta = (
+        cabotage_total - road_total
+        if cabotage_total is not None and road_total is not None
+        else None
+    )
+    road_vs_cabotage_pct = (
+        (road_vs_cabotage_delta / road_total) * 100.0
+        if road_vs_cabotage_delta is not None and road_total not in (None, 0.0)
+        else None
+    )
+    cabotage_savings_pct = (
+        (1.0 - (cabotage_total / road_total)) * 100.0
+        if cabotage_total is not None and road_total not in (None, 0.0)
+        else None
+    )
+
+    hoteling_included = bool(sea.get("hoteling_included"))
+    hoteling_source_level = sea.get("hoteling_source_level")
+    port_ops_included = bool(sea.get("port_ops_included"))
+    port_ops_source_level = sea.get("port_ops_source_level")
+    port_ops_warnings = sea.get("port_ops_warnings") or []
+
+    row.update(
+        {
+            "pre_carriage_emissions_kgco2e": pre_carriage,
+            "on_carriage_emissions_kgco2e": on_carriage,
+            "multimodal_road_emissions_kgco2e": multimodal_road,
+            "navigation_emissions_kgco2e": navigation,
+            "hoteling_emissions_kgco2e": hoteling,
+            "marine_emissions_kgco2e": marine,
+            "port_ops_emissions_kgco2e": port_ops,
+            "component_total_emissions_kgco2e": component_total,
+            "component_total_delta_kgco2e": component_delta,
+            "road_vs_cabotage_delta_kgco2e": road_vs_cabotage_delta,
+            "road_vs_cabotage_pct_difference": road_vs_cabotage_pct,
+            "cabotage_emissions_savings_pct": cabotage_savings_pct,
+            "emissions_winner": _emissions_winner(road_total, cabotage_total),
+            "hoteling_requested": bool(sea.get("hoteling_requested")),
+            "hoteling_included": hoteling_included,
+            "hoteling_exclusion_reason": sea.get("hoteling_exclusion_reason"),
+            "hoteling_hours_total": _as_float_value(sea.get("hoteling_hours_total")),
+            "hoteling_source_level": hoteling_source_level,
+            "hoteling_basis": sea.get("hoteling_basis"),
+            "hoteling_warning": sea.get("hoteling_warning"),
+            "hoteling_fallback_flag": bool(
+                hoteling_included and hoteling_source_level not in (None, "", "observed")
+            ),
+            "port_ops_included": port_ops_included,
+            "port_ops_source_level": port_ops_source_level,
+            "port_ops_source_level_counts": _json_cell(sea.get("port_ops_source_level_counts")),
+            "port_ops_warning_count": len(port_ops_warnings),
+            "port_ops_warnings": _json_cell(port_ops_warnings),
+            "port_ops_fallback_flag": bool(
+                port_ops_included and port_ops_source_level not in (None, "", "observed")
+            ),
+            "sailing_fuel_calc_mode": sea.get("sailing_fuel_calc_mode"),
+        }
+    )
+    return row
+
+
 def build_result_row(
     config: Mapping[str, Any],
     case: Mapping[str, Any],
@@ -661,6 +812,7 @@ def build_result_row(
     automatic_destination_port: Mapping[str, Any] | None = None,
     forced_origin_port: Mapping[str, Any] | None = None,
     forced_destination_port: Mapping[str, Any] | None = None,
+    include_report_components: bool = False,
 ) -> dict[str, Any]:
     override = _case_maritime_override(case)
     row = _base_row(config, case)
@@ -728,6 +880,8 @@ def build_result_row(
         row["road_cost_brl"] = road.get("cost")
         row["multimodal_emissions_kgco2e"] = multimodal.get("total_co2e")
         row["multimodal_cost_brl"] = multimodal.get("total_cost")
+        if include_report_components:
+            row.update(_report_component_payload(results))
 
     _finalize_flags(row, case)
     row["output_status"] = "executed"
@@ -748,7 +902,12 @@ def build_rows_without_execution(config: Mapping[str, Any]) -> list[dict[str, An
     return rows
 
 
-def _execute_model_case(config: Mapping[str, Any], case: Mapping[str, Any]) -> dict[str, Any]:
+def _execute_model_case(
+    config: Mapping[str, Any],
+    case: Mapping[str, Any],
+    *,
+    include_report_components: bool = False,
+) -> dict[str, Any]:
     from modules.multimodal.builder import (
         build_path_geometry_from_resolved,
         load_routing_assets,
@@ -808,6 +967,7 @@ def _execute_model_case(config: Mapping[str, Any], case: Mapping[str, Any]) -> d
             automatic_destination_port=automatic_destination_port,
             forced_origin_port=forced_origin_port,
             forced_destination_port=forced_destination_port,
+            include_report_components=include_report_components,
         )
         row["validation_status"] = _clean_text(case.get("validation_status")) or "warning_only"
         row["same_port_flag"] = True
@@ -852,10 +1012,16 @@ def _execute_model_case(config: Mapping[str, Any], case: Mapping[str, Any]) -> d
         automatic_destination_port=automatic_destination_port,
         forced_origin_port=forced_origin_port,
         forced_destination_port=forced_destination_port,
+        include_report_components=include_report_components,
     )
 
 
-def build_rows(config: Mapping[str, Any], *, execute: bool = False) -> list[dict[str, Any]]:
+def build_rows(
+    config: Mapping[str, Any],
+    *,
+    execute: bool = False,
+    include_report_components: bool = False,
+) -> list[dict[str, Any]]:
     if not execute:
         return build_rows_without_execution(config)
 
@@ -867,7 +1033,13 @@ def build_rows(config: Mapping[str, Any], *, execute: bool = False) -> list[dict
         if mode in RECORD_ONLY_MODES:
             rows.append(build_exclusion_row(config, case))
         elif mode == MODEL_RERUN_MODE:
-            rows.append(_execute_model_case(config, case))
+            rows.append(
+                _execute_model_case(
+                    config,
+                    case,
+                    include_report_components=include_report_components,
+                )
+            )
         elif mode in PLANNED_MODES:
             rows.append(build_planned_row(config, case))
         else:
@@ -890,6 +1062,29 @@ def write_output_json(rows: Sequence[Mapping[str, Any]], path: Path | str) -> No
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("w", encoding="utf-8") as handle:
         json.dump(list(rows), handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+
+
+def write_report_output_csv(rows: Sequence[Mapping[str, Any]], path: Path | str) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=REPORT_OUTPUT_FIELDS, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field) for field in REPORT_OUTPUT_FIELDS})
+
+
+def write_report_output_json(rows: Sequence[Mapping[str, Any]], path: Path | str) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("w", encoding="utf-8") as handle:
+        json.dump(
+            [{field: row.get(field) for field in REPORT_OUTPUT_FIELDS} for row in rows],
+            handle,
+            indent=2,
+            ensure_ascii=False,
+        )
         handle.write("\n")
 
 

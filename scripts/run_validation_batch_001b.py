@@ -23,6 +23,8 @@ from modules.validation.batch_001b import (
     load_validation_config,
     write_output_csv,
     write_output_json,
+    write_report_output_csv,
+    write_report_output_json,
 )
 
 _log = get_logger("run_validation_batch_001b")
@@ -46,6 +48,11 @@ def main() -> int:
         help="Actually run model_rerun cases. Without this, model cases are emitted as planned rows only.",
     )
     parser.add_argument(
+        "--report-components",
+        action="store_true",
+        help="Write report-ready component and provenance columns in addition to the standard fields.",
+    )
+    parser.add_argument(
         "--json-only",
         action="store_true",
         help="Write only JSON output.",
@@ -65,14 +72,24 @@ def main() -> int:
 
     try:
         config = load_validation_config(args.config)
-        rows = build_rows(config, execute=bool(args.execute))
+        rows = build_rows(
+            config,
+            execute=bool(args.execute),
+            include_report_components=bool(args.report_components),
+        )
         csv_path = args.output_csv or default_output_csv_path(config)
         json_path = args.output_json or default_output_json_path(config)
         if not args.json_only:
-            write_output_csv(rows, csv_path)
+            if args.report_components:
+                write_report_output_csv(rows, csv_path)
+            else:
+                write_output_csv(rows, csv_path)
             _log.info("Batch 001B CSV written to %s", csv_path)
         if not args.csv_only:
-            write_output_json(rows, json_path)
+            if args.report_components:
+                write_report_output_json(rows, json_path)
+            else:
+                write_output_json(rows, json_path)
             _log.info("Batch 001B JSON written to %s", json_path)
     except ValidationConfigError as exc:
         _log.error(str(exc))
