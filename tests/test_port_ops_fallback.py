@@ -195,17 +195,26 @@ class LegacyHotelingFallbackTests(unittest.TestCase):
 
 
 class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
-    def _path_data(self) -> dict:
+    def _path_data(
+        self,
+        *,
+        road_direct_km: float = 1000.0,
+        first_mile_km: float = 100.0,
+        last_mile_km: float = 50.0,
+        sea_km: float = 1200.0,
+        port_origin_name: str = "Observed Port",
+        port_destiny_name: str = "Missing Port",
+    ) -> dict:
         return {
             "status": "ok",
             "origin": {"label": "Origin, SP", "uf": "SP"},
             "destiny": {"label": "Destiny, RJ", "uf": "RJ"},
-            "port_origin": {"name": "Observed Port"},
-            "port_destiny": {"name": "Missing Port"},
-            "road_direct": {"distance_km": 1000.0},
-            "first_mile": {"distance_km": 100.0},
-            "last_mile": {"distance_km": 50.0},
-            "sea_leg": {"distance_km": 1200.0},
+            "port_origin": {"name": port_origin_name},
+            "port_destiny": {"name": port_destiny_name},
+            "road_direct": {"distance_km": road_direct_km},
+            "first_mile": {"distance_km": first_mile_km},
+            "last_mile": {"distance_km": last_mile_km},
+            "sea_leg": {"distance_km": sea_km},
         }
 
     def _fake_vessel(self) -> VesselClassEfficiency:
@@ -237,14 +246,20 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
         trips = 0 if distance_km <= 0 else 1
         return liters, 0.0, 0.0, trips, 0.0, 0.0
 
-    def _run_evaluator(self, *, include_port_ops: bool) -> dict:
+    def _run_evaluator(
+        self,
+        *,
+        include_port_ops: bool,
+        observed_port_ops: list[dict] | None = None,
+        path_data: dict | None = None,
+    ) -> dict:
         diesel_lookup = DieselPriceLookup(
             source_csv="diesel.csv",
             default_price_r_per_l=6.0,
             uf_to_price={"SP": 6.12, "RJ": 6.15},
             row_count=2,
         )
-        observed = [
+        observed = observed_port_ops or [
             {"port_name": "Observed Port", "fuel_kg": 8.0, "cargo_teu": 1.0},
             {"port_name": "Large Peer", "fuel_kg": 20.0, "cargo_teu": 10.0},
         ]
@@ -287,7 +302,7 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
             side_effect=self._estimate_leg_liters,
         ):
             return evaluator.evaluate_path(
-                self._path_data(),
+                path_data or self._path_data(),
                 cargo_t=14.0,
                 cargo_teu=1.0,
                 truck_key="semi_27t",
@@ -298,6 +313,39 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
                 port_ops_scenario="test",
                 port_ops_observed_ports=observed,
             )
+
+    def _assert_component_totals_match(self, result: dict) -> None:
+        multimodal = result["multimodal"]
+        sea = multimodal["sea"]
+        marine_ef = float(result["inputs"]["marine_ef_kg_per_kg"])
+
+        expected_marine_co2e = (
+            float(sea["fuel_kg_sailing"]) + float(sea["hoteling_fuel_kg"])
+        ) * marine_ef
+        self.assertAlmostEqual(sea["co2e_marine"], expected_marine_co2e)
+        self.assertAlmostEqual(sea["co2e"], sea["co2e_marine"] + sea["port_ops_co2e"])
+        self.assertAlmostEqual(
+            multimodal["total_co2e"],
+            multimodal["first_mile"]["co2e"] + sea["co2e"] + multimodal["last_mile"]["co2e"],
+        )
+
+    def test_route_total_uses_complete_observed_port_data(self) -> None:
+        result = self._run_evaluator(
+            include_port_ops=True,
+            path_data=self._path_data(port_destiny_name="Destination Port"),
+            observed_port_ops=[
+                {"port_name": "Observed Port", "fuel_kg": 8.0, "cargo_teu": 1.0},
+                {"port_name": "Destination Port", "fuel_kg": 6.0, "cargo_teu": 1.0},
+            ],
+        )
+
+        sea = result["multimodal"]["sea"]
+
+        self.assertAlmostEqual(sea["port_ops_fuel_kg"], 14.0)
+        self.assertEqual(sea["port_ops_source_level"], "observed")
+        self.assertEqual(sea["port_ops_source_level_counts"], {"observed": 2})
+        self.assertLess(result["multimodal"]["total_co2e"], result["road_only"]["co2e"])
+        self._assert_component_totals_match(result)
 
     def test_route_total_includes_estimated_missing_port_call(self) -> None:
         with_port_ops = self._run_evaluator(include_port_ops=True)
@@ -313,6 +361,17 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
             with_port_ops["multimodal"]["total_co2e"],
             without_port_ops["multimodal"]["total_co2e"],
         )
+        self.assertLess(with_port_ops["multimodal"]["total_co2e"], with_port_ops["road_only"]["co2e"])
+        self._assert_component_totals_match(with_port_ops)
+
+    def test_short_road_route_can_remain_lower_than_multimodal(self) -> None:
+        result = self._run_evaluator(
+            include_port_ops=True,
+            path_data=self._path_data(road_direct_km=100.0),
+        )
+
+        self.assertLessEqual(result["road_only"]["co2e"], result["multimodal"]["total_co2e"])
+        self._assert_component_totals_match(result)
 
 
 if __name__ == "__main__":
