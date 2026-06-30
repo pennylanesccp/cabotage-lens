@@ -67,6 +67,5 @@ local/
 outputs/
 
 # Local-only reference papers and workbooks. Tracked metadata lives in docs/.
-*.pdf
 docs/references/
 references/

@@ -1,0 +1,66 @@
+This is BibTeX, Version 0.99e
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: cabotagelens_technical_article.aux
+Reallocating 'name_of_file' (item size: 1) to 6 items.
+The style file: plain.bst
+Reallocating 'name_of_file' (item size: 1) to 14 items.
+Database file #1: ../references.bib
+Warning--to sort, need author or key in icct2022
+Warning--to sort, need author or key in shortsea2019
+Warning--to sort, need author or key in modalshiftreview2020
+Warning--to sort, need author or key in competitiveness2024
+Warning--to sort, need author or key in decarb2024
+Warning--to sort, need author or key in maritimelca2024
+Warning--empty author in shortsea2019
+Warning--empty journal in shortsea2019
+Warning--empty author in modalshiftreview2020
+Warning--empty journal in modalshiftreview2020
+Warning--empty author in icct2022
+Warning--empty author in competitiveness2024
+Warning--empty journal in competitiveness2024
+Warning--empty author in decarb2024
+Warning--empty journal in decarb2024
+Warning--empty author in maritimelca2024
+Warning--empty journal in maritimelca2024
+You've used 6 entries,
+            2118 wiz_defined-function locations,
+            520 strings with 5520 characters,
+and the built_in function-call counts, 1049 in all, are:
+= -- 104
+> -- 6
+< -- 0
++ -- 8
+- -- 0
+* -- 67
+:= -- 149
+add.period$ -- 18
+call.type$ -- 6
+change.case$ -- 19
+chr.to.int$ -- 0
+cite$ -- 23
+duplicate$ -- 58
+empty$ -- 107
+format.name$ -- 0
+if$ -- 222
+int.to.chr$ -- 0
+int.to.str$ -- 6
+missing$ -- 5
+newline$ -- 33
+num.names$ -- 0
+pop$ -- 27
+preamble$ -- 1
+purify$ -- 12
+quote$ -- 0
+skip$ -- 40
+stack$ -- 0
+substring$ -- 32
+swap$ -- 0
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 24
+warning$ -- 17
+while$ -- 0
+width$ -- 7
+write$ -- 58
+(There were 17 warnings)

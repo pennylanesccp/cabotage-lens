@@ -1,15 +1,19 @@
 \documentclass[12pt,a4paper]{article}
 
+\usepackage{cmap}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage[brazil]{babel}
 \usepackage{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
-\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
 
 \geometry{margin=2.5cm}
+\setlength{\emergencystretch}{2em}
 
 \newcommand{\cooe}{CO$_2$e}
 \newcommand{\ttw}{TTW}
@@ -29,13 +33,20 @@ Comparações entre transporte rodoviário e cabotagem podem se tornar enganosas
 \textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; \cooe{}; logística; Brasil; framework computacional.
 \end{abstract}
 
+\clearpage
+
 \tableofcontents
+
+\clearpage
 
 \section*{Dicionário de termos, siglas e abreviações}
 \phantomsection
 \addcontentsline{toc}{section}{Dicionário de termos, siglas e abreviações}
+\begingroup
 \small
 \begin{description}
+  \setlength{\itemsep}{0.25em}
+  \setlength{\parsep}{0pt}
   \item[CabotageLens] Framework computacional auditável desenvolvido para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário sob fronteiras metodológicas explícitas; não é ferramenta de frete comercial, booking, despacho ou confirmação de disponibilidade operacional.
   \item[OD] Par origem-destino usado para definir a remessa e construir as alternativas comparadas.
   \item[Cabotagem] Navegação costeira entre portos brasileiros, tratada neste artigo como componente de uma cadeia porta a porta e não como substituto isolado da viagem rodoviária completa.
@@ -68,7 +79,9 @@ Comparações entre transporte rodoviário e cabotagem podem se tornar enganosas
   \item[Análise de sensibilidade] Execução sob hipótese documentada para avaliar dependência do resultado a rota, porto, distância ou parâmetro.
   \item[Reprodutibilidade] Capacidade de rastrear entradas, cache, rotas, parâmetros e classificação para repetir ou auditar uma execução.
 \end{description}
-\normalsize
+\endgroup
+
+\clearpage
 
 \section{Introdução}
 \label{sec:introducao}
@@ -129,7 +142,7 @@ A alternativa rodoviária direta modela uma perna origem-destino por caminhão. 
 \begin{figure}[htbp]
 \centering
 \fbox{\parbox{0.88\textwidth}{\centering
-\small Placeholder: esquema da unidade funcional e das alternativas comparadas.\\[0.4em]
+\small Esquema preliminar da unidade funcional e das alternativas comparadas.\\[0.4em]
 Alternativa rodoviária direta: origem -- rodovia -- destino.\\
 Alternativa multimodal: origem -- rodovia -- porto -- cabotagem -- porto -- rodovia -- destino.}}
 \caption{Comparação porta a porta entre a alternativa rodoviária direta e a cadeia rodoviária-cabotagem-rodoviária.}
@@ -185,7 +198,7 @@ O fluxo computacional pode ser lido em seis etapas. Primeiro, o par origem-desti
 \begin{figure}[htbp]
 \centering
 \fbox{\parbox{0.88\textwidth}{\centering
-\small Placeholder: diagrama do pipeline CabotageLens.\\[0.4em]
+\small Diagrama conceitual do pipeline CabotageLens.\\[0.4em]
 Entrada OD e carga; rota rodoviária direta; seleção ou fixação de portos; pre-carriage; perna marítima; on-carriage; port-ops/hoteling; agregação; avisos e proveniência; comparação final.}}
 \caption{Pipeline computacional do CabotageLens para comparação rota a rota.}
 \label{fig:pipeline-cabotagelens}
@@ -294,9 +307,11 @@ As sensibilidades internas e o benchmark externo sustentam interpretação direc
 
 Como artigo técnico, o resultado central é a estrutura: um modo rastreável de formular comparações multimodais com fronteiras explícitas. Trabalhos futuros devem ampliar a cobertura de distâncias marítimas, melhorar a verificação de portos e serviços, incorporar fronteiras \wtw{}/LCA separadas quando houver fatores compatíveis, refinar operações portuárias e hoteling com dados observados, e adicionar camadas comerciais apenas quando houver dados de frete, frequência, contrato e confiabilidade adequadamente documentados.
 
-% TODO: A bibliografia ainda usa o arquivo preliminar docs/references.bib.
+\clearpage
+
+% TODO: A bibliografia ainda usa o arquivo preliminar ../references.bib.
 % Revisar metadados e estilo ABNT na etapa final de produção.
 \bibliographystyle{plain}
-\bibliography{docs/references}
+\bibliography{../references}
 
 \end{document}
