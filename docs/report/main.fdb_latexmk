@@ -1,12 +1,12 @@
 # Fdb version 4
-["biber main"] 1782870900.772 "main.bcf" "main.bbl" "main" 1782870936.11508 0
-  "../references.bib" 1782505138 10609 61701c0324024df1320015a2729f1f57 ""
-  "main.bcf" 1782870934 111638 65f18073fe9eb3a25ecfa2476151304e "pdflatex"
+["biber main"] 1782872198.17036 "main.bcf" "main.bbl" "main" 1782872227.83757 0
+  "../references.bib" 1782872167 12091 dd83f5015a098d752c2e5f182c5cbb1a ""
+  "main.bcf" 1782872226 111638 65f18073fe9eb3a25ecfa2476151304e "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1782870926.68464 "main.tex" "main.pdf" "main" 1782870936.11868 0
+["pdflatex"] 1782872215.42166 "main.tex" "main.pdf" "main" 1782872227.83934 0
   "C:/Users/Cliente/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1782792716 80909 eab91d9745dd2edfd62a31d53cd5fe15 ""
   "C:/Users/Cliente/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1782789178 13334455 858f84ec1dc82b8443ff48cd6da9ecbf ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ec.enc" 1256929440 2375 baa924870cfb487815765f9094cf3728 ""
@@ -25,6 +25,7 @@
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/tfm/public/lm/ec-lmbx10.tfm" 1256929440 12076 b54175e02101bea1addf6b2d0197ed12 ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/tfm/public/lm/ec-lmbx12.tfm" 1256929440 12088 d750ac78274fa7c9f73ba09914c04f8a ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/tfm/public/lm/ec-lmbxi10.tfm" 1256929440 17180 a5723008921cdcb0c5f4ebe997919b73 ""
+  "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/tfm/public/lm/ec-lmcsc10.tfm" 1256929440 11276 116dd5bea6621ce4a1999f96d876084c ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/tfm/public/lm/ec-lmr10.tfm" 1256929440 12056 7e13df7fe4cbce21b072ba7c4f4deb6e ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/tfm/public/lm/ec-lmr12.tfm" 1256929440 12092 7b1546e2d096cfd5dcbd4049b0b1ec2e ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/tfm/public/lm/ec-lmr17.tfm" 1256929440 12156 ca1ae6a3c8564e89597f1f993fba1608 ""
@@ -56,6 +57,7 @@
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx10.pfb" 1256929440 121021 836464b5fe0c782d94085eb083550ccc ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx12.pfb" 1256929440 116908 9a7a12d1e4df280ea0ab4aad83cdef88 ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbxi10.pfb" 1256929440 112766 6259d69aa3d87a505f375e49d8f6bf3a ""
+  "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmcsc10.pfb" 1256929440 116427 4909e80035dae5d5a4ec2b5ddd9649dd ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi10.pfb" 1256929440 30388 702fae6a5f0e6e9c48a1d872b442ffcf ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi12.pfb" 1256929440 30696 3da7e46ecf5615eedebd9f27dab4d9d7 ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi8.pfb" 1256929440 30635 833ec815d446ec453a4913fc26d24cbc ""
@@ -200,14 +202,14 @@
   "chapters/ch08_discussao.tex" 1782870317 11968 77bac6a959445f1a1f4de4eea81d7e02 ""
   "chapters/ch09_limitacoes.tex" 1782870249 13558 9ec21dd8665946f288c0b1d9ce79282a ""
   "chapters/ch10_conclusoes.tex" 1782870294 8771 f45db99f51d94a87dfb64137f1f48e03 ""
-  "main.aux" 1782870934 41702 b908c75a48487bb63324ba19dbcb09c5 "pdflatex"
-  "main.bbl" 1782870910 4971 7eb819df82b9e0c0f277a435d0ee65dc "biber main"
-  "main.lof" 1782870934 1169 aabef1933ae45d655c91653d82e661c6 "pdflatex"
-  "main.lot" 1782870934 5387 5644d605d106c0de4ecd545e03208074 "pdflatex"
-  "main.out" 1782870934 24946 44d48f7fd4cbd727774ba3102873dd39 "pdflatex"
-  "main.run.xml" 1782870934 2371 16b64731b8a7f01cbd4bfb04cca6f8ed "pdflatex"
+  "main.aux" 1782872226 41702 f1eba5f212abaa3f616fd660c8865c4f "pdflatex"
+  "main.bbl" 1782872204 17499 809f1c4c070001adae404be240a4d516 "biber main"
+  "main.lof" 1782872226 1169 aabef1933ae45d655c91653d82e661c6 "pdflatex"
+  "main.lot" 1782872226 5387 5644d605d106c0de4ecd545e03208074 "pdflatex"
+  "main.out" 1782872226 24946 44d48f7fd4cbd727774ba3102873dd39 "pdflatex"
+  "main.run.xml" 1782872226 2371 16b64731b8a7f01cbd4bfb04cca6f8ed "pdflatex"
   "main.tex" 1782867053 10130 ed3af4730ae54f37317bbd1a927e31d5 ""
-  "main.toc" 1782870934 9314 37163f5ac4c6759b41610fe1e2e55499 "pdflatex"
+  "main.toc" 1782872226 9314 37163f5ac4c6759b41610fe1e2e55499 "pdflatex"
   (generated)
   "main.aux"
   "main.bcf"

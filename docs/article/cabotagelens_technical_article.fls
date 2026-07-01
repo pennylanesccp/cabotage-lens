@@ -282,6 +282,7 @@ INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\lm\t1lmtt.fd
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\lm\t1lmtt.fd
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\lm\t1lmtt.fd
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmtt12.tfm
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmcsc10.tfm
 INPUT cabotagelens_technical_article.aux
 INPUT .\cabotagelens_technical_article.out
 INPUT .\cabotagelens_technical_article.out
@@ -291,6 +292,8 @@ INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmbx1
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmbx10.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmbx12.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmbx12.pfb
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmcsc10.pfb
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmcsc10.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmex10.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmex10.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmmi12.pfb

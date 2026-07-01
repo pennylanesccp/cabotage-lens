@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  30 JUN 2026 21:37
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  30 JUN 2026 23:17
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -898,7 +898,11 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 
-[10] [11] [12] [13
+[10] [11] [12]
+Package microtype Info: Character `029' is missing
+(microtype)             in font `T1/lmr/m/sc/12'.
+(microtype)             Ignoring protrusion settings for this character.
+ [13
 
 ] (cabotagelens_technical_article.aux)
  ***********
@@ -914,32 +918,33 @@ l'.
 
  ) 
 Here is how much of TeX's memory you used:
- 20812 strings out of 467871
- 370187 string characters out of 5417408
+ 20841 strings out of 467871
+ 370619 string characters out of 5417408
  1255297 words of memory out of 5000000
- 49149 multiletter control sequences out of 15000+600000
- 716482 words of font info for 188 fonts, out of 8000000 for 9000
+ 49160 multiletter control sequences out of 15000+600000
+ 720177 words of font info for 197 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,11n,79p,1632b,1786s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx10.
 pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx1
-2.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lme
-x10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/l
-mmi12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm
-/lmmi6.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/l
-m/lmmi8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/
-lm/lmr10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public
-/lm/lmr12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/publi
-c/lm/lmr17.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/publ
-ic/lm/lmr7.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/publ
-ic/lm/lmr8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/publ
-ic/lm/lmri10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/pu
-blic/lm/lmri12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/
-public/lm/lmsy8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1
-/public/lm/lmtt12.pfb>
-Output written on cabotagelens_technical_article.pdf (13 pages, 339437 bytes).
+2.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmc
+sc10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/
+lmex10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/l
+m/lmmi12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public
+/lm/lmmi6.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/publi
+c/lm/lmmi8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/publ
+ic/lm/lmr10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/pub
+lic/lm/lmr12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/pu
+blic/lm/lmr17.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/p
+ublic/lm/lmr7.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/p
+ublic/lm/lmr8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/p
+ublic/lm/lmri10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1
+/public/lm/lmri12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/typ
+e1/public/lm/lmsy8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/ty
+pe1/public/lm/lmtt12.pfb>
+Output written on cabotagelens_technical_article.pdf (13 pages, 365038 bytes).
 PDF statistics:
- 276 PDF objects out of 1000 (max. 8388607)
+ 290 PDF objects out of 1000 (max. 8388607)
  48 named destinations out of 1000 (max. 500000)
- 47749 words of extra memory for PDF output out of 51595 (max. 10000000)
+ 49797 words of extra memory for PDF output out of 51595 (max. 10000000)
 

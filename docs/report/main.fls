@@ -450,6 +450,7 @@ INPUT .\appendices\appendix_c_checklist_reprodutibilidade.tex
 INPUT .\appendices\appendix_c_checklist_reprodutibilidade.tex
 INPUT .\appendices\appendix_c_checklist_reprodutibilidade.tex
 INPUT appendices\appendix_c_checklist_reprodutibilidade.tex
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmcsc10.tfm
 INPUT main.aux
 INPUT .\main.out
 INPUT .\main.out
@@ -461,6 +462,8 @@ INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmbx1
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmbx12.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmbxi10.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmbxi10.pfb
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmcsc10.pfb
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmcsc10.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmmi10.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmmi10.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmmi12.pfb

@@ -20,80 +20,356 @@
 \refsection{0}
   \datalist[entry]{none/global//global/global/global}
     \entry{icct2022}{report}{}{}
+      \name{author}{1}{}{%
+        {{hash=5692c3a2bf984a2be94ce9c046779c2d}{%
+           family={Carvalho},
+           familyi={C\bibinitperiod},
+           given={Francielle},
+           giveni={F\bibinitperiod}}}%
+      }
       \list{institution}{1}{%
         {International Council on Clean Transportation}%
       }
+      \strng{namehash}{5692c3a2bf984a2be94ce9c046779c2d}
+      \strng{fullhash}{5692c3a2bf984a2be94ce9c046779c2d}
+      \strng{fullhashraw}{5692c3a2bf984a2be94ce9c046779c2d}
+      \strng{bibnamehash}{5692c3a2bf984a2be94ce9c046779c2d}
+      \strng{authorbibnamehash}{5692c3a2bf984a2be94ce9c046779c2d}
+      \strng{authornamehash}{5692c3a2bf984a2be94ce9c046779c2d}
+      \strng{authorfullhash}{5692c3a2bf984a2be94ce9c046779c2d}
+      \strng{authorfullhashraw}{5692c3a2bf984a2be94ce9c046779c2d}
       \field{sortinit}{1}
       \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{month}{7}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/brazilian-coastal-shipping-decarbonization-2022.pdf}
+      \field{number}{2022-24}
       \field{title}{Brazilian coastal shipping: New prospects for growth with decarbonization}
-      \field{type}{techreport}
+      \field{type}{Working Paper}
       \field{year}{2022}
+      \field{dateera}{ce}
     \endentry
     \entry{shortsea2019}{article}{}{}
+      \name{author}{2}{}{%
+        {{hash=e2f1a5b12a151def6089fe4c1f925b60}{%
+           family={Svindland},
+           familyi={S\bibinitperiod},
+           given={Morten},
+           giveni={M\bibinitperiod}}}%
+        {{hash=399f1bbf940ebf6221cebe75b30ad19b}{%
+           family={Hjelle},
+           familyi={H\bibinitperiod},
+           given={Harald\bibnamedelima M.},
+           giveni={H\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+      }
+      \strng{namehash}{cbebdb29083c285ee172878596df7f63}
+      \strng{fullhash}{cbebdb29083c285ee172878596df7f63}
+      \strng{fullhashraw}{cbebdb29083c285ee172878596df7f63}
+      \strng{bibnamehash}{cbebdb29083c285ee172878596df7f63}
+      \strng{authorbibnamehash}{cbebdb29083c285ee172878596df7f63}
+      \strng{authornamehash}{cbebdb29083c285ee172878596df7f63}
+      \strng{authorfullhash}{cbebdb29083c285ee172878596df7f63}
+      \strng{authorfullhashraw}{cbebdb29083c285ee172878596df7f63}
       \field{sortinit}{2}
       \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{journaltitle}{Transportation Research Part D: Transport and Environment}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/short-sea-container-co2-efficiency-comparison-2019.pdf}
-      \field{title}{The comparative CO2 efficiency of short sea container transport}
+      \field{title}{The comparative {CO2} efficiency of short sea container transport}
+      \field{volume}{77}
       \field{year}{2019}
+      \field{pages}{11\bibrangedash 20}
+      \range{pages}{10}
+      \verb{doi}
+      \verb 10.1016/j.trd.2019.08.025
+      \endverb
     \endentry
     \entry{modalshiftreview2020}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=f619501be6f803decf2e03900f08cc91}{%
+           family={Raza},
+           familyi={R\bibinitperiod},
+           given={Zeeshan},
+           giveni={Z\bibinitperiod}}}%
+        {{hash=3d17b1dd04e7301df6ce272d2f3d99c0}{%
+           family={Svanberg},
+           familyi={S\bibinitperiod},
+           given={Martin},
+           giveni={M\bibinitperiod}}}%
+        {{hash=abe1e79c66ec8b247c67c53d691b479c}{%
+           family={Wiegmans},
+           familyi={W\bibinitperiod},
+           given={Bart},
+           giveni={B\bibinitperiod}}}%
+      }
+      \strng{namehash}{4ce34ee84aae1d5088f17dd128b340ef}
+      \strng{fullhash}{4ce34ee84aae1d5088f17dd128b340ef}
+      \strng{fullhashraw}{4ce34ee84aae1d5088f17dd128b340ef}
+      \strng{bibnamehash}{4ce34ee84aae1d5088f17dd128b340ef}
+      \strng{authorbibnamehash}{4ce34ee84aae1d5088f17dd128b340ef}
+      \strng{authornamehash}{4ce34ee84aae1d5088f17dd128b340ef}
+      \strng{authorfullhash}{4ce34ee84aae1d5088f17dd128b340ef}
+      \strng{authorfullhashraw}{4ce34ee84aae1d5088f17dd128b340ef}
       \field{sortinit}{2}
       \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{journaltitle}{Transport Reviews}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/modal-shift-road-haulage-short-sea-review-2020.pdf}
+      \field{number}{3}
       \field{title}{Modal shift from road haulage to short sea shipping: a systematic literature review and research directions}
+      \field{volume}{40}
       \field{year}{2020}
+      \field{pages}{382\bibrangedash 406}
+      \range{pages}{25}
+      \verb{doi}
+      \verb 10.1080/01441647.2020.1714789
+      \endverb
     \endentry
     \entry{competitiveness2024}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=0d8eb6b64933738a2eacd6007907a655}{%
+           family={Costa},
+           familyi={C\bibinitperiod},
+           given={Gustavo\bibnamedelimb Adolfo\bibnamedelimb Alves\bibnamedelima da},
+           giveni={G\bibinitperiod\bibinitdelim A\bibinitperiod\bibinitdelim A\bibinitperiod\bibinitdelim d\bibinitperiod}}}%
+        {{hash=fe2a73c7898ecad925eec69c3105a225}{%
+           family={Mendes},
+           familyi={M\bibinitperiod},
+           given={André\bibnamedelima Bergsten},
+           giveni={A\bibinitperiod\bibinitdelim B\bibinitperiod}}}%
+        {{hash=b3285590bfa8239fc2da91e146fdeb67}{%
+           family={Gomes\bibnamedelimb da\bibnamedelima Cruz},
+           familyi={G\bibinitperiod\bibinitdelim d\bibinitperiod\bibinitdelim C\bibinitperiod},
+           given={José\bibnamedelima Pedro},
+           giveni={J\bibinitperiod\bibinitdelim P\bibinitperiod}}}%
+      }
+      \strng{namehash}{b5a015cba9050bb243349fcd914269c3}
+      \strng{fullhash}{b5a015cba9050bb243349fcd914269c3}
+      \strng{fullhashraw}{b5a015cba9050bb243349fcd914269c3}
+      \strng{bibnamehash}{b5a015cba9050bb243349fcd914269c3}
+      \strng{authorbibnamehash}{b5a015cba9050bb243349fcd914269c3}
+      \strng{authornamehash}{b5a015cba9050bb243349fcd914269c3}
+      \strng{authorfullhash}{b5a015cba9050bb243349fcd914269c3}
+      \strng{authorfullhashraw}{b5a015cba9050bb243349fcd914269c3}
       \field{sortinit}{3}
       \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{eid}{104062}
+      \field{journaltitle}{Journal of Transport Geography}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/brazilian-cabotage-competitiveness-supernetwork-2024.pdf}
       \field{title}{Brazilian maritime containerized cabotage competitiveness assessment based on a multimodal super network}
-      \field{year}{2024}
+      \field{volume}{122}
+      \field{year}{2025}
+      \verb{doi}
+      \verb 10.1016/j.jtrangeo.2024.104062
+      \endverb
     \endentry
     \entry{decarb2024}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=0d8eb6b64933738a2eacd6007907a655}{%
+           family={Costa},
+           familyi={C\bibinitperiod},
+           given={Gustavo\bibnamedelimb Adolfo\bibnamedelimb Alves\bibnamedelima da},
+           giveni={G\bibinitperiod\bibinitdelim A\bibinitperiod\bibinitdelim A\bibinitperiod\bibinitdelim d\bibinitperiod}}}%
+        {{hash=fe2a73c7898ecad925eec69c3105a225}{%
+           family={Mendes},
+           familyi={M\bibinitperiod},
+           given={André\bibnamedelima Bergsten},
+           giveni={A\bibinitperiod\bibinitdelim B\bibinitperiod}}}%
+        {{hash=7e3a6de98af1ad30be0def2852dc62c5}{%
+           family={Silva},
+           familyi={S\bibinitperiod},
+           given={Vanina\bibnamedelimb Macowski\bibnamedelima Durski},
+           giveni={V\bibinitperiod\bibinitdelim M\bibinitperiod\bibinitdelim D\bibinitperiod}}}%
+      }
+      \strng{namehash}{e818a70fe2813e91d3e33ff53185b89d}
+      \strng{fullhash}{e818a70fe2813e91d3e33ff53185b89d}
+      \strng{fullhashraw}{e818a70fe2813e91d3e33ff53185b89d}
+      \strng{bibnamehash}{e818a70fe2813e91d3e33ff53185b89d}
+      \strng{authorbibnamehash}{e818a70fe2813e91d3e33ff53185b89d}
+      \strng{authornamehash}{e818a70fe2813e91d3e33ff53185b89d}
+      \strng{authorfullhash}{e818a70fe2813e91d3e33ff53185b89d}
+      \strng{authorfullhashraw}{e818a70fe2813e91d3e33ff53185b89d}
       \field{sortinit}{8}
       \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{eid}{100018}
+      \field{journaltitle}{Latin American Transport Studies}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf}
       \field{title}{Decarbonization pathways in Brazilian maritime cabotage: A comparative analysis of very low sulfur fuel oil, marine diesel oil, and hydrogenated vegetable oil in carbon dioxide equivalent emissions}
+      \field{volume}{2}
       \field{year}{2024}
+      \verb{doi}
+      \verb 10.1016/j.latran.2024.100018
+      \endverb
     \endentry
     \entry{maritimelca2024}{article}{}{}
+      \name{author}{4}{}{%
+        {{hash=c6c2a7950d084b0872ef7a23d9c67996}{%
+           family={Roux},
+           familyi={R\bibinitperiod},
+           given={M.},
+           giveni={M\bibinitperiod}}}%
+        {{hash=c649343435cedcfb3c863aec2b22eaec}{%
+           family={Lodato},
+           familyi={L\bibinitperiod},
+           given={C.},
+           giveni={C\bibinitperiod}}}%
+        {{hash=539de9f0b316b02fd8715f05832e99b5}{%
+           family={Laurent},
+           familyi={L\bibinitperiod},
+           given={A.},
+           giveni={A\bibinitperiod}}}%
+        {{hash=0406fde710e079b6cdc479d93b3d4fcc}{%
+           family={Astrup},
+           familyi={A\bibinitperiod},
+           given={T.\bibnamedelimi F.},
+           giveni={T\bibinitperiod\bibinitdelim F\bibinitperiod}}}%
+      }
+      \strng{namehash}{e4b1517695c32af89b7d4762ba69eeb7}
+      \strng{fullhash}{164a2056ba0d392bba869e7d3010cd6f}
+      \strng{fullhashraw}{164a2056ba0d392bba869e7d3010cd6f}
+      \strng{bibnamehash}{e4b1517695c32af89b7d4762ba69eeb7}
+      \strng{authorbibnamehash}{e4b1517695c32af89b7d4762ba69eeb7}
+      \strng{authornamehash}{e4b1517695c32af89b7d4762ba69eeb7}
+      \strng{authorfullhash}{164a2056ba0d392bba869e7d3010cd6f}
+      \strng{authorfullhashraw}{164a2056ba0d392bba869e7d3010cd6f}
       \field{sortinit}{8}
       \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{journaltitle}{Sustainable Production and Consumption}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/support/maritime-fuels-lca-review-insights-gaps-2024.pdf}
       \field{title}{A review of life cycle assessment studies of maritime fuels: Critical insights, gaps, and recommendations}
+      \field{volume}{50}
       \field{year}{2024}
+      \field{pages}{69\bibrangedash 86}
+      \range{pages}{18}
+      \verb{doi}
+      \verb 10.1016/j.spc.2024.07.016
+      \endverb
     \endentry
     \entry{berth2009}{article}{}{}
+      \name{author}{2}{}{%
+        {{hash=dfe72e28f97a43d1162b41fd043e71cd}{%
+           family={Hulskotte},
+           familyi={H\bibinitperiod},
+           given={J.\bibnamedelimi H.\bibnamedelimi J.},
+           giveni={J\bibinitperiod\bibinitdelim H\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+        {{hash=4e62e485c8d43da8b6dbea4b50c19bf2}{%
+           family={{Denier van der Gon}},
+           familyi={D\bibinitperiod},
+           given={H.\bibnamedelimi A.\bibnamedelimi C.},
+           giveni={H\bibinitperiod\bibinitdelim A\bibinitperiod\bibinitdelim C\bibinitperiod}}}%
+      }
+      \strng{namehash}{508587c0bf2f4aa246967e155a479784}
+      \strng{fullhash}{508587c0bf2f4aa246967e155a479784}
+      \strng{fullhashraw}{508587c0bf2f4aa246967e155a479784}
+      \strng{bibnamehash}{508587c0bf2f4aa246967e155a479784}
+      \strng{authorbibnamehash}{508587c0bf2f4aa246967e155a479784}
+      \strng{authornamehash}{508587c0bf2f4aa246967e155a479784}
+      \strng{authorfullhash}{508587c0bf2f4aa246967e155a479784}
+      \strng{authorfullhashraw}{508587c0bf2f4aa246967e155a479784}
       \field{sortinit}{9}
       \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{journaltitle}{Atmospheric Environment}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/seagoing-ships-at-berth-fuel-emissions-survey-2009.pdf}
       \field{title}{Fuel consumption and associated emissions from seagoing ships at berth derived from an on-board survey}
-      \field{year}{2009}
+      \field{volume}{44}
+      \field{year}{2010}
+      \field{pages}{1229\bibrangedash 1236}
+      \range{pages}{8}
+      \verb{doi}
+      \verb 10.1016/j.atmosenv.2009.10.018
+      \endverb
     \endentry
     \entry{shipops2022}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=c8aba7b9a2713bcfc584d4a8de6ed9ab}{%
+           family={Nguyen},
+           familyi={N\bibinitperiod},
+           given={Phong-Nha},
+           giveni={P\bibinithyphendelim N\bibinitperiod}}}%
+        {{hash=2d95337626def49daf05757418b3d641}{%
+           family={Woo},
+           familyi={W\bibinitperiod},
+           given={Su-Han},
+           giveni={S\bibinithyphendelim H\bibinitperiod}}}%
+        {{hash=5359627c0d3f4d5ae4ad1e88ceec0075}{%
+           family={Kim},
+           familyi={K\bibinitperiod},
+           given={Hwayoung},
+           giveni={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{8c1fe45992151642e61c851981d33120}
+      \strng{fullhash}{8c1fe45992151642e61c851981d33120}
+      \strng{fullhashraw}{8c1fe45992151642e61c851981d33120}
+      \strng{bibnamehash}{8c1fe45992151642e61c851981d33120}
+      \strng{authorbibnamehash}{8c1fe45992151642e61c851981d33120}
+      \strng{authornamehash}{8c1fe45992151642e61c851981d33120}
+      \strng{authorfullhash}{8c1fe45992151642e61c851981d33120}
+      \strng{authorfullhashraw}{8c1fe45992151642e61c851981d33120}
       \field{sortinit}{9}
       \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{eid}{103223}
+      \field{journaltitle}{Transportation Research Part D: Transport and Environment}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf}
       \field{title}{Ship emissions in hotelling phase and loading/unloading in Southeast Asia ports}
+      \field{volume}{105}
       \field{year}{2022}
+      \verb{doi}
+      \verb 10.1016/j.trd.2022.103223
+      \endverb
     \endentry
     \entry{berthairquality2010}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=718934c041d07c198838db57ac6d8a8a}{%
+           family={Lonati},
+           familyi={L\bibinitperiod},
+           given={Giovanni},
+           giveni={G\bibinitperiod}}}%
+        {{hash=923600a09b8afe698749970ba61ccbed}{%
+           family={Cernuschi},
+           familyi={C\bibinitperiod},
+           given={Stefano},
+           giveni={S\bibinitperiod}}}%
+        {{hash=e22caa1e71c111a7caec40187cf20a79}{%
+           family={Sidi},
+           familyi={S\bibinitperiod},
+           given={Shelina},
+           giveni={S\bibinitperiod}}}%
+      }
+      \strng{namehash}{f0d4a748b0838149260ca83f05cba90c}
+      \strng{fullhash}{f0d4a748b0838149260ca83f05cba90c}
+      \strng{fullhashraw}{f0d4a748b0838149260ca83f05cba90c}
+      \strng{bibnamehash}{f0d4a748b0838149260ca83f05cba90c}
+      \strng{authorbibnamehash}{f0d4a748b0838149260ca83f05cba90c}
+      \strng{authornamehash}{f0d4a748b0838149260ca83f05cba90c}
+      \strng{authorfullhash}{f0d4a748b0838149260ca83f05cba90c}
+      \strng{authorfullhashraw}{f0d4a748b0838149260ca83f05cba90c}
       \field{sortinit}{9}
       \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
+      \field{journaltitle}{Science of the Total Environment}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/at-berth-ship-emissions-air-quality-impact-2010.pdf}
       \field{title}{Air quality impact assessment of at-berth ship emissions: Case-study for the project of a new freight port}
+      \field{volume}{409}
       \field{year}{2010}
+      \field{pages}{192\bibrangedash 200}
+      \range{pages}{9}
+      \verb{doi}
+      \verb 10.1016/j.scitotenv.2010.08.029
+      \endverb
     \endentry
   \enddatalist
 \endrefsection
