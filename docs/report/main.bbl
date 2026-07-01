@@ -56,40 +56,40 @@
       \field{year}{2024}
     \endentry
     \entry{decarb2024}{article}{}{}
-      \field{sortinit}{3}
-      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{sortinit}{8}
+      \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
       \field{labeltitlesource}{title}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/brazilian-cabotage-decarbonization-pathways-fuels-2024.pdf}
       \field{title}{Decarbonization pathways in Brazilian maritime cabotage: A comparative analysis of very low sulfur fuel oil, marine diesel oil, and hydrogenated vegetable oil in carbon dioxide equivalent emissions}
       \field{year}{2024}
     \endentry
     \entry{maritimelca2024}{article}{}{}
-      \field{sortinit}{3}
-      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{sortinit}{8}
+      \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
       \field{labeltitlesource}{title}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/support/maritime-fuels-lca-review-insights-gaps-2024.pdf}
       \field{title}{A review of life cycle assessment studies of maritime fuels: Critical insights, gaps, and recommendations}
       \field{year}{2024}
     \endentry
     \entry{berth2009}{article}{}{}
-      \field{sortinit}{1}
-      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
       \field{labeltitlesource}{title}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/seagoing-ships-at-berth-fuel-emissions-survey-2009.pdf}
       \field{title}{Fuel consumption and associated emissions from seagoing ships at berth derived from an on-board survey}
       \field{year}{2009}
     \endentry
     \entry{shipops2022}{article}{}{}
-      \field{sortinit}{1}
-      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
       \field{labeltitlesource}{title}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/ship-hoteling-loading-unloading-emissions-se-asia-2022.pdf}
       \field{title}{Ship emissions in hotelling phase and loading/unloading in Southeast Asia ports}
       \field{year}{2022}
     \endentry
     \entry{berthairquality2010}{article}{}{}
-      \field{sortinit}{1}
-      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
       \field{labeltitlesource}{title}
       \field{note}{Arquivo local-only, ignorado pelo Git: docs/references/core/at-berth-ship-emissions-air-quality-impact-2010.pdf}
       \field{title}{Air quality impact assessment of at-berth ship emissions: Case-study for the project of a new freight port}

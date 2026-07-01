@@ -6,7 +6,7 @@
 
 O Capítulo~\ref{ch:discussao} responde a uma pergunta diferente daquela tratada no Capítulo~\ref{ch:resultados}: qual é o significado da evidência sob as fronteiras adotadas? O capítulo anterior registrou resultados, categorias de uso e valores observados; a discussão interpreta o alcance desses achados sem acrescentar novas linhas, recalcular cenários ou promover classificações além daquelas já rastreadas.
 
-A leitura defensável é deliberadamente estreita. As sensibilidades executadas, o benchmark Gustavo/Costa, o rerun Supabase/cache e a reconciliação rodoviária tornam a evidência mais interpretável, mas não mudam sua natureza. O conjunto atual sustenta discussão direcional, metodológica e condicionada; não sustenta validação calibrada, conclusão comercial, disponibilidade operacional real ou superioridade universal da cabotagem. Nenhum resultado corrente deve ser tratado como \texttt{headline\_candidate}.
+A leitura defensável é deliberadamente estreita. As sensibilidades executadas, o benchmark do Prof. Dr. Gustavo Costa, o rerun Supabase/cache e a reconciliação rodoviária tornam a evidência mais interpretável, mas não mudam sua natureza. O conjunto atual sustenta discussão direcional, metodológica e condicionada; não sustenta validação calibrada, conclusão comercial, disponibilidade operacional real ou superioridade universal da cabotagem. Nenhum resultado corrente deve ser tratado como \texttt{headline\_candidate}.
 
 Essa separação organiza o fechamento do relatório. O Capítulo~\ref{ch:resultados} mostra o que foi observado; o Capítulo~\ref{ch:discussao} discute por que esses achados importam; o Capítulo~\ref{ch:limitacoes} detalha as limitações que impedem leituras mais fortes; e o Capítulo~\ref{ch:conclusoes} conclui sem transformar evidência condicionada em afirmação universal.
 
@@ -28,10 +28,10 @@ A proveniência da distância marítima cumpre função semelhante. Uma distânc
 
 Essa disciplina muda a pergunta da discussão. Em vez de perguntar se a cabotagem é superior em sentido geral, o relatório deve perguntar o que acontece quando uma cadeia específica, com portos específicos e distância de proveniência conhecida, é comparada com a rota rodoviária direta sob a mesma unidade funcional. A resposta continua condicional, mas é tecnicamente mais defensável.
 
-\section{Benchmark Gustavo/Costa: apoio direcional, não calibração}
+\section{Benchmark do Prof. Dr. Gustavo Costa: apoio direcional, não calibração}
 \label{sec:benchmark-discussao}
 
-O benchmark Gustavo/Costa é uma camada importante para o TF porque introduz uma referência externa ao próprio \CabotageLens{}. No relatório final, ele pode receber tratamento mais amplo do que no artigo técnico, pois ajuda a explicar ao leitor da banca como o modelo se comporta diante de um comparador familiar ao contexto da pesquisa. Ainda assim, seu papel deve permanecer subordinado à contribuição principal do trabalho: o framework auditável, não a reprodução do workbook.
+O benchmark do Prof. Dr. Gustavo Costa é uma camada importante para o TF porque introduz uma referência externa ao próprio \CabotageLens{}. No relatório final, ele pode receber tratamento mais amplo do que no artigo técnico, pois ajuda a explicar ao leitor da banca como o modelo se comporta diante de um comparador familiar ao contexto da pesquisa. Ainda assim, seu papel deve permanecer subordinado à contribuição principal do trabalho: o framework auditável, não a reprodução do workbook.
 
 O significado seguro do Batch 002 é apoio direcional com lacunas de magnitude. Nos pares comparáveis, o workbook e o \CabotageLens{} apontam na mesma direção modal de emissões, mas a classificação \texttt{same\_direction\_large\_gap} preserva que a magnitude não foi calibrada. Isso não é uma falha a esconder nem uma prova de que o workbook seja verdade absoluta. É evidência de que os dois artefatos compartilham um sinal interpretativo, enquanto permanecem separados por fronteiras, premissas e métodos ainda não reconciliados.
 
@@ -46,7 +46,7 @@ A Tabela~\ref{tab:benchmark-discussao} resume como cada camada associada ao benc
 \toprule
 Camada de evidência & Significado para a discussão & Leitura que deve ser evitada \\
 \midrule
-Benchmark Gustavo/Costa & Acrescenta contraste externo e apoio direcional nas linhas comparáveis. & Tratar o workbook como verdade de referência ou reprodução calibrada.\\
+Benchmark do Prof. Dr. Gustavo Costa & Acrescenta contraste externo e apoio direcional nas linhas comparáveis. & Tratar o workbook como verdade de referência ou reprodução calibrada.\\
 Rerun Supabase/cache & Reduz a plausibilidade de instabilidade computacional como explicação principal da lacuna. & Converter estabilidade de cache em validação de rota, serviço ou magnitude.\\
 Reconciliação rodoviária & Mostra que premissas rodoviárias explicam parte relevante da lacuna \emph{road-only}. & Substituir o baseline do \CabotageLens{} pelo fator diagnóstico.\\
 Lacunas remanescentes & Tornam visíveis diferenças de distância, veículo, carga, alocação, porto, serviço, port-ops/hoteling e fronteira ambiental. & Fechar a validação como se as diferenças já estivessem reconciliadas.\\

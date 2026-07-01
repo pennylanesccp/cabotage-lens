@@ -113,7 +113,7 @@
 \chapter*{Resumo}
 \markboth{Resumo}{Resumo}
 \addcontentsline{toc}{chapter}{Resumo}
-Este relatório apresenta o \CabotageLens{}, um framework computacional auditável para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros. A contribuição central é uma estrutura de comparação porta a porta, orientada por rota, que preserva unidade funcional, portos, distâncias, proveniência dos dados, componentes portuários, emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado. O trabalho separa explicitamente emissões \ttw{}, \wtw{} e LCA; distingue custo modelado de frete comercial; e classifica evidências de forma conservadora para evitar extrapolações sobre superioridade modal universal, viabilidade comercial ou validação calibrada. As sensibilidades executadas e o benchmark externo Gustavo/Costa apoiam interpretação direcional cautelosa, mas não substituem validação operacional, disponibilidade de serviço ou reconstrução integral de referências externas. O resultado é uma base metodológica e computacional defensável para discutir quando a cabotagem pode aparecer promissora em cenários específicos e quais lacunas precisam ser resolvidas antes de conclusões mais fortes.
+Este relatório apresenta o \CabotageLens{}, um framework computacional auditável para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros. A contribuição central é uma estrutura de comparação porta a porta, orientada por rota, que preserva unidade funcional, portos, distâncias, proveniência dos dados, componentes portuários, emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado. O trabalho separa explicitamente emissões \ttw{}, \wtw{} e LCA; distingue custo modelado de frete comercial; e classifica evidências de forma conservadora para evitar extrapolações sobre superioridade modal universal, viabilidade comercial ou validação calibrada. As sensibilidades executadas e o benchmark externo apoiam interpretação direcional cautelosa, mas não substituem validação operacional, disponibilidade de serviço ou reconstrução integral de referências externas. O resultado é uma base metodológica e computacional defensável para discutir quando a cabotagem pode aparecer promissora em cenários específicos e quais lacunas precisam ser resolvidas antes de conclusões mais fortes.
 
 \textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; \cooe{}; custo modelado; rastreabilidade; Brasil.
 
@@ -121,7 +121,7 @@ Este relatório apresenta o \CabotageLens{}, um framework computacional auditáv
 \markboth{Abstract}{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 \selectlanguage{english}
-This report presents \CabotageLens{}, an auditable computational framework for comparing direct road transport and road-cabotage-road alternatives in Brazilian freight corridors. Its central contribution is a route-aware, door-to-door comparison structure that preserves the functional unit, port choices, distances, data provenance, port-operation components, operational TTW \cooe{} emissions, and a modeled operational cost proxy under explicit methodological boundaries. The work separates TTW emissions from WTW and LCA perspectives, distinguishes modeled cost from commercial freight, and classifies evidence conservatively to avoid extrapolating route-specific results into claims of universal modal superiority, commercial viability, or calibrated validation. The executed sensitivity cases and the Gustavo/Costa external benchmark support a cautious directional interpretation, but they do not replace operational validation, service-availability evidence, or a calibrated reproduction of external references. The result is a defensible methodological and computational basis for discussing when cabotage may appear promising in specific scenarios and which data gaps must be resolved before stronger conclusions can be drawn.
+This report presents \CabotageLens{}, an auditable computational framework for comparing direct road transport and road-cabotage-road alternatives in Brazilian freight corridors. Its central contribution is a route-aware, door-to-door comparison structure that preserves the functional unit, port choices, distances, data provenance, port-operation components, operational TTW \cooe{} emissions, and a modeled operational cost proxy under explicit methodological boundaries. The work separates TTW emissions from WTW and LCA perspectives, distinguishes modeled cost from commercial freight, and classifies evidence conservatively to avoid extrapolating route-specific results into claims of universal modal superiority, commercial viability, or calibrated validation. The executed sensitivity cases and the external benchmark support a cautious directional interpretation, but they do not replace operational validation, service-availability evidence, or a calibrated reproduction of external references. The result is a defensible methodological and computational basis for discussing when cabotage may appear promising in specific scenarios and which data gaps must be resolved before stronger conclusions can be drawn.
 
 \textbf{Keywords}: coastal shipping; road freight; multimodal freight; operational emissions; \cooe{}; modeled cost; traceability; Brazil.
 \selectlanguage{brazil}
@@ -140,40 +140,37 @@ This report presents \CabotageLens{}, an auditable computational framework for c
 \addcontentsline{toc}{chapter}{Dicionário de termos, siglas e abreviações}
 \small
 \begin{description}
-  \item[\CabotageLens{}] Framework computacional auditável desenvolvido neste TF para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário sob unidade funcional, rota, portos, proveniência, custo modelado, emissões operacionais e classificação de evidência.
-  \item[ANTAQ] Agência Nacional de Transportes Aquaviários, fonte de dados e contexto para cabotagem e chamadas portuárias quando aplicável.
-  \item[OD] Par origem-destino usado para definir a remessa, construir rotas e organizar resultados.
-  \item[TEU] Unidade equivalente a contêiner de 20 pés, usada como referência de carga conteinerizada nos cenários rastreados.
+  \item[ANTAQ] Agência Nacional de Transportes Aquaviários.
+  \item[OD] Par origem-destino usado para definir a remessa ou o corredor analisado.
+  \item[TEU] Unidade equivalente a contêiner de 20 pés.
   \item[BRL] Real brasileiro, unidade monetária usada para expressar o proxy de custo operacional modelado.
-  \item[BR do Mar] Programa/política brasileira de estímulo à cabotagem, usado como contexto institucional e não como validação de corredor específico.
-  \item[Cabotagem] Navegação costeira entre portos brasileiros; no relatório, aparece como componente de uma cadeia porta a porta, não como comparação isolada navio-versus-caminhão.
-  \item[SSS] \textit{Short sea shipping}; literatura de navegação marítima costeira usada para contextualizar mudança modal, benefícios condicionais e cautelas metodológicas.
-  \item[Transporte rodoviário direto] Alternativa porta a porta formada por uma perna rodoviária origem-destino para a mesma unidade funcional.
-  \item[Transporte rodoviário-cabotagem-rodoviário] Alternativa multimodal com acesso rodoviário inicial, porto de origem, perna marítima, porto de destino, componentes portuários quando representáveis e acesso rodoviário final.
+  \item[BR do Mar] Programa brasileiro associado ao transporte marítimo costeiro.
+  \item[SSS] \textit{Short sea shipping}, transporte marítimo de curta distância ou costeiro.
+  \item[Transporte rodoviário direto] Alternativa formada por uma perna rodoviária entre origem e destino.
+  \item[Alternativa multimodal] Cadeia com acesso rodoviário inicial, perna marítima, portos e acesso rodoviário final.
   \item[Pre-carriage] Trecho rodoviário inicial entre a origem da carga e o porto de embarque.
   \item[On-carriage] Trecho rodoviário final entre o porto de desembarque e o destino da carga.
-  \item[Operações portuárias] Componentes operacionais de porto ou terminal incluídos apenas quando há proveniência defensável; dado ausente deve permanecer como lacuna, não como zero silencioso.
-  \item[Hoteling/hotelling] Permanência e consumo operacional associados ao navio em porto. A inclusão separada depende de dado observado, média ponderada, default documentado ou marcação explícita de indisponibilidade; quando a intensidade marítima agregada já cobre esse consumo, o componente deve ser tratado como incorporado para evitar dupla contagem.
-  \item[\ttw{}] Fronteira operacional \textit{tank-to-wheel}/\textit{tank-to-wake} usada como referência ambiental de linha de base para emissões de \cooe{} no \CabotageLens{}.
-  \item[\wtw{}] Perspectiva \textit{well-to-wheel}/\textit{well-to-wake}, mais ampla que a fronteira operacional de linha de base e usada apenas como contexto, limitação ou trabalho futuro quando não reconciliada.
-  \item[LCA/ACV] Avaliação de ciclo de vida; fronteira ambiental mais ampla que inclui etapas fora da linha operacional \ttw{} atual.
-  \item[CO$_2$] Dióxido de carbono. Não é automaticamente equivalente a \cooe{} ou CO$_2$eq sem alinhamento de gases, fator, unidade e fronteira.
-  \item[\cooe{}] Dióxido de carbono equivalente conforme fatores e fronteira implementados no projeto.
-  \item[CO$_2$eq] Notação preservada quando vinculada a benchmark ou fonte externa; não deve ser tratada como intercambiável com \cooe{} sem suporte de fronteira.
-  \item[GEE/GHG] Gases de efeito estufa; categoria ambiental dependente dos gases incluídos no fator de emissão.
-  \item[Unidade funcional] Base comum da comparação: movimento de uma quantidade especificada de carga conteinerizada entre origem e destino.
-  \item[Carga útil] Massa de carga efetivamente transportada na remessa ou cenário, distinta da capacidade nominal do veículo ou embarcação.
-  \item[Fator de emissão] Coeficiente que converte consumo de combustível, energia ou atividade em emissões sob uma unidade, gases incluídos e fronteira específica.
-  \item[Proxy de custo operacional modelado] Resultado monetário parcial calculado para componentes representados no cenário; não equivale a frete comercial, cotação, tarifa, contrato ou viabilidade econômica.
-  \item[Frete comercial] Preço de mercado negociado, cotado ou contratado para transporte; está fora da fronteira de saída monetária do \CabotageLens{}.
-  \item[Fallback] Uso de aproximação, matriz, referência indireta ou fonte alternativa quando não há dado mais forte; deve permanecer explícito e reduzir a força da evidência quando material.
-  \item[Proveniência] Registro da origem, método e confiabilidade do dado usado no cálculo, como observado, referência externa, matriz, default documentado, fallback ou indisponível.
-  \item[Benchmark] Referência externa usada para plausibilidade, contraste ou evidência direcional; não é verdade absoluta nem alvo automático de calibração.
-  \item[Gustavo/Costa] Família de benchmark externo usada para comparação direcional e diagnóstico de lacunas; não é verdade de referência, não é reprodução calibrada e não substitui a linha de base do \CabotageLens{}.
-  \item[Evidência direcional] Evidência de que duas fontes ou execuções apontam o mesmo sentido de resultado, sem demonstrar equivalência de magnitude.
-  \item[Reclassificação conservadora] Atribuição de uma categoria de uso à evidência para impedir que resultados sensíveis, diagnósticos ou não comparáveis sejam promovidos a conclusão principal.
-  \item[Análise de sensibilidade] Execução sob hipótese documentada para avaliar dependência do resultado a distância, porto, parâmetro, fronteira ou fonte.
-  \item[Reprodutibilidade] Capacidade de rastrear entradas, cache, rotas, parâmetros, resultados e classificações para repetir ou auditar uma execução.
+  \item[Operações portuárias] Atividades realizadas em porto ou terminal para atendimento da carga e da embarcação.
+  \item[Hoteling/hotelling] Permanência do navio atracado ou em porto, com consumo de energia para sistemas de bordo.
+  \item[\ttw{}] Fronteira operacional \textit{tank-to-wheel}/\textit{tank-to-wake}.
+  \item[\wtw{}] Perspectiva \textit{well-to-wheel}/\textit{well-to-wake}.
+  \item[LCA/ACV] Avaliação de ciclo de vida.
+  \item[CO$_2$] Dióxido de carbono.
+  \item[\cooe{}] Dióxido de carbono equivalente.
+  \item[CO$_2$eq] Notação para dióxido de carbono equivalente em fontes ou benchmarks externos.
+  \item[GEE/GHG] Gases de efeito estufa.
+  \item[Unidade funcional] Base comum usada para comparar alternativas de transporte.
+  \item[Carga útil] Massa de carga efetivamente transportada na remessa ou cenário.
+  \item[Fator de emissão] Coeficiente que relaciona consumo, energia ou atividade a emissões.
+  \item[Proxy de custo operacional modelado] Estimativa monetária parcial calculada para os componentes representados.
+  \item[Frete comercial] Preço de mercado negociado, cotado ou contratado para transporte.
+  \item[Fallback] Aproximação ou fonte alternativa usada quando não há dado mais forte.
+  \item[Proveniência] Registro da origem e confiabilidade de um dado.
+  \item[Benchmark] Referência externa usada para comparação ou plausibilidade.
+  \item[Evidência direcional] Evidência de que duas fontes ou execuções apontam o mesmo sentido de resultado.
+  \item[Reclassificação conservadora] Categoria de uso atribuída à evidência para limitar sua interpretação.
+  \item[Análise de sensibilidade] Execução sob hipótese documentada para avaliar dependência do resultado.
+  \item[Reprodutibilidade] Capacidade de rastrear e repetir entradas, parâmetros, resultados e classificações.
 \end{description}
 \normalsize
 \clearpage

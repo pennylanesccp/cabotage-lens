@@ -168,7 +168,7 @@
     </bcf:option>
     <bcf:option type="singlevalued">
       <bcf:key>sortlocale</bcf:key>
-      <bcf:value>brazil</bcf:value>
+      <bcf:value>english</bcf:value>
     </bcf:option>
     <bcf:option type="singlevalued">
       <bcf:key>sortingtemplatename</bcf:key>
@@ -2376,34 +2376,60 @@
     <bcf:citekey order="1" intorder="1">icct2022</bcf:citekey>
     <bcf:citekey order="2" intorder="1">shortsea2019</bcf:citekey>
     <bcf:citekey order="2" intorder="2">modalshiftreview2020</bcf:citekey>
-    <bcf:citekey order="3" intorder="1">shortsea2019</bcf:citekey>
-    <bcf:citekey order="3" intorder="2">competitiveness2024</bcf:citekey>
-    <bcf:citekey order="3" intorder="3">decarb2024</bcf:citekey>
-    <bcf:citekey order="3" intorder="4">maritimelca2024</bcf:citekey>
-    <bcf:citekey order="3" intorder="5">modalshiftreview2020</bcf:citekey>
+    <bcf:citekey order="3" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="3" intorder="2">modalshiftreview2020</bcf:citekey>
     <bcf:citekey order="4" intorder="1">icct2022</bcf:citekey>
-    <bcf:citekey order="5" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="5" intorder="1">modalshiftreview2020</bcf:citekey>
     <bcf:citekey order="6" intorder="1">shortsea2019</bcf:citekey>
-    <bcf:citekey order="7" intorder="1">modalshiftreview2020</bcf:citekey>
-    <bcf:citekey order="8" intorder="1">shortsea2019</bcf:citekey>
-    <bcf:citekey order="8" intorder="2">competitiveness2024</bcf:citekey>
-    <bcf:citekey order="9" intorder="1">decarb2024</bcf:citekey>
-    <bcf:citekey order="9" intorder="2">maritimelca2024</bcf:citekey>
-    <bcf:citekey order="10" intorder="1">berth2009</bcf:citekey>
-    <bcf:citekey order="10" intorder="2">shipops2022</bcf:citekey>
-    <bcf:citekey order="10" intorder="3">berthairquality2010</bcf:citekey>
-    <bcf:citekey order="10" intorder="4">decarb2024</bcf:citekey>
+    <bcf:citekey order="7" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="8" intorder="1">decarb2024</bcf:citekey>
+    <bcf:citekey order="8" intorder="2">maritimelca2024</bcf:citekey>
+    <bcf:citekey order="9" intorder="1">berth2009</bcf:citekey>
+    <bcf:citekey order="9" intorder="2">shipops2022</bcf:citekey>
+    <bcf:citekey order="9" intorder="3">berthairquality2010</bcf:citekey>
+    <bcf:citekey order="10" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="10" intorder="2">modalshiftreview2020</bcf:citekey>
     <bcf:citekey order="11" intorder="1">shortsea2019</bcf:citekey>
     <bcf:citekey order="11" intorder="2">competitiveness2024</bcf:citekey>
-    <bcf:citekey order="12" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="11" intorder="3">modalshiftreview2020</bcf:citekey>
+    <bcf:citekey order="12" intorder="1">icct2022</bcf:citekey>
     <bcf:citekey order="12" intorder="2">decarb2024</bcf:citekey>
     <bcf:citekey order="12" intorder="3">maritimelca2024</bcf:citekey>
-    <bcf:citekey order="13" intorder="1">berth2009</bcf:citekey>
-    <bcf:citekey order="13" intorder="2">shipops2022</bcf:citekey>
-    <bcf:citekey order="14" intorder="1">berthairquality2010</bcf:citekey>
-    <bcf:citekey order="14" intorder="2">shipops2022</bcf:citekey>
+    <bcf:citekey order="13" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="13" intorder="2">modalshiftreview2020</bcf:citekey>
+    <bcf:citekey order="14" intorder="1">shortsea2019</bcf:citekey>
+    <bcf:citekey order="14" intorder="2">competitiveness2024</bcf:citekey>
     <bcf:citekey order="15" intorder="1">competitiveness2024</bcf:citekey>
     <bcf:citekey order="15" intorder="2">modalshiftreview2020</bcf:citekey>
+    <bcf:citekey order="16" intorder="1">berth2009</bcf:citekey>
+    <bcf:citekey order="16" intorder="2">shipops2022</bcf:citekey>
+    <bcf:citekey order="16" intorder="3">decarb2024</bcf:citekey>
+    <bcf:citekey order="17" intorder="1">shortsea2019</bcf:citekey>
+    <bcf:citekey order="17" intorder="2">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="18" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="18" intorder="2">decarb2024</bcf:citekey>
+    <bcf:citekey order="19" intorder="1">shortsea2019</bcf:citekey>
+    <bcf:citekey order="19" intorder="2">modalshiftreview2020</bcf:citekey>
+    <bcf:citekey order="20" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="21" intorder="1">decarb2024</bcf:citekey>
+    <bcf:citekey order="21" intorder="2">maritimelca2024</bcf:citekey>
+    <bcf:citekey order="22" intorder="1">berth2009</bcf:citekey>
+    <bcf:citekey order="22" intorder="2">shipops2022</bcf:citekey>
+    <bcf:citekey order="23" intorder="1">decarb2024</bcf:citekey>
+    <bcf:citekey order="23" intorder="2">maritimelca2024</bcf:citekey>
+    <bcf:citekey order="24" intorder="1">icct2022</bcf:citekey>
+    <bcf:citekey order="24" intorder="2">decarb2024</bcf:citekey>
+    <bcf:citekey order="24" intorder="3">maritimelca2024</bcf:citekey>
+    <bcf:citekey order="25" intorder="1">berth2009</bcf:citekey>
+    <bcf:citekey order="25" intorder="2">shipops2022</bcf:citekey>
+    <bcf:citekey order="25" intorder="3">berthairquality2010</bcf:citekey>
+    <bcf:citekey order="26" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="26" intorder="2">modalshiftreview2020</bcf:citekey>
+    <bcf:citekey order="27" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="27" intorder="2">modalshiftreview2020</bcf:citekey>
+    <bcf:citekey order="28" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="29" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="29" intorder="2">modalshiftreview2020</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="none">

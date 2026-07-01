@@ -1,15 +1,15 @@
 [0] Config.pm:328> INFO - This is Biber 2.21
 [0] Config.pm:331> INFO - Logfile is 'cabotagelens_technical_article.blg'
-[186] biber-MSWIN64:342> INFO - === 
-[227] Biber.pm:421> INFO - Reading 'cabotagelens_technical_article.bcf'
-[439] Biber.pm:1002> INFO - Found 6 citekeys in bib section 0
-[461] Biber.pm:4487> INFO - Processing section 0
-[475] Biber.pm:4678> INFO - Looking for bibtex file '../references.bib' for section 0
-[532] bibtex.pm:1713> INFO - LaTeX decoding ...
+[139] biber-MSWIN64:342> INFO - === 
+[185] Biber.pm:421> INFO - Reading 'cabotagelens_technical_article.bcf'
+[349] Biber.pm:1002> INFO - Found 9 citekeys in bib section 0
+[373] Biber.pm:4487> INFO - Processing section 0
+[403] Biber.pm:4678> INFO - Looking for bibtex file '../references.bib' for section 0
+[496] bibtex.pm:1713> INFO - LaTeX decoding ...
 [581] bibtex.pm:1519> INFO - Found BibTeX data source '../references.bib'
-[672] UCollate.pm:68> INFO - Overriding locale 'pt-BR' defaults 'normalization = NFD' with 'normalization = prenormalized'
-[672] UCollate.pm:68> INFO - Overriding locale 'pt-BR' defaults 'variable = shifted' with 'variable = non-ignorable'
-[673] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'pt-BR'
-[673] Biber.pm:4313> INFO - No sort tailoring available for locale 'pt-BR'
-[678] bbl.pm:676> INFO - Writing 'cabotagelens_technical_article.bbl' with encoding 'UTF-8'
-[680] bbl.pm:779> INFO - Output to cabotagelens_technical_article.bbl
+[710] UCollate.pm:68> INFO - Overriding locale 'pt-BR' defaults 'variable = shifted' with 'variable = non-ignorable'
+[711] UCollate.pm:68> INFO - Overriding locale 'pt-BR' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[711] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'pt-BR'
+[711] Biber.pm:4313> INFO - No sort tailoring available for locale 'pt-BR'
+[722] bbl.pm:676> INFO - Writing 'cabotagelens_technical_article.bbl' with encoding 'UTF-8'
+[729] bbl.pm:779> INFO - Output to cabotagelens_technical_article.bbl

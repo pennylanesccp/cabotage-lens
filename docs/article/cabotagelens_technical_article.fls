@@ -1,6 +1,6 @@
-PWD c:\Users\Cliente\Documents\workspaces\personal\cabotage-lens\docs\article
+PWD C:\Users\Cliente\Documents\workspaces\personal\cabotage-lens\docs\article
 INPUT C:\Users\Cliente\AppData\Local\MiKTeX\miktex\data\le\pdftex\pdflatex.fmt
-INPUT c:\Users\Cliente\Documents\workspaces\personal\cabotage-lens\docs\article\cabotagelens_technical_article.tex
+INPUT cabotagelens_technical_article.tex
 OUTPUT cabotagelens_technical_article.log
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\base\article.cls
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\base\article.cls
@@ -271,6 +271,13 @@ INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmri
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\enc\dvips\lm\lm-mathit.enc
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\enc\dvips\lm\lm-mathex.enc
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\enc\dvips\lm\lm-mathsy.enc
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmr8.tfm
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmr10.tfm
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\rm-lmr5.tfm
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\lmmi5.tfm
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\lmsy5.tfm
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmr7.tfm
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmri10.tfm
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\lm\t1lmtt.fd
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\lm\t1lmtt.fd
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\lm\t1lmtt.fd
@@ -298,6 +305,8 @@ INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmr12
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmr12.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmr17.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmr17.pfb
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmr7.pfb
+INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmr7.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmr8.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmr8.pfb
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\fonts\type1\public\lm\lmri10.pfb
