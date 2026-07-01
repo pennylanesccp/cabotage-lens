@@ -26,7 +26,7 @@ Células Batch 002 não comparáveis & 15 células & 6 self-pairs e 9 linhas rod
 \end{tabularx}
 \end{table}
 
-A rerodada de 30 de junho de 2026 das validações, incorporando a exposição dos componentes de operações portuárias e \emph{hoteling} conforme a metodologia atual, manteve a conclusão modal dos cenários avaliados. Foram executadas 24 linhas de validação/modelo, com emissões médias rodoviárias de 6.258,34 kg \cooe{} e emissões médias multimodais por cabotagem de 467,43 kg \cooe{}, resultando em economia média de 91,97\%. Em todos os cenários executados, a cabotagem permaneceu como alternativa de menor emissão, sem mudança de conclusão modal em relação aos artefatos comparáveis.
+A rerodada de 30 de junho de 2026 das validações, incorporando a exposição dos componentes de operações portuárias e \emph{hoteling} conforme a metodologia atual, manteve a conclusão modal dos cenários avaliados. Foram consideradas 24 linhas executadas/modeladas, com emissões médias rodoviárias de 6.258,34 kg \cooe{} e emissões médias multimodais por cabotagem de 467,43 kg \cooe{}, resultando em economia média de 91,97\%. Em todos os cenários executados, a cabotagem permaneceu como alternativa de menor emissão, sem mudança de conclusão modal em relação aos artefatos comparáveis.
 
 \begin{table}[htbp]
 \centering
@@ -37,13 +37,14 @@ A rerodada de 30 de junho de 2026 das validações, incorporando a exposição d
 \toprule
 Métrica & Valor & Leitura segura \\
 \midrule
-Linhas executadas/modelo & 24 & Denominador agregado da rerodada.\\
-Emissões médias rodoviárias & 6.258,34 kg \cooe{} & Média não ponderada das linhas executadas/modelo.\\
-Emissões médias multimodais por cabotagem & 467,43 kg \cooe{} & Média não ponderada das linhas executadas/modelo.\\
+Linhas executadas/modeladas & 24 & Denominador agregado da rerodada.\\
+Composição do denominador & 3 sensibilidades Batch 001B + 21 linhas Batch 002 & Linhas record-only, bloqueadas, excluídas ou não comparáveis ficam fora da média.\\
+Emissões médias rodoviárias & 6.258,34 kg \cooe{} & Média não ponderada das linhas executadas/modeladas.\\
+Emissões médias multimodais por cabotagem & 467,43 kg \cooe{} & Média não ponderada das linhas executadas/modeladas.\\
 Economia média da cabotagem & 91,97\% & Diferença percentual média frente ao rodoviário direto.\\
 Soma de emissões de navegação & 8.586,80 kg \cooe{} & Componente marítimo em navegação.\\
 Soma de \emph{hoteling} explícito & 0,00 kg \cooe{} & Tratamento metodológico resumido no Apêndice~\ref{sec:app-nota-portops-hoteling}.\\
-Soma de operações portuárias & 309,72 kg \cooe{} & Componente explicitamente incluído nas linhas executadas/modelo.\\
+Soma de operações portuárias & 309,72 kg \cooe{} & Componente explicitamente incluído nas linhas executadas/modeladas.\\
 Conclusão modal & 24/24 \codecell{cabotage\_lower\_emissions}; 0 mudanças & Nenhuma conclusão modal mudou nos comparáveis.\\
 \bottomrule
 \end{tabularx}
@@ -181,7 +182,7 @@ Grupo & Observação obtida & Classificação & O que não sustenta \\
 Batch 001 & 5 casos históricos com limitações. & \codecell{historical\_diagnostic} & Resultado corrigido ou validação final.\\
 Batch 001B & 8 linhas de decisão. & Diversas categorias metodológicas & Execução numérica de todas as linhas planejadas.\\
 Sensibilidades & 3 linhas com multimodal menor em custo e emissões. & \codecell{sensitive} & Linha de base robusta, validação do porto original ou frete comercial.\\
-Rerodada portops/\emph{hoteling} & 24 linhas executadas/modelo; médias de 6.258,34 kg \cooe{} rodoviárias e 467,43 kg \cooe{} multimodais. & 24/24 \codecell{cabotage\_lower\_emissions} & Isolamento causal das diferenças antigo--novo sem controlar mudanças de cache/provedor.\\
+Rerodada portops/\emph{hoteling} & 24 linhas executadas/modeladas; médias de 6.258,34 kg \cooe{} rodoviárias e 467,43 kg \cooe{} multimodais. & 24/24 \codecell{cabotage\_lower\_emissions} & Isolamento causal das diferenças antigo--novo sem controlar mudanças de cache/provedor.\\
 Batch 002 & 21/21 pares alinhados em direção. & \codecell{benchmark\_supports\_direction} & Reprodução exata, calibração ou workbook como verdade de referência.\\
 Rerun/cache & 63 cache hits e 0 misses. & \codecell{benchmark\_methodology\_gap} & Validação de magnitude, rota comercial ou serviço disponível.\\
 Reconciliação & Divergência rodoviária reduzida para 43,9\%/19,6\%. & \codecell{benchmark\_supports\_road\_factor\_explanation} & Recalibração da aplicação.\\

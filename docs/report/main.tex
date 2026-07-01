@@ -153,7 +153,7 @@ This report presents \CabotageLens{}, an auditable computational framework for c
   \item[Pre-carriage] Trecho rodoviário inicial entre a origem da carga e o porto de embarque.
   \item[On-carriage] Trecho rodoviário final entre o porto de desembarque e o destino da carga.
   \item[Operações portuárias] Componentes operacionais de porto ou terminal incluídos apenas quando há proveniência defensável; dado ausente deve permanecer como lacuna, não como zero silencioso.
-  \item[Hoteling/hotelling] Permanência e consumo operacional associados ao navio em porto. A inclusão depende de dado observado, média ponderada, default documentado ou marcação explícita de indisponibilidade.
+  \item[Hoteling/hotelling] Permanência e consumo operacional associados ao navio em porto. A inclusão separada depende de dado observado, média ponderada, default documentado ou marcação explícita de indisponibilidade; quando a intensidade marítima agregada já cobre esse consumo, o componente deve ser tratado como incorporado para evitar dupla contagem.
   \item[\ttw{}] Fronteira operacional \textit{tank-to-wheel}/\textit{tank-to-wake} usada como referência ambiental de linha de base para emissões de \cooe{} no \CabotageLens{}.
   \item[\wtw{}] Perspectiva \textit{well-to-wheel}/\textit{well-to-wake}, mais ampla que a fronteira operacional de linha de base e usada apenas como contexto, limitação ou trabalho futuro quando não reconciliada.
   \item[LCA/ACV] Avaliação de ciclo de vida; fronteira ambiental mais ampla que inclui etapas fora da linha operacional \ttw{} atual.
