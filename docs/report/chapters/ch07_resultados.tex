@@ -50,7 +50,7 @@ Conclusão modal & 24/24 \codecell{cabotage\_lower\_emissions}; 0 mudanças & Ne
 \end{tabularx}
 \end{table}
 
-As categorias preservam as fronteiras materiais dos resultados. Custos são estimativas modeladas por remessa, não tarifas, cotações, contratos ou fretes comerciais. A saída ambiental é reportada como emissões operacionais \ttw{} de \cooe{}, salvo indicação explícita em contrário; valores \wtw{}, LCA ou CO$_2$-only não devem ser misturados com a saída atual sem reconciliação metodológica.
+A leitura desse resumo herda as fronteiras materiais já definidas: custos permanecem modelados, emissões permanecem operacionais \ttw{} de \cooe{} e comparações externas exigem compatibilidade de unidade, escopo e proveniência.
 
 \section{Resultados históricos e decisões metodológicas Batch 001/001B}
 \label{sec:resultados-batch001}
@@ -103,7 +103,7 @@ Caso & Papel e portos & Custo rod./multi. (BRL) & Emissões rod./multi. (kg \coo
 
 Nos três cenários de sensibilidade executados, a alternativa multimodal apresentou menor custo modelado e menores emissões operacionais \ttw{} de \cooe{} do que a alternativa rodoviária direta. Essa afirmação vale apenas para essas hipóteses nomeadas de distância ou porto alternativo, e cada linha continua \texttt{sensitive}, não linha de base validada nem \texttt{headline\_candidate}.
 
-A diferença entre os custos rodoviários e multimodais deve ser lida dentro da fronteira de custo do modelo. Na alternativa rodoviária direta, a remessa é atribuída a um veículo rodoviário dedicado; na alternativa multimodal, a perna marítima distribui custos e consumo de navio pela capacidade/carga representada no cenário. Essa estrutura explica por que o custo multimodal modelado pode ficar muito menor, mas não transforma o valor em frete comercial, tarifa portuária completa ou cotação contratável.
+A diferença entre os custos rodoviários e multimodais deve ser lida dentro da fronteira de custo do modelo. Na alternativa rodoviária direta, a remessa é atribuída a um veículo rodoviário dedicado; na alternativa multimodal, a perna marítima distribui custos e consumo de navio pela capacidade/carga representada no cenário. Essa estrutura explica por que o custo multimodal modelado pode ficar muito menor, sob a fronteira econômica já delimitada.
 
 \section{Resultados do benchmark externo Batch 002}
 \label{sec:resultados-batch002}
@@ -164,7 +164,7 @@ O rerun fortalece a reprodutibilidade computacional do Batch 002, mas não valid
 \section{Síntese dos resultados classificados e transição para a discussão}
 \label{sec:sintese-resultados}
 
-O Capítulo~\ref{ch:resultados} não produz uma conclusão universal sobre cabotagem. Ele organiza resultados observados e classificações de uso. A síntese segura é que há evidência de sensibilidade favorável em três cenários nomeados, apoio direcional externo no Batch 002, estabilidade computacional no rerun e redução diagnóstica da lacuna rodoviária quando se aplica uma premissa de benchmark. Nenhum desses grupos, isolado ou em conjunto, autoriza validação calibrada, superioridade universal ou uso comercial direto.
+O Capítulo~\ref{ch:resultados} organiza resultados observados e classificações de uso, não uma conclusão geral sobre cabotagem. A síntese segura é que há evidência de sensibilidade favorável em três cenários nomeados, apoio direcional externo no Batch 002, estabilidade computacional no rerun e redução diagnóstica da lacuna rodoviária quando se aplica uma premissa de benchmark. Com as cautelas de validação já descritas, nenhum desses grupos vira \texttt{headline\_candidate}.
 
 A Figura~\ref{fig:sintese-resultados-classificados} reserva espaço para uma visualização final que conecte camadas de evidência, categorias e usos permitidos sem substituir a leitura detalhada da Tabela~\ref{tab:sintese-resultados}.
 

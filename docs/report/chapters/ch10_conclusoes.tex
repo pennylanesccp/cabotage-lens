@@ -6,7 +6,7 @@
 
 Este trabalho desenvolveu e documentou o \CabotageLens{} como um framework computacional auditável, reprodutível e orientado por rota para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros. A conclusão principal não é uma afirmação universal de superioridade da cabotagem. A contribuição central é mostrar que a comparação modal pode ser construída com unidade funcional explícita, cadeia porta a porta, proveniência de dados, fronteiras metodológicas declaradas e classificação conservadora da força da evidência.
 
-Sob essa formulação, os resultados do \CabotageLens{} devem ser lidos como estimativas de cenário. Custos permanecem custos modelados, não fretes comerciais, tarifas ou cotações. Emissões permanecem operacionais \ttw{} de \cooe{}, não \wtw{} nem LCA. A seleção de portos, a distância marítima, os acessos terrestres, os componentes portuários, os parâmetros de carga e a classificação de validação condicionam o alcance de cada conclusão.
+Sob essa formulação, os resultados do \CabotageLens{} devem ser lidos como estimativas de cenário sob as fronteiras metodológicas definidas. A seleção de portos, a distância marítima, os acessos terrestres, os componentes portuários, os parâmetros de carga, a fronteira econômica, a fronteira ambiental e a classificação de validação condicionam o alcance de cada conclusão.
 
 Assim, o resultado mais defensável do TF é metodológico e computacional: o \CabotageLens{} torna visíveis as hipóteses que normalmente ficam implícitas em uma comparação entre rodovia e cabotagem. A ferramenta não substitui validação comercial ou operacional, mas organiza uma base rastreável para discutir quando uma alternativa multimodal aparece promissora, quando a evidência é apenas sensível ou diagnóstica, e quais lacunas precisam ser fechadas antes de afirmações mais fortes.
 
@@ -30,7 +30,7 @@ A rerodada consolidada de 30 de junho de 2026 reforça essa leitura condicionada
 
 O rerun Supabase/cache reforça a reprodutibilidade computacional ao reduzir a hipótese de instabilidade de provedor ou cache como causa principal das lacunas observadas. A reconciliação de fator rodoviário explica parte relevante da diferença no lado \emph{road-only}, mas permanece diagnóstico de alinhamento com o benchmark. Ela não recalibra o \CabotageLens{}, não substitui o modelo rodoviário de linha de base e não altera a fronteira operacional \ttw{} do trabalho.
 
-As limitações apresentadas no Capítulo~\ref{ch:limitacoes}, portanto, não enfraquecem a conclusão; elas definem seu uso correto. O TF pode concluir que o \CabotageLens{} produz comparações rastreáveis, auditáveis e academicamente defensáveis sob fronteiras explícitas. Não pode concluir que a cabotagem seja universalmente superior, que custos modelados sejam fretes comerciais, que emissões operacionais \ttw{} de \cooe{} sejam \wtw{}/LCA, que sensibilidades sejam resultados robustos de baseline ou que o benchmark do Prof. Dr. Gustavo Costa tenha sido plenamente reproduzido.
+As limitações apresentadas no Capítulo~\ref{ch:limitacoes}, portanto, não enfraquecem a conclusão; elas definem seu uso correto. O TF pode concluir que o \CabotageLens{} produz comparações rastreáveis, auditáveis e academicamente defensáveis sob fronteiras explícitas. Não pode converter essas comparações em superioridade modal universal, decisão comercial, validação operacional, resultado \wtw{}/LCA ou reprodução calibrada do benchmark externo.
 
 \section{Agenda prioritária de trabalhos futuros}
 \label{sec:trabalhos-futuros}

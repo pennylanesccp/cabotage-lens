@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  30 JUN 2026 21:39
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  30 JUN 2026 21:52
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -951,7 +951,7 @@ Package babel Info: 'brazil' activates 'portuges' shorthands.
 
  [8]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10.95> on input line 158.
+(Font)              <10.95> on input line 162.
  [9
 
 
@@ -1032,11 +1032,11 @@ Overfull \hbox (2.8486pt too wide) in paragraph at lines 77--77
 []|\T1/lmr/m/n/10.95 (-20) Persistência/exportação|  
  []
 
-[19] [20]) (chapters/ch06_validacao_evidencia.tex [21] [22]
+[19] [20]) (chapters/ch06_validacao_evidencia.tex [21]
 Cap\'{\i }tulo 6.
-[23
+[22
 
-] [24] [25] [26] [27] [28{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-mathsy.enc}]
+] [23] [24] [25] [26] [27{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-mathsy.enc}]
 Overfull \hbox (86.88506pt too wide) in paragraph at lines 191--192
 \T1/lmr/m/n/12 (-20) me-di-ana do lado road-only. O uso se-guro dessa ca-mada é \T1/lmtt/m/n/12 benchmark_supports_road_factor_explanation\T1/lmr/m/n/12 (-20) :
  []
@@ -1061,27 +1061,27 @@ Underfull \hbox (badness 10000) in alignment at lines 214--227
 [] [] []
  []
 
-[29]) (chapters/ch07_resultados.tex [30]
+[28]) (chapters/ch07_resultados.tex [29]
 Cap\'{\i }tulo 7.
-[31
+[30
 
-] [32]
+] [31]
 Overfull \hbox (23.04808pt too wide) in paragraph at lines 84--85
 \T1/lmr/m/n/12 (-20) Foram exe-cu-ta-das três li-nhas de sen-si-bi-li-dade do Batch 001B: \T1/lmtt/m/n/12 TF-VAL-001B-SENS-002-REFDIST\T1/lmr/m/n/12 (-20) ,
  []
 
-[33] [34]
+[32] [33]
 Underfull \hbox (badness 1331) in paragraph at lines 159--159
 []|\T1/lmr/m/n/10 (+20) 53,5%/52,9% $\OMS/lmsy/m/n/10 !$ 
  []
 
-[35]) (chapters/ch08_discussao.tex [36] [37]
+[34]) (chapters/ch08_discussao.tex [35] [36]
 Cap\'{\i }tulo 8.
-[38
+[37
 
-] [39] [40] [41]) (chapters/ch09_limitacoes.tex [42]
+] [38] [39] [40]) (chapters/ch09_limitacoes.tex [41]
 Cap\'{\i }tulo 9.
-[43
+[42
 
 ]
 
@@ -1096,11 +1096,11 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 34.
 
-[44] [45] [46]) (chapters/ch10_conclusoes.tex [47] [48]
+[43] [44] [45]) (chapters/ch10_conclusoes.tex [46] [47]
 Cap\'{\i }tulo 10.
-[49
+[48
 
-] [50]) (appendices/appendix_a_parametros.tex [51] [52]
+] [49] [50]) (appendices/appendix_a_parametros.tex [51]
 Ap\^endice A.
 
 Overfull \hbox (455.24411pt too wide) detected at line 18
@@ -1122,16 +1122,16 @@ Underfull \hbox (badness 10000) in alignment at lines 27--39
 [] [] [] []
  []
 
-appendices/appendix_a_parametros.tex:39: ignored error: Infinite glue shrinkage found in box being split [53
+appendices/appendix_a_parametros.tex:39: ignored error: Infinite glue shrinkage found in box being split [52
 
-] [54]
+] [53]
 Overfull \hbox (12.66112pt too wide) in paragraph at lines 89--89
 []|\T1/lmtt/m/n/10.95 estimated_port_average|  
  []
 
-[55]) (appendices/appendix_b_validacao.tex [56]
+[54]) (appendices/appendix_b_validacao.tex [55]
 Ap\^endice B.
-[57
+[56
 
 ]
 Underfull \hbox (badness 1259) in paragraph at lines 107--107
@@ -1143,7 +1143,7 @@ Underfull \hbox (badness 1259) in paragraph at lines 107--107
 []|\T1/lmr/m/n/10 (+20) 199,8%/149,3% $\OMS/lmsy/m/n/10 !$ 
  []
 
-[58]
+[57]
 Overfull \hbox (455.24411pt too wide) detected at line 122
 []
  []
@@ -1163,7 +1163,7 @@ Underfull \hbox (badness 10000) in alignment at lines 131--144
 [] [] []
  []
 
-[59]) (appendices/appendix_c_checklist_reprodutibilidade.tex [60]
+[58]) (appendices/appendix_c_checklist_reprodutibilidade.tex [59]
 Ap\^endice C.
 
 Underfull \hbox (badness 1533) in paragraph at lines 28--28
@@ -1190,9 +1190,9 @@ Overfull \hbox (25.9406pt too wide) in paragraph at lines 28--28
 \T1/lmtt/m/n/10.95 docs/report/appendices/\T1/lmr/m/n/10.95 (-20) .|  
  []
 
-) [61
+) [60
 
-] [62] [63] [64
+] [61] [62] [63
 
 ] (main.aux)
  ***********
@@ -1206,17 +1206,17 @@ Package logreq Info: Writing requests to 'main.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 25658 strings out of 467871
- 453708 string characters out of 5417408
+ 25657 strings out of 467871
+ 453697 string characters out of 5417408
  1358341 words of memory out of 5000000
  53527 multiletter control sequences out of 15000+600000
- 728753 words of font info for 268 fonts, out of 8000000 for 9000
+ 728707 words of font info for 268 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,13n,79p,1413b,2351s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,13n,79p,1270b,2351s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbxi10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr7.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmri10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmri12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsy10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmtt10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmtt12.pfb>
-Output written on main.pdf (75 pages, 621695 bytes).
+Output written on main.pdf (74 pages, 619871 bytes).
 PDF statistics:
- 1143 PDF objects out of 1200 (max. 8388607)
- 224 named destinations out of 1000 (max. 500000)
+ 1139 PDF objects out of 1200 (max. 8388607)
+ 223 named destinations out of 1000 (max. 500000)
  51413 words of extra memory for PDF output out of 51595 (max. 10000000)
 
