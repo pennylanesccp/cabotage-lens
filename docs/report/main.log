@@ -1,4 +1,4 @@
-﻿This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  30 JUN 2026 23:31
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  30 JUN 2026 23:49
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -47,11 +47,11 @@ LaTeX Encoding Info:    Redeclaring text command \ij (encoding T1) on input lin
 e 2072.
 LaTeX Encoding Info:    Redeclaring text command \IJ (encoding T1) on input lin
 e 2073.
-LaTeX Encoding Info:    Ignoring declaration for text command \ij (encoding ?)
+LaTeX Encoding Info:    Ignoring declaration for text command \ij (encoding ?) 
 on input line 2074.
-LaTeX Encoding Info:    Ignoring declaration for text command \IJ (encoding ?)
+LaTeX Encoding Info:    Ignoring declaration for text command \IJ (encoding ?) 
 on input line 2076.
-LaTeX Encoding Info:    Ignoring declaration for text command \SS (encoding ?)
+LaTeX Encoding Info:    Ignoring declaration for text command \SS (encoding ?) 
 on input line 2101.
 \U@D=\dimen149
 \l@unhyphenated=\language79
@@ -246,7 +246,7 @@ Package pdflscape Info: Auto-detected driver: pdftex on input line 81.
 ))
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/seqsplit\seqsplit.sty
 Package: seqsplit 2006/08/07 v0.1 Splitting long sequences (DNA, RNA, proteins,
- etc.)
+ etc.) 
 ) (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
 Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
 
@@ -616,7 +616,7 @@ Package csquotes Info: Trying to load configuration file 'csquotes.cfg'...
 Package csquotes Info: ... configuration file loaded successfully.
 
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/csquotes\csquotes.cfg
-File: csquotes.cfg
+File: csquotes.cfg 
 ))
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\biblatex.sty
 Package: biblatex 2025/07/10 v3.21 programmable bibliographies (PK/MW)
@@ -842,12 +842,12 @@ Package biblatex Info: Trying to load configuration file...
 Package biblatex Info: ... file 'biblatex.cfg' found.
 
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\biblatex.cfg
-File: biblatex.cfg
+File: biblatex.cfg 
 )
 Package biblatex Info: Input encoding 'utf8' detected.
 Package biblatex Info: Document encoding is UTF8 ....
  (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
-Package: expl3 2025-12-24 L3 programming layer (loader)
+Package: expl3 2025-12-24 L3 programming layer (loader) 
 
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-p
 dftex.def
@@ -855,7 +855,7 @@ File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count461
 ))
 Package biblatex Info: ... and expl3
-(biblatex)             2025-12-24 L3 programming layer (loader)
+(biblatex)             2025-12-24 L3 programming layer (loader) 
 (biblatex)             is new enough (at least 2020/04/06),
 (biblatex)             setting 'casechanger=expl3'.
 
@@ -910,7 +910,7 @@ LaTeX Font Info:    ... okay on input line 79.
 * paper: a4paper
 * layout: <same size as paper>
 * layoutoffset:(h,v)=(0.0pt,0.0pt)
-* modes:
+* modes: 
 * h-part:(L,W,R)=(71.13188pt, 455.24411pt, 71.13188pt)
 * v-part:(T,H,B)=(71.13188pt, 702.78308pt, 71.13188pt)
 * \paperwidth=597.50787pt
@@ -992,7 +992,7 @@ Package microtype Info: No adjustment of tracking.
 Package microtype Info: No adjustment of interword spacing.
 Package microtype Info: No adjustment of character kerning.
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-cmr.cfg
-File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman
+File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
 (RS)
 )
 Package biblatex Info: Trying to load language 'english'...
@@ -1047,12 +1047,12 @@ LaTeX Font Info:    Trying to load font information for OML+lmm on input line 1
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/lm\omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )<<oml.cmap>>
-LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line
+LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 
 107.
  (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/lm\omslmsy.fd
 File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )<<oms.cmap>>
-LaTeX Font Info:    Trying to load font information for OMX+lmex on input line
+LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 
 107.
 
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/lm\omxlmex.fd
@@ -1083,7 +1083,7 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 ) [1
 
-{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-rm.enc}]
+{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-rm.enc}] 
 [2
 
 ] (main.toc [3
@@ -1116,17 +1116,17 @@ LaTeX Font Info:    External font `lmex10' loaded for size
 ] [10]
 (chapters/ch01_introducao.tex
 Cap\'{\i }tulo 1.
-<images/figura_1_1.png, id=608, 2041.6275pt x 913.91437pt>
+<images/figura_1_1.png, id=594, 2041.6275pt x 913.91437pt>
 File: images/figura_1_1.png Graphic file (type png)
 <use images/figura_1_1.png>
 Package pdftex.def Info: images/figura_1_1.png  used on input line 10.
 (pdftex.def)             Requested size: 432.48051pt x 193.58716pt.
 
-pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has
+pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has 
 been already used, duplicate ignored
-<to be read again>
-                   \relax
-l.18
+<to be read again> 
+                   \relax 
+l.18 
       [1
 
 
@@ -1190,12 +1190,12 @@ Package microtype Info: Loading generic protrusion settings for font family
 
 ]
 Underfull \hbox (badness 1024) in paragraph at lines 54--54
-\T1/lmtt/m/n/10.95 manual_override \T1/lmr/m/n/10.95 (+20) ou
+\T1/lmtt/m/n/10.95 manual_override \T1/lmr/m/n/10.95 (+20) ou 
  []
 
 [12] [13] [14{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm
 /lm-mathit.enc}]
-<images/figura_4_1.png, id=714, 2826.56pt x 1541.76pt>
+<images/figura_4_1.png, id=700, 2826.56pt x 1541.76pt>
 File: images/figura_4_1.png Graphic file (type png)
 <use images/figura_4_1.png>
 Package pdftex.def Info: images/figura_4_1.png  used on input line 111.
@@ -1203,7 +1203,7 @@ Package pdftex.def Info: images/figura_4_1.png  used on input line 111.
  [15 <./images/figura_4_1.png>] [16] [17])
 (chapters/ch05_implementacao_computacional.tex [18]
 Cap\'{\i }tulo 5.
-<images/figura_5_1.png, id=745, 2826.56pt x 1541.76pt>
+<images/figura_5_1.png, id=731, 2826.56pt x 1541.76pt>
 File: images/figura_5_1.png Graphic file (type png)
 <use images/figura_5_1.png>
 Package pdftex.def Info: images/figura_5_1.png  used on input line 13.
@@ -1216,14 +1216,14 @@ c}] [20 <./images/figura_5_1.png>] [21] [22] [23] [24])
 Cap\'{\i }tulo 6.
 
 Underfull \hbox (badness 1648) in paragraph at lines 27--27
-[]|\T1/lmr/m/n/10.95 (+20) Evidência con-di-ci-o-
+[]|\T1/lmr/m/n/10.95 (+20) Evid�ncia con-di-ci-o- 
  []
 
 [26
 
 ] [27] [28] [29] [30]
 Overfull \hbox (86.88506pt too wide) in paragraph at lines 191--192
-\T1/lmr/m/n/12 (-20) me-di-ana do lado road-only. O uso se-guro dessa ca-mada é
+\T1/lmr/m/n/12 (-20) me-di-ana do lado road-only. O uso se-guro dessa ca-mada �
  \T1/lmtt/m/n/12 benchmark_supports_road_factor_explanation\T1/lmr/m/n/12 (-20)
  :
  []
@@ -1255,16 +1255,16 @@ Cap\'{\i }tulo 7.
 
 ] [35]
 Overfull \hbox (0.94579pt too wide) in paragraph at lines 76--76
-[]|\T1/lmr/m/n/10.95 (-20) Contextualizar
+[]|\T1/lmr/m/n/10.95 (-20) Contextualizar 
  []
 
 [36] [37]
 Underfull \hbox (badness 1331) in paragraph at lines 159--159
-[]|\T1/lmr/m/n/10 (+20) 53,5%/52,9% $\OMS/lmsy/m/n/10 !$
+[]|\T1/lmr/m/n/10 (+20) 53,5%/52,9% $\OMS/lmsy/m/n/10 !$ 
  []
 
 [38]
-<images/figura_7_1.png, id=871, 2762.32pt x 1541.76pt>
+<images/figura_7_1.png, id=857, 2762.32pt x 1541.76pt>
 File: images/figura_7_1.png Graphic file (type png)
 <use images/figura_7_1.png>
 Package pdftex.def Info: images/figura_7_1.png  used on input line 173.
@@ -1319,20 +1319,20 @@ Underfull \hbox (badness 10000) in alignment at lines 27--39
 ignored error: Infinite glue shrinkage found in box being split [55
 
 ]
-<images/figura_A_1.png, id=986, 2826.56pt x 1541.76pt>
+<images/figura_A_1.png, id=972, 2826.56pt x 1541.76pt>
 File: images/figura_A_1.png Graphic file (type png)
 <use images/figura_A_1.png>
 Package pdftex.def Info: images/figura_A_1.png  used on input line 49.
 (pdftex.def)             Requested size: 386.96027pt x 211.06927pt.
 
 Overfull \hbox (12.66112pt too wide) in paragraph at lines 94--94
-[]|\T1/lmtt/m/n/10.95 estimated_port_average|
+[]|\T1/lmtt/m/n/10.95 estimated_port_average|  
  []
 
 [56] [57 <./images/figura_A_1.png>]) (appendices/appendix_b_validacao.tex
 [58]
 Ap\^endice B.
-<images/figura_B_1.png, id=1008, 2826.56pt x 1541.76pt>
+<images/figura_B_1.png, id=992, 2826.56pt x 1541.76pt>
 File: images/figura_B_1.png Graphic file (type png)
 <use images/figura_B_1.png>
 Package pdftex.def Info: images/figura_B_1.png  used on input line 13.
@@ -1341,12 +1341,12 @@ Package pdftex.def Info: images/figura_B_1.png  used on input line 13.
 
  <./images/figura_B_1.png>] [60]
 Underfull \hbox (badness 1259) in paragraph at lines 112--112
-[]|\T1/lmr/m/n/10 (+20) 201,0%/150,5% $\OMS/lmsy/m/n/10 !$
+[]|\T1/lmr/m/n/10 (+20) 201,0%/150,5% $\OMS/lmsy/m/n/10 !$ 
  []
 
 
 Underfull \hbox (badness 1259) in paragraph at lines 112--112
-[]|\T1/lmr/m/n/10 (+20) 199,8%/149,3% $\OMS/lmsy/m/n/10 !$
+[]|\T1/lmr/m/n/10 (+20) 199,8%/149,3% $\OMS/lmsy/m/n/10 !$ 
  []
 
 
@@ -1372,58 +1372,33 @@ Underfull \hbox (badness 10000) in alignment at lines 136--149
 ignored error: Infinite glue shrinkage found in box being split [61])
 (appendices/appendix_c_checklist_reprodutibilidade.tex [62] [63]
 Ap\^endice C.
+[64
 
-Underfull \hbox (badness 1533) in paragraph at lines 28--28
-[]|\T1/lmr/m/n/10.95 (+20) Criado em
- []
-
-
-Overfull \hbox (8.6944pt too wide) in paragraph at lines 28--28
-\T1/lmtt/m/n/10.95 docs/report/main.tex\T1/lmr/m/n/10.95 (-20) .|
- []
-
-
-Underfull \hbox (badness 1248) in paragraph at lines 28--28
-[]|\T1/lmr/m/n/10.95 (+20) Capítulos 1
- []
-
-
-Overfull \hbox (14.44313pt too wide) in paragraph at lines 28--28
-\T1/lmtt/m/n/10.95 docs/report/chapters/\T1/lmr/m/n/10.95 (-20) .|
- []
-
-
-Overfull \hbox (25.9406pt too wide) in paragraph at lines 28--28
-\T1/lmtt/m/n/10.95 docs/report/appendices/\T1/lmr/m/n/10.95 (-20) .|
- []
-
-) [64
-
-] [65] [66]
+]) [65]
 Package microtype Info: Character `029' is missing
 (microtype)             in font `T1/lmr/m/sc/12'.
 (microtype)             Ignoring protrusion settings for this character.
- [67
+ [66
 
-] [68] (main.aux)
+] [67] (main.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-12-24>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: 44D48F7FD4CBD727774BA3102873DD39;24946.
+(rerunfilecheck)             Checksum: 4799D34F206294642C82D59D3E2FDB19;24341.
 Package logreq Info: Writing requests to 'main.run.xml'.
 \openout1 = `main.run.xml'.
 
- )
+ ) 
 Here is how much of TeX's memory you used:
- 25726 strings out of 467871
- 455079 string characters out of 5417408
- 1365002 words of memory out of 5000000
- 53579 multiletter control sequences out of 15000+600000
- 732224 words of font info for 275 fonts, out of 8000000 for 9000
+ 25703 strings out of 467871
+ 454736 string characters out of 5417408
+ 1364707 words of memory out of 5000000
+ 53571 multiletter control sequences out of 15000+600000
+ 728851 words of font info for 270 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,13n,79p,1199b,2351s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,12n,79p,1199b,2351s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx10.
 pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx1
 2.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmb
@@ -1441,9 +1416,9 @@ public/lm/lmri10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type
 pe1/public/lm/lmsy10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/
 type1/public/lm/lmtt10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/font
 s/type1/public/lm/lmtt12.pfb>
-Output written on main.pdf (79 pages, 9306019 bytes).
+Output written on main.pdf (78 pages, 9299649 bytes).
 PDF statistics:
- 1188 PDF objects out of 1200 (max. 8388607)
- 228 named destinations out of 1000 (max. 500000)
- 53491 words of extra memory for PDF output out of 61914 (max. 10000000)
+ 1165 PDF objects out of 1200 (max. 8388607)
+ 223 named destinations out of 1000 (max. 500000)
+ 51427 words of extra memory for PDF output out of 51595 (max. 10000000)
 

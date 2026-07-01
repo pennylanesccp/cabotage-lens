@@ -42,14 +42,12 @@
 \contentsline {table}{\numberline {A.1}{\ignorespaces Inventário resumido de fontes, usos e limites de interpretação.}}{55}{table.A.1}%
 \contentsline {table}{\numberline {A.2}{\ignorespaces Hierarquia de proveniência para distâncias e componentes de rota.}}{57}{table.caption.38}%
 \contentsline {table}{\numberline {A.3}{\ignorespaces Proveniência de operações portuárias e hoteling.}}{58}{table.caption.39}%
-\contentsline {table}{\numberline {A.4}{\ignorespaces Pendências de parâmetro e metadado para a produção final.}}{58}{table.caption.40}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {B.1}{\ignorespaces Camadas de validação e uso permitido.}}{60}{table.caption.42}%
-\contentsline {table}{\numberline {B.2}{\ignorespaces Sensibilidades executadas e valores rastreados.}}{61}{table.caption.43}%
-\contentsline {table}{\numberline {B.3}{\ignorespaces Resumo do Batch 002 do Prof. Dr. Gustavo Costa.}}{61}{table.caption.44}%
+\contentsline {table}{\numberline {B.1}{\ignorespaces Camadas de validação e uso permitido.}}{60}{table.caption.41}%
+\contentsline {table}{\numberline {B.2}{\ignorespaces Sensibilidades executadas e valores rastreados.}}{61}{table.caption.42}%
+\contentsline {table}{\numberline {B.3}{\ignorespaces Resumo do Batch 002 do Prof. Dr. Gustavo Costa.}}{61}{table.caption.43}%
 \contentsline {table}{\numberline {B.5}{\ignorespaces Categorias de uso e usos proibidos.}}{61}{table.B.5}%
-\contentsline {table}{\numberline {B.4}{\ignorespaces Rerun/cache e reconciliação rodoviária do Batch 002.}}{63}{table.caption.45}%
+\contentsline {table}{\numberline {B.4}{\ignorespaces Rerun/cache e reconciliação rodoviária do Batch 002.}}{63}{table.caption.44}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {C.1}{\ignorespaces Checklist técnico do relatório LaTeX.}}{65}{table.caption.46}%
-\contentsline {table}{\numberline {C.2}{\ignorespaces Checklist metodológico para revisão final.}}{65}{table.caption.47}%
-\contentsline {table}{\numberline {C.3}{\ignorespaces Pendências antes da submissão do PDF final.}}{66}{table.caption.48}%
+\contentsline {table}{\numberline {C.1}{\ignorespaces Checklist técnico de reprodutibilidade do relatório.}}{64}{table.caption.45}%
+\contentsline {table}{\numberline {C.2}{\ignorespaces Checklist de consistência metodológica do framework.}}{65}{table.caption.46}%

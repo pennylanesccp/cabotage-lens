@@ -1,29 +1,28 @@
-\chapter{Checklist de reprodutibilidade e produção final}
+\chapter{Checklist de reprodutibilidade}
 \label{app:checklist-reprodutibilidade}
 
-Este apêndice registra os itens mínimos para transformar esta primeira versão LaTeX em PDF final de entrega. A lista não substitui os comandos de validação do repositório; ela organiza o que precisa permanecer verificável antes da submissão.
+Este apêndice consolida o checklist técnico e metodológico adotado para garantir a rastreabilidade, auditoria e reprodutibilidade de todas as análises de rota, custos modelados, emissões operacionais e classificações de evidência produzidas pelo CabotageLens.
 
 \section{Checklist técnico}
 \label{sec:app-checklist-tecnico}
 
-A Tabela~\ref{tab:app-checklist-tecnico} cobre os itens estruturais do artefato LaTeX.
+A Tabela~\ref{tab:app-checklist-tecnico} detalha a estrutura de arquivos e componentes LaTeX que organizam o presente relatório final.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Checklist técnico do relatório LaTeX.}
+\caption{Checklist técnico de reprodutibilidade do relatório.}
 \label{tab:app-checklist-tecnico}
-\begin{tabularx}{\textwidth}{L{0.30\textwidth}L{0.24\textwidth}Y}
+\begin{tabularx}{\textwidth}{L{0.25\textwidth}L{0.32\textwidth}Y}
 \toprule
-Item & Situação nesta versão & Ação antes da entrega final \\
+Item & Registro no relatório & Função de reprodutibilidade \\
 \midrule
-Documento principal & Criado em \texttt{docs/report/main.tex}. & Compilar com ferramenta LaTeX disponível no ambiente final.\\
-Capítulos modulares & Capítulos 1 a 10 separados em \texttt{docs/report/chapters/}. & Revisar paginação, quebras e referências cruzadas após compilação.\\
-Apêndices & Apêndices A, B e C separados em \texttt{docs/report/appendices/}. & Ajustar densidade ou mover material conforme orientação institucional.\\
-Figuras & Figuras finais inseridas com legenda, rótulo e referência textual. & Revisar enquadramento, legibilidade e posicionamento no PDF final.\\
-Tabelas & Tabelas principais convertidas com \texttt{booktabs}, \texttt{tabularx} e \texttt{longtable}. & Verificar largura e quebra de página no PDF.\\
-Bibliografia & \texttt{../references.bib} referenciado por \texttt{main.tex}. & Ajustar estilo ABNT/USP e chaves faltantes, se houver.\\
-Metadados & Autor, orientador, instituição, curso, local e ano preenchidos no arquivo principal. & Revisar apenas se houver exigência formal da instituição.\\
+Documento principal & \texttt{docs/report/main.tex} & Centraliza a estrutura do relatório, importando os capítulos, apêndices e a base bibliográfica. \\
+Capítulos modulares & \texttt{docs/report/chapters/} & Organiza os capítulos do relatório de forma independente, facilitando a manutenção e a rastreabilidade do texto. \\
+Apêndices de suporte & \texttt{docs/report/appendices/} & Detalha parâmetros, tabelas de validação e checklists auxiliares para auditoria acadêmica. \\
+Figuras e diagramas & \texttt{docs/report/images/} & Armazena as imagens de fluxogramas e diagramas conceituais que apoiam as explicações teóricas. \\
+Tabelas e matrizes & Ambientes \texttt{tabular}, \texttt{tabularx} e \texttt{longtable} & Estruturam dados quantitativos e classificações de evidência em formato legível e padronizado. \\
+Base bibliográfica & \texttt{docs/references.bib} & Consolida os metadados das referências bibliográficas citadas ao longo de todo o documento. \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -31,49 +30,24 @@ Metadados & Autor, orientador, instituição, curso, local e ano preenchidos no 
 \section{Checklist metodológico}
 \label{sec:app-checklist-metodologico}
 
-A Tabela~\ref{tab:app-checklist-metodologico} preserva os controles de interpretação que devem sobreviver à revisão de estilo, diagramação e normalização bibliográfica.
+A Tabela~\ref{tab:app-checklist-metodologico} sintetiza os controles de modelagem, fronteiras e premissas científicas que regem as comparações modais apresentadas.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Checklist metodológico para revisão final.}
+\caption{Checklist de consistência metodológica do framework.}
 \label{tab:app-checklist-metodologico}
-\begin{tabularx}{\textwidth}{L{0.32\textwidth}Y}
+\begin{tabularx}{\textwidth}{L{0.30\textwidth}Y}
 \toprule
-Controle & Verificação antes da submissão \\
+Dimensão de controle & Como é preservado no framework \\
 \midrule
-Comparação porta a porta & Confirmar que nenhuma seção compara navio isolado contra caminhão completo.\\
-Fronteira ambiental & Confirmar que a linha de base continua como emissões operacionais \ttw{} de \cooe{}.\\
-Unidades ambientais & Confirmar que CO$_2$, \cooe{} e CO$_2$eq aparecem apenas quando a fronteira de fonte permite.\\
-Fronteira econômica & Confirmar que custo modelado não é descrito como frete comercial, cotação, tarifa ou viabilidade econômica.\\
-Cabotagem & Confirmar que não há afirmação de superioridade universal sobre o modo.\\
-Benchmark do Prof. Dr. Gustavo Costa & Confirmar que o benchmark permanece externo, direcional e não calibrado.\\
-Port operations e hoteling & Confirmar que proveniência, fallback e indisponibilidade continuam explícitos.\\
-Dados ausentes & Confirmar que ausência de dado não é interpretada como zero.\\
-Evidência atual & Confirmar que nenhum caso atual foi promovido a \texttt{headline\_candidate}.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\section{Pendências finais}
-\label{sec:app-pendencias-finais}
-
-A Tabela~\ref{tab:app-pendencias-finais} lista pendências assumidas por este primeiro artefato LaTeX. Elas são deixadas visíveis porque dependem de decisão institucional, normalização final ou produção visual, não de inferência técnica.
-
-\begin{table}[htbp]
-\centering
-\small
-\caption{Pendências antes da submissão do PDF final.}
-\label{tab:app-pendencias-finais}
-\begin{tabularx}{\textwidth}{L{0.28\textwidth}Y}
-\toprule
-Pendência & Motivo \\
-\midrule
-Revisar resumo em inglês & O \emph{abstract} já está preenchido e deve acompanhar ajustes finais do resumo em português.\\
-Revisar figuras finais & As figuras metodológicas devem permanecer legíveis, enquadradas e consistentes com as respectivas legendas.\\
-Revisar estilo bibliográfico & A versão atual usa estilo simples; ABNT/USP pode exigir ajuste posterior.\\
-Executar compilação LaTeX no ambiente final & O ambiente local precisa ter compilador instalado para validação visual completa.\\
-Revisar quebras de página e tabelas largas & A revisão visual só é confiável após compilação.\\
+Comparação porta a porta & A unidade funcional mantém a origem, o destino e a massa de carga constantes entre a rodovia direta e a cadeia multimodal. \\
+Fronteira ambiental & As emissões operacionais são limitadas estritamente ao escopo tank-to-wheel (\ttw{}) de \cooe{}, diferenciadas de \wtw{} ou LCA. \\
+Fronteira econômica & O custo é tratado como proxy de custo operacional modelado parcial, sem assumir a natureza de frete comercial ou tarifa. \\
+Proveniência de distâncias & Cada perna terrestre ou marítima registra explicitamente sua origem (matriz, API, referência externa, fallback ou override). \\
+Componentes portuários & Custos de terminal e emissões de hoteling só entram quando há proveniência declarada, evitando dupla contagem. \\
+Tratamento de dados ausentes & Dados indisponíveis de portops/hoteling são mantidos como lacunas na proveniência, em vez de assumidos como zero. \\
+Classificação de evidência & Resultados são categorizados por limites de uso (ex.: sensibilidade, benchmark direcional), restringindo alegações de superioridade universal. \\
 \bottomrule
 \end{tabularx}
 \end{table}

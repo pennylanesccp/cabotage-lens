@@ -79,14 +79,12 @@
 \contentsline {section}{\numberline {A.1}Inventário resumido de fontes}{55}{section.A.1}%
 \contentsline {section}{\numberline {A.2}Hierarquia de proveniência}{56}{section.A.2}%
 \contentsline {section}{\numberline {A.3}Operações portuárias e hoteling}{56}{section.A.3}%
-\contentsline {section}{\numberline {A.4}Parâmetros que permanecem pendentes para a versão final}{58}{section.A.4}%
 \contentsline {chapter}{\numberline {B}Validação, benchmark e evidências complementares}{59}{appendix.B}%
 \contentsline {section}{\numberline {B.1}Mapa de camadas de validação}{59}{section.B.1}%
 \contentsline {section}{\numberline {B.2}Nota metodológica da rerodada portops/\emph {hoteling}}{60}{section.B.2}%
 \contentsline {section}{\numberline {B.3}Sensibilidades executadas}{60}{section.B.3}%
 \contentsline {section}{\numberline {B.4}Benchmark externo e reconciliação diagnóstica}{60}{section.B.4}%
 \contentsline {section}{\numberline {B.5}Categorias de uso}{61}{section.B.5}%
-\contentsline {chapter}{\numberline {C}Checklist de reprodutibilidade e produção final}{64}{appendix.C}%
+\contentsline {chapter}{\numberline {C}Checklist de reprodutibilidade}{64}{appendix.C}%
 \contentsline {section}{\numberline {C.1}Checklist técnico}{64}{section.C.1}%
-\contentsline {section}{\numberline {C.2}Checklist metodológico}{64}{section.C.2}%
-\contentsline {section}{\numberline {C.3}Pendências finais}{64}{section.C.3}%
+\contentsline {section}{\numberline {C.2}Checklist metodológico}{65}{section.C.2}%
