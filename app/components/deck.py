@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 
 import pydeck as pdk
-import streamlit.components.v1 as components
+import streamlit as st
 
 _DECK_HTML_STYLE = """
   <style>
@@ -98,4 +98,4 @@ def render_deck_chart(deck: pdk.Deck, *, height: int, require_ctrl_for_wheel_zoo
     )
     if require_ctrl_for_wheel_zoom:
         deck_html = inject_modifier_wheel_zoom(deck_html)
-    components.iframe(_html_to_data_url(deck_html), height=height, scrolling=False)
+    st.iframe(_html_to_data_url(deck_html), height=height)

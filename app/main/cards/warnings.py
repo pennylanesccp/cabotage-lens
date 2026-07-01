@@ -4,6 +4,9 @@ from typing import Any, Mapping
 
 import streamlit as st
 
+_ROUTE_QUALITY_WARNING_TITLE = "Route quality warning"
+_SUPPRESSED_ROUTE_QUALITY_WARNING_CODES = {"fallback_maritime_distance"}
+
 
 def _route_quality_warnings(results: Mapping[str, Any] | None) -> list[Mapping[str, Any]]:
     if not results:
@@ -21,6 +24,8 @@ def _route_quality_warnings(results: Mapping[str, Any] | None) -> list[Mapping[s
         if not message:
             continue
         code = str(item.get("code") or message).strip()
+        if code in _SUPPRESSED_ROUTE_QUALITY_WARNING_CODES:
+            continue
         if code in seen_codes:
             continue
         seen_codes.add(code)
@@ -35,9 +40,11 @@ def render_route_quality_warnings(results: Mapping[str, Any] | None) -> None:
 
     if len(warnings) == 1:
         warning = warnings[0]
-        title = str(warning.get("title") or "Cabotage route warning").strip()
+        title = str(warning.get("title") or _ROUTE_QUALITY_WARNING_TITLE).strip()
+        if title == "Cabotage route warning":
+            title = _ROUTE_QUALITY_WARNING_TITLE
         st.warning(f"**{title}**\n\n{warning['message']}")
         return
 
     body = "\n".join(f"- {warning['message']}" for warning in warnings)
-    st.warning(f"**Cabotage route warnings**\n\n{body}")
+    st.warning(f"**Route quality warnings**\n\n{body}")

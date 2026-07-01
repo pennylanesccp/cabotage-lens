@@ -192,7 +192,7 @@ def _clear_loaded_dataset_if_stale(scenario: HeatmapScenario, destination_set_id
             float(scenario.cargo_t),
             destination_set_id,
         )
-        st.session_state.heatmap_dataset = None
+        st.session_state["heatmap_dataset"] = None
 
 
 def _format_countdown(value: Any) -> str:
@@ -215,6 +215,19 @@ def _log_level_class(line: str) -> str:
 
 def _render_live_run_logs(log_box: Any) -> None:
     _shared_render_live_run_logs(log_box)
+
+
+def _render_antaq_refresh_status(summary: dict[str, Any] | None) -> None:
+    status = summary.get("app_refresh_status") if isinstance(summary, dict) else None
+    if not isinstance(status, dict):
+        return
+    message = str(status.get("message") or "").strip()
+    if not message:
+        return
+    if status.get("ok") is False:
+        st.warning(message)
+    elif status.get("used_local_raw_fallback"):
+        st.info(message)
 
 
 def _inject_run_feedback_css() -> None:
@@ -502,7 +515,9 @@ def render_page() -> None:
         _render_live_run_logs(log_box)
         try:
             if bool(st.session_state.get("refresh_antaq_before_run", False)):
-                run_antaq_refresh_for_app(progress_callback=progress_callback)
+                _render_antaq_refresh_status(
+                    run_antaq_refresh_for_app(progress_callback=progress_callback)
+                )
             dataset = run_heatmap(
                 scenario,
                 rerun=False,
@@ -546,7 +561,9 @@ def render_page() -> None:
         _render_live_run_logs(log_box)
         try:
             if bool(st.session_state.get("refresh_antaq_before_run", False)):
-                run_antaq_refresh_for_app(progress_callback=progress_callback)
+                _render_antaq_refresh_status(
+                    run_antaq_refresh_for_app(progress_callback=progress_callback)
+                )
             dataset = rerun_heatmap(
                 scenario,
                 progress_callback=progress_callback,

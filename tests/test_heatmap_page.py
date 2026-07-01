@@ -10,7 +10,7 @@ from app.heatmap.types import (
     HeatmapRunInfo,
     HeatmapScenario,
 )
-from app.main.utils.constants import DEFAULT_ORIGIN
+from app.main.utils.constants import DEFAULT_ORIGIN, DEFAULTS
 
 
 class HeatmapPageTests(unittest.TestCase):
@@ -21,7 +21,7 @@ class HeatmapPageTests(unittest.TestCase):
             page._init_page_state()
 
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_ORIGIN_FIELD], DEFAULT_ORIGIN)
-        self.assertEqual(fake_streamlit.session_state["heatmap_cargo"], 30.0)
+        self.assertEqual(fake_streamlit.session_state["heatmap_cargo"], float(DEFAULTS["cargo_t"]))
         self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
         self.assertEqual(fake_streamlit.session_state["heatmap_destination_set_id"], "city_dests_over50k.txt")
 

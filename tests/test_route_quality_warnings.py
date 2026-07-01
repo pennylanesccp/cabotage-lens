@@ -49,7 +49,7 @@ class RouteQualityWarningTests(unittest.TestCase):
 
         self.assertEqual(warnings, [])
 
-    def test_warning_renderer_displays_non_blocking_streamlit_warning(self) -> None:
+    def test_warning_renderer_suppresses_fallback_warning_in_streamlit_ui(self) -> None:
         fake_streamlit = SimpleNamespace(warning=Mock())
         results = {
             "route_quality_warnings": [
@@ -64,10 +64,36 @@ class RouteQualityWarningTests(unittest.TestCase):
         with patch("app.main.cards.warnings.st", fake_streamlit):
             render_route_quality_warnings(results)
 
+        fake_streamlit.warning.assert_not_called()
+
+    def test_warning_renderer_keeps_other_route_quality_warnings(self) -> None:
+        fake_streamlit = SimpleNamespace(warning=Mock())
+        results = {
+            "route_quality_warnings": [
+                {
+                    "code": "same_port",
+                    "title": "Cabotage route warning",
+                    "message": (
+                        "The selected origin and destination ports are the same, so this result should not be "
+                        "interpreted as a meaningful cabotage alternative."
+                    ),
+                },
+                {
+                    "code": "fallback_maritime_distance",
+                    "title": "Cabotage route warning",
+                    "message": "The maritime distance was estimated using fallback logic; treat this result as a screening estimate.",
+                },
+            ]
+        }
+
+        with patch("app.main.cards.warnings.st", fake_streamlit):
+            render_route_quality_warnings(results)
+
         fake_streamlit.warning.assert_called_once()
         warning_text = fake_streamlit.warning.call_args.args[0]
-        self.assertIn("Cabotage route warning", warning_text)
-        self.assertIn("fallback logic", warning_text)
+        self.assertIn("Route quality warning", warning_text)
+        self.assertIn("same", warning_text)
+        self.assertNotIn("fallback logic", warning_text)
 
 
 if __name__ == "__main__":

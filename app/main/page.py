@@ -54,6 +54,19 @@ def _normalize_choice(session_key: str, valid_options: Iterable[str], default_va
         st.session_state[session_key] = default_value if default_value in options else options[0]
 
 
+def _render_antaq_refresh_status(summary: dict[str, Any] | None) -> None:
+    status = summary.get("app_refresh_status") if isinstance(summary, dict) else None
+    if not isinstance(status, dict):
+        return
+    message = str(status.get("message") or "").strip()
+    if not message:
+        return
+    if status.get("ok") is False:
+        st.warning(message)
+    elif status.get("used_local_raw_fallback"):
+        st.info(message)
+
+
 def render_page() -> None:
     init_state()
     inject_css()
@@ -106,7 +119,9 @@ def render_page() -> None:
         refresh_requested = bool(st.session_state.get("refresh_antaq_before_run", False))
         try:
             if refresh_requested:
-                run_antaq_refresh_for_app(progress_callback=progress_callback)
+                _render_antaq_refresh_status(
+                    run_antaq_refresh_for_app(progress_callback=progress_callback)
+                )
             geo, results, err, resolved_db_target = run_analysis(
                 payload=payload,
                 progress_callback=progress_callback,
