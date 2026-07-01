@@ -5,51 +5,51 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {3.1}{\ignorespaces Uso seguro das principais famílias de literatura no relatório.}}{8}{table.caption.9}%
+\contentsline {table}{\numberline {3.1}{\ignorespaces Síntese do papel das principais famílias de literatura no relatório.}}{9}{table.caption.9}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {4.1}{\ignorespaces Unidade funcional e alternativas comparadas no TF.}}{10}{table.caption.10}%
-\contentsline {table}{\numberline {4.2}{\ignorespaces Grupos de fontes e usos metodológicos.}}{11}{table.caption.11}%
-\contentsline {table}{\numberline {4.3}{\ignorespaces Fronteiras metodológicas de linha de base.}}{12}{table.caption.12}%
-\contentsline {table}{\numberline {4.4}{\ignorespaces Hierarquia de proveniência de distâncias.}}{14}{table.caption.14}%
-\contentsline {table}{\numberline {4.5}{\ignorespaces Classificações metodológicas usadas para controlar inferências.}}{16}{table.caption.15}%
+\contentsline {table}{\numberline {4.1}{\ignorespaces Unidade funcional e alternativas comparadas no TF.}}{11}{table.caption.10}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Grupos de fontes e usos metodológicos.}}{12}{table.caption.11}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Fronteiras metodológicas de linha de base.}}{13}{table.caption.12}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces Hierarquia de proveniência de distâncias.}}{15}{table.caption.14}%
+\contentsline {table}{\numberline {4.5}{\ignorespaces Classificações metodológicas usadas para controlar inferências.}}{17}{table.caption.15}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {5.1}{\ignorespaces Fluxos computacionais do \textit {CabotageLens}{}.}}{18}{table.caption.17}%
-\contentsline {table}{\numberline {5.2}{\ignorespaces Componentes computacionais e metadados preservados.}}{20}{table.caption.18}%
+\contentsline {table}{\numberline {5.1}{\ignorespaces Fluxos computacionais do \textit {CabotageLens}{}.}}{19}{table.caption.17}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces Componentes computacionais e metadados preservados.}}{21}{table.caption.18}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {6.1}{\ignorespaces Camadas de evidência usadas no relatório.}}{23}{table.caption.19}%
-\contentsline {table}{\numberline {6.2}{\ignorespaces Casos históricos Batch 001 e uso seguro no TF.}}{24}{table.caption.20}%
-\contentsline {table}{\numberline {6.3}{\ignorespaces Decisões Batch 001B e categorias associadas.}}{25}{table.caption.21}%
-\contentsline {table}{\numberline {6.4}{\ignorespaces Sensibilidades Batch 001B e interpretação segura.}}{25}{table.caption.22}%
-\contentsline {table}{\numberline {6.5}{\ignorespaces Classificação do Batch 002 do Prof. Dr. Gustavo Costa.}}{26}{table.caption.23}%
-\contentsline {table}{\numberline {6.6}{\ignorespaces Resultados do rerun Supabase/cache.}}{27}{table.caption.24}%
-\contentsline {table}{\numberline {6.7}{\ignorespaces Reconciliação rodoviária como diagnóstico, não recalibração.}}{28}{table.caption.25}%
-\contentsline {table}{\numberline {6.8}{\ignorespaces Categorias de uso no TF e usos proibidos.}}{29}{table.6.8}%
+\contentsline {table}{\numberline {6.1}{\ignorespaces Camadas de evidência usadas no relatório.}}{24}{table.caption.19}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces Casos históricos Batch 001 e uso seguro no TF.}}{25}{table.caption.20}%
+\contentsline {table}{\numberline {6.3}{\ignorespaces Decisões Batch 001B e categorias associadas.}}{26}{table.caption.21}%
+\contentsline {table}{\numberline {6.4}{\ignorespaces Sensibilidades Batch 001B e interpretação segura.}}{26}{table.caption.22}%
+\contentsline {table}{\numberline {6.5}{\ignorespaces Classificação do Batch 002 do Prof. Dr. Gustavo Costa.}}{27}{table.caption.23}%
+\contentsline {table}{\numberline {6.6}{\ignorespaces Resultados do rerun Supabase/cache.}}{28}{table.caption.24}%
+\contentsline {table}{\numberline {6.7}{\ignorespaces Reconciliação rodoviária como diagnóstico, não recalibração.}}{29}{table.caption.25}%
+\contentsline {table}{\numberline {6.8}{\ignorespaces Categorias de uso no TF e usos proibidos.}}{30}{table.6.8}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {7.1}{\ignorespaces Inventário de evidências no Capítulo~\ref {ch:resultados}.}}{30}{table.caption.26}%
-\contentsline {table}{\numberline {7.2}{\ignorespaces Resumo agregado da rerodada de validação com componentes portuários expostos.}}{31}{table.caption.27}%
-\contentsline {table}{\numberline {7.3}{\ignorespaces Resultado classificatório Batch 001/001B.}}{32}{table.caption.28}%
-\contentsline {table}{\numberline {7.4}{\ignorespaces Resultados das sensibilidades executadas.}}{33}{table.caption.29}%
-\contentsline {table}{\numberline {7.5}{\ignorespaces Resultado resumido do benchmark externo Batch 002.}}{33}{table.caption.30}%
-\contentsline {table}{\numberline {7.6}{\ignorespaces Rerun/cache e reconciliação rodoviária.}}{34}{table.caption.31}%
-\contentsline {table}{\numberline {7.7}{\ignorespaces Síntese dos resultados classificados.}}{36}{table.caption.33}%
+\contentsline {table}{\numberline {7.1}{\ignorespaces Inventário de evidências no Capítulo~\ref {ch:resultados}.}}{31}{table.caption.26}%
+\contentsline {table}{\numberline {7.2}{\ignorespaces Resumo agregado da rerodada de validação com componentes portuários expostos.}}{32}{table.caption.27}%
+\contentsline {table}{\numberline {7.3}{\ignorespaces Resultado classificatório Batch 001/001B.}}{33}{table.caption.28}%
+\contentsline {table}{\numberline {7.4}{\ignorespaces Resultados das sensibilidades executadas.}}{34}{table.caption.29}%
+\contentsline {table}{\numberline {7.5}{\ignorespaces Resultado resumido do benchmark externo Batch 002.}}{34}{table.caption.30}%
+\contentsline {table}{\numberline {7.6}{\ignorespaces Rerun/cache e reconciliação rodoviária.}}{35}{table.caption.31}%
+\contentsline {table}{\numberline {7.7}{\ignorespaces Síntese dos resultados classificados.}}{37}{table.caption.33}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {8.1}{\ignorespaces Leitura interpretativa das camadas associadas ao benchmark externo.}}{39}{table.caption.34}%
+\contentsline {table}{\numberline {8.1}{\ignorespaces Leitura interpretativa das camadas associadas ao benchmark externo.}}{40}{table.caption.34}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {9.1}{\ignorespaces Condições de uso dos resultados do TF.}}{42}{table.caption.35}%
+\contentsline {table}{\numberline {9.1}{\ignorespaces Condições de uso dos resultados do TF.}}{43}{table.caption.35}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {10.1}{\ignorespaces Agenda prioritária de trabalhos futuros.}}{50}{table.caption.36}%
+\contentsline {table}{\numberline {10.1}{\ignorespaces Agenda prioritária de trabalhos futuros.}}{51}{table.caption.36}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {A.1}{\ignorespaces Inventário resumido de fontes, usos e limites de interpretação.}}{52}{table.A.1}%
-\contentsline {table}{\numberline {A.2}{\ignorespaces Hierarquia de proveniência para distâncias e componentes de rota.}}{54}{table.caption.38}%
-\contentsline {table}{\numberline {A.3}{\ignorespaces Proveniência de operações portuárias e hoteling.}}{54}{table.caption.39}%
-\contentsline {table}{\numberline {A.4}{\ignorespaces Pendências de parâmetro e metadado para a produção final.}}{55}{table.caption.40}%
+\contentsline {table}{\numberline {A.1}{\ignorespaces Inventário resumido de fontes, usos e limites de interpretação.}}{53}{table.A.1}%
+\contentsline {table}{\numberline {A.2}{\ignorespaces Hierarquia de proveniência para distâncias e componentes de rota.}}{55}{table.caption.38}%
+\contentsline {table}{\numberline {A.3}{\ignorespaces Proveniência de operações portuárias e hoteling.}}{55}{table.caption.39}%
+\contentsline {table}{\numberline {A.4}{\ignorespaces Pendências de parâmetro e metadado para a produção final.}}{56}{table.caption.40}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {B.1}{\ignorespaces Camadas de validação e uso permitido.}}{57}{table.caption.42}%
-\contentsline {table}{\numberline {B.2}{\ignorespaces Sensibilidades executadas e valores rastreados.}}{57}{table.caption.43}%
-\contentsline {table}{\numberline {B.3}{\ignorespaces Resumo do Batch 002 do Prof. Dr. Gustavo Costa.}}{58}{table.caption.44}%
-\contentsline {table}{\numberline {B.4}{\ignorespaces Rerun/cache e reconciliação rodoviária do Batch 002.}}{58}{table.caption.45}%
-\contentsline {table}{\numberline {B.5}{\ignorespaces Categorias de uso e usos proibidos.}}{59}{table.B.5}%
+\contentsline {table}{\numberline {B.1}{\ignorespaces Camadas de validação e uso permitido.}}{58}{table.caption.42}%
+\contentsline {table}{\numberline {B.2}{\ignorespaces Sensibilidades executadas e valores rastreados.}}{58}{table.caption.43}%
+\contentsline {table}{\numberline {B.3}{\ignorespaces Resumo do Batch 002 do Prof. Dr. Gustavo Costa.}}{59}{table.caption.44}%
+\contentsline {table}{\numberline {B.4}{\ignorespaces Rerun/cache e reconciliação rodoviária do Batch 002.}}{59}{table.caption.45}%
+\contentsline {table}{\numberline {B.5}{\ignorespaces Categorias de uso e usos proibidos.}}{60}{table.B.5}%
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {C.1}{\ignorespaces Checklist técnico do relatório LaTeX.}}{61}{table.caption.46}%
-\contentsline {table}{\numberline {C.2}{\ignorespaces Checklist metodológico para revisão final.}}{61}{table.caption.47}%
-\contentsline {table}{\numberline {C.3}{\ignorespaces Pendências antes da submissão do PDF final.}}{62}{table.caption.48}%
+\contentsline {table}{\numberline {C.1}{\ignorespaces Checklist técnico do relatório LaTeX.}}{62}{table.caption.46}%
+\contentsline {table}{\numberline {C.2}{\ignorespaces Checklist metodológico para revisão final.}}{62}{table.caption.47}%
+\contentsline {table}{\numberline {C.3}{\ignorespaces Pendências antes da submissão do PDF final.}}{63}{table.caption.48}%

@@ -11,82 +11,82 @@
 \contentsline {section}{\numberline {2.2}Objetivos específicos}{3}{section.2.2}%
 \contentsline {chapter}{\numberline {3}Revisão bibliográfica}{5}{chapter.3}%
 \contentsline {section}{\numberline {3.1}Cabotagem brasileira, matriz de transporte e BR do Mar}{5}{section.3.1}%
-\contentsline {section}{\numberline {3.2}Mudança modal e short sea shipping}{5}{section.3.2}%
+\contentsline {section}{\numberline {3.2}Mudança modal e short sea shipping}{6}{section.3.2}%
 \contentsline {section}{\numberline {3.3}Comparações porta a porta e modelos de rede multimodal}{6}{section.3.3}%
-\contentsline {section}{\numberline {3.4}Emissões operacionais, TTW{}, WTW{}, LCA, CO$_2$ e CO$_2$e{}}{6}{section.3.4}%
+\contentsline {section}{\numberline {3.4}Emissões operacionais, TTW{}, WTW{}, LCA, CO$_2$ e CO$_2$e{}}{7}{section.3.4}%
 \contentsline {section}{\numberline {3.5}Operações portuárias e hoteling}{7}{section.3.5}%
 \contentsline {section}{\numberline {3.6}Fronteira econômica e custo modelado}{7}{section.3.6}%
-\contentsline {section}{\numberline {3.7}Síntese da lacuna metodológica}{7}{section.3.7}%
-\contentsline {chapter}{\numberline {4}Metodologia}{9}{chapter.4}%
-\contentsline {section}{\numberline {4.1}Unidade funcional e alternativas comparadas}{9}{section.4.1}%
-\contentsline {section}{\numberline {4.2}Fontes primárias de dados e insumos derivados}{9}{section.4.2}%
-\contentsline {section}{\numberline {4.3}Fronteiras metodológicas do estudo}{10}{section.4.3}%
-\contentsline {section}{\numberline {4.4}Construção da alternativa rodoviária direta}{11}{section.4.4}%
-\contentsline {section}{\numberline {4.5}Construção da alternativa rodoviária-cabotagem-rodoviária}{12}{section.4.5}%
-\contentsline {section}{\numberline {4.6}Seleção de portos e definição de cenários}{13}{section.4.6}%
-\contentsline {section}{\numberline {4.7}Proveniência das distâncias e hierarquia de confiança}{14}{section.4.7}%
-\contentsline {section}{\numberline {4.8}Cadeias conceituais de cálculo de emissões e custos}{14}{section.4.8}%
-\contentsline {section}{\numberline {4.9}Operações portuárias, hoteling e proveniência dos dados}{15}{section.4.9}%
-\contentsline {section}{\numberline {4.10}Qualidade de rota, classificação de evidências e limites de uso}{15}{section.4.10}%
-\contentsline {chapter}{\numberline {5}Ferramenta computacional}{17}{chapter.5}%
-\contentsline {section}{\numberline {5.1}Visão geral da ferramenta e arquitetura do protótipo}{17}{section.5.1}%
-\contentsline {section}{\numberline {5.2}Dois fluxos computacionais: execução de cenário e atualização de dados}{18}{section.5.2}%
-\contentsline {section}{\numberline {5.3}Entradas do cenário, geocodificação e roteamento terrestre}{18}{section.5.3}%
-\contentsline {section}{\numberline {5.4}Construção das alternativas, seleção de portos e perna marítima}{19}{section.5.4}%
-\contentsline {section}{\numberline {5.5}Operacionalização computacional dos insumos metodológicos}{19}{section.5.5}%
-\contentsline {section}{\numberline {5.6}Cálculo por perna: combustível, custo modelado e emissões}{20}{section.5.6}%
-\contentsline {section}{\numberline {5.7}Persistência, cache, interface e rastreabilidade}{21}{section.5.7}%
-\contentsline {section}{\numberline {5.8}Limitações computacionais e uso correto da ferramenta}{21}{section.5.8}%
-\contentsline {chapter}{\numberline {6}Validação, benchmark e classificação de evidências}{22}{chapter.6}%
-\contentsline {section}{\numberline {6.1}Estratégia de validação como classificação de evidências}{22}{section.6.1}%
-\contentsline {section}{\numberline {6.2}Batch 001 como diagnóstico histórico}{23}{section.6.2}%
-\contentsline {section}{\numberline {6.3}Batch 001B como camada de decisão metodológica}{23}{section.6.3}%
-\contentsline {section}{\numberline {6.4}Sensibilidades Batch 001B: evidência sensível, não robusta}{24}{section.6.4}%
-\contentsline {section}{\numberline {6.5}Batch 002 do Prof. Dr. Gustavo Costa como benchmark externo direcional}{26}{section.6.5}%
-\contentsline {section}{\numberline {6.6}Rerun Supabase/cache como verificação de estabilidade computacional}{27}{section.6.6}%
-\contentsline {section}{\numberline {6.7}Reconciliação rodoviária como diagnóstico de premissas}{27}{section.6.7}%
-\contentsline {section}{\numberline {6.8}Categorias de uso no TF e passagem para os resultados}{28}{section.6.8}%
-\contentsline {chapter}{\numberline {7}Resultados}{30}{chapter.7}%
-\contentsline {section}{\numberline {7.1}Inventário de evidências e categorias de uso}{30}{section.7.1}%
-\contentsline {section}{\numberline {7.2}Resultados históricos e decisões metodológicas Batch 001/001B}{31}{section.7.2}%
-\contentsline {section}{\numberline {7.3}Resultados das sensibilidades executadas}{32}{section.7.3}%
-\contentsline {section}{\numberline {7.4}Resultados do benchmark externo Batch 002}{33}{section.7.4}%
-\contentsline {section}{\numberline {7.5}Resultados do rerun/cache e da reconciliação rodoviária}{34}{section.7.5}%
-\contentsline {section}{\numberline {7.6}Síntese dos resultados classificados e transição para a discussão}{35}{section.7.6}%
-\contentsline {chapter}{\numberline {8}Discussão}{37}{chapter.8}%
-\contentsline {section}{\numberline {8.1}Pergunta interpretativa e fronteiras de leitura}{37}{section.8.1}%
-\contentsline {section}{\numberline {8.2}Por que a comparação rota a rota e porta a porta importa}{37}{section.8.2}%
-\contentsline {section}{\numberline {8.3}Corredores, portos e proveniência da distância marítima}{38}{section.8.3}%
-\contentsline {section}{\numberline {8.4}Benchmark do Prof. Dr. Gustavo Costa: apoio direcional, não calibração}{39}{section.8.4}%
-\contentsline {section}{\numberline {8.5}Fronteiras econômica, ambiental e portuária na interpretação}{40}{section.8.5}%
-\contentsline {section}{\numberline {8.6}Valor prático do \textit {CabotageLens}{} como triagem}{40}{section.8.6}%
-\contentsline {section}{\numberline {8.7}Contribuição metodológica do framework auditável}{41}{section.8.7}%
-\contentsline {chapter}{\numberline {9}Limitações}{42}{chapter.9}%
-\contentsline {section}{\numberline {9.1}Função das limitações e condições de uso}{42}{section.9.1}%
-\contentsline {section}{\numberline {9.2}Fronteira ambiental: TTW{} operacional, CO$_2$e{} e limites de ciclo de vida}{43}{section.9.2}%
-\contentsline {section}{\numberline {9.3}Fronteira econômica: custo modelado, alocação e ausência de frete comercial}{43}{section.9.3}%
-\contentsline {section}{\numberline {9.4}Fronteira operacional: serviço, agenda, terminais e super-rede}{44}{section.9.4}%
-\contentsline {section}{\numberline {9.5}Fronteira de rota: portos, distâncias, fallback e same-port}{45}{section.9.5}%
-\contentsline {section}{\numberline {9.6}Fronteira de validação: sensibilidades, Prof. Dr. Gustavo Costa e reconciliação}{45}{section.9.6}%
-\contentsline {section}{\numberline {9.7}Fontes, literatura e generalização}{46}{section.9.7}%
-\contentsline {chapter}{\numberline {10}Conclusões e trabalhos futuros}{48}{chapter.10}%
-\contentsline {section}{\numberline {10.1}Conclusão principal}{48}{section.10.1}%
-\contentsline {section}{\numberline {10.2}Contribuição metodológica e computacional do \textit {CabotageLens}{}}{48}{section.10.2}%
-\contentsline {section}{\numberline {10.3}Alcance das evidências e interpretação segura}{49}{section.10.3}%
-\contentsline {section}{\numberline {10.4}Agenda prioritária de trabalhos futuros}{50}{section.10.4}%
-\contentsline {section}{\numberline {10.5}Fechamento}{51}{section.10.5}%
-\contentsline {chapter}{\numberline {A}Parâmetros, fontes e proveniência}{52}{appendix.A}%
-\contentsline {section}{\numberline {A.1}Inventário resumido de fontes}{52}{section.A.1}%
-\contentsline {section}{\numberline {A.2}Hierarquia de proveniência}{53}{section.A.2}%
-\contentsline {section}{\numberline {A.3}Operações portuárias e hoteling}{54}{section.A.3}%
-\contentsline {section}{\numberline {A.4}Parâmetros que permanecem pendentes para a versão final}{55}{section.A.4}%
-\contentsline {chapter}{\numberline {B}Validação, benchmark e evidências complementares}{56}{appendix.B}%
-\contentsline {section}{\numberline {B.1}Mapa de camadas de validação}{56}{section.B.1}%
-\contentsline {section}{\numberline {B.2}Nota metodológica da rerodada portops/\emph {hoteling}}{56}{section.B.2}%
-\contentsline {section}{\numberline {B.3}Sensibilidades executadas}{57}{section.B.3}%
-\contentsline {section}{\numberline {B.4}Benchmark externo e reconciliação diagnóstica}{57}{section.B.4}%
-\contentsline {section}{\numberline {B.5}Categorias de uso}{58}{section.B.5}%
-\contentsline {chapter}{\numberline {C}Checklist de reprodutibilidade e produção final}{60}{appendix.C}%
-\contentsline {section}{\numberline {C.1}Checklist técnico}{60}{section.C.1}%
-\contentsline {section}{\numberline {C.2}Checklist metodológico}{60}{section.C.2}%
-\contentsline {section}{\numberline {C.3}Pendências finais}{60}{section.C.3}%
+\contentsline {section}{\numberline {3.7}Síntese da lacuna metodológica}{8}{section.3.7}%
+\contentsline {chapter}{\numberline {4}Metodologia}{10}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Unidade funcional e alternativas comparadas}{10}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Fontes primárias de dados e insumos derivados}{10}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Fronteiras metodológicas do estudo}{11}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Construção da alternativa rodoviária direta}{12}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Construção da alternativa rodoviária-cabotagem-rodoviária}{13}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Seleção de portos e definição de cenários}{14}{section.4.6}%
+\contentsline {section}{\numberline {4.7}Proveniência das distâncias e hierarquia de confiança}{15}{section.4.7}%
+\contentsline {section}{\numberline {4.8}Cadeias conceituais de cálculo de emissões e custos}{15}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Operações portuárias, hoteling e proveniência dos dados}{16}{section.4.9}%
+\contentsline {section}{\numberline {4.10}Qualidade de rota, classificação de evidências e limites de uso}{16}{section.4.10}%
+\contentsline {chapter}{\numberline {5}Ferramenta computacional}{18}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Visão geral da ferramenta e arquitetura do protótipo}{18}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Dois fluxos computacionais: execução de cenário e atualização de dados}{19}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Entradas do cenário, geocodificação e roteamento terrestre}{19}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Construção das alternativas, seleção de portos e perna marítima}{20}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Operacionalização computacional dos insumos metodológicos}{20}{section.5.5}%
+\contentsline {section}{\numberline {5.6}Cálculo por perna: combustível, custo modelado e emissões}{21}{section.5.6}%
+\contentsline {section}{\numberline {5.7}Persistência, cache, interface e rastreabilidade}{22}{section.5.7}%
+\contentsline {section}{\numberline {5.8}Limitações computacionais e uso correto da ferramenta}{22}{section.5.8}%
+\contentsline {chapter}{\numberline {6}Validação, benchmark e classificação de evidências}{23}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Estratégia de validação como classificação de evidências}{23}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Batch 001 como diagnóstico histórico}{24}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Batch 001B como camada de decisão metodológica}{24}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Sensibilidades Batch 001B: evidência sensível, não robusta}{25}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Batch 002 do Prof. Dr. Gustavo Costa como benchmark externo direcional}{27}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Rerun Supabase/cache como verificação de estabilidade computacional}{28}{section.6.6}%
+\contentsline {section}{\numberline {6.7}Reconciliação rodoviária como diagnóstico de premissas}{28}{section.6.7}%
+\contentsline {section}{\numberline {6.8}Categorias de uso no TF e passagem para os resultados}{29}{section.6.8}%
+\contentsline {chapter}{\numberline {7}Resultados}{31}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Inventário de evidências e categorias de uso}{31}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Resultados históricos e decisões metodológicas Batch 001/001B}{32}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Resultados das sensibilidades executadas}{33}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Resultados do benchmark externo Batch 002}{34}{section.7.4}%
+\contentsline {section}{\numberline {7.5}Resultados do rerun/cache e da reconciliação rodoviária}{35}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Síntese dos resultados classificados e transição para a discussão}{36}{section.7.6}%
+\contentsline {chapter}{\numberline {8}Discussão}{38}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Pergunta interpretativa e fronteiras de leitura}{38}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Por que a comparação rota a rota e porta a porta importa}{38}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Corredores, portos e proveniência da distância marítima}{39}{section.8.3}%
+\contentsline {section}{\numberline {8.4}Benchmark do Prof. Dr. Gustavo Costa: apoio direcional, não calibração}{40}{section.8.4}%
+\contentsline {section}{\numberline {8.5}Fronteiras econômica, ambiental e portuária na interpretação}{41}{section.8.5}%
+\contentsline {section}{\numberline {8.6}Valor prático do \textit {CabotageLens}{} como triagem}{41}{section.8.6}%
+\contentsline {section}{\numberline {8.7}Contribuição metodológica do framework auditável}{42}{section.8.7}%
+\contentsline {chapter}{\numberline {9}Limitações}{43}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Função das limitações e condições de uso}{43}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Fronteira ambiental: TTW{} operacional, CO$_2$e{} e limites de ciclo de vida}{44}{section.9.2}%
+\contentsline {section}{\numberline {9.3}Fronteira econômica: custo modelado, alocação e ausência de frete comercial}{44}{section.9.3}%
+\contentsline {section}{\numberline {9.4}Fronteira operacional: serviço, agenda, terminais e super-rede}{45}{section.9.4}%
+\contentsline {section}{\numberline {9.5}Fronteira de rota: portos, distâncias, fallback e same-port}{46}{section.9.5}%
+\contentsline {section}{\numberline {9.6}Fronteira de validação: sensibilidades, Prof. Dr. Gustavo Costa e reconciliação}{46}{section.9.6}%
+\contentsline {section}{\numberline {9.7}Fontes, literatura e generalização}{47}{section.9.7}%
+\contentsline {chapter}{\numberline {10}Conclusões e trabalhos futuros}{49}{chapter.10}%
+\contentsline {section}{\numberline {10.1}Conclusão principal}{49}{section.10.1}%
+\contentsline {section}{\numberline {10.2}Contribuição metodológica e computacional do \textit {CabotageLens}{}}{49}{section.10.2}%
+\contentsline {section}{\numberline {10.3}Alcance das evidências e interpretação segura}{50}{section.10.3}%
+\contentsline {section}{\numberline {10.4}Agenda prioritária de trabalhos futuros}{51}{section.10.4}%
+\contentsline {section}{\numberline {10.5}Fechamento}{52}{section.10.5}%
+\contentsline {chapter}{\numberline {A}Parâmetros, fontes e proveniência}{53}{appendix.A}%
+\contentsline {section}{\numberline {A.1}Inventário resumido de fontes}{53}{section.A.1}%
+\contentsline {section}{\numberline {A.2}Hierarquia de proveniência}{54}{section.A.2}%
+\contentsline {section}{\numberline {A.3}Operações portuárias e hoteling}{55}{section.A.3}%
+\contentsline {section}{\numberline {A.4}Parâmetros que permanecem pendentes para a versão final}{56}{section.A.4}%
+\contentsline {chapter}{\numberline {B}Validação, benchmark e evidências complementares}{57}{appendix.B}%
+\contentsline {section}{\numberline {B.1}Mapa de camadas de validação}{57}{section.B.1}%
+\contentsline {section}{\numberline {B.2}Nota metodológica da rerodada portops/\emph {hoteling}}{57}{section.B.2}%
+\contentsline {section}{\numberline {B.3}Sensibilidades executadas}{58}{section.B.3}%
+\contentsline {section}{\numberline {B.4}Benchmark externo e reconciliação diagnóstica}{58}{section.B.4}%
+\contentsline {section}{\numberline {B.5}Categorias de uso}{59}{section.B.5}%
+\contentsline {chapter}{\numberline {C}Checklist de reprodutibilidade e produção final}{61}{appendix.C}%
+\contentsline {section}{\numberline {C.1}Checklist técnico}{61}{section.C.1}%
+\contentsline {section}{\numberline {C.2}Checklist metodológico}{61}{section.C.2}%
+\contentsline {section}{\numberline {C.3}Pendências finais}{61}{section.C.3}%

@@ -1,12 +1,12 @@
 # Fdb version 4
-["biber main"] 1782865592.62201 "main.bcf" "main.bbl" "main" 1782867176.27961 0
+["biber main"] 1782865592.62201 "main.bcf" "main.bbl" "main" 1782867668.99272 0
   "../references.bib" 1782505138 10609 61701c0324024df1320015a2729f1f57 ""
-  "main.bcf" 1782867175 111781 125c52dd49435be8a512aca496aa8fc3 "pdflatex"
+  "main.bcf" 1782867667 111781 125c52dd49435be8a512aca496aa8fc3 "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1782867168.16295 "c:/Users/Cliente/Documents/workspaces/personal/cabotage-lens/docs/report/main.tex" "main.pdf" "main" 1782867176.28172 0
+["pdflatex"] 1782867660.44213 "c:/Users/Cliente/Documents/workspaces/personal/cabotage-lens/docs/report/main.tex" "main.pdf" "main" 1782867668.99443 0
   "C:/Users/Cliente/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1782792716 80909 eab91d9745dd2edfd62a31d53cd5fe15 ""
   "C:/Users/Cliente/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1782789178 13334455 858f84ec1dc82b8443ff48cd6da9ecbf ""
   "C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ec.enc" 1256929440 2375 baa924870cfb487815765f9094cf3728 ""
@@ -193,7 +193,7 @@
   "c:/Users/Cliente/Documents/workspaces/personal/cabotage-lens/docs/report/main.tex" 1782867053 10130 ed3af4730ae54f37317bbd1a927e31d5 ""
   "chapters/ch01_introducao.tex" 1782867086 4468 60628b7e34f37c140738cea51cade0b9 ""
   "chapters/ch02_objetivos.tex" 1782786104 2408 406d256446e87702ddd014308d2b6728 ""
-  "chapters/ch03_revisao_bibliografica.tex" 1782792612 9491 df2526b05f1005842f922db1297060eb ""
+  "chapters/ch03_revisao_bibliografica.tex" 1782867651 11380 023882172359a1c76fa4dbdbc17441dd ""
   "chapters/ch04_metodologia.tex" 1782866075 21128 010aa7d989d151d837a4be9308989bbf ""
   "chapters/ch05_implementacao_computacional.tex" 1782867109 13103 5a8a281ce71742e48579073f55f1e861 ""
   "chapters/ch06_validacao_evidencia.tex" 1782866075 19368 22ad0379d650243c4ac834620b256f54 ""
@@ -201,14 +201,14 @@
   "chapters/ch08_discussao.tex" 1782867146 12115 7ef332160cba5df79afee03ee39923a6 ""
   "chapters/ch09_limitacoes.tex" 1782866120 14443 7d1c9ea95dc73b9e1d82a5a46035ad3b ""
   "chapters/ch10_conclusoes.tex" 1782867158 9284 31fdad385b29b910dbed377dd56f0f86 ""
-  "main.aux" 1782867174 41940 71b3d9c2a700263fbdfa0f5b5f09353c "pdflatex"
+  "main.aux" 1782867667 41960 4039e8e941dcb7215e33023e24cfaf67 "pdflatex"
   "main.bbl" 1782865595 4971 7eb819df82b9e0c0f277a435d0ee65dc "biber main"
-  "main.lof" 1782867175 1316 a7354aab23f614b43b31a6cc58fd6893 "pdflatex"
-  "main.lot" 1782867175 5287 a8bb7b1197d35b798a1ccd9acc27b4df "pdflatex"
-  "main.out" 1782867175 24928 76b740d853071976ef3e2b18d8d60648 "pdflatex"
-  "main.run.xml" 1782867175 2371 16b64731b8a7f01cbd4bfb04cca6f8ed "pdflatex"
+  "main.lof" 1782867667 1316 1dc1ef5a9cdae7b7694b552ea9095faa "pdflatex"
+  "main.lot" 1782867667 5294 82e77890dc244f1f296e724142ae3d25 "pdflatex"
+  "main.out" 1782867667 24928 76b740d853071976ef3e2b18d8d60648 "pdflatex"
+  "main.run.xml" 1782867667 2371 16b64731b8a7f01cbd4bfb04cca6f8ed "pdflatex"
   "main.tex" 1782867053 10130 ed3af4730ae54f37317bbd1a927e31d5 ""
-  "main.toc" 1782867175 9309 f780e17ee2f2e5e1107e1aae40c27a31 "pdflatex"
+  "main.toc" 1782867667 9312 fb9829e7830f12707af4bd2da5e51b28 "pdflatex"
   (generated)
   "main.aux"
   "main.bcf"
