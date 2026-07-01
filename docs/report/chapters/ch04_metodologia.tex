@@ -106,7 +106,12 @@ O mesmo encadeamento vale para o custo modelado da alternativa direta: a distân
 
 A alternativa rodoviária-cabotagem-rodoviária usa a mesma remessa e o mesmo par origem-destino, mas decompõe o percurso em componentes. O \emph{pre-carriage} liga a origem da carga ao porto de origem. A perna marítima liga o porto de origem ao porto de destino. As operações portuárias e o \emph{hoteling} entram quando fazem parte da fronteira selecionada e têm proveniência representável. O \emph{on-carriage} liga o porto de destino ao destino final da carga \cite{shortsea2019,competitiveness2024}.
 
-\placeholderfigure{Diagrama metodológico preliminar: fluxo da alternativa multimodal com pre-carriage, porto de origem, operações portuárias/hoteling, perna marítima, porto de destino e on-carriage, indicando os pontos de entrada de distância, custo, emissões e proveniência.}{Decomposição metodológica da alternativa rodoviária-cabotagem-rodoviária.}{fig:cadeia-multimodal}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{images/figura_4_1.png}
+\caption{Decomposição metodológica da alternativa multimodal em pernas rodoviárias, interface portuária, perna marítima e agregação final.}
+\label{fig:cadeia-multimodal}
+\end{figure}
 
 A Figura~\ref{fig:cadeia-multimodal} evidencia a regra de agregação por componentes. O total multimodal não é a perna marítima isolada: é a soma dos acessos terrestres, da navegação e dos componentes portuários incluídos, cada um com distância, fator, custo e proveniência próprios.
 

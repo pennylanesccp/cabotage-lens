@@ -42,9 +42,14 @@ Prof. Dr. Gustavo Costa & Pares OD, rotas, fatores ou planilhas usados em benchm
 \section{Hierarquia de proveniência}
 \label{sec:app-hierarquia-proveniencia}
 
-A Figura~\ref{fig:proveniencia-hierarquia} deve ser substituída, na versão final, por um diagrama de proveniência dos dados. O placeholder é mantido no LaTeX para reservar o ponto de leitura e garantir que a figura final seja referenciada no texto.
+A Figura~\ref{fig:proveniencia-hierarquia} sintetiza a hierarquia de proveniência usada para interpretar os principais insumos do modelo.
 
-\placeholderfigure{Esquema preliminar: hierarquia de proveniência dos insumos, distinguindo dados observados, referências externas específicas, matriz rastreada, médias ponderadas, padrões documentados, fallbacks e valores indisponíveis.}{Hierarquia de proveniência dos principais insumos do \CabotageLens{}.}{fig:proveniencia-hierarquia}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{images/figura_A_1.png}
+\caption{Hierarquia de proveniência adotada para classificação das fontes de dados, priorizando maior rastreabilidade e explicitando o aumento de incerteza associado a estimativas e valores-padrão de literatura.}
+\label{fig:proveniencia-hierarquia}
+\end{figure}
 
 A Tabela~\ref{tab:app-proveniencia-distancias} detalha a hierarquia aplicada às distâncias e aos componentes de rota. A leitura mais forte depende de referência específica para o par e para a fronteira analisada; a leitura mais fraca deve permanecer como triagem, lacuna ou sensibilidade.
 

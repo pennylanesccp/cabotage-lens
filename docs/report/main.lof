@@ -3,20 +3,21 @@
 \babel@toc {english}{}\relax 
 \babel@toc {brazil}{}\relax 
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {1.1}{\ignorespaces Comparação porta a porta entre alternativa rodoviária direta e alternativa rodoviária-cabotagem-rodoviária.}}{1}{figure.caption.8}%
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Comparação conceitual entre a alternativa rodoviária direta e a cadeia multimodal rodoviário-cabotagem-rodoviário, avaliadas sob a mesma unidade funcional e fronteira porta a porta.}}{2}{figure.caption.8}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {4.1}{\ignorespaces Decomposição metodológica da alternativa rodoviária-cabotagem-rodoviária.}}{14}{figure.caption.13}%
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Decomposição metodológica da alternativa multimodal em pernas rodoviárias, interface portuária, perna marítima e agregação final.}}{15}{figure.caption.13}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Arquitetura computacional simplificada da ferramenta, desde as entradas do usuário e a camada de dados até o motor de cálculo, a rastreabilidade e a interface web.}}{20}{figure.caption.16}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {7.1}{\ignorespaces Síntese dos resultados classificados na rerodada de validação, com comparação média de emissões entre a alternativa rodoviária direta e a alternativa multimodal com cabotagem.}}{39}{figure.caption.32}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {7.1}{\ignorespaces Síntese visual dos resultados classificados e seus usos permitidos.}}{38}{figure.caption.31}%
 \addvspace {10\p@ }
+\contentsline {figure}{\numberline {A.1}{\ignorespaces Hierarquia de proveniência adotada para classificação das fontes de dados, priorizando maior rastreabilidade e explicitando o aumento de incerteza associado a estimativas e valores-padrão de literatura.}}{57}{figure.caption.37}%
 \addvspace {10\p@ }
-\addvspace {10\p@ }
-\addvspace {10\p@ }
-\contentsline {figure}{\numberline {A.1}{\ignorespaces Hierarquia de proveniência dos principais insumos do \textit {CabotageLens}{}.}}{55}{figure.caption.36}%
-\addvspace {10\p@ }
-\contentsline {figure}{\numberline {B.1}{\ignorespaces Fluxo de classificação de evidências no TF.}}{58}{figure.caption.40}%
+\contentsline {figure}{\numberline {B.1}{\ignorespaces Fluxo de classificação de evidências utilizado para organizar cada cenário avaliado, desde a definição do cenário até a classificação final do resultado.}}{59}{figure.caption.41}%
 \addvspace {10\p@ }

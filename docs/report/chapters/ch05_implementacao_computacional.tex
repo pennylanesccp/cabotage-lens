@@ -8,6 +8,13 @@ O \CabotageLens{} é o protótipo computacional desenvolvido neste trabalho para
 
 A contribuição computacional está na operacionalização dessas etapas em um fluxo auditável, sem redefinir o inventário de fontes do Capítulo~\ref{ch:metodologia}. O programa combina entrada do usuário, geocodificação, roteamento por provedores, cache, seleção de portos, matriz marítima, insumos processados, alocação de carga, operações portuárias, \emph{hoteling}, persistência Supabase, interface e artefatos de validação. Mais do que calcular um total, ele mostra a linhagem do resultado: coordenadas, provedor usado, acerto ou falha de cache, porto selecionado, fonte da distância marítima, cobertura ANTAQ/MRV, preço de diesel, preço de bunker, modo de alocação, componentes incluídos ou excluídos, avisos de rota e classificação de uso.
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{images/figura_5_1.png}
+\caption{Arquitetura computacional simplificada da ferramenta, desde as entradas do usuário e a camada de dados até o motor de cálculo, a rastreabilidade e a interface web.}
+\label{fig:arquitetura-computacional}
+\end{figure}
+
 \section{Dois fluxos computacionais: execução de cenário e atualização de dados}
 \label{sec:fluxos-computacionais}
 
