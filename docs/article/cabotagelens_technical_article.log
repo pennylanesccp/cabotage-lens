@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  30 JUN 2026 23:44
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.6.30)  30 JUN 2026 23:52
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -644,7 +644,7 @@ File: t1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 (cabotagelens_technical_article.aux
 Package babel Info: 'brazil' activates 'portuges' shorthands.
-(babel)             Reported on input line 9.
+(babel)             Reported on input line 15.
 )
 \openout1 = `cabotagelens_technical_article.aux'.
 
@@ -824,78 +824,68 @@ LaTeX Font Info:    External font `lmex10' loaded for size
 {C:/Users/Cliente/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/Cl
 iente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ec.enc}{C:/Users/Clie
 nte/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-rm.enc}]
-(cabotagelens_technical_article.toc
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <12> on input line 6.
-)
-\tf@toc=\write5
-\openout5 = `cabotagelens_technical_article.toc'.
+(Font)              <12> on input line 58.
 
- [2
-
-] [3
-
-] [4
-
-]
-Underfull \hbox (badness 10000) in paragraph at lines 126--126
+[2]
+Underfull \hbox (badness 10000) in paragraph at lines 79--79
 []|\T1/lmr/m/n/10.95 (+20) Rodovia di-reta e ca-deia
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 126--126
+Underfull \hbox (badness 10000) in paragraph at lines 79--79
 \T1/lmr/m/n/10.95 (+20) rodoviário-cabotagem-
  []
 
 
-Underfull \hbox (badness 4454) in paragraph at lines 130--130
+Underfull \hbox (badness 4454) in paragraph at lines 83--83
 []|\T1/lmr/m/n/10.95 (+20) Sensibilidade, ben-ch-mark ex-
  []
 
-[5] [6] [7{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm
--mathit.enc}{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/
-lm-mathex.enc}{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/l
-m/lm-mathsy.enc}] [8]
+[3] [4{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-mat
+hit.enc}{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-m
+athex.enc}{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm
+-mathsy.enc}] [5] [6]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 269.
+(Font)              <5> on input line 203.
 
-Overfull \hbox (35.03995pt too wide) in paragraph at lines 259--275
+Overfull \hbox (35.03995pt too wide) in paragraph at lines 193--209
  [][] 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 286--286
+Underfull \hbox (badness 10000) in paragraph at lines 220--220
 []|\T1/lmr/m/n/10.95 (+20) Custo ro-do-vi-á-rio
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 286--286
+Underfull \hbox (badness 10000) in paragraph at lines 220--220
 \T1/lmr/m/n/10.95 (+20) / mul-ti-mo-dal
  []
 
 
-Underfull \hbox (badness 2165) in paragraph at lines 286--287
+Underfull \hbox (badness 2165) in paragraph at lines 220--221
 []|\T1/lmr/m/n/10.95 (+20) Emissões ro-do-vi-á-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 288--288
+Underfull \hbox (badness 10000) in paragraph at lines 222--222
 []|\T1/lmr/m/n/10.95 (+20) 16.347,22 /
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 290--290
+Underfull \hbox (badness 10000) in paragraph at lines 224--224
 []|\T1/lmr/m/n/10.95 (+20) 15.074,20 /
  []
 
 
-Overfull \hbox (2.47278pt too wide) in paragraph at lines 284--293
+Overfull \hbox (2.47278pt too wide) in paragraph at lines 218--227
  [][] 
  []
 
-[9] [10]
+[7]
 LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 2
-97.
+31.
  (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/lm\t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
@@ -904,22 +894,22 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 
-Underfull \hbox (badness 2343) in paragraph at lines 297--298
+Underfull \hbox (badness 2343) in paragraph at lines 231--232
 []\T1/lmr/m/n/12 (+20) A mag-ni-tude das emis-sões per-ma-ne-ceu di-ver-gente, 
 sendo clas-si-fi-cada como
  []
 
-LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 3
-06.
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 2
+40.
 (C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex/latex/lm\ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
-[11{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ts1.en
-c}] [12]
+[8{C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ts1.enc
+}] [9]
 Package microtype Info: Character `029' is missing
 (microtype)             in font `T1/lmr/m/sc/12'.
 (microtype)             Ignoring protrusion settings for this character.
- [13
+ [10
 
 ] (cabotagelens_technical_article.aux)
  ***********
@@ -928,20 +918,20 @@ L3 programming layer <2025-12-24>
  ***********
 Package rerunfilecheck Info: File `cabotagelens_technical_article.out' has not 
 changed.
-(rerunfilecheck)             Checksum: 34F8D984EA4EC0834931BB648BC79D9B;2459.
+(rerunfilecheck)             Checksum: 2E3D2D014CDF5340B5334732144368D4;2180.
 Package logreq Info: Writing requests to 'cabotagelens_technical_article.run.xm
 l'.
 \openout1 = `cabotagelens_technical_article.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 20879 strings out of 467871
- 371628 string characters out of 5417408
- 1257428 words of memory out of 5000000
- 49192 multiletter control sequences out of 15000+600000
- 716314 words of font info for 198 fonts, out of 8000000 for 9000
+ 20849 strings out of 467871
+ 371019 string characters out of 5417408
+ 1257203 words of memory out of 5000000
+ 49181 multiletter control sequences out of 15000+600000
+ 711708 words of font info for 194 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,16n,79p,1924b,1786s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,16n,79p,1924b,1686s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 pdfTeX warning (dest): name{Hfootnote.2} has been referenced but does not exist
 , replaced by a fixed one
@@ -962,13 +952,12 @@ lm/lmmi8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/public
 c/lm/lmr12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/publ
 ic/lm/lmr17.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/pub
 lic/lm/lmr8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/pub
-lic/lm/lmri10.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/p
-ublic/lm/lmri12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1
-/public/lm/lmsy8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type
-1/public/lm/lmtt12.pfb>
-Output written on cabotagelens_technical_article.pdf (13 pages, 346956 bytes).
+lic/lm/lmri12.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/p
+ublic/lm/lmsy8.pfb><C:/Users/Cliente/AppData/Local/Programs/MiKTeX/fonts/type1/
+public/lm/lmtt12.pfb>
+Output written on cabotagelens_technical_article.pdf (10 pages, 315237 bytes).
 PDF statistics:
- 286 PDF objects out of 1000 (max. 8388607)
- 48 named destinations out of 1000 (max. 500000)
- 49781 words of extra memory for PDF output out of 51595 (max. 10000000)
+ 246 PDF objects out of 1000 (max. 8388607)
+ 40 named destinations out of 1000 (max. 500000)
+ 47725 words of extra memory for PDF output out of 51595 (max. 10000000)
 

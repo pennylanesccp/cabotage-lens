@@ -41,53 +41,6 @@ Comparações entre transporte rodoviário e cabotagem podem se tornar enganosas
 \textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; \cooe{}; logística; Brasil; framework computacional.
 \end{abstract}
 
-\clearpage
-
-\tableofcontents
-
-\clearpage
-
-\section*{Dicionário de termos, siglas e abreviações}
-\phantomsection
-\addcontentsline{toc}{section}{Dicionário de termos, siglas e abreviações}
-\begingroup
-\small
-\begin{description}
-  \setlength{\itemsep}{0.25em}
-  \setlength{\parsep}{0pt}
-  \item[OD] Par origem-destino usado para definir a remessa e construir as alternativas comparadas.
-  \item[Transporte rodoviário direto] Alternativa porta a porta formada por uma perna rodoviária entre origem e destino.
-  \item[Alternativa multimodal] Cadeia com acesso rodoviário inicial, perna marítima, portos e acesso rodoviário final.
-  \item[Pre-carriage] Trecho rodoviário que conecta a origem ao porto de embarque.
-  \item[On-carriage] Trecho rodoviário que conecta o porto de desembarque ao destino final.
-  \item[Hoteling/hotelling] Permanência do navio atracado ou em porto, com consumo de energia para sistemas de bordo.
-  \item[Operações portuárias] Atividades realizadas em porto ou terminal para atendimento da carga e da embarcação.
-  \item[\ttw{}] Fronteira operacional \textit{tank-to-wheel}/\textit{tank-to-wake}.
-  \item[\wtw{}] Perspectiva \textit{well-to-wheel}/\textit{well-to-wake}.
-  \item[LCA/ACV] Avaliação de ciclo de vida.
-  \item[CO$_2$] Dióxido de carbono.
-  \item[\cooe{}] Dióxido de carbono equivalente.
-  \item[CO$_2$eq] Notação para dióxido de carbono equivalente em fontes ou benchmarks externos.
-  \item[GEE/GHG] Gases de efeito estufa.
-  \item[SSS] \textit{Short sea shipping}, transporte marítimo de curta distância ou costeiro.
-  \item[BR do Mar] Política brasileira associada ao transporte marítimo costeiro.
-  \item[Fallback] Aproximação ou fonte alternativa usada quando falta dado mais forte.
-  \item[Proveniência] Registro da origem e confiabilidade de um dado.
-  \item[Benchmark] Comparação externa usada como evidência de plausibilidade ou direção.
-  \item[Evidência direcional] Evidência de que duas fontes apontam o mesmo sentido de resultado.
-  \item[Reclassificação conservadora] Categoria de uso atribuída à evidência para limitar sua interpretação.
-  \item[Proxy de custo operacional modelado] Estimativa monetária parcial calculada para os componentes representados.
-  \item[Frete comercial] Valor negociado ou cotado de mercado.
-  \item[Carga útil] Massa de carga efetivamente transportada na remessa ou cenário.
-  \item[Unidade funcional] Base comum usada para comparar alternativas de transporte.
-  \item[Fator de emissão] Coeficiente que relaciona consumo ou atividade a emissões.
-  \item[Análise de sensibilidade] Execução sob hipótese documentada para avaliar dependência do resultado.
-  \item[Reprodutibilidade] Capacidade de rastrear e repetir entradas, parâmetros, resultados e classificações.
-\end{description}
-\endgroup
-
-\clearpage
-
 \section{Introdução}
 \label{sec:introducao}
 
@@ -144,17 +97,7 @@ A unidade funcional é o transporte de uma quantidade especificada de carga cont
 
 A alternativa rodoviária direta modela uma perna origem-destino por caminhão. A alternativa multimodal decompõe a mesma remessa em cinco blocos: \textit{pre-carriage} rodoviário da origem ao porto de origem, operações portuárias e hoteling no porto de origem quando representáveis, perna marítima entre portos, operações portuárias e hoteling no porto de destino quando representáveis, e \textit{on-carriage} rodoviário do porto de destino ao destino final. A comparação, portanto, é porta a porta; a perna marítima nunca é interpretada isoladamente como substituta de toda a viagem rodoviária \cite{shortsea2019,competitiveness2024}.
 
-\begin{figure}[htbp]
-\centering
-\fbox{\parbox{0.88\textwidth}{\centering
-\small Esquema preliminar da unidade funcional e das alternativas comparadas.\\[0.4em]
-Alternativa rodoviária direta: origem -- rodovia -- destino.\\
-Alternativa multimodal: origem -- rodovia -- porto -- cabotagem -- porto -- rodovia -- destino.}}
-\caption{Comparação porta a porta entre a alternativa rodoviária direta e a cadeia rodoviária-cabotagem-rodoviária.}
-\label{fig:comparacao-porta-a-porta}
-\end{figure}
-
-A Figura~\ref{fig:comparacao-porta-a-porta} explicita a diferença central entre a abordagem do artigo e uma comparação modal simplificada. O trecho marítimo é apenas uma parte da alternativa multimodal; acessos terrestres, portos e dados de proveniência pertencem à comparação.
+A comparação porta a porta estabelece que a alternativa rodoviária direta é constituída por um único trecho rodoviário direto entre a origem e o destino da remessa. Em contrapartida, a alternativa multimodal integra acessos rodoviários (\textit{pre-carriage} e \textit{on-carriage}), operações portuárias de interface e a perna marítima de cabotagem. Assim, o trecho marítimo representa apenas uma parte da cadeia logística combinada, sendo fundamental incluir a totalidade das pernas terrestres e das atividades portuárias para uma avaliação ambiental e econômica justa.
 
 \subsection{Construção de rota e proveniência}
 \label{subsec:rota-proveniencia}
@@ -200,16 +143,7 @@ O CabotageLens é implementado como aplicação Streamlit com lógica de domíni
 
 O fluxo computacional pode ser lido em seis etapas. Primeiro, o par origem-destino é normalizado e associado a coordenadas. Segundo, a alternativa rodoviária direta é construída como rota origem-destino. Terceiro, o framework identifica portos candidatos ou aplica configuração de porto forçado quando o cenário exige uma sensibilidade. Quarto, são construídas as pernas de acesso terrestre, a perna marítima e o acesso final. Quinto, o modelo adiciona componentes portuários e hoteling apenas quando a proveniência permite. Sexto, as saídas são agregadas em proxy de custo operacional modelado, emissões operacionais \ttw{} de \cooe{}, avisos, fonte de distância e classificação de uso.
 
-\begin{figure}[htbp]
-\centering
-\fbox{\parbox{0.88\textwidth}{\centering
-\small Diagrama conceitual do pipeline CabotageLens.\\[0.4em]
-Entrada OD e carga; rota rodoviária direta; seleção ou fixação de portos; pre-carriage; perna marítima; on-carriage; port-ops/hoteling; agregação; avisos e proveniência; comparação final.}}
-\caption{Pipeline computacional do CabotageLens para comparação rota a rota.}
-\label{fig:pipeline-cabotagelens}
-\end{figure}
-
-A Figura~\ref{fig:pipeline-cabotagelens} resume o pipeline. A ênfase não está apenas nos totais finais, mas na trilha de auditoria que permite interpretar cada total. Em vez de apresentar apenas um custo rodoviário e um custo multimodal, a ferramenta registra pernas, portos, fonte de distância marítima, status de cache, componentes incluídos ou excluídos, razões de fallback e classificação de uso.
+Este pipeline computacional assegura que a ênfase da modelagem não resida apenas nos valores totais agregados, mas na trilha de auditoria e proveniência que permite interpretar cada resultado. O CabotageLens registra individualmente as pernas terrestres e marítimas, os portos intermediários selecionados, a fonte da distância marítima, o status do cache operacional (para evitar chamadas redundantes a APIs de roteamento), os componentes ambientais/econômicos ativados ou omitidos, e as eventuais razões para o acionamento de fallbacks geométricos.
 
 Supabase/Postgres fornece persistência operacional para lugares, rotas, cenários e resultados. Essa persistência melhora reprodutibilidade e rastreabilidade, mas não transforma uma rota modelada em evidência de serviço real. O framework também não implementa uma super-rede comercial completa. Frequência de serviço, disponibilidade de navio, slot, terminal, confiabilidade e contrato são condições logísticas relevantes, mas permanecem fora da fronteira atual e devem ser tratadas como futuras camadas de modelagem \cite{competitiveness2024,modalshiftreview2020}.
 \label{sec:evidencia}
