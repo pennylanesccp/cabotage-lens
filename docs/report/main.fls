@@ -1,6 +1,6 @@
-PWD C:\Users\Cliente\Documents\workspaces\personal\cabotage-lens\docs\report
+PWD c:\Users\Cliente\Documents\workspaces\personal\cabotage-lens\docs\report
 INPUT C:\Users\Cliente\AppData\Local\MiKTeX\miktex\data\le\pdftex\pdflatex.fmt
-INPUT main.tex
+INPUT c:\Users\Cliente\Documents\workspaces\personal\cabotage-lens\docs\report\main.tex
 OUTPUT main.log
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\base\report.cls
 INPUT C:\Users\Cliente\AppData\Local\Programs\MiKTeX\tex\latex\base\report.cls
