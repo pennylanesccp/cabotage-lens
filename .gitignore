@@ -1,3 +1,29 @@
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+
+# LaTeX temporary files
+*.nav
+*.snm
+*.vrb
+*.xdv
+
+# Editor/backup artifacts
+*.bak
+*.tmp
+*~
+
 .env
 .env.*
 *.env
