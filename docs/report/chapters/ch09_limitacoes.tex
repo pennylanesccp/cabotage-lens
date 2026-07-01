@@ -6,59 +6,59 @@
 
 As limitações deste trabalho delimitam as condições de interpretação dos resultados. Elas não reduzem o valor do \CabotageLens{}; ao contrário, reforçam sua contribuição principal: um framework auditável para comparar cenários rodoviários e rodoviário-cabotagem-rodoviário sob fronteiras explícitas de rota, custo, emissões, proveniência e validação.
 
-O Capítulo~\ref{ch:limitacoes} deve ser lido como controle de sobreafirmação. Ele separa o que o protótipo sustenta, o que permanece condicionado e o que ainda exige evidência externa. A interpretação segura dos resultados atuais é cenário-dependente, direcional e diagnóstica: sensibilidades mostram comportamento do modelo sob hipóteses rastreadas; o benchmark do Prof. Dr. Gustavo Costa apoia consistência direcional, mas não valida magnitude calibrada; e diagnósticos explicam lacunas sem substituir a linha de base.
+O Capítulo~\ref{ch:limitacoes} deve ser lido como um conjunto de condições de uso. Ele separa o que o protótipo sustenta, o que permanece condicionado e o que ainda exige evidência externa. A interpretação segura dos resultados atuais é cenário-dependente, direcional e diagnóstica: sensibilidades mostram comportamento do modelo sob hipóteses rastreadas; o benchmark externo apoia consistência direcional com lacunas de magnitude; e diagnósticos explicam diferenças sem substituir a linha de base.
 
 A Tabela~\ref{tab:condicoes-uso} sintetiza as principais fronteiras que governam o uso do relatório.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Condições de uso dos resultados do TF.}
+\caption{Fronteiras que delimitam o uso dos resultados.}
 \label{tab:condicoes-uso}
 \begin{tabularx}{\textwidth}{L{0.22\textwidth}Y}
 \toprule
-Fronteira & Condição de uso no TF \\
+Fronteira & Condição de uso no relatório \\
 \midrule
 Ambiental & Emissões operacionais \ttw{} de \cooe{}, sem inferir \wtw{}, LCA, CO$_2$-only ou inventário completo de poluentes.\\
 Econômica & Custos como estimativas modeladas, não como fretes comerciais, tarifas, contratos ou recomendação de compra.\\
 Operacional & Rotas como cenários de comparação, não como prova de serviço, frequência, slot, terminal, agenda ou booking.\\
 Rota e porto & Portos selecionados, portos forçados, portos alternativos, distância marítima e casos \texttt{same-port} condicionam a força da evidência.\\
-Validação & Sensibilidade, benchmark, rerun e reconciliação têm papéis distintos e não devem ser convertidos em validação única.\\
+Validação & Sensibilidade, benchmark, rerun e reconciliação têm papéis distintos na força da evidência.\\
 Fontes & Literatura e artefatos externos podem contextualizar limites e trabalhos futuros, mas não substituem parâmetros ou resultados rastreados.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Com essas fronteiras, o Capítulo~\ref{ch:limitacoes} prepara a passagem para o Capítulo~\ref{ch:conclusoes}. As conclusões podem afirmar a contribuição metodológica do \CabotageLens{} sem transformar evidência parcial em validação comercial, operacional ou universal.
+Com essas fronteiras, o Capítulo~\ref{ch:limitacoes} prepara a passagem para o Capítulo~\ref{ch:conclusoes}. As conclusões podem afirmar a contribuição metodológica do \CabotageLens{} justamente porque o uso dos resultados está delimitado.
 
 \section{Fronteira ambiental: \ttw{} operacional, \cooe{} e limites de ciclo de vida}
 \label{sec:limitacao-ambiental}
 
 A fronteira ambiental corrente é operacional. Salvo indicação explícita em contrário, o \CabotageLens{} reporta emissões operacionais \ttw{} de \cooe{} associadas às pernas e aos componentes modelados no cenário. Para as pernas rodoviárias, essa leitura corresponde às emissões diretas do uso de combustível no veículo; para a perna marítima, corresponde às emissões diretas da combustão a bordo e aos componentes operacionais explicitamente incluídos.
 
-Essa fronteira deixa fora etapas a montante e de ciclo de vida. Produção, refino, transporte e distribuição de combustíveis, fabricação e manutenção de veículos ou navios, construção de infraestrutura, fim de vida dos ativos, combustíveis alternativos, emissões locais completas em porto e avaliação de qualidade do ar pertencem a fronteiras mais amplas, como WTT, \wtw{} ou LCA. Esses temas podem contextualizar a discussão e orientar trabalhos futuros, mas não substituem a linha de base operacional atual \cite{decarb2024,maritimelca2024}.
+Essa fronteira separa a linha de base atual de etapas a montante e de ciclo de vida. Produção, refino, transporte e distribuição de combustíveis, fabricação e manutenção de veículos ou navios, construção de infraestrutura, fim de vida dos ativos, combustíveis alternativos, emissões locais completas em porto e avaliação de qualidade do ar pertencem a fronteiras mais amplas, como WTT, \wtw{} ou LCA. Esses temas contextualizam a discussão e orientam trabalhos futuros sem alterar a linha de base operacional atual \cite{decarb2024,maritimelca2024}.
 
-Também há uma limitação de rastreabilidade da métrica \cooe{} quando o resultado é comparado a fontes externas. \cooe{} depende dos gases incluídos, dos fatores de emissão, da regra de equivalência climática e da fronteira adotada. Assim, literatura ou benchmarks que reportam CO$_2$ isolado, \cooe{} sob outro escopo, \wtw{} ou LCA não podem calibrar ou validar diretamente os resultados \ttw{} de \cooe{} do \CabotageLens{} sem reconciliação explícita de unidade funcional, base de carga, gases incluídos, fatores e fronteira ambiental \cite{icct2022,decarb2024,maritimelca2024}.
+Também há uma condição de rastreabilidade da métrica \cooe{} quando o resultado é comparado a fontes externas. \cooe{} depende dos gases incluídos, dos fatores de emissão, da regra de equivalência climática e da fronteira adotada. Por isso, literatura ou benchmarks que reportam CO$_2$ isolado, \cooe{} sob outro escopo, \wtw{} ou LCA exigem reconciliação explícita de unidade funcional, base de carga, gases incluídos, fatores e fronteira ambiental antes de qualquer comparação direta \cite{icct2022,decarb2024,maritimelca2024}.
 
 As operações portuárias e o \emph{hoteling} seguem a mesma disciplina. Quando esses componentes aparecem no cenário, eles são parcelas operacionais modeladas, não inventário terminal-específico completo. A interpretação deve evitar dois extremos: ignorar que operações em porto podem alterar a comparação ou tratá-las como medição completa de produtividade, energia auxiliar, permanência em berço, dispersão atmosférica ou impacto local à saúde \cite{berth2009,shipops2022,berthairquality2010}.
 
 \section{Fronteira econômica: custo modelado, alocação e ausência de frete comercial}
 \label{sec:limitacao-economica}
 
-A fronteira econômica do \CabotageLens{} é de custo modelado. Os valores em BRL são saídas de cenários definidos por rota, portos, carga, componentes habilitados, parâmetros e regras de alocação. Eles servem para comparação metodológica entre alternativas sob o mesmo enquadramento, mas não representam cotação de mercado, tarifa praticada, contrato negociado, proposta de armador, booking ou recomendação de contratação.
+A fronteira econômica do \CabotageLens{} é de custo modelado. Os valores em BRL são saídas de cenários definidos por rota, portos, carga, componentes habilitados, parâmetros e regras de alocação. Eles servem para comparação metodológica entre alternativas sob o mesmo enquadramento; a conversão desse resultado em avaliação de mercado exige outra camada de evidência.
 
-Essa limitação é especialmente importante na alternativa multimodal. A perna marítima pode distribuir custo, combustível e emissões por capacidade compartilhada, enquanto a alternativa rodoviária direta representa o veículo dedicado à remessa modelada. Essa diferença de alocação é parte do método e ajuda a explicar por que custos ou emissões multimodais podem parecer muito baixos em alguns cenários. Ela não deve ser interpretada como erro automático do modelo, nem como prova de frete comercial mais barato.
+Essa condição é especialmente importante na alternativa multimodal. A perna marítima pode distribuir custo, combustível e emissões por capacidade compartilhada, enquanto a alternativa rodoviária direta representa o veículo dedicado à remessa modelada. Essa diferença de alocação é parte do método e ajuda a explicar por que custos ou emissões multimodais podem parecer muito baixos em alguns cenários. A distinção preserva a rastreabilidade da comparação e evita confundir custo modelado com preço contratado.
 
-O custo modelado também não incorpora, de forma completa, margem comercial, negociação, seguro, demurrage, detention, inventário em trânsito, confiabilidade, variação de prazo, risco operacional, taxas locais, tarifas terminal-específicas, disponibilidade de slot ou aceitação de carga. Esses elementos pertencem a uma avaliação comercial ou operacional posterior. Portanto, um resultado favorável em custo modelado pode indicar uma hipótese que merece investigação, mas não encerra a análise econômica de mercado \cite{competitiveness2024,modalshiftreview2020}.
+Uma avaliação econômica de mercado incorporaria margem comercial, negociação, seguro, demurrage, detention, inventário em trânsito, confiabilidade, variação de prazo, risco operacional, taxas locais, tarifas terminal-específicas, disponibilidade de slot e aceitação de carga. Esses elementos pertencem a uma etapa posterior. Um resultado favorável em custo modelado indica hipótese de interesse para investigação, não conclusão comercial \cite{competitiveness2024,modalshiftreview2020}.
 
 \section{Fronteira operacional: serviço, agenda, terminais e super-rede}
 \label{sec:limitacao-operacional}
 
-O \CabotageLens{} constrói cenários determinísticos e auditáveis; ele não constrói um plano operacional de transporte. Um porto selecionado ou forçado funciona como nó metodológico do experimento, não como prova de que existe linha de cabotagem disponível, janela de navio, aceitação terminal, \emph{cutoff} documental, pátio, capacidade, slot ou operador disposto a executar a cadeia.
+O \CabotageLens{} constrói cenários determinísticos e auditáveis; ele não constrói um plano operacional de transporte. Um porto selecionado ou forçado funciona como nó metodológico do experimento. A confirmação de linha de cabotagem, janela de navio, aceitação terminal, \emph{cutoff} documental, pátio, capacidade, slot ou operador disposto a executar a cadeia pertence a uma validação operacional posterior.
 
-A decisão real de mudança modal depende de serviço, frequência, horários, confiabilidade, \emph{transit time}, coordenação entre operadores, risco de atraso, capacidade disponível, aceitação de carga, integração entre trechos terrestres e marítimos e condições contratuais. Esses fatores são reconhecidos como relevantes, mas não são validados pelo protótipo atual. Por isso, uma rota favorável no modelo deve ser lida como comparação condicionada, não como autorização operacional \cite{competitiveness2024,modalshiftreview2020}.
+A decisão real de mudança modal depende de serviço, frequência, horários, confiabilidade, \emph{transit time}, coordenação entre operadores, risco de atraso, capacidade disponível, aceitação de carga, integração entre trechos terrestres e marítimos e condições contratuais. Esses fatores indicam a próxima etapa de validação quando uma rota aparece promissora no modelo \cite{competitiveness2024,modalshiftreview2020}.
 
-O modelo também não resolve uma super-rede multimodal nacional. Ele não escolhe simultaneamente entre múltiplas linhas, operadores, transbordos, frequências, capacidades, conexões, tempos de espera e custos comerciais concorrentes. Essa fronteira preserva a utilidade do \CabotageLens{} como instrumento de triagem e auditoria de cenários, sem transformá-lo em otimizador de rede, plataforma de cotação ou sistema de contratação logística \cite{competitiveness2024}.
+O modelo também não resolve uma super-rede multimodal nacional. A versão atual não escolhe simultaneamente entre múltiplas linhas, operadores, transbordos, frequências, capacidades, conexões, tempos de espera e custos comerciais concorrentes. Essa fronteira preserva a utilidade do \CabotageLens{} como instrumento de triagem e auditoria de cenários, e orienta uma evolução futura para modelagem de rede \cite{competitiveness2024}.
 
 \section{Fronteira de rota: portos, distâncias, fallback e same-port}
 \label{sec:limitacao-rota}
@@ -67,22 +67,22 @@ A interpretação dos resultados depende da rota construída. A alternativa rodo
 
 As lacunas selecionadas continuam relevantes: Manaus--Porto de Fortaleza e Porto do Rio Grande--Porto do Recife permanecem sem evidência suficiente de distância marítima exata nos artefatos rastreados atuais. Pecém pode ser discutido como sensibilidade de porto alternativo para a região de Fortaleza, mas não valida Porto de Fortaleza. Suape pode ser discutido como sensibilidade de porto alternativo para a região de Recife, mas não valida Porto do Recife. A troca de porto altera acessos, terminal, distância marítima, fronteira de cenário e leitura operacional.
 
-Casos \texttt{same-port}, como Santos/Santos, não representam desempenho normal de cabotagem, porque não há perna marítima substantiva entre portos distintos. Eles são úteis como controle interpretativo, aviso de qualidade ou exemplo de exclusão, mas não sustentam comparação modal principal. Do mesmo modo, casos excluídos ou bloqueados, como a cadeia conteinerizada com Angra dos Reis ou decisões de porto ainda não documentadas, não devem ser reaproveitados como resultado numérico.
+Casos \texttt{same-port}, como Santos/Santos, representam uma condição-limite da lógica de rota, porque não há perna marítima substantiva entre portos distintos. Eles são úteis como controle interpretativo, aviso de qualidade ou exemplo de exclusão, mas ficam fora da comparação modal principal. Do mesmo modo, casos excluídos ou bloqueados, como a cadeia conteinerizada com Angra dos Reis ou decisões de porto ainda não documentadas, permanecem como orientação metodológica para trabalho futuro.
 
-Essa fronteira de rota controla a leitura das sensibilidades. Uma sensibilidade executada mostra o comportamento do modelo sob uma hipótese rastreada de distância ou porto; ela não elimina a lacuna do caso selecionado original, não transforma fallback em referência robusta e não comprova serviço, terminal, slot, booking ou frete contratado.
+Essa fronteira de rota controla a leitura das sensibilidades. Uma sensibilidade executada mostra o comportamento do modelo sob uma hipótese rastreada de distância ou porto. A lacuna do caso selecionado original permanece identificada, e a próxima etapa de validação passa por evidência específica de distância, porto, serviço e operação.
 
 \section{Fronteira de validação: sensibilidades, Prof. Dr. Gustavo Costa e reconciliação}
 \label{sec:limitacao-validacao}
 
-A validação atual é composta por camadas, não por um veredito único. Batch 001 preserva diagnóstico histórico; Batch 001B organiza decisões metodológicas e sensibilidades; Batch 002 acrescenta benchmark externo do Prof. Dr. Gustavo Costa; o rerun Supabase/cache verifica estabilidade computacional; e a reconciliação rodoviária explica parte da lacuna de magnitude. Cada camada aumenta a rastreabilidade, mas nenhuma transforma os resultados atuais em \texttt{headline\_candidate} robusto.
+A validação atual é composta por camadas, não por um veredito único. Batch 001 preserva diagnóstico histórico; Batch 001B organiza decisões metodológicas e sensibilidades; Batch 002 acrescenta benchmark externo do Prof. Dr. Gustavo Costa; o rerun Supabase/cache verifica estabilidade computacional; e a reconciliação rodoviária explica parte da lacuna de magnitude. Cada camada aumenta a rastreabilidade e define a força da evidência disponível.
 
-As sensibilidades executadas mostram comportamento sob hipóteses documentadas. Elas podem apoiar discussão sobre direção e sensibilidade de rota, mas não substituem baseline validado, não validam os portos originalmente selecionados e não provam disponibilidade operacional ou comercial. Seu papel é manter visível como distância marítima, porto alternativo e fronteira de cenário afetam a interpretação.
+As sensibilidades executadas mostram comportamento sob hipóteses documentadas. Elas apoiam discussão sobre direção e sensibilidade de rota dentro de cenários nomeados. Seu papel é manter visível como distância marítima, porto alternativo e fronteira de cenário afetam a interpretação.
 
-O benchmark do Prof. Dr. Gustavo Costa é valioso porque confronta o \CabotageLens{} com uma referência externa familiar ao mesmo problema amplo de comparação entre rodovia e cabotagem. Contudo, o workbook/paper não foi reconstruído integralmente em sua lógica interna de distância, rota, serviço, porto, alocação de carga, tratamento de operações portuárias e fronteira ambiental. A concordância direcional observada nos pares comparáveis apoia consistência qualitativa, mas não valida magnitude calibrada nem reprodução exata.
+O benchmark externo é valioso porque confronta o \CabotageLens{} com uma referência familiar ao mesmo problema amplo de comparação entre rodovia e cabotagem. O workbook/paper, porém, não foi reconstruído integralmente em sua lógica interna de distância, rota, serviço, porto, alocação de carga, tratamento de operações portuárias e fronteira ambiental. A concordância direcional observada nos pares comparáveis apoia consistência qualitativa e explicita lacunas de magnitude.
 
-A classificação \texttt{same\_direction\_large\_gap} deve continuar visível porque comunica a diferença entre direção e magnitude. As células puladas ou não comparáveis do workbook também não são falha automática do modelo; elas indicam limites de comparabilidade entre artefatos. O rerun com Supabase/cache reduz a hipótese de instabilidade computacional como explicação principal da lacuna, mas não valida serviço, rota comercial, preço, terminal ou magnitude.
+A classificação \texttt{same\_direction\_large\_gap} deve continuar visível porque comunica a diferença entre direção e magnitude. As células puladas ou não comparáveis do workbook indicam limites de comparabilidade entre artefatos. O rerun com Supabase/cache reduz a hipótese de instabilidade computacional como explicação principal da lacuna e direciona a análise para diferenças metodológicas.
 
-A reconciliação rodoviária com \(0{,}8602944~\mathrm{kg~CO_2eq/km}\) permanece diagnóstico de alinhamento com o benchmark, não recalibração do \CabotageLens{}. Ela ajuda a explicar parte do \emph{mismatch} rodoviário, mas não substitui o modelo rodoviário de linha de base, não altera os resultados do aplicativo e não autoriza misturar \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. A lacuna residual continua metodologicamente relevante e deve ser atribuída a diferenças ainda não reconciliadas, não a validação fechada.
+A reconciliação rodoviária com \(0{,}8602944~\mathrm{kg~CO_2eq/km}\) permanece diagnóstico de alinhamento com o benchmark, não recalibração do \CabotageLens{}. Ela ajuda a explicar parte do \emph{mismatch} rodoviário, mantém o modelo rodoviário de linha de base inalterado e preserva a distinção entre \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. A lacuna residual orienta reconciliações futuras de método, rota, carga e fronteira ambiental.
 
 \section{Fontes, literatura e generalização}
 \label{sec:limitacao-fontes-generalizacao}
@@ -91,4 +91,4 @@ A literatura usada no TF fortalece o enquadramento acadêmico, mas tem função 
 
 Essa regra evita substituições silenciosas. Valores \wtw{}/LCA, HVO, fatores regionais de outro estudo, emissões CO$_2$-only, margens comerciais, taxas, intensidades de navio, tempos de porto ou resultados de super-rede só poderiam entrar no modelo depois de uma decisão metodológica explícita, com unidade funcional, fronteira, base de carga, fonte, compatibilidade e implementação rastreadas. Sem essa cadeia, a literatura permanece como contexto, limitação, comparação ou agenda futura.
 
-Por fim, os resultados do TF não devem ser generalizados para todos os corredores brasileiros. As conclusões são específicas por rota, cenário, carga, porto, distância, proveniência, fronteira econômica, fronteira ambiental e classificação de evidência. O trabalho pode concluir que o \CabotageLens{} oferece uma estrutura auditável e academicamente útil para comparação de cenários; não pode concluir que a cabotagem seja universalmente superior, que custos modelados sejam fretes comerciais, que o benchmark do Prof. Dr. Gustavo Costa seja verdade de referência, ou que sensibilidades e literatura resolvam todas as lacunas de rota, validação, custo, emissões e operação.
+Por fim, os resultados do TF são específicos por rota, cenário, carga, porto, distância, proveniência, fronteira econômica, fronteira ambiental e classificação de evidência. Essa condição de generalização preserva a contribuição central: o trabalho conclui que o \CabotageLens{} oferece uma estrutura auditável e academicamente útil para comparação de cenários, enquanto a ampliação para outros corredores, dados comerciais, validações operacionais e fronteiras ambientais mais amplas permanece como agenda de pesquisa.
