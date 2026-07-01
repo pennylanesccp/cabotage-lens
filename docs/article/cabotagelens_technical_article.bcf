@@ -2404,6 +2404,8 @@
     <bcf:citekey order="14" intorder="2">shipops2022</bcf:citekey>
     <bcf:citekey order="15" intorder="1">competitiveness2024</bcf:citekey>
     <bcf:citekey order="15" intorder="2">modalshiftreview2020</bcf:citekey>
+    <bcf:citekey order="16" intorder="1">competitiveness2024</bcf:citekey>
+    <bcf:citekey order="16" intorder="2">decarb2024</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="none">

@@ -1,15 +1,13 @@
 \babel@toc {brazil}{}\relax 
 \contentsline {section}{Dicionário de termos, siglas e abreviações}{3}{section*.3}%
 \contentsline {section}{\numberline {1}Introdução}{4}{section.1}%
-\contentsline {section}{\numberline {2}Contexto e lacuna metodológica}{4}{section.2}%
+\contentsline {section}{\numberline {2}Revisão da literatura e fundamentação metodológica}{4}{section.2}%
 \contentsline {section}{\numberline {3}Metodologia}{6}{section.3}%
 \contentsline {subsection}{\numberline {3.1}Unidade funcional e alternativas}{6}{subsection.3.1}%
 \contentsline {subsection}{\numberline {3.2}Construção de rota e proveniência}{6}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}Agregação de emissões e custos}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.3}Agregação de emissões e custos}{7}{subsection.3.3}%
 \contentsline {subsection}{\numberline {3.4}Operações portuárias, hoteling e dados ausentes}{7}{subsection.3.4}%
 \contentsline {section}{\numberline {4}Implementação computacional}{7}{section.4}%
-\contentsline {section}{\numberline {5}Estratégia de evidência}{8}{section.5}%
-\contentsline {section}{\numberline {6}Resultados}{9}{section.6}%
-\contentsline {section}{\numberline {7}Discussão}{10}{section.7}%
-\contentsline {section}{\numberline {8}Limitações}{11}{section.8}%
-\contentsline {section}{\numberline {9}Conclusões}{12}{section.9}%
+\contentsline {section}{\numberline {5}Resultados}{9}{section.5}%
+\contentsline {section}{\numberline {6}Discussão e limitações}{11}{section.6}%
+\contentsline {section}{\numberline {7}Conclusão e trabalhos futuros}{12}{section.7}%

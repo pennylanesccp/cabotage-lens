@@ -1,15 +1,15 @@
-﻿[0] Config.pm:328> INFO - This is Biber 2.21
-[0] Config.pm:331> INFO - Logfile is 'cabotagelens_technical_article.blg'
-[253] biber-MSWIN64:342> INFO - ===
-[334] Biber.pm:421> INFO - Reading 'cabotagelens_technical_article.bcf'
-[627] Biber.pm:1002> INFO - Found 9 citekeys in bib section 0
-[700] Biber.pm:4487> INFO - Processing section 0
-[744] Biber.pm:4678> INFO - Looking for bibtex file '../references.bib' for section 0
-[853] bibtex.pm:1713> INFO - LaTeX decoding ...
-[1052] bibtex.pm:1519> INFO - Found BibTeX data source '../references.bib'
-[1440] UCollate.pm:68> INFO - Overriding locale 'pt-BR' defaults 'normalization = NFD' with 'normalization = prenormalized'
-[1440] UCollate.pm:68> INFO - Overriding locale 'pt-BR' defaults 'variable = shifted' with 'variable = non-ignorable'
-[1441] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'pt-BR'
-[1441] Biber.pm:4313> INFO - No sort tailoring available for locale 'pt-BR'
-[1467] bbl.pm:676> INFO - Writing 'cabotagelens_technical_article.bbl' with encoding 'UTF-8'
-[1491] bbl.pm:779> INFO - Output to cabotagelens_technical_article.bbl
+[0] Config.pm:328> INFO - This is Biber 2.21
+[1] Config.pm:331> INFO - Logfile is 'cabotagelens_technical_article.blg'
+[168] biber-MSWIN64:342> INFO - === 
+[220] Biber.pm:421> INFO - Reading 'cabotagelens_technical_article.bcf'
+[393] Biber.pm:1002> INFO - Found 9 citekeys in bib section 0
+[411] Biber.pm:4487> INFO - Processing section 0
+[426] Biber.pm:4678> INFO - Looking for bibtex file '../references.bib' for section 0
+[495] bibtex.pm:1713> INFO - LaTeX decoding ...
+[563] bibtex.pm:1519> INFO - Found BibTeX data source '../references.bib'
+[731] UCollate.pm:68> INFO - Overriding locale 'pt-BR' defaults 'variable = shifted' with 'variable = non-ignorable'
+[731] UCollate.pm:68> INFO - Overriding locale 'pt-BR' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[732] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'pt-BR'
+[732] Biber.pm:4313> INFO - No sort tailoring available for locale 'pt-BR'
+[752] bbl.pm:676> INFO - Writing 'cabotagelens_technical_article.bbl' with encoding 'UTF-8'
+[762] bbl.pm:779> INFO - Output to cabotagelens_technical_article.bbl
