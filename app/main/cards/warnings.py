@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from typing import Any, Mapping
 
 import streamlit as st
@@ -43,8 +44,24 @@ def render_route_quality_warnings(results: Mapping[str, Any] | None) -> None:
         title = str(warning.get("title") or _ROUTE_QUALITY_WARNING_TITLE).strip()
         if title == "Cabotage route warning":
             title = _ROUTE_QUALITY_WARNING_TITLE
-        st.warning(f"**{title}**\n\n{warning['message']}")
+        st.markdown(
+            (
+                "<section class='quality-note'>"
+                f"<strong>{escape(title)}</strong>"
+                f"<p>{escape(str(warning['message']))}</p>"
+                "</section>"
+            ),
+            unsafe_allow_html=True,
+        )
         return
 
-    body = "\n".join(f"- {warning['message']}" for warning in warnings)
-    st.warning(f"**Route quality warnings**\n\n{body}")
+    items = "".join(f"<li>{escape(str(warning['message']))}</li>" for warning in warnings)
+    st.markdown(
+        (
+            "<section class='quality-note'>"
+            "<strong>Route quality warnings</strong>"
+            f"<ul>{items}</ul>"
+            "</section>"
+        ),
+        unsafe_allow_html=True,
+    )

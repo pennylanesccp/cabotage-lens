@@ -224,7 +224,7 @@ def build_map_deck(geo: Mapping[str, Any], results: Mapping[str, Any] | None, st
 
 
 def render_map(geo: Mapping[str, Any], results: Mapping[str, Any] | None, state: Mapping[str, Any]) -> None:
-    map_height = 560
+    map_height = 520
     deck = build_map_deck(geo, results=results, state=state)
     render_deck_chart(deck, height=map_height, require_ctrl_for_wheel_zoom=True)
 
@@ -236,7 +236,7 @@ def render_map_placeholder() -> None:
             <div class='map-shell__content'>
                 <p class='map-shell__eyebrow'>Map</p>
                 <h3>Route canvas ready</h3>
-                <p>Run an analysis to render the road and cabotage paths here, keeping the same layout you see after a scenario completes.</p>
+                <p>Run an analysis to render the direct-road reference, port access legs, and cabotage sea leg here.</p>
             </div>
         </section>
         """,

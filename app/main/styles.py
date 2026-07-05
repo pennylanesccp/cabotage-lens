@@ -4,15 +4,80 @@ import streamlit as st
 
 BASE_CSS = """
 <style>
+    :root {
+        --cl-bg: #101820;
+        --cl-surface: #f8fafc;
+        --cl-surface-muted: #edf2f7;
+        --cl-ink: #10202b;
+        --cl-ink-muted: #4b5f70;
+        --cl-line: rgba(16, 32, 43, 0.12);
+        --cl-navy: #123047;
+        --cl-green: #0f766e;
+        --cl-amber: #b7791f;
+        --cl-blue: #2563eb;
+        --cl-red: #b91c1c;
+        --cl-radius: 8px;
+    }
     .stApp {
         background:
-            radial-gradient(900px 360px at 8% -12%, rgba(52, 152, 219, .16), transparent 55%),
-            radial-gradient(900px 420px at 100% 0%, rgba(22, 160, 133, .14), transparent 45%),
-            #0b1220;
+            linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(236, 242, 247, 0.98)),
+            #f3f6f9;
+        color: var(--cl-ink);
     }
     .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1.75rem;
+        width: min(100%, 1180px);
+        max-width: 1180px;
+        padding: 1.35rem 1.6rem 2rem 1.6rem;
+        margin: 0 auto;
+        color: var(--cl-ink);
+    }
+    div[data-testid="stMainBlockContainer"],
+    .stMain .block-container {
+        width: min(100%, 1180px) !important;
+        max-width: 1180px !important;
+        padding: 1.35rem 1.6rem 2rem 1.6rem !important;
+        margin: 0 auto !important;
+        color: var(--cl-ink);
+    }
+    .main .block-container h1,
+    .main .block-container h2,
+    .main .block-container h3,
+    .main .block-container h4,
+    .main .block-container h5,
+    .main .block-container h6,
+    .main .block-container p,
+    .main .block-container label,
+    .main .block-container span {
+        letter-spacing: 0;
+    }
+    div[data-testid="stMainBlockContainer"] h1,
+    div[data-testid="stMainBlockContainer"] h2,
+    div[data-testid="stMainBlockContainer"] h3,
+    div[data-testid="stMainBlockContainer"] h4,
+    div[data-testid="stMainBlockContainer"] h5,
+    div[data-testid="stMainBlockContainer"] h6,
+    div[data-testid="stMainBlockContainer"] p,
+    div[data-testid="stMainBlockContainer"] label,
+    div[data-testid="stMainBlockContainer"] span {
+        letter-spacing: 0;
+    }
+    .main .block-container h1,
+    .main .block-container h2,
+    .main .block-container h3 {
+        color: var(--cl-ink);
+    }
+    div[data-testid="stMainBlockContainer"] h1,
+    div[data-testid="stMainBlockContainer"] h2,
+    div[data-testid="stMainBlockContainer"] h3 {
+        color: var(--cl-ink);
+    }
+    .main .block-container p,
+    .main .block-container label {
+        color: var(--cl-ink-muted);
+    }
+    div[data-testid="stMainBlockContainer"] p,
+    div[data-testid="stMainBlockContainer"] label {
+        color: var(--cl-ink-muted);
     }
     section[data-testid="stSidebar"] .block-container {
         padding-top: 1rem;
@@ -51,94 +116,249 @@ BASE_CSS = """
         height: 0;
         margin: 0;
     }
+    section[data-testid="stSidebar"] {
+        border-right: 1px solid rgba(16, 32, 43, 0.16);
+        background:
+            linear-gradient(180deg, rgba(16, 32, 43, 0.98), rgba(18, 48, 71, 0.96)),
+            #10202b;
+    }
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] label {
+        color: #e2e8f0;
+        letter-spacing: 0;
+    }
+    .sidebar-brand {
+        padding: 0.15rem 0 0.55rem 0;
+    }
+    .sidebar-brand__title {
+        margin: 0;
+        color: #f8fafc;
+        font-size: 1.02rem;
+        font-weight: 750;
+    }
+    .sidebar-brand__subtitle {
+        margin: 0.35rem 0 0 0;
+        color: #cbd5e1;
+        font-size: 0.84rem;
+        line-height: 1.45;
+    }
+    .sidebar-section-label {
+        margin: 0.9rem 0 0.35rem 0;
+        color: #e2e8f0;
+        font-size: 0.72rem;
+        font-weight: 750;
+        text-transform: uppercase;
+    }
     .page-header {
-        margin-bottom: 0.7rem;
+        margin: 0 0 1rem 0;
+        padding: 1.15rem 1.25rem;
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-radius);
+        background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(243, 248, 246, 0.96)),
+            #ffffff;
+        box-shadow: 0 14px 34px rgba(16, 32, 43, 0.08);
     }
     .page-header h1 {
         margin: 0;
-        font-size: 1.7rem;
-        color: #e2e8f0;
-        line-height: 1.2;
+        color: var(--cl-ink);
+        font-size: clamp(1.45rem, 2vw, 2rem);
+        line-height: 1.15;
     }
     .page-header p {
-        margin: 0.22rem 0 0 0;
-        color: #cbd5e1;
-        font-size: 0.96rem;
+        margin: 0.55rem 0 0 0;
+        color: var(--cl-ink-muted);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        max-width: 58rem;
+    }
+    .page-header__kicker {
+        margin: 0 0 0.38rem 0;
+        color: var(--cl-green);
+        font-size: 0.72rem;
+        font-weight: 750;
+        text-transform: uppercase;
+    }
+    .page-header__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-top: 0.85rem;
+    }
+    .meta-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 1.7rem;
+        padding: 0.18rem 0.55rem;
+        border: 1px solid rgba(15, 118, 110, 0.18);
+        border-radius: var(--cl-radius);
+        background: rgba(15, 118, 110, 0.08);
+        color: var(--cl-ink);
+        font-size: 0.78rem;
+        font-weight: 650;
+        overflow-wrap: anywhere;
+    }
+    .section-heading {
+        margin: 1.05rem 0 0.55rem 0;
+    }
+    .section-heading__kicker {
+        margin: 0;
+        color: var(--cl-green);
+        font-size: 0.72rem;
+        font-weight: 750;
+        text-transform: uppercase;
+    }
+    .section-heading h2,
+    .section-heading h3 {
+        margin: 0.15rem 0 0 0;
+        color: var(--cl-ink);
+        font-size: 1.15rem;
+    }
+    .section-heading p {
+        margin: 0.25rem 0 0 0;
+        color: var(--cl-ink-muted);
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+    .insight-strip {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem;
+        margin: 0.55rem 0 0.85rem 0;
+    }
+    .insight-card {
+        min-width: 0;
+        padding: 0.8rem 0.9rem;
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-radius);
+        background: #ffffff;
+    }
+    .insight-card__label {
+        margin: 0;
+        color: var(--cl-ink-muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .insight-card__value {
+        margin: 0.25rem 0 0 0;
+        color: var(--cl-ink);
+        font-size: 0.98rem;
+        font-weight: 720;
+        line-height: 1.3;
+    }
+    .insight-card__note {
+        margin: 0.2rem 0 0 0;
+        color: var(--cl-ink-muted);
+        font-size: 0.78rem;
+        line-height: 1.35;
     }
     .summary-panels {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.9rem;
+        gap: 0.75rem;
         margin: 0.55rem 0 0.9rem 0;
     }
     .summary-panel {
-        border: 1px solid rgba(148, 163, 184, 0.24);
-        border-radius: 22px;
-        background:
-            linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(9, 14, 26, 0.92)),
-            #0f172a;
-        padding: 0.95rem 1.1rem 1.05rem 1.1rem;
-        box-shadow: 0 18px 38px rgba(2, 6, 23, 0.22);
+        min-width: 0;
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-radius);
+        background: #ffffff;
+        padding: 0.9rem;
+        box-shadow: 0 12px 26px rgba(16, 32, 43, 0.07);
     }
     .summary-panel[data-accent="multimodal"] {
-        border-color: rgba(45, 212, 191, 0.34);
-        box-shadow: inset 0 1px 0 rgba(94, 234, 212, 0.1), 0 18px 38px rgba(2, 6, 23, 0.22);
+        border-top: 4px solid var(--cl-green);
     }
     .summary-panel[data-accent="road"] {
-        border-color: rgba(251, 191, 36, 0.28);
-        box-shadow: inset 0 1px 0 rgba(252, 211, 77, 0.08), 0 18px 38px rgba(2, 6, 23, 0.22);
+        border-top: 4px solid var(--cl-amber);
     }
     .summary-panel__header {
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.7rem;
     }
     .summary-panel__eyebrow {
         margin: 0;
-        color: #e2e8f0;
-        font-size: 0.82rem;
-        font-weight: 700;
-        letter-spacing: 0.16em;
+        color: var(--cl-ink);
+        font-size: 0.78rem;
+        font-weight: 750;
         text-transform: uppercase;
+    }
+    .summary-panel__subhead {
+        margin: 0.18rem 0 0 0;
+        color: var(--cl-ink-muted);
+        font-size: 0.78rem;
+        line-height: 1.35;
     }
     .summary-panel__metrics {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(6.6rem, 1fr));
         align-items: stretch;
-        gap: 0;
+        gap: 0.55rem;
     }
     .summary-panel__metric {
         min-width: 0;
-        padding: 0.15rem 0.95rem;
-        text-align: center;
-    }
-    .summary-panel__metric + .summary-panel__metric {
-        border-left: 1px solid rgba(148, 163, 184, 0.18);
+        padding: 0.55rem;
+        border: 1px solid rgba(16, 32, 43, 0.08);
+        border-radius: var(--cl-radius);
+        background: #f8fafc;
     }
     .summary-panel__label {
-        margin: 0 0 0.38rem 0;
-        color: #94a3b8;
-        font-size: 0.72rem;
-        letter-spacing: 0.08em;
+        margin: 0 0 0.25rem 0;
+        color: var(--cl-ink-muted);
+        font-size: 0.68rem;
+        font-weight: 700;
         text-transform: uppercase;
     }
     .summary-panel__value {
-        color: #f8fafc;
-        font-size: 1.16rem;
-        font-weight: 700;
+        color: var(--cl-ink);
+        font-size: 1.05rem;
+        font-weight: 760;
         line-height: 1.15;
         margin: 0;
+        overflow-wrap: anywhere;
+    }
+    .quality-note {
+        margin: 0.7rem 0;
+        padding: 0.8rem 0.9rem;
+        border: 1px solid rgba(183, 121, 31, 0.25);
+        border-radius: var(--cl-radius);
+        background: rgba(255, 251, 235, 0.92);
+        color: #5f3a06;
+        line-height: 1.45;
+    }
+    .quality-note strong {
+        color: #7c4a03;
+    }
+    .quality-note p {
+        margin: 0.35rem 0 0 0;
+        color: #5f3a06;
+    }
+    .quality-note ul {
+        margin: 0.45rem 0 0 1.1rem;
+        padding: 0;
+    }
+    .quality-note li {
+        margin: 0.22rem 0;
+        color: #5f3a06;
+    }
+    .empty-state {
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-radius);
+        background: #ffffff;
+        padding: 0.95rem 1rem;
+        color: var(--cl-ink-muted);
+        line-height: 1.45;
     }
     .map-shell {
-        min-height: 560px;
+        min-height: clamp(320px, 46vh, 480px);
         display: grid;
         place-items: center;
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        border-radius: 22px;
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-radius);
         background:
-            radial-gradient(420px 180px at 20% 10%, rgba(56, 189, 248, 0.12), transparent 60%),
-            radial-gradient(360px 220px at 85% 15%, rgba(45, 212, 191, 0.11), transparent 55%),
-            linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(8, 15, 29, 0.98)),
-            #0f172a;
-        box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08), 0 18px 42px rgba(2, 6, 23, 0.24);
+            linear-gradient(135deg, rgba(18, 48, 71, 0.94), rgba(15, 118, 110, 0.84)),
+            #123047;
+        box-shadow: 0 16px 34px rgba(16, 32, 43, 0.12);
         margin-bottom: 1rem;
         overflow: hidden;
     }
@@ -149,9 +369,9 @@ BASE_CSS = """
     }
     .map-shell__eyebrow {
         margin: 0 0 0.35rem 0;
-        color: #38bdf8;
+        color: #a7f3d0;
         font-size: 0.76rem;
-        letter-spacing: 0.14em;
+        font-weight: 750;
         text-transform: uppercase;
     }
     .map-shell h3 {
@@ -161,9 +381,16 @@ BASE_CSS = """
     }
     .map-shell p {
         margin: 0.5rem 0 0 0;
-        color: #cbd5e1;
+        color: #e2e8f0;
         font-size: 0.94rem;
         line-height: 1.5;
+    }
+    .data-panel {
+        padding: 0.9rem 1rem;
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-radius);
+        background: #ffffff;
+        margin: 0.65rem 0 0.85rem 0;
     }
     .details-placeholder {
         color: #cbd5e1;
@@ -174,7 +401,37 @@ BASE_CSS = """
     .details-placeholder strong {
         color: #f8fafc;
     }
-    @media (max-width: 1100px) {
+    div[data-testid="stMetric"] {
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-radius);
+        background: #ffffff;
+        padding: 0.65rem 0.75rem;
+    }
+    div[data-testid="stMetric"] label {
+        color: var(--cl-ink-muted);
+    }
+    div[data-testid="stMetricValue"] {
+        color: var(--cl-ink);
+    }
+    div[data-testid="stExpander"] {
+        border-color: var(--cl-line);
+        border-radius: var(--cl-radius);
+        background: rgba(255, 255, 255, 0.82);
+    }
+    div[data-testid="stDataFrame"] {
+        border-radius: var(--cl-radius);
+        overflow: hidden;
+    }
+    iframe {
+        border-radius: var(--cl-radius) !important;
+    }
+    @media (max-width: 1250px) {
+        .summary-panels,
+        .insight-strip {
+            grid-template-columns: 1fr;
+        }
+    }
+    @media (max-width: 980px) {
         .summary-panel__metrics {
             grid-template-columns: 1fr;
         }
@@ -183,12 +440,20 @@ BASE_CSS = """
         }
         .summary-panel__metric + .summary-panel__metric {
             border-left: 0;
-            border-top: 1px solid rgba(148, 163, 184, 0.18);
         }
     }
     @media (max-width: 720px) {
-        .summary-panels {
-            grid-template-columns: 1fr;
+        .main .block-container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        div[data-testid="stMainBlockContainer"],
+        .stMain .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .page-header {
+            padding: 1rem;
         }
     }
 </style>

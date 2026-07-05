@@ -23,12 +23,29 @@ def _load_dashboard_dataset_cached() -> CabotageDashboardDataset:
     return load_dashboard_dataset()
 
 
-def _render_header(dataset: CabotageDashboardDataset) -> None:
-    del dataset
+def _render_section_heading(kicker: str, title: str, body: str) -> None:
     st.markdown(
         f"""
-        <section style='padding: 1.1rem 1.35rem; border-radius: 24px; background: linear-gradient(135deg, rgba(234, 244, 255, 0.97), rgba(241, 248, 233, 0.94)); border: 1px solid rgba(15, 23, 42, 0.10); margin-bottom: 0.8rem;'>
-            <h1 style='margin: 0; font-size: 2rem; color: #102a43;'>Cabotage {_PAGE_TITLE}</h1>
+        <div class='section-heading'>
+            <p class='section-heading__kicker'>{kicker}</p>
+            <h2>{title}</h2>
+            <p>{body}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_header() -> None:
+    st.markdown(
+        f"""
+        <section class='page-header'>
+            <p class='page-header__kicker'>Observed cabotage data</p>
+            <h1>Cabotage {_PAGE_TITLE}</h1>
+            <p>
+                Inspect processed voyage, stop, and segment records used as evidence for Brazilian cabotage activity.
+                Filters change only the displayed dashboard view.
+            </p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -36,6 +53,11 @@ def _render_header(dataset: CabotageDashboardDataset) -> None:
 
 
 def _render_filters(dataset: CabotageDashboardDataset) -> tuple[list[int], str | None, list[str], int]:
+    _render_section_heading(
+        "Dataset controls",
+        "Filter observed cabotage records",
+        "Use these controls to focus the dashboard without changing stored data or model calculations.",
+    )
     years = sorted(int(value) for value in dataset.voyages["reference_year"].dropna().astype(int).unique().tolist())
     closure_modes = sorted(str(value) for value in dataset.voyages["closure_label"].dropna().unique().tolist())
     all_ports = sorted(
@@ -250,6 +272,11 @@ def _port_stay_profile(stops: pd.DataFrame, top_n: int) -> pd.DataFrame:
 
 
 def _render_overview_metrics(voyages: pd.DataFrame, stops: pd.DataFrame, segments: pd.DataFrame) -> None:
+    _render_section_heading(
+        "Overview",
+        "Filtered dataset summary",
+        "Counts and cargo totals reflect the current filter selection.",
+    )
     total_voyages = int(voyages["voyage_id"].nunique())
     total_loaded_weight_t = float(voyages["loaded_weight_t_total"].sum())
     carried_weight_t = float(segments["cargo_weight_t"].sum()) if not segments.empty else 0.0
@@ -267,6 +294,7 @@ def _render_overview_metrics(voyages: pd.DataFrame, stops: pd.DataFrame, segment
     row_two[1].metric("Unique vessels", _metric_text(unique_imos, decimals=0))
     row_two[2].metric("Observed ports", _metric_text(unique_ports, decimals=0))
 
+
 def _render_ranked_bar_chart(
     df: pd.DataFrame,
     *,
@@ -275,6 +303,7 @@ def _render_ranked_bar_chart(
     title: str,
     color: str,
     tooltip_cols: list[str] | None = None,
+    caption: str | None = None,
 ) -> None:
     if df.empty:
         st.info("No data for this chart in the current filter.")
@@ -291,6 +320,8 @@ def _render_ranked_bar_chart(
         .properties(title=title, height=_CHART_HEIGHT)
     )
     st.altair_chart(chart, width="stretch")
+    if caption:
+        st.caption(caption)
 
 
 def _render_monthly_chart(df: pd.DataFrame) -> None:
@@ -321,6 +352,7 @@ def _render_monthly_chart(df: pd.DataFrame) -> None:
         height=_CHART_HEIGHT,
     )
     st.altair_chart(chart, width="stretch")
+    st.caption("Bars show carried cargo weight; the line shows observed segment count for the same month.")
 
 
 def _format_compact_table(
@@ -361,8 +393,11 @@ def render_page() -> None:
         archive_to_storage=bool(st.session_state.archive_logs),
     )
 
-    header_cols = st.columns([0.82, 0.18])
-    with header_cols[1]:
+    _render_header()
+    toolbar_cols = st.columns([0.78, 0.22])
+    with toolbar_cols[0]:
+        st.caption("Dashboard data load is cached for 10 minutes. Refresh only reloads the processed dashboard dataset.")
+    with toolbar_cols[1]:
         if st.button("Refresh data", width="stretch"):
             _load_dashboard_dataset_cached.clear()
             st.rerun()
@@ -376,7 +411,6 @@ def render_page() -> None:
         st.error(f"Failed to load cabotage dashboard data: {exc}")
         return
 
-    _render_header(dataset)
     selected_years, selected_port, selected_closure_modes, top_n = _render_filters(dataset)
     view = filter_dashboard_dataset(
         dataset,
@@ -416,6 +450,7 @@ def render_page() -> None:
                 title="Ports where cargo most departs",
                 color="#2563eb",
                 tooltip_cols=["port", "cargo_weight_t", "segment_count", "voyage_count", "share_pct"],
+                caption="Ranked by carried cargo weight departing from each observed port.",
             )
         with chart_right:
             _render_ranked_bar_chart(
@@ -425,6 +460,7 @@ def render_page() -> None:
                 title="Ports where cargo most arrives",
                 color="#0f766e",
                 tooltip_cols=["port", "cargo_weight_t", "segment_count", "voyage_count", "share_pct"],
+                caption="Ranked by carried cargo weight arriving at each observed port.",
             )
 
     with ports_tab:
@@ -437,6 +473,7 @@ def render_page() -> None:
                 title="Intermediate hubs by moved cargo",
                 color="#7c3aed",
                 tooltip_cols=["port", "moved_weight_t", "stop_count", "voyage_count", "avg_port_stay_hours"],
+                caption="Intermediate stops only; values depend on the current voyage filters.",
             )
         with right:
             _render_ranked_bar_chart(
@@ -446,6 +483,7 @@ def render_page() -> None:
                 title="Ports with the longest average stay",
                 color="#b45309",
                 tooltip_cols=["port", "avg_port_stay_hours", "avg_operation_hours", "moved_weight_t", "voyage_count"],
+                caption="Average stay is calculated from available processed stop timestamps.",
             )
 
     with segments_tab:
@@ -458,6 +496,7 @@ def render_page() -> None:
                 title="Observed corridors by carried cargo",
                 color="#dc2626",
                 tooltip_cols=["corridor", "cargo_weight_t", "segment_count", "voyage_count", "cargo_teu"],
+                caption="Corridors aggregate observed segment pairs after filters are applied.",
             )
         with right:
             _render_ranked_bar_chart(
@@ -467,8 +506,11 @@ def render_page() -> None:
                 title="Vessels with more carried cargo",
                 color="#1d4ed8",
                 tooltip_cols=["imo", "cargo_weight_t", "segment_count", "voyage_count", "cargo_teu"],
+                caption="Vessel rows use IMO identifiers present in the processed segment records.",
             )
     with details_tab:
+        st.markdown("**Observed corridors**")
+        st.caption("Compact table view of the same top segment pairs shown in the Segments tab.")
         _display_table(
             _format_compact_table(
                 segment_pairs[["corridor", "cargo_weight_t", "cargo_teu", "segment_count", "voyage_count"]],
@@ -476,6 +518,8 @@ def render_page() -> None:
             )
         )
 
+        st.markdown("**Departure ports**")
+        st.caption("Compact table view of the top departure ports after filters are applied.")
         _display_table(
             _format_compact_table(
                 departures[["port", "cargo_weight_t", "cargo_teu", "segment_count", "voyage_count", "share_pct"]],

@@ -221,11 +221,14 @@ def render_breakdown(results: Mapping[str, Any]) -> None:
         "Emissions are operational TTW CO2e estimates from the current fuel-factor boundary. "
         "Cost values are model estimates/proxies, not complete commercial freight quotes."
     )
-    st.markdown("**Total summary**")
+    st.markdown("**Route totals**")
+    st.caption("Direct-road and multimodal totals are shown on the same cost, distance, and TTW CO2e basis.")
     st.dataframe(_summary_table(results), hide_index=True, width="stretch")
-    st.markdown("**Multimodal leg breakdown**")
+    st.markdown("**Multimodal component breakdown**")
+    st.caption("Port operations and hoteling remain visible as separate components when requested or resolved.")
     st.dataframe(_legs_table(results), hide_index=True, width="stretch")
     port_call_table = _port_call_breakdown_table(results)
     if not port_call_table.empty:
         st.markdown("**Port-call provenance**")
+        st.caption("Unavailable or partial port-call values are retained in the table instead of being hidden.")
         st.dataframe(port_call_table, hide_index=True, width="stretch")

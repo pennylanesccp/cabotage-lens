@@ -14,7 +14,7 @@ from app.main.sidebar.run_button import render_run_button
 def render_sidebar(class_options: Iterable[str], port_ops_scenarios: Iterable[str]) -> bool:
     with st.sidebar:
         render_sidebar_brand()
-        st.subheader("Scenario")
+        st.markdown("<p class='sidebar-section-label'>Scenario</p>", unsafe_allow_html=True)
         render_filters()
         with st.expander("Advanced", expanded=False):
             render_advanced(class_options=class_options, port_ops_scenarios=port_ops_scenarios)

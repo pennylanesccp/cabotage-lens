@@ -9,16 +9,20 @@ from modules.fuel.truck_specs import list_truck_keys
 from app.main.utils.antaq import antaq_refresh_label
 
 
+def _section_label(title: str) -> None:
+    st.markdown(f"<p class='sidebar-section-label'>{title}</p>", unsafe_allow_html=True)
+
+
 def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[str]) -> None:
-    st.markdown("##### Routing")
+    _section_label("Routing")
     st.session_state["profile"] = "driving-car"
     st.caption("Road routing is locked to `driving-car` with 5s provider timeouts and no HTTP retries.")
     st.checkbox("Overwrite road cache", key="overwrite_road")
 
-    st.markdown("##### Road")
+    _section_label("Road")
     st.selectbox("Truck", options=sorted(list_truck_keys()), key="truck_key")
 
-    st.markdown("##### Maritime")
+    _section_label("Maritime")
     st.selectbox("Vessel class", options=list(class_options), key="vessel_class")
     st.selectbox("Allocation mode", options=["auto", "teu_share", "dwt_share"], key="allocation_mode")
     st.number_input(
@@ -30,7 +34,7 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
         disabled=(st.session_state.allocation_mode == "dwt_share"),
     )
 
-    st.markdown("##### Port")
+    _section_label("Port")
     st.number_input("Cargo (TEU, optional)", min_value=0.0, step=1.0, key="cargo_teu_input")
     st.checkbox("Include hoteling", key="include_hoteling")
     st.number_input("Hoteling hours per call", min_value=0.0, step=1.0, key="hoteling_hours_per_call")
@@ -41,7 +45,7 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.number_input("Port moves per call override (0 uses defaults)", min_value=0.0, step=1.0, key="port_moves_per_call_input")
     st.selectbox("Port ops scenario", options=list(port_ops_scenarios), key="port_ops_scenario")
 
-    st.markdown("##### Map")
+    _section_label("Map")
     st.selectbox("Map style", options=["Voyager", "Positron", "Dark Matter"], key="map_style")
     st.checkbox("Show first/last mile", key="map_show_first_last")
     st.checkbox("Show sea leg", key="map_show_sea")
@@ -53,7 +57,7 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.slider("Pitch", min_value=0, max_value=60, key="map_pitch")
     st.slider("Bearing", min_value=-180, max_value=180, key="map_bearing")
 
-    st.markdown("##### App")
+    _section_label("App")
     st.checkbox(
         antaq_refresh_label(),
         key="refresh_antaq_before_run",
@@ -64,7 +68,7 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     )
     st.text_input(
         "Database target",
-        key="db_target_str",
+        value=str(st.session_state.get("db_target_str", "")),
         help="Shows the active Supabase Postgres target configured through Streamlit secrets.",
         disabled=True,
     )

@@ -163,11 +163,12 @@ def _failure_table(records: Iterable[Any]) -> pd.DataFrame:
 def _render_header() -> None:
     st.markdown(
         f"""
-        <section style='padding: 1.4rem 1.5rem; border-radius: 24px; background: linear-gradient(135deg, rgba(233, 247, 235, 0.98), rgba(255, 244, 224, 0.96)); border: 1px solid rgba(22, 101, 52, 0.12); margin-bottom: 1rem;'>
-            <p style='margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: #3b5d2a;'>Supabase-backed heatmap</p>
-            <h1 style='margin: 0; font-size: 2rem; color: #142312;'>{escape(HEATMAP_PAGE_TITLE)}</h1>
-            <p style='margin: 0.65rem 0 0 0; max-width: 48rem; color: #334155;'>
-                Explore the current Brazil-wide 3D comparison surface. Color and elevation both follow the signed quantitative difference around a neutral zero plane.
+        <section class='page-header'>
+            <p class='page-header__kicker'>Supabase-backed heatmap</p>
+            <h1>{escape(HEATMAP_PAGE_TITLE)}</h1>
+            <p>
+                Explore the current Brazil-wide 3D comparison surface. Color and elevation follow the signed quantitative
+                difference around a neutral zero plane, using only the stored rows available for the selected scenario.
             </p>
         </section>
         """,
@@ -239,6 +240,16 @@ def _progress_callback(progress_bar: Any, status_box: Any, cooldown_box: Any, lo
 
 
 def _render_dataset(dataset: HeatmapDataset) -> None:
+    st.markdown(
+        """
+        <div class='section-heading'>
+            <p class='section-heading__kicker'>Comparison surface</p>
+            <h2>Stored route outcomes</h2>
+            <p>Select the metric used by the 3D surface and inspect the diagnostics for missing or skipped rows.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     metric = st.radio(
         "Color metric",
         options=list(HEATMAP_METRICS),
@@ -267,7 +278,7 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
     latest_failed_destinations = max(dataset.run.pending_count - dataset.run.missing_count, 0)
     loaded_from_route_cache = diagnostics.loaded_route_cache_rows > 0
 
-    with st.expander("Diagnostics", expanded=False):
+    with st.expander("Diagnostics and data coverage", expanded=False):
         diag_cols = st.columns(5)
         diag_cols[0].metric("Successful latest", f"{dataset.run.success_count}")
         diag_cols[1].metric("Failed latest", f"{dataset.run.fail_count}")
@@ -596,3 +607,13 @@ def render_page() -> None:
     dataset = st.session_state.get("heatmap_dataset")
     if isinstance(dataset, HeatmapDataset):
         _render_dataset(dataset)
+    else:
+        st.markdown(
+            """
+            <section class='empty-state'>
+                Load cached routes or run the missing destinations from the sidebar to render the comparison surface.
+                The page keeps missing rows, failures, and skipped points visible in diagnostics once data are available.
+            </section>
+            """,
+            unsafe_allow_html=True,
+        )

@@ -309,4 +309,8 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
 
 
 def render_assumptions(results: Mapping[str, Any], payload: Mapping[str, Any]) -> None:
+    st.caption(
+        "This table preserves the calculation boundary, selected model parameters, and any fallback or unavailable-data basis "
+        "that affects interpretation."
+    )
     st.dataframe(_assumptions_table(results=results, payload=payload), hide_index=True, width="stretch")

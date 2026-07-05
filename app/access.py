@@ -26,18 +26,18 @@ _ACCESS_CSS = """
         max-width: 28rem;
         margin: 8vh auto 0 auto;
         padding: 1.5rem;
-        border-radius: 24px;
+        border-radius: 8px;
         border: 1px solid rgba(148, 163, 184, 0.22);
         background:
-            linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(9, 14, 26, 0.92)),
-            #0f172a;
-        box-shadow: 0 18px 42px rgba(2, 6, 23, 0.26);
+            linear-gradient(180deg, rgba(18, 48, 71, 0.97), rgba(16, 24, 32, 0.96)),
+            #123047;
+        box-shadow: 0 16px 36px rgba(16, 32, 43, 0.22);
     }
     .access-shell__eyebrow {
         margin: 0 0 0.3rem 0;
-        color: #38bdf8;
+        color: #a7f3d0;
         font-size: 0.76rem;
-        letter-spacing: 0.14em;
+        font-weight: 750;
         text-transform: uppercase;
     }
     .access-shell h1 {

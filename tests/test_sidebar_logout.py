@@ -12,6 +12,7 @@ class SidebarLogoutTests(unittest.TestCase):
         fake_streamlit = SimpleNamespace(
             sidebar=contextlib.nullcontext(),
             subheader=Mock(),
+            markdown=Mock(),
             expander=Mock(return_value=contextlib.nullcontext()),
         )
 

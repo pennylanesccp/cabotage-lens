@@ -50,7 +50,7 @@ class RouteQualityWarningTests(unittest.TestCase):
         self.assertEqual(warnings, [])
 
     def test_warning_renderer_suppresses_fallback_warning_in_streamlit_ui(self) -> None:
-        fake_streamlit = SimpleNamespace(warning=Mock())
+        fake_streamlit = SimpleNamespace(markdown=Mock(), warning=Mock())
         results = {
             "route_quality_warnings": [
                 {
@@ -64,10 +64,11 @@ class RouteQualityWarningTests(unittest.TestCase):
         with patch("app.main.cards.warnings.st", fake_streamlit):
             render_route_quality_warnings(results)
 
+        fake_streamlit.markdown.assert_not_called()
         fake_streamlit.warning.assert_not_called()
 
     def test_warning_renderer_keeps_other_route_quality_warnings(self) -> None:
-        fake_streamlit = SimpleNamespace(warning=Mock())
+        fake_streamlit = SimpleNamespace(markdown=Mock(), warning=Mock())
         results = {
             "route_quality_warnings": [
                 {
@@ -89,11 +90,12 @@ class RouteQualityWarningTests(unittest.TestCase):
         with patch("app.main.cards.warnings.st", fake_streamlit):
             render_route_quality_warnings(results)
 
-        fake_streamlit.warning.assert_called_once()
-        warning_text = fake_streamlit.warning.call_args.args[0]
+        fake_streamlit.markdown.assert_called_once()
+        warning_text = fake_streamlit.markdown.call_args.args[0]
         self.assertIn("Route quality warning", warning_text)
         self.assertIn("same", warning_text)
         self.assertNotIn("fallback logic", warning_text)
+        fake_streamlit.warning.assert_not_called()
 
 
 if __name__ == "__main__":

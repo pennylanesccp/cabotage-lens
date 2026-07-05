@@ -16,7 +16,7 @@ _DECK_HTML_STYLE = """
     }
     canvas {
       outline: none !important;
-      border-radius: 22px;
+      border-radius: 8px;
     }
   </style>
 """

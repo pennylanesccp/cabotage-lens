@@ -32,12 +32,22 @@ from app.main.utils.state import attach_streamlit_logging, init_state
 def _render_header(payload: dict[str, Any]) -> None:
     origin_label = clean_place_label(payload.get("origin"))
     destiny_label = clean_place_label(payload.get("destiny"))
+    cargo_label = f"{safe_float(payload.get('cargo_t')):,.1f} t cargo"
 
     st.markdown(
         f"""
         <section class='page-header'>
+            <p class='page-header__kicker'>Road versus cabotage</p>
             <h1>{escape(PAGE_TITLE)}</h1>
-            <p>{escape(origin_label)} -> {escape(destiny_label)} | {safe_float(payload.get('cargo_t')):,.1f} t cargo compared across road and cabotage.</p>
+            <p>
+                Compare a direct-road reference against a cabotage-assisted route for the selected Brazilian freight scenario.
+                Results retain explicit caveats for fallback data, approximations, and incomplete route evidence.
+            </p>
+            <div class='page-header__meta'>
+                <span class='meta-chip'>Origin: {escape(origin_label)}</span>
+                <span class='meta-chip'>Destination: {escape(destiny_label)}</span>
+                <span class='meta-chip'>{escape(cargo_label)}</span>
+            </div>
         </section>
         """,
         unsafe_allow_html=True,

@@ -6,6 +6,7 @@ import streamlit as st
 
 from app.access import render_logout_control
 from app.heatmap.config import heatmap_destination_label
+from app.main.sidebar.branding import render_sidebar_brand
 from modules.fuel.truck_specs import list_truck_keys
 
 from app.main.sidebar.filters import (
@@ -31,7 +32,8 @@ def render_sidebar(
     port_ops_scenarios: Iterable[str],
 ) -> None:
     with st.sidebar:
-        st.subheader("Scenario")
+        render_sidebar_brand()
+        st.markdown("<p class='sidebar-section-label'>Heatmap scenario</p>", unsafe_allow_html=True)
         _render_origin_field(origin_field_key)
         st.number_input("Cargo (t)", min_value=0.0, step=0.5, format="%g", key="heatmap_cargo")
         with st.expander("Advanced", expanded=False):
@@ -44,7 +46,7 @@ def render_sidebar(
 
 def render_run_actions(*, has_origin: bool, has_loaded_dataset: bool) -> Tuple[bool, bool, bool]:
     with st.sidebar:
-        st.markdown("##### Actions")
+        st.markdown("<p class='sidebar-section-label'>Actions</p>", unsafe_allow_html=True)
         load_clicked = st.button(
             "Load from route cache",
             type="primary",
@@ -115,15 +117,15 @@ def _render_advanced(
         help="Overlay the source destination-city points for hover inspection.",
     )
 
-    st.markdown("##### Routing")
+    _section_label("Routing")
     st.session_state["profile"] = "driving-car"
     st.caption("Heatmap routing is locked to `driving-car` with 5s provider timeouts and no HTTP retries.")
     st.caption("Routes cache is never overwritten from the heatmap page.")
 
-    st.markdown("##### Road")
+    _section_label("Road")
     st.selectbox("Truck", options=sorted(list_truck_keys()), key="truck_key")
 
-    st.markdown("##### Maritime")
+    _section_label("Maritime")
     st.selectbox("Vessel class", options=list(class_options), key="vessel_class")
     st.selectbox("Allocation mode", options=["auto", "teu_share", "dwt_share"], key="allocation_mode")
     st.number_input(
@@ -135,7 +137,7 @@ def _render_advanced(
         disabled=(st.session_state.allocation_mode == "dwt_share"),
     )
 
-    st.markdown("##### Port")
+    _section_label("Port")
     st.number_input("Cargo (TEU, optional)", min_value=0.0, step=1.0, key="cargo_teu_input")
     st.checkbox("Include hoteling", key="include_hoteling")
     st.number_input("Hoteling hours per call", min_value=0.0, step=1.0, key="hoteling_hours_per_call")
@@ -151,7 +153,7 @@ def _render_advanced(
     )
     st.selectbox("Port ops scenario", options=list(port_ops_scenarios), key="port_ops_scenario")
 
-    st.markdown("##### App")
+    _section_label("App")
     st.selectbox(
         "Run scope destination set",
         options=list(destination_set_options),
@@ -169,7 +171,7 @@ def _render_advanced(
     )
     st.text_input(
         "Database target",
-        key="db_target_str",
+        value=str(st.session_state.get("db_target_str", "")),
         help="Shows the active Supabase Postgres target configured through Streamlit secrets.",
         disabled=True,
     )
@@ -193,3 +195,7 @@ def _render_advanced(
     if policy_message:
         st.caption(str(policy_message))
     st.slider("Debug log lines", min_value=50, max_value=1000, step=50, key="log_last_n")
+
+
+def _section_label(title: str) -> None:
+    st.markdown(f"<p class='sidebar-section-label'>{title}</p>", unsafe_allow_html=True)
