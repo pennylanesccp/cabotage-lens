@@ -5,11 +5,16 @@ from typing import Any, Mapping
 
 import streamlit as st
 
+from app.main.run_feedback import sanitize_ui_log_line
+
 
 def render_debug(payload: Mapping[str, Any], geo: Mapping[str, Any] | None, results: Mapping[str, Any] | None) -> None:
     with st.expander("Raw logs", expanded=False):
         logs = list(st.session_state.get("ui_logs", []))
-        shown = logs[-int(st.session_state.get("log_last_n", 300)):]
+        shown = [
+            sanitize_ui_log_line(line)
+            for line in logs[-int(st.session_state.get("log_last_n", 300)):]
+        ]
         st.text_area("Logs", value="\n".join(shown), height=220)
 
     with st.expander("Pipeline JSON", expanded=False):

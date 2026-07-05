@@ -412,6 +412,44 @@ def _latest_results_for_selector_cte(
     """
 
 
+def _latest_summary_cte(
+    items_table: str,
+    runs_table: str,
+    locations_table: str,
+    *,
+    item_columns: set[str],
+) -> str:
+    insertion_timestamp_sql = _item_column_sql(item_columns, "insertion_timestamp", default_sql="NULL")
+    return f"""
+    WITH matching_runs AS (
+        SELECT
+              r.run_id
+            , r.origin_location_id
+            , r.destination_set_id
+            , COALESCE(r.completed_timestamp, r.updated_timestamp, r.started_timestamp) AS run_sort_timestamp
+        FROM {runs_table} AS r
+        LEFT JOIN {locations_table} AS origin_loc
+               ON origin_loc.id = r.origin_location_id
+        WHERE r.selector_hash = ?
+    ),
+    ranked AS (
+        SELECT
+              i.run_id
+            , i.input_destiny
+            , i.status
+            , i.updated_timestamp
+            , {insertion_timestamp_sql} AS insertion_timestamp
+            , ROW_NUMBER() OVER (
+                  PARTITION BY LOWER(TRIM(i.input_destiny))
+                  ORDER BY r.run_sort_timestamp DESC NULLS LAST, i.updated_timestamp DESC, {insertion_timestamp_sql} DESC, i.id DESC
+              ) AS row_rank
+        FROM {items_table} AS i
+        INNER JOIN matching_runs AS r
+                ON r.run_id = i.run_id
+    )
+    """
+
+
 def _row_to_record(row: Sequence[Any]) -> BulkResultRecord:
     return BulkResultRecord(
         scenario_key=str(row[0]),
@@ -492,10 +530,14 @@ def summarize_results(
         locations_table=locations,
         route_table=routes,
     )
-    item_cols = table_columns(conn, items)
 
     row = conn.execute(
-        _latest_results_cte(items, runs, locations, routes, item_columns=item_cols)
+        _latest_summary_cte(
+            items,
+            runs,
+            locations,
+            item_columns={"insertion_timestamp"},
+        )
         + """
         SELECT
               COUNT(*) AS row_count

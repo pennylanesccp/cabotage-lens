@@ -283,7 +283,19 @@ class BulkRunPersistenceTests(unittest.TestCase):
             ]
         )
 
-        with patch("modules.infra.db.bulk_results.ensure_results_table"):
+        with patch("modules.infra.db.bulk_results.ensure_results_table"), patch(
+            "modules.infra.db.bulk_results.table_columns",
+            return_value={
+                "failed_step",
+                "failed_leg",
+                "failure_reason",
+                "failure_detail",
+                "retryable",
+                "failure_provider",
+                "failure_provider_operation",
+                "insertion_timestamp",
+            },
+        ):
             summary = summarize_results(conn, selector=selector)
             rows = list_results(conn, selector=selector, only_success=None)
 

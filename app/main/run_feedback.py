@@ -6,6 +6,7 @@ from typing import Any, Callable
 import streamlit as st
 
 _RUN_LOG_HEIGHT_PX = 260
+_TRACEBACK_MARKER = "Traceback (most recent call last):"
 
 
 def format_countdown(value: Any) -> str:
@@ -114,8 +115,20 @@ def _log_level_class(line: str) -> str:
     return "info"
 
 
+def sanitize_ui_log_line(line: Any) -> str:
+    text = str(line)
+    marker_index = text.find(_TRACEBACK_MARKER)
+    if marker_index < 0:
+        return text
+    prefix = text[:marker_index].rstrip()
+    return prefix or "Traceback omitted from UI; see server logs for details."
+
+
 def render_live_run_logs(log_box: Any, *, title: str = "Live evaluation log") -> None:
-    shown = list(st.session_state.get("ui_logs", []))[-int(st.session_state.get("log_last_n", 300)) :]
+    shown = [
+        sanitize_ui_log_line(line)
+        for line in list(st.session_state.get("ui_logs", []))[-int(st.session_state.get("log_last_n", 300)) :]
+    ]
     lines = [
         (
             f"<div class='run-feedback-log__line run-feedback-log__line--{_log_level_class(line)}'>"

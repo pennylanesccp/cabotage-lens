@@ -39,6 +39,10 @@ _current_archive_object_path: Optional[str] = None
 _current_local_log_path: Optional[str] = None
 
 
+def _local_secrets_file_exists() -> bool:
+    return _LOCAL_SECRETS_PATH.exists()
+
+
 def get_logger(name: Optional[str] = None) -> logging.Logger:
     return logging.getLogger(name if name else "root")
 
@@ -159,7 +163,7 @@ def detect_runtime_environment(explicit: Any = None) -> str:
         return "hosted"
     if os.name != "nt" and str(_REPO_ROOT).startswith("/mount/src"):
         return "hosted"
-    if _LOCAL_SECRETS_PATH.exists():
+    if _local_secrets_file_exists():
         return "local"
     return "local"
 

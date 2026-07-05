@@ -51,12 +51,16 @@ HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM = 1800.0
 HEATMAP_POINT_OVERLAY_RADIUS_M = 22_000.0
 
 
-def _normalize_destination_set_id(destination_set_id: str | None) -> str:
+def normalize_heatmap_destination_set_id(destination_set_id: str | None) -> str:
     candidate = str(destination_set_id or HEATMAP_DESTINATION_SET_ID).strip() or HEATMAP_DESTINATION_SET_ID
     candidate_path = Path(candidate)
     if candidate_path.name != candidate or candidate_path.suffix.lower() != ".txt":
         raise FileNotFoundError(f"Destination set must be a .txt filename under {HEATMAP_DESTINATIONS_DIR}: {candidate}")
     return candidate
+
+
+def _normalize_destination_set_id(destination_set_id: str | None) -> str:
+    return normalize_heatmap_destination_set_id(destination_set_id)
 
 
 def _remote_destination_set_names() -> tuple[str, ...]:

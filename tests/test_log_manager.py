@@ -116,7 +116,7 @@ class LogManagerTests(unittest.TestCase):
             self.assertIn("local file logging works", local_file.read_text(encoding="utf-8"))
 
     def test_runtime_environment_defaults_local_logging_policy(self) -> None:
-        with patch("modules.infra.log_manager._LOCAL_SECRETS_PATH.exists", return_value=True), patch.dict(
+        with patch("modules.infra.log_manager._local_secrets_file_exists", return_value=True), patch.dict(
             "os.environ",
             {},
             clear=True,
@@ -128,7 +128,7 @@ class LogManagerTests(unittest.TestCase):
         self.assertFalse(storage_archival_enabled_by_default(environment))
 
     def test_runtime_environment_defaults_hosted_archival_policy(self) -> None:
-        with patch("modules.infra.log_manager._LOCAL_SECRETS_PATH.exists", return_value=False), patch.dict(
+        with patch("modules.infra.log_manager._local_secrets_file_exists", return_value=False), patch.dict(
             "os.environ",
             {"IS_STREAMLIT_CLOUD": "true"},
             clear=True,

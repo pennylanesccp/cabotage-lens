@@ -464,10 +464,11 @@ def render_page() -> None:
             st.warning(str(exc))
             st.session_state.heatmap_dataset = None
         except Exception as exc:
-            _log.exception(
-                "Failed to load cache-backed heatmap surface origin=%s cargo_t=%.3f",
+            _log.error(
+                "Failed to load cache-backed heatmap surface origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
+                exc,
             )
             progress_bar.empty()
             cooldown_box.empty()
@@ -525,10 +526,11 @@ def render_page() -> None:
                 destination_set_id=destination_set_id,
             )
         except Exception as exc:
-            _log.exception(
-                "Heatmap run-missing failed origin=%s cargo_t=%.3f",
+            _log.error(
+                "Heatmap run-missing failed origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
+                exc,
             )
             progress_bar.empty()
             cooldown_box.empty()
@@ -570,10 +572,11 @@ def render_page() -> None:
                 destination_set_id=destination_set_id,
             )
         except Exception as exc:
-            _log.exception(
-                "Heatmap rerun-all failed origin=%s cargo_t=%.3f",
+            _log.error(
+                "Heatmap rerun-all failed origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
+                exc,
             )
             progress_bar.empty()
             cooldown_box.empty()

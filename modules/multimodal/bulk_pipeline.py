@@ -12,6 +12,7 @@ from modules.infra.database_manager import (
     list_bulk_result_points_by_input_keys,
     list_bulk_results,
     list_cached_place_points,
+    list_route_place_points,
     start_bulk_run,
     upsert_place_points,
     upsert_runs,

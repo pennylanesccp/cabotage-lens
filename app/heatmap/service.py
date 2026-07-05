@@ -40,6 +40,7 @@ from app.heatmap.config import (
     HEATMAP_DESTINATION_SET_ID,
     heatmap_destination_label,
     list_heatmap_destination_sets,
+    normalize_heatmap_destination_set_id,
     resolve_heatmap_destination_path,
 )
 from app.heatmap.types import (
@@ -101,7 +102,7 @@ def _dedupe_preserve_order(values: List[str]) -> List[str]:
 
 def _resolve_destination_set_id(destination_set_id: str | None = None) -> str:
     try:
-        return resolve_heatmap_destination_path(destination_set_id).name
+        return normalize_heatmap_destination_set_id(destination_set_id)
     except FileNotFoundError as exc:
         raise HeatmapConfigurationError(str(exc)) from exc
 
@@ -1268,10 +1269,9 @@ def run_heatmap(
     _require_postgres()
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     destination_label = _destination_label(resolved_destination_set_id)
-    destination_path = resolve_heatmap_destination_path(resolved_destination_set_id)
     all_destinations = list(_heatmap_destinations(resolved_destination_set_id))
     if not all_destinations:
-        raise HeatmapDataError(f"Heatmap destinations file is empty: {destination_path}")
+        raise HeatmapDataError(f"Heatmap destinations file is empty: {resolved_destination_set_id}")
 
     if rerun:
         destinations_to_process = all_destinations
@@ -1326,7 +1326,7 @@ def run_heatmap(
             destination_set_id=resolved_destination_set_id,
             progress_callback=progress_callback,
             max_geocode_workers=1,
-            max_route_workers=1,
+            max_route_workers=2,
         )
         _log.info(
             (

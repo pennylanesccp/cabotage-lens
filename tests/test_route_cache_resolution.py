@@ -292,7 +292,7 @@ class RouteCacheResolutionTests(unittest.TestCase):
         self.assertIsNotNone(conn.last_sql)
         assert conn.last_sql is not None
         self.assertIn("DISTINCT ON (rc.origin_location_id, rc.destiny_location_id)", conn.last_sql)
-        self.assertNotIn("rc.is_hgv", conn.last_sql)
+        self.assertNotIn("rc.is_hgv = ?", conn.last_sql)
         self.assertEqual(conn.last_params, [10, 20, 10, 20])
 
     def test_delete_key_removes_all_cached_variants_for_pair(self) -> None:

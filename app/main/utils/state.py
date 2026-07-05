@@ -188,12 +188,12 @@ def attach_streamlit_logging(level: str, archive_to_storage: bool) -> None:
                 policy_message,
             )
 
-    st.session_state.runtime_environment = runtime_environment
-    st.session_state.write_local_logs = effective_write_local_logs
-    st.session_state.effective_archive_logs = effective_archive_to_storage
-    st.session_state.local_log_path = get_current_local_log_path()
-    st.session_state.archive_log_path = get_current_archive_object_path()
-    st.session_state.logging_policy_message = policy_message
+    st.session_state["runtime_environment"] = runtime_environment
+    st.session_state["write_local_logs"] = effective_write_local_logs
+    st.session_state["effective_archive_logs"] = effective_archive_to_storage
+    st.session_state["local_log_path"] = get_current_local_log_path()
+    st.session_state["archive_log_path"] = get_current_archive_object_path()
+    st.session_state["logging_policy_message"] = policy_message
 
     root = logging.getLogger()
     for handler in list(root.handlers):

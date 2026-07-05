@@ -86,6 +86,17 @@ class BulkApproximationTests(unittest.TestCase):
         def fake_build_geometry(origin_pt, destiny_pt, **_kwargs):
             return copy.deepcopy(geos_by_label[destiny_pt["label"]])
 
+        find_place_calls = {"count": 0}
+
+        def fake_find_place_point(_conn, *, place, **_kwargs):
+            if str(place).strip() == "Origin, SP":
+                find_place_calls["count"] += 1
+                if find_place_calls["count"] > 1:
+                    point = copy.deepcopy(points_by_input["Origin, SP"])
+                    point["location_id"] = 100
+                    return point
+            return None
+
         get_leg_mock = MagicMock(
             return_value={
                 "distance_km": 12.0,
@@ -159,9 +170,15 @@ class BulkApproximationTests(unittest.TestCase):
             side_effect=lambda *args, **kwargs: contextlib.nullcontext(FakeConn()),
         ), patch(
             "modules.multimodal.bulk_pipeline.find_place_point",
-            return_value=None,
+            side_effect=fake_find_place_point,
         ), patch(
             "modules.multimodal.bulk_pipeline.list_cached_place_points",
+            return_value={},
+        ), patch(
+            "modules.multimodal.bulk_pipeline.list_bulk_results",
+            return_value=[],
+        ), patch(
+            "modules.multimodal.bulk_pipeline.list_bulk_result_points_by_input_keys",
             return_value={},
         ), patch(
             "modules.multimodal.bulk_pipeline.list_route_place_points",

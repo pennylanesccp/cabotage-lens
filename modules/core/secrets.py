@@ -104,8 +104,11 @@ def get_secret(
     include_runtime: bool = True,
 ) -> Any:
     """Return a secret from local secrets.toml, Streamlit runtime, or the environment."""
-    local_value = _normalize_secret_value(load_local_secrets(path).get(key, _MISSING))
-    if local_value is not _MISSING:
+    local_secrets = load_local_secrets(path)
+    if key in local_secrets:
+        local_value = _normalize_secret_value(local_secrets.get(key, _MISSING))
+        if local_value is _MISSING:
+            return default
         return local_value
 
     if include_runtime:

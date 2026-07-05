@@ -429,7 +429,6 @@ def upsert_alias_point(
     aliases_table: str = DEFAULT_ALIASES_TABLE,
     locations_table: str = DEFAULT_LOCATIONS_TABLE,
 ) -> Optional[Dict[str, Any]]:
-    ensure_tables(conn, locations_table=locations_table, aliases_table=aliases_table)
     location = get_or_create_location(
         conn,
         lat=lat,
