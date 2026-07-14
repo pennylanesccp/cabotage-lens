@@ -56,7 +56,7 @@
         resetContainer();
         widgetId = window.turnstile.render("#turnstile-shell", {
           sitekey: currentArgs.site_key,
-          theme: currentArgs.theme || "light",
+          theme: currentArgs.theme || "dark",
           callback: function (token) {
             setToken(token);
           },

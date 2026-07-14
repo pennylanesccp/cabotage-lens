@@ -5,24 +5,28 @@ import streamlit as st
 BASE_CSS = """
 <style>
     :root {
-        --cl-bg: #101820;
-        --cl-surface: #f8fafc;
-        --cl-surface-muted: #edf2f7;
-        --cl-ink: #10202b;
-        --cl-ink-muted: #4b5f70;
-        --cl-line: rgba(16, 32, 43, 0.12);
+        --cl-bg: #0b1118;
+        --cl-surface: #111c27;
+        --cl-surface-muted: #182635;
+        --cl-ink: #f1f5f9;
+        --cl-ink-muted: #a9b7c6;
+        --cl-line: rgba(148, 163, 184, 0.2);
         --cl-navy: #123047;
-        --cl-green: #0f766e;
-        --cl-amber: #b7791f;
-        --cl-blue: #2563eb;
-        --cl-red: #b91c1c;
+        --cl-green: #2dd4bf;
+        --cl-amber: #f59e0b;
+        --cl-blue: #60a5fa;
+        --cl-red: #f87171;
         --cl-radius: 8px;
     }
     .stApp {
         background:
-            linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(236, 242, 247, 0.98)),
-            #f3f6f9;
+            radial-gradient(circle at 78% 0%, rgba(18, 48, 71, 0.38), transparent 38rem),
+            linear-gradient(180deg, #0b1118, #0d1620);
         color: var(--cl-ink);
+    }
+    header[data-testid="stHeader"] {
+        background: rgba(8, 13, 20, 0.96);
+        border-bottom: 1px solid var(--cl-line);
     }
     .main .block-container {
         width: min(100%, 1180px);
@@ -117,7 +121,7 @@ BASE_CSS = """
         margin: 0;
     }
     section[data-testid="stSidebar"] {
-        border-right: 1px solid rgba(16, 32, 43, 0.16);
+        border-right: 1px solid var(--cl-line);
         background:
             linear-gradient(180deg, rgba(16, 32, 43, 0.98), rgba(18, 48, 71, 0.96)),
             #10202b;
@@ -155,9 +159,9 @@ BASE_CSS = """
         border: 1px solid var(--cl-line);
         border-radius: var(--cl-radius);
         background:
-            linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(243, 248, 246, 0.96)),
-            #ffffff;
-        box-shadow: 0 14px 34px rgba(16, 32, 43, 0.08);
+            linear-gradient(135deg, rgba(18, 48, 71, 0.92), rgba(17, 28, 39, 0.96)),
+            var(--cl-surface);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
     }
     .page-header h1 {
         margin: 0;
@@ -190,9 +194,9 @@ BASE_CSS = """
         align-items: center;
         min-height: 1.7rem;
         padding: 0.18rem 0.55rem;
-        border: 1px solid rgba(15, 118, 110, 0.18);
+        border: 1px solid rgba(45, 212, 191, 0.28);
         border-radius: var(--cl-radius);
-        background: rgba(15, 118, 110, 0.08);
+        background: rgba(45, 212, 191, 0.1);
         color: var(--cl-ink);
         font-size: 0.78rem;
         font-weight: 650;
@@ -231,7 +235,7 @@ BASE_CSS = """
         padding: 0.8rem 0.9rem;
         border: 1px solid var(--cl-line);
         border-radius: var(--cl-radius);
-        background: #ffffff;
+        background: var(--cl-surface);
     }
     .insight-card__label {
         margin: 0;
@@ -263,9 +267,9 @@ BASE_CSS = """
         min-width: 0;
         border: 1px solid var(--cl-line);
         border-radius: var(--cl-radius);
-        background: #ffffff;
+        background: var(--cl-surface);
         padding: 0.9rem;
-        box-shadow: 0 12px 26px rgba(16, 32, 43, 0.07);
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.2);
     }
     .summary-panel[data-accent="multimodal"] {
         border-top: 4px solid var(--cl-green);
@@ -298,9 +302,9 @@ BASE_CSS = """
     .summary-panel__metric {
         min-width: 0;
         padding: 0.55rem;
-        border: 1px solid rgba(16, 32, 43, 0.08);
+        border: 1px solid var(--cl-line);
         border-radius: var(--cl-radius);
-        background: #f8fafc;
+        background: var(--cl-surface-muted);
     }
     .summary-panel__label {
         margin: 0 0 0.25rem 0;
@@ -320,18 +324,18 @@ BASE_CSS = """
     .quality-note {
         margin: 0.7rem 0;
         padding: 0.8rem 0.9rem;
-        border: 1px solid rgba(183, 121, 31, 0.25);
+        border: 1px solid rgba(245, 158, 11, 0.38);
         border-radius: var(--cl-radius);
-        background: rgba(255, 251, 235, 0.92);
-        color: #5f3a06;
+        background: rgba(120, 53, 15, 0.28);
+        color: #fde68a;
         line-height: 1.45;
     }
     .quality-note strong {
-        color: #7c4a03;
+        color: #fbbf24;
     }
     .quality-note p {
         margin: 0.35rem 0 0 0;
-        color: #5f3a06;
+        color: #fde68a;
     }
     .quality-note ul {
         margin: 0.45rem 0 0 1.1rem;
@@ -339,12 +343,12 @@ BASE_CSS = """
     }
     .quality-note li {
         margin: 0.22rem 0;
-        color: #5f3a06;
+        color: #fde68a;
     }
     .empty-state {
         border: 1px solid var(--cl-line);
         border-radius: var(--cl-radius);
-        background: #ffffff;
+        background: var(--cl-surface);
         padding: 0.95rem 1rem;
         color: var(--cl-ink-muted);
         line-height: 1.45;
@@ -389,7 +393,7 @@ BASE_CSS = """
         padding: 0.9rem 1rem;
         border: 1px solid var(--cl-line);
         border-radius: var(--cl-radius);
-        background: #ffffff;
+        background: var(--cl-surface);
         margin: 0.65rem 0 0.85rem 0;
     }
     .details-placeholder {
@@ -404,7 +408,7 @@ BASE_CSS = """
     div[data-testid="stMetric"] {
         border: 1px solid var(--cl-line);
         border-radius: var(--cl-radius);
-        background: #ffffff;
+        background: var(--cl-surface);
         padding: 0.65rem 0.75rem;
     }
     div[data-testid="stMetric"] label {
@@ -416,7 +420,7 @@ BASE_CSS = """
     div[data-testid="stExpander"] {
         border-color: var(--cl-line);
         border-radius: var(--cl-radius);
-        background: rgba(255, 255, 255, 0.82);
+        background: rgba(17, 28, 39, 0.88);
     }
     div[data-testid="stDataFrame"] {
         border-radius: var(--cl-radius);

@@ -25,10 +25,10 @@ def format_countdown(value: Any) -> str:
 
 def status_card(message: str, *, tone: str = "info") -> str:
     palette = {
-        "info": ("#eff6ff", "#1d4ed8", "#1e3a8a"),
-        "success": ("#ecfdf5", "#047857", "#064e3b"),
-        "warning": ("#fff7ed", "#c2410c", "#7c2d12"),
-        "error": ("#fef2f2", "#dc2626", "#7f1d1d"),
+        "info": ("#172554", "#3b82f6", "#bfdbfe"),
+        "success": ("#052e2b", "#14b8a6", "#99f6e4"),
+        "warning": ("#431407", "#f97316", "#fed7aa"),
+        "error": ("#450a0a", "#ef4444", "#fecaca"),
     }
     background, border, text = palette.get(tone, palette["info"])
     return (
@@ -78,17 +78,17 @@ def inject_run_feedback_css() -> None:
                 gap: 0.75rem;
                 padding: 0.8rem 0.95rem;
                 border-radius: 16px;
-                border: 1px solid #c2410c;
-                background: #fff7ed;
-                color: #7c2d12;
+                border: 1px solid #f97316;
+                background: #431407;
+                color: #fed7aa;
                 margin: 0.4rem 0 0.55rem 0;
             }
             .run-feedback-cooldown__spinner {
                 width: 1.05rem;
                 height: 1.05rem;
                 border-radius: 999px;
-                border: 3px solid rgba(194, 65, 12, 0.18);
-                border-top-color: #c2410c;
+                border: 3px solid rgba(249, 115, 22, 0.22);
+                border-top-color: #fb923c;
                 animation: run-feedback-spin 0.8s linear infinite;
                 flex: 0 0 auto;
             }

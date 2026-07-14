@@ -15,13 +15,13 @@ def render_turnstile_widget(
     *,
     site_key: str,
     reset_nonce: int = 0,
-    theme: str = "light",
+    theme: str = "dark",
     key: str | None = None,
 ) -> str | None:
     return _TURNSTILE_COMPONENT(
         site_key=str(site_key),
         reset_nonce=int(reset_nonce),
-        theme=str(theme or "light"),
+        theme=str(theme or "dark"),
         key=key,
         default="",
     )
