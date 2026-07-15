@@ -50,8 +50,8 @@ We group fuels in two broad baskets:
 - "diesel-like" (distillates):  diesel, mgo, mdo, gasoil
 - "residual / fuel oil":        vlsfo, mfo, hfo, ifo
 
-All of these share a single default factor per basket. Aliases (e.g. "VLSFO 0.5")
-are normalised internally to a canonical key.
+Each canonical fuel key has an explicit default factor. Aliases (e.g. "VLSFO 0.5")
+are normalised internally to that canonical key.
 
 If you need very specific factors, pass `ef_kg_per_kg_override=...` yourself.
 """
@@ -116,7 +116,7 @@ _CANONICAL_FACTORS: Dict[str, FuelFactor] = {
     )
     , "vlsfo": FuelFactor(
           key="vlsfo"
-        , ef_kg_per_kg=3.21      # ≈ 3.2 kg CO₂e / kg residual fuel oil
+        , ef_kg_per_kg=3.114     # 3.114 kg CO₂e / kg VLSFO (TTW model factor)
         , group="residual"
         , label="Very low sulphur fuel oil (VLSFO)"
     )

@@ -173,7 +173,7 @@ O combustível marítimo principal considerado é VLSFO:
 
 ```text
 emissoes_maritimas_kgCO2e =
-    combustivel_maritimo_kg * 3,21
+    combustivel_maritimo_kg * 3,114
 ```
 
 ---

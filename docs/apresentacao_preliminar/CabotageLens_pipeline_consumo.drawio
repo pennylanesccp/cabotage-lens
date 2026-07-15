@@ -70,7 +70,7 @@
                 <mxCell id="hotel" value="&lt;b&gt;Hoteling&lt;/b&gt;&lt;br&gt;&lt;b&gt;Não somado separadamente&lt;/b&gt;&lt;br&gt;quando a intensidade MRV por trabalho de transporte está ativa" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F4CCCC;strokeColor=#C00000;fontSize=13;" parent="1" vertex="1">
                     <mxGeometry x="1380" y="1020" width="150" height="125" as="geometry"/>
                 </mxCell>
-                <mxCell id="marine_emis" value="&lt;b&gt;Emissões marítimas&lt;/b&gt;&lt;br&gt;E&lt;sub&gt;sea&lt;/sub&gt; = F&lt;sub&gt;sea&lt;/sub&gt; × 3,21 kg CO₂e/kg&lt;br&gt;E&lt;sub&gt;port&lt;/sub&gt; pelo fator de diesel" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#D9E1F2;strokeColor=#4472C4;" parent="1" vertex="1">
+                <mxCell id="marine_emis" value="&lt;b&gt;Emissões marítimas&lt;/b&gt;&lt;br&gt;E&lt;sub&gt;sea&lt;/sub&gt; = F&lt;sub&gt;sea&lt;/sub&gt; × 3,114 kg CO₂e/kg&lt;br&gt;E&lt;sub&gt;port&lt;/sub&gt; pelo fator de diesel" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#D9E1F2;strokeColor=#4472C4;" parent="1" vertex="1">
                     <mxGeometry x="825" y="1195" width="215" height="110" as="geometry"/>
                 </mxCell>
                 <mxCell id="mm_total" value="&lt;b&gt;Total multimodal&lt;/b&gt;&lt;br&gt;first mile + navegação + port ops + last mile&lt;br&gt;(sem hoteling separado)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#E4DFEC;strokeColor=#8064A2;fontStyle=1;" parent="1" vertex="1">
@@ -100,7 +100,7 @@
                 <mxCell id="src_port" value="&lt;b&gt;Dados Relatorio 2.xlsx&lt;/b&gt;&lt;br&gt;RTG e caminhão interno" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
                     <mxGeometry x="470" y="2070" width="340" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="src_ef" value="&lt;b&gt;Fatores TTW implementados&lt;/b&gt;&lt;br&gt;diesel: 2,68 kg/L&lt;br&gt;VLSFO: 3,21 kg/kg" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
+                <mxCell id="src_ef" value="&lt;b&gt;Fatores TTW implementados&lt;/b&gt;&lt;br&gt;diesel: 2,68 kg/L&lt;br&gt;VLSFO: 3,114 kg/kg" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
                     <mxGeometry x="840" y="2070" width="340" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="warning" value="&lt;b&gt;Limite metodológico&lt;/b&gt;&lt;br&gt;Port ops padrão = proxy documentado de Santos;&lt;br&gt;STS permanece indisponível." style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F4CCCC;strokeColor=#C00000;fontSize=13;" parent="1" vertex="1">
