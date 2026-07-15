@@ -534,6 +534,11 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
                     "transparent and must not be interpreted as local city-level precision."
                 )
             )
+        if surface.source_cell_count > 0:
+            st.caption(
+                f"Observed-destination coverage preserved {surface.source_cell_count} coastal or border cells whose "
+                "centers fall outside the clipped surface. These cells use the destination result directly."
+            )
         if surface.skipped_far_cells > 0:
             st.caption(
                 f"Cells without an accepted supporting triangle remain excluded: {surface.skipped_far_cells}."

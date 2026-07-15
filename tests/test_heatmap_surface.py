@@ -20,6 +20,9 @@ class HeatmapSurfaceTests(unittest.TestCase):
         boundary_patcher = patch("app.heatmap.surface._brazil_boundary_rings", return_value=tuple())
         boundary_patcher.start()
         self.addCleanup(boundary_patcher.stop)
+        self.anchor_patcher = patch("app.heatmap.surface._source_anchored_cells", return_value=tuple())
+        self.anchor_patcher.start()
+        self.addCleanup(self.anchor_patcher.stop)
 
     def _dataset(self) -> HeatmapDataset:
         scenario = HeatmapScenario(
@@ -223,7 +226,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         dataset = self._dataset()
         mock_cells = (
             (
-                ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
+                ((0.4, 0.4), (0.6, 0.4), (0.6, 0.6), (0.4, 0.6)),
                 0.5,
                 0.5,
             ),
@@ -357,6 +360,54 @@ class HeatmapSurfaceTests(unittest.TestCase):
         centers = {(cell[2], cell[1]) for cell in cells}
         self.assertNotIn((1.5, 1.5), centers)
         self.assertTrue(all((lon + lat) <= 2.0 + 1e-9 for lon, lat in centers))
+
+    def test_source_anchored_cells_cover_every_observed_destination(self) -> None:
+        hull_polygon = ((0.0, 0.0), (2.0, 0.0), (0.0, 2.0))
+        geometry_samples = (
+            ("Alpha", "AA", 0.0, 0.0),
+            ("Beta", "BB", 0.0, 2.0),
+            ("Gamma", "CC", 2.0, 0.0),
+        )
+
+        self.anchor_patcher.stop()
+        try:
+            with patch("app.heatmap.surface.HEATMAP_SURFACE_CELL_SIZE_DEGREES", 1.0):
+                cells = heatmap_surface._source_anchored_cells(hull_polygon, geometry_samples)
+        finally:
+            self.anchor_patcher.start()
+
+        for _name, _uf, lat, lon in geometry_samples:
+            self.assertTrue(
+                any(heatmap_surface._point_in_ring(lon, lat, cell[0]) for cell in cells)
+            )
+
+    def test_build_surface_keeps_coastal_city_when_cell_center_is_outside_boundary(self) -> None:
+        dataset = self._dataset()
+        mock_cells = (
+            (
+                ((-0.1, -0.1), (1.0, -0.1), (1.0, 1.0), (-0.1, 1.0)),
+                0.5,
+                0.5,
+            ),
+        )
+        boundary = (((-0.2, -0.2), (0.2, -0.2), (0.2, 0.2), (-0.2, 0.2)),)
+
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells), patch(
+            "app.heatmap.surface._source_anchored_cells",
+            return_value=tuple(),
+        ), patch(
+            "app.heatmap.surface._brazil_boundary_rings",
+            return_value=boundary,
+        ):
+            surface = build_surface(dataset, "cost")
+
+        self.assertEqual(len(surface.cells), 1)
+        self.assertEqual(surface.cells[0].interpolation_quality, "source")
+        self.assertEqual(surface.source_cell_count, 1)
+        self.assertEqual(surface.dense_cell_count, 0)
+        self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
+        self.assertEqual(surface.cells[0].nearest_distance_km, 0.0)
+        self.assertAlmostEqual(surface.cells[0].absolute_value, -200.0)
 
 
 if __name__ == "__main__":

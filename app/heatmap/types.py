@@ -153,3 +153,4 @@ class HeatmapSurface:
     dense_cell_count: int = 0
     sparse_cell_count: int = 0
     very_sparse_cell_count: int = 0
+    source_cell_count: int = 0

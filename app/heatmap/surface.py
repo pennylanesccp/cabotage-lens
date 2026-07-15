@@ -314,6 +314,42 @@ def _hull_cells(hull_polygon: _HullPolygon) -> tuple[_Cell, ...]:
     return tuple(cells)
 
 
+def _source_anchored_cells(
+    hull_polygon: _HullPolygon,
+    geometry_samples: Sequence[_GeometrySample],
+) -> tuple[_Cell, ...]:
+    """Return grid cells that contain observed destinations.
+
+    Centroid-only clipping can omit a coastal or border destination when the
+    cell center falls just outside the country or convex hull. These cells
+    keep every observed destination connected to the rendered surface.
+    """
+    if not hull_polygon or not geometry_samples:
+        return tuple()
+
+    min_lon = min(coord[0] for coord in hull_polygon)
+    min_lat = min(coord[1] for coord in hull_polygon)
+    step = float(HEATMAP_SURFACE_CELL_SIZE_DEGREES)
+    cells: dict[tuple[int, int], _Cell] = {}
+    for _name, _uf, lat, lon in geometry_samples:
+        lon_index = math.floor((float(lon) - min_lon) / step)
+        lat_index = math.floor((float(lat) - min_lat) / step)
+        cell_lon = min_lon + (lon_index * step)
+        cell_lat = min_lat + (lat_index * step)
+        polygon = (
+            (cell_lon, cell_lat),
+            (cell_lon + step, cell_lat),
+            (cell_lon + step, cell_lat + step),
+            (cell_lon, cell_lat + step),
+        )
+        cells[(lon_index, lat_index)] = (
+            polygon,
+            cell_lat + (step / 2.0),
+            cell_lon + (step / 2.0),
+        )
+    return tuple(cells.values())
+
+
 def _distance_km(lat_a: float, lon_a: float, lat_b: float, lon_b: float) -> float:
     x = math.radians(lon_b - lon_a) * math.cos(math.radians((lat_a + lat_b) / 2.0))
     y = math.radians(lat_b - lat_a)
@@ -578,7 +614,30 @@ def _surface_geometry_cached(
     geometry_samples = _unique_geometry_samples(geometry_signature)
     hull_polygon = _convex_hull([(float(sample[3]), float(sample[2])) for sample in geometry_samples])
     prepared_triangles = _prepare_triangles(geometry_samples)
-    return geometry_samples, hull_polygon, prepared_triangles, _hull_cells(hull_polygon)
+    cells_by_polygon = {cell[0]: cell for cell in _hull_cells(hull_polygon)}
+    cells_by_polygon.update(
+        {cell[0]: cell for cell in _source_anchored_cells(hull_polygon, geometry_samples)}
+    )
+    return geometry_samples, hull_polygon, prepared_triangles, tuple(cells_by_polygon.values())
+
+
+def _nearest_sample_in_polygon(
+    polygon: _HullPolygon,
+    center_lat: float,
+    center_lon: float,
+    samples: Sequence[_Sample],
+) -> _Sample | None:
+    candidates = [
+        sample
+        for sample in samples
+        if _point_in_ring(float(sample[3]), float(sample[2]), polygon)
+    ]
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda sample: _distance_km(center_lat, center_lon, float(sample[2]), float(sample[3])),
+    )
 
 
 def _elevation_for_value(value: float, scale: float) -> float:
@@ -672,18 +731,49 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
     dense_cell_count = 0
     sparse_cell_count = 0
     very_sparse_cell_count = 0
+    source_cell_count = 0
     for polygon, center_lat, center_lon in hull_cells:
-        if brazil_boundary_rings and not _point_in_any_ring(center_lon, center_lat, brazil_boundary_rings):
+        anchor_sample = _nearest_sample_in_polygon(
+            polygon,
+            center_lat,
+            center_lon,
+            value_samples,
+        )
+        center_inside_boundary = not brazil_boundary_rings or _point_in_any_ring(
+            center_lon,
+            center_lat,
+            brazil_boundary_rings,
+        )
+        if not center_inside_boundary and anchor_sample is None:
             skipped_outside_boundary_cells += 1
             continue
         interpolation_quality = "dense"
-        interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, dense_triangles)
+        if not center_inside_boundary and anchor_sample is not None:
+            interpolated = (
+                float(anchor_sample[4]),
+                float(anchor_sample[5]),
+                anchor_sample[0],
+                anchor_sample[1] or None,
+                0.0,
+            )
+            interpolation_quality = "source"
+        else:
+            interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, dense_triangles)
         if interpolated is None and sparse_triangles:
             interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, sparse_triangles)
             interpolation_quality = "sparse"
         if interpolated is None and very_sparse_triangles:
             interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, very_sparse_triangles)
             interpolation_quality = "very_sparse"
+        if interpolated is None and anchor_sample is not None:
+            interpolated = (
+                float(anchor_sample[4]),
+                float(anchor_sample[5]),
+                anchor_sample[0],
+                anchor_sample[1] or None,
+                0.0,
+            )
+            interpolation_quality = "source"
         if interpolated is None:
             skipped_far_cells += 1
             continue
@@ -700,6 +790,8 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         elif interpolation_quality == "sparse":
             fill_color = (*fill_color[:3], int(HEATMAP_SURFACE_SPARSE_ALPHA))
             sparse_cell_count += 1
+        elif interpolation_quality == "source":
+            source_cell_count += 1
         else:
             dense_cell_count += 1
         cells.append(
@@ -740,6 +832,7 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         dense_cell_count=dense_cell_count,
         sparse_cell_count=sparse_cell_count,
         very_sparse_cell_count=very_sparse_cell_count,
+        source_cell_count=source_cell_count,
     )
 
 
@@ -765,6 +858,7 @@ def _log_surface_audit(
         dense_cells,
         sparse_cells,
         very_sparse_cells,
+        source_cells,
         skipped_far_cells,
         skipped_outside_cells,
         dense_limit_km,
@@ -780,7 +874,7 @@ def _log_surface_audit(
         (
             "Heatmap coverage audit metric=%s route_rows=%d unique_coordinates=%d duplicate_coordinate_rows=%d "
             "prepared_triangles=%d dense_triangles=%d sparse_triangles=%d very_sparse_triangles=%d excluded_triangles=%d "
-            "dense_cells=%d sparse_cells=%d very_sparse_cells=%d "
+            "dense_cells=%d sparse_cells=%d very_sparse_cells=%d source_cells=%d "
             "skipped_far_cells=%d skipped_outside_boundary_cells=%d dense_limit_km=%.1f sparse_limit_km=%.1f "
             "very_sparse_limit_km=%.1f detailed_routes=%s"
         ),
@@ -796,6 +890,7 @@ def _log_surface_audit(
         int(dense_cells),
         int(sparse_cells),
         int(very_sparse_cells),
+        int(source_cells),
         int(skipped_far_cells),
         int(skipped_outside_cells),
         float(dense_limit_km),
@@ -911,6 +1006,7 @@ def build_surface(
             surface.dense_cell_count,
             surface.sparse_cell_count,
             surface.very_sparse_cell_count,
+            surface.source_cell_count,
             surface.skipped_far_cells,
             surface.skipped_outside_boundary_cells,
             surface.interpolation_radius_km,

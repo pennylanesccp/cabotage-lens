@@ -47,6 +47,8 @@ def _surface_tooltip_html(cell: HeatmapSurfaceCell, metric: str) -> str:
         quality_label = "Very sparse interpolation"
     elif quality == "sparse":
         quality_label = "Sparse interpolation"
+    elif quality == "source":
+        quality_label = "Observed destination"
     else:
         quality_label = "Dense interpolation"
     if metric == "cost":

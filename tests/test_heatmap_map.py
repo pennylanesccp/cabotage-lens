@@ -64,6 +64,14 @@ class HeatmapMapTests(unittest.TestCase):
 
         self.assertLess(rows[0]["polygon"][0][2], heatmap_map.HEATMAP_SURFACE_ZERO_PLANE_ELEVATION_M)
 
+    def test_surface_tooltip_labels_source_anchored_cells(self) -> None:
+        surface = self._surface()
+        surface.cells[0].interpolation_quality = "source"
+
+        rows = heatmap_map._surface_cap_rows(surface, "cost")
+
+        self.assertIn("Observed destination", rows[0]["tooltip_html"])
+
     def test_render_heatmap_map_renders_caps_only_to_avoid_body_occlusion(self) -> None:
         dataset = SimpleNamespace(points=[])
         surface = self._surface()
