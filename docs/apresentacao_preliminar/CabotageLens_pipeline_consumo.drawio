@@ -1,0 +1,223 @@
+<mxfile host="65bd71144e">
+    <diagram id="cabotage-pipeline" name="Pipeline principal">
+        <mxGraphModel dx="1818" dy="978" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="2250" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="CabotageLens — Pipeline principal de consumo de combustível e emissões" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=24;fontStyle=1;fillColor=#1F4E78;fontColor=#FFFFFF;strokeColor=#17365D;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="25" width="1510" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="scope" value="Fluxo principal sem fallback: rotas resolvidas + intensidade marítima direcional ANTAQ–MRV" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=13;fontStyle=2;fillColor=#D9EAF7;strokeColor=#5B9BD5;strokeWidth=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="100" width="1060" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="inputs" value="&lt;b&gt;1. Entradas do cenário&lt;/b&gt;&lt;br&gt;Origem • destino • carga (t e/ou TEU)&lt;br&gt;preset de caminhão • classe do navio • parâmetros portuários" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#E2F0D9;strokeColor=#70AD47;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="477" y="180" width="620" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="geocode" value="&lt;b&gt;2. Resolver pontos&lt;/b&gt;&lt;br&gt;Geocodificação e cache de coordenadas" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#DDEBF7;strokeColor=#5B9BD5;" parent="1" vertex="1">
+                    <mxGeometry x="477" y="310" width="620" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="ports" value="&lt;b&gt;3. Selecionar portos&lt;/b&gt;&lt;br&gt;Porto elegível mais próximo da origem e do destino" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#DDEBF7;strokeColor=#5B9BD5;" parent="1" vertex="1">
+                    <mxGeometry x="477" y="440" width="620" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="road_routes" value="&lt;b&gt;4A. Rotas rodoviárias&lt;/b&gt;&lt;br&gt;ORS/cache: direta, first mile e last mile" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#DDEBF7;strokeColor=#5B9BD5;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="570" width="560" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="sea_route" value="&lt;b&gt;4B. Perna marítima&lt;/b&gt;&lt;br&gt;SeaMatrix + corredor direcional observado" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#D9E1F2;strokeColor=#4472C4;" parent="1" vertex="1">
+                    <mxGeometry x="835" y="570" width="560" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="split" value="&lt;b&gt;5. Avaliação por alternativa&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#E4DFEC;strokeColor=#8064A2;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="477" y="700" width="620" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="road_lane" value="ALTERNATIVA 1 — RODOVIA DIRETA" style="swimlane;html=1;rounded=1;horizontal=1;startSize=34;fontSize=16;fontStyle=1;strokeWidth=2;fillColor=#FFFFFF;strokeColor=#ED7D31;fillColor=#FDF2EA;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="800" width="650" height="800" as="geometry"/>
+                </mxCell>
+                <mxCell id="mm_lane" value="ALTERNATIVA 2 — RODOVIA + CABOTAGEM + RODOVIA" style="swimlane;html=1;rounded=1;horizontal=1;startSize=34;fontSize=16;fontStyle=1;strokeWidth=2;fillColor=#FFFFFF;strokeColor=#4472C4;fillColor=#EEF3F9;" parent="1" vertex="1">
+                    <mxGeometry x="805" y="800" width="750" height="800" as="geometry"/>
+                </mxCell>
+                <mxCell id="road_spec" value="&lt;b&gt;Configuração do caminhão&lt;/b&gt;&lt;br&gt;eixos • payload • peso de referência&lt;br&gt;η&lt;sub&gt;base&lt;/sub&gt; em km/L" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FCE4D6;strokeColor=#ED7D31;" parent="1" vertex="1">
+                    <mxGeometry x="265" y="875" width="320" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="road_trips" value="&lt;b&gt;Número de viagens&lt;/b&gt;&lt;br&gt;N = ceil(carga / payload)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FCE4D6;strokeColor=#ED7D31;" parent="1" vertex="1">
+                    <mxGeometry x="135" y="1040" width="270" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="road_eta" value="&lt;b&gt;Eficiência carregada&lt;/b&gt;&lt;br&gt;η = η&lt;sub&gt;base&lt;/sub&gt;[1 − ε(payload−ref)/ref]" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FFFFFF;strokeColor=#A6A6A6;fontFamily=Courier New;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="445" y="1040" width="270" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="road_liters" value="&lt;b&gt;Combustível rodoviário&lt;/b&gt;&lt;br&gt;L&lt;sub&gt;direta&lt;/sub&gt; = D&lt;sub&gt;direta&lt;/sub&gt; / η × N" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FFFFFF;strokeColor=#A6A6A6;fontFamily=Courier New;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="265" y="1210" width="320" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="road_emis" value="&lt;b&gt;Emissões rodoviárias&lt;/b&gt;&lt;br&gt;E&lt;sub&gt;direta&lt;/sub&gt; = L&lt;sub&gt;direta&lt;/sub&gt; × 2,68 kg CO₂e/L" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FCE4D6;strokeColor=#ED7D31;" parent="1" vertex="1">
+                    <mxGeometry x="135" y="1390" width="270" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="road_cost" value="&lt;b&gt;Custo modelado&lt;/b&gt;&lt;br&gt;C&lt;sub&gt;direta&lt;/sub&gt; = L&lt;sub&gt;direta&lt;/sub&gt; × preço do diesel" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FCE4D6;strokeColor=#ED7D31;" parent="1" vertex="1">
+                    <mxGeometry x="445" y="1390" width="270" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="first" value="&lt;b&gt;First mile&lt;/b&gt;&lt;br&gt;&lt;i&gt;origem → porto de embarque&lt;/i&gt;&lt;br&gt;Mesma fórmula rodoviária: L = D/η × N" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FCE4D6;strokeColor=#ED7D31;" parent="1" vertex="1">
+                    <mxGeometry x="1080" y="870" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="sea" value="&lt;b&gt;Navegação&lt;/b&gt;&lt;br&gt;&lt;i&gt;porto de embarque → porto de descarga&lt;/i&gt;&lt;br&gt;F&lt;sub&gt;sea&lt;/sub&gt; = I&lt;sub&gt;rota&lt;/sub&gt; × carga × D&lt;sub&gt;nm&lt;/sub&gt; / 1000&lt;br&gt;I em g/(t·nm)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#D9E1F2;strokeColor=#4472C4;" parent="1" vertex="1">
+                    <mxGeometry x="1065" y="1015" width="290" height="125" as="geometry"/>
+                </mxCell>
+                <mxCell id="last" value="&lt;b&gt;Last mile&lt;/b&gt;&lt;br&gt;&lt;i&gt;porto de descarga → destino&lt;/i&gt;&lt;br&gt;Mesma fórmula rodoviária: L = D/η × N" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FCE4D6;strokeColor=#ED7D31;" parent="1" vertex="1">
+                    <mxGeometry x="1080" y="1200" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="teu" value="&lt;b&gt;Resolver TEU&lt;/b&gt;&lt;br&gt;TEU = ceil(carga/14) se não informado" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FFF2CC;strokeColor=#BF9000;" parent="1" vertex="1">
+                    <mxGeometry x="830" y="875" width="210" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="portops" value="&lt;b&gt;Operações portuárias&lt;/b&gt;&lt;br&gt;movimentos × L/movimento&lt;br&gt;RTG + caminhão interno × 2 chamadas" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#FFF2CC;strokeColor=#BF9000;" parent="1" vertex="1">
+                    <mxGeometry x="825" y="1025" width="215" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="hotel" value="&lt;b&gt;Hoteling&lt;/b&gt;&lt;br&gt;&lt;b&gt;Não somado separadamente&lt;/b&gt;&lt;br&gt;quando a intensidade MRV por trabalho de transporte está ativa" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F4CCCC;strokeColor=#C00000;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="1380" y="1020" width="150" height="125" as="geometry"/>
+                </mxCell>
+                <mxCell id="marine_emis" value="&lt;b&gt;Emissões marítimas&lt;/b&gt;&lt;br&gt;E&lt;sub&gt;sea&lt;/sub&gt; = F&lt;sub&gt;sea&lt;/sub&gt; × 3,21 kg CO₂e/kg&lt;br&gt;E&lt;sub&gt;port&lt;/sub&gt; pelo fator de diesel" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#D9E1F2;strokeColor=#4472C4;" parent="1" vertex="1">
+                    <mxGeometry x="825" y="1195" width="215" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="mm_total" value="&lt;b&gt;Total multimodal&lt;/b&gt;&lt;br&gt;first mile + navegação + port ops + last mile&lt;br&gt;(sem hoteling separado)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#E4DFEC;strokeColor=#8064A2;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1040" y="1420" width="340" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="comparison" value="&lt;b&gt;6. Comparação final&lt;/b&gt;&lt;br&gt;Road-only versus multimodal&lt;br&gt;&lt;br&gt;Economia de emissões = [1 − E&lt;sub&gt;MM&lt;/sub&gt;/E&lt;sub&gt;Road&lt;/sub&gt;] × 100%&lt;br&gt;Economia de custo = [1 − C&lt;sub&gt;MM&lt;/sub&gt;/C&lt;sub&gt;Road&lt;/sub&gt;] × 100%" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#E4DFEC;strokeColor=#8064A2;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="452" y="1680" width="750" height="125" as="geometry"/>
+                </mxCell>
+                <mxCell id="sources_header" value="&lt;b&gt;Fontes e limites metodológicos&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#E4DFEC;strokeColor=#8064A2;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="1890" width="1450" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="src_ors" value="&lt;b&gt;ORS + Supabase cache&lt;/b&gt;&lt;br&gt;distâncias terrestres" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="1970" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="src_ports" value="&lt;b&gt;ports_br.json&lt;/b&gt;&lt;br&gt;portos e coordenadas" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="1970" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="src_antaq" value="&lt;b&gt;ANTAQ&lt;/b&gt;&lt;br&gt;viagens, escalas, carga e TEU" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="1210" y="1970" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="src_mrv" value="&lt;b&gt;EU MRV 2021–2024&lt;/b&gt;&lt;br&gt;g combustível/(t·nm) por IMO" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="2070" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="src_sea" value="&lt;b&gt;sea_matrix.json&lt;/b&gt;&lt;br&gt;distâncias e KPI direcional" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="1970" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="src_port" value="&lt;b&gt;Dados Relatorio 2.xlsx&lt;/b&gt;&lt;br&gt;RTG e caminhão interno" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="2070" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="src_ef" value="&lt;b&gt;Fatores TTW implementados&lt;/b&gt;&lt;br&gt;diesel: 2,68 kg/L&lt;br&gt;VLSFO: 3,21 kg/kg" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F2F2F2;strokeColor=#7F7F7F;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="2070" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="warning" value="&lt;b&gt;Limite metodológico&lt;/b&gt;&lt;br&gt;Port ops padrão = proxy documentado de Santos;&lt;br&gt;STS permanece indisponível." style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=14;strokeWidth=2;fillColor=#F4CCCC;strokeColor=#C00000;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="1210" y="2070" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;" parent="1" source="inputs" target="geocode" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;" parent="1" source="geocode" target="ports" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;" parent="1" source="ports" target="road_routes" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;" parent="1" source="ports" target="sea_route" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;" parent="1" source="road_routes" target="split" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;" parent="1" source="sea_route" target="split" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;" parent="1" source="split" target="road_spec" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="787" y="850"/>
+                            <mxPoint x="425" y="850"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="split" target="first" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="787" y="850"/>
+                            <mxPoint x="1210" y="850"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.35;exitY=1;entryX=0.5;entryY=0;" parent="1" source="road_spec" target="road_trips" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.65;exitY=1;entryX=0.5;entryY=0;" parent="1" source="road_spec" target="road_eta" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.35;entryY=0;" parent="1" source="road_trips" target="road_liters" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.65;entryY=0;" parent="1" source="road_eta" target="road_liters" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="road_liters" target="road_emis" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="road_liters" target="road_cost" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="first" target="sea" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="sea" target="last">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" parent="1" source="sea" target="marine_emis" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1050" y="1080"/>
+                            <mxPoint x="1050" y="1250"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="last" target="mm_total" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="teu" target="portops" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="portops" target="marine_emis" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" parent="1" source="marine_emis" target="mm_total" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="933" y="1473"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.25;entryY=0;" parent="1" source="road_emis" target="comparison" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="270" y="1640"/>
+                            <mxPoint x="640" y="1640"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.4;entryY=0;" parent="1" source="road_cost" target="comparison" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="580" y="1640"/>
+                            <mxPoint x="752" y="1640"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.8;entryY=0;" parent="1" source="mm_total" target="comparison" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1210" y="1640"/>
+                            <mxPoint x="1052" y="1640"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;endFill=0;strokeWidth=2;dashed=1;strokeColor=#C00000;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" parent="1" source="hotel" target="sea" edge="1">
+                    <mxGeometry x="0" y="-1" relative="1" as="geometry">
+                        <mxPoint y="-12" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
