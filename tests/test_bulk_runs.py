@@ -3,7 +3,15 @@ from collections import deque
 from unittest.mock import patch
 
 from modules.infra.db.bulk_results import BulkResultSummary, list_results, summarize_results, upsert_result as upsert_bulk_result
-from modules.infra.db.bulk_runs import BulkRunSelector, finish_run, insert_run_result, insert_run_results, start_run
+from modules.infra.db.bulk_runs import (
+    BulkRunSelector,
+    finish_run,
+    insert_run_result,
+    insert_run_results,
+    mark_abandoned_selector_runs,
+    start_run,
+    try_acquire_selector_lock,
+)
 
 
 class _FakeCursor:
@@ -88,6 +96,32 @@ class BulkRunPersistenceTests(unittest.TestCase):
         self.assertEqual(len(conn.statements), 2)
         self.assertIn("INSERT INTO bulk_runs", conn.statements[0][0])
         self.assertIn("UPDATE bulk_runs", conn.statements[1][0])
+
+    def test_selector_lock_uses_postgres_session_advisory_lock(self) -> None:
+        conn = _RecordingConnection(row=(True,))
+
+        acquired = try_acquire_selector_lock(conn, selector_hash_value="selector-123")
+
+        self.assertTrue(acquired)
+        statement, params = conn.statements[0]
+        self.assertIn("pg_try_advisory_lock", statement)
+        self.assertEqual(params, ("cabotagelens:bulk-run:selector-123",))
+
+    def test_mark_abandoned_selector_runs_only_updates_running_rows(self) -> None:
+        conn = _RecordingConnection()
+
+        with patch("modules.infra.db.bulk_runs.ensure_runs_table"):
+            updated = mark_abandoned_selector_runs(
+                conn,
+                selector_hash_value="selector-123",
+                error_message="superseded",
+            )
+
+        self.assertEqual(updated, 0)
+        statement, params = conn.statements[0]
+        self.assertIn("status = 'failed'", statement)
+        self.assertIn("status = 'running'", statement)
+        self.assertEqual(params, ("superseded", "selector-123"))
 
     def test_insert_run_result_persists_normalized_refs_and_metrics(self) -> None:
         conn = _RecordingConnection()

@@ -17,7 +17,11 @@ from modules.infra.database_manager import (
     upsert_place_points,
     upsert_runs,
 )
-from modules.infra.db.bulk_runs import selector_hash
+from modules.infra.db.bulk_runs import (
+    mark_abandoned_selector_runs,
+    selector_hash,
+    try_acquire_selector_lock,
+)
 from modules.infra.log_manager import get_log_context, get_logger, set_log_context
 from modules.multimodal.builder import build_path_geometry_from_resolved, build_port_node, load_routing_assets
 from modules.multimodal.bulk import (
@@ -722,6 +726,18 @@ def _apply_destination_point_reuse(
         perf.incr("destination_cache_misses")
 
 
+def _append_point_row_and_maybe_flush(
+    rows: List[Dict[str, Any]],
+    row: Dict[str, Any],
+    *,
+    batch_size: int,
+    flush_callback: Any,
+) -> None:
+    rows.append(row)
+    if len(rows) >= max(int(batch_size), 1):
+        flush_callback()
+
+
 def run_bulk_evaluation_pipeline(
     origin: str,
     dest_list: List[str],
@@ -788,6 +804,7 @@ def run_bulk_evaluation_pipeline(
     fail_count = 0
     run_id: Optional[str] = None
     selector_hash_value: Optional[str] = None
+    selector_lock_key: Optional[str] = None
     active_run_step = "bootstrap"
 
     started_global = time.perf_counter()
@@ -857,6 +874,13 @@ def run_bulk_evaluation_pipeline(
         except Exception as exc:
             _log.warning("Bulk pipeline DB connection lost before %s; reconnecting: %s", context, exc)
             conn.reconnect()
+            if selector_lock_key and not try_acquire_selector_lock(
+                conn,
+                selector_hash_value=selector_lock_key,
+            ):
+                raise RuntimeError(
+                    "Another worker acquired this bulk scenario while the database connection was recovering."
+                )
 
     def _flush_point_rows(conn: Any, rows: List[Dict[str, Any]]) -> None:
         if not rows:
@@ -1011,6 +1035,32 @@ def run_bulk_evaluation_pipeline(
                     destination_set_id=destination_set_id,
                 )
                 selector_hash_value = selector_hash(run_selector)
+                selector_lock_key = selector_hash_value
+
+                if not try_acquire_selector_lock(
+                    conn,
+                    selector_hash_value=selector_lock_key,
+                ):
+                    raise RuntimeError(
+                        "Another bulk run is already processing this origin, scenario, and destination set. "
+                        "Wait for it to finish instead of starting a duplicate run."
+                    )
+                abandoned_count = mark_abandoned_selector_runs(
+                    conn,
+                    selector_hash_value=selector_lock_key,
+                    error_message=(
+                        "Previous worker released its execution lock before completing; "
+                        "the run was superseded by a new attempt."
+                    ),
+                    table_name=runs_table,
+                )
+                conn.commit()
+                if abandoned_count:
+                    _log.warning(
+                        "Marked %d abandoned bulk run(s) failed before starting selector_hash=%s",
+                        abandoned_count,
+                        selector_lock_key,
+                    )
 
                 evaluation_kwargs = {
                     "cargo_t": cargo_t,
@@ -1291,8 +1341,22 @@ def run_bulk_evaluation_pipeline(
                 perf=perf,
                 point_rows_to_persist=point_rows_to_persist,
             )
+            _flush_point_rows(conn, point_rows_to_persist)
 
             unresolved_items = [item for item in work_items if item.point is None]
+            cached_destination_count = len(work_items) - len(unresolved_items)
+            _emit_progress(
+                progress_callback,
+                phase="resolution_cache",
+                current=cached_destination_count,
+                total=len(work_items),
+                cached_count=cached_destination_count,
+                geocode_required_count=len(unresolved_items),
+                message=(
+                    f"Coordinates: {cached_destination_count}/{len(work_items)} loaded from Supabase; "
+                    f"{len(unresolved_items)} require geocoding"
+                ),
+            )
             resolution_log_context = get_log_context()
 
             def _resolve_destination(item: DestinationWorkItem):
@@ -1365,7 +1429,8 @@ def run_bulk_evaluation_pipeline(
                             item.point = point
                             item.destiny_name = point["label"]
                             item.point_source = "provider"
-                            point_rows_to_persist.append(
+                            _append_point_row_and_maybe_flush(
+                                point_rows_to_persist,
                                 {
                                     "place": item.normalized_input,
                                     "label": point["label"],
@@ -1373,7 +1438,9 @@ def run_bulk_evaluation_pipeline(
                                     "lon": point["lon"],
                                     "uf": point.get("uf"),
                                     "source": "provider",
-                                }
+                                },
+                                batch_size=persist_batch_size,
+                                flush_callback=lambda: _flush_point_rows(conn, point_rows_to_persist),
                             )
                         _emit_progress(
                             progress_callback,
@@ -1387,6 +1454,7 @@ def run_bulk_evaluation_pipeline(
                 finally:
                     if executor is not None:
                         executor.shutdown(wait=True)
+                    _flush_point_rows(conn, point_rows_to_persist)
 
             _flush_point_rows(conn, point_rows_to_persist)
             _log.info(

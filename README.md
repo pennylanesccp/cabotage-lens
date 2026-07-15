@@ -200,4 +200,6 @@ This repository now uses unit tests that mock the Postgres and Storage boundarie
 
 - The route cache is durable and shared through Postgres.
 - The heatmap page reads and writes only the Supabase-backed bulk tables.
+- Bulk heatmap runs persist newly geocoded location aliases in batches, so an interrupted large run can reuse completed geocoding work on its next attempt.
+- PostgreSQL advisory locks prevent concurrent workers from processing the same origin, scenario, and destination set.
 - There is no local database fallback.

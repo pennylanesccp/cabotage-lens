@@ -30,6 +30,7 @@ from modules.infra.db.road_cache import (
 
 DEFAULT_RUNS_TABLE = "bulk_runs"
 DEFAULT_RUN_RESULTS_TABLE = "bulk_run_items"
+_RUN_LOCK_NAMESPACE = "cabotagelens:bulk-run"
 
 _RUNS_DDL_SQL = """
 CREATE TABLE IF NOT EXISTS {table} (
@@ -269,6 +270,45 @@ def selector_hash(selector: BulkRunSelector) -> str:
     }
     encoded = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def try_acquire_selector_lock(conn: DBConnection, *, selector_hash_value: str) -> bool:
+    """Hold a PostgreSQL session lock while one selector is being evaluated."""
+    lock_key = f"{_RUN_LOCK_NAMESPACE}:{str(selector_hash_value).strip()}"
+    row = conn.execute(
+        "SELECT pg_try_advisory_lock(hashtextextended(?, 0))",
+        (lock_key,),
+    ).fetchone()
+    return bool(row and row[0])
+
+
+def mark_abandoned_selector_runs(
+    conn: DBConnection,
+    *,
+    selector_hash_value: str,
+    error_message: str,
+    table_name: str = DEFAULT_RUNS_TABLE,
+) -> int:
+    """Fail stale ``running`` rows after the selector session lock is acquired."""
+    table = safe_table_name(table_name)
+    ensure_runs_table(conn, table)
+    cursor = conn.execute(
+        f"""
+        UPDATE {table}
+           SET status = 'failed'
+             , error_message = COALESCE(NULLIF(error_message, ''), ?)
+             , duration_s = COALESCE(
+                   duration_s,
+                   EXTRACT(EPOCH FROM ({current_timestamp_sql()} - started_timestamp))
+               )
+             , completed_timestamp = COALESCE(completed_timestamp, {current_timestamp_sql()})
+             , updated_timestamp = {current_timestamp_sql()}
+         WHERE selector_hash = ?
+           AND status = 'running'
+        """,
+        (str(error_message), str(selector_hash_value)),
+    )
+    return max(int(getattr(cursor, "rowcount", 0) or 0), 0)
 
 
 def ensure_runs_table(

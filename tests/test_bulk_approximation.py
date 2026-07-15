@@ -191,6 +191,12 @@ class BulkApproximationTests(unittest.TestCase):
             "modules.multimodal.bulk_pipeline.start_bulk_run",
             return_value="run-1",
         ), patch(
+            "modules.multimodal.bulk_pipeline.try_acquire_selector_lock",
+            return_value=True,
+        ), patch(
+            "modules.multimodal.bulk_pipeline.mark_abandoned_selector_runs",
+            return_value=0,
+        ), patch(
             "modules.multimodal.bulk_pipeline.finish_bulk_run",
             finish_run_mock,
         ), patch(

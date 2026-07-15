@@ -138,6 +138,36 @@ class BulkPipelineCoordinatorTests(unittest.TestCase):
 
 
 class BulkPipelineExecutionTests(unittest.TestCase):
+    def test_point_rows_flush_incrementally_at_configured_batch_size(self) -> None:
+        rows: list[dict[str, object]] = []
+        flushed: list[list[dict[str, object]]] = []
+
+        def flush() -> None:
+            flushed.append(list(rows))
+            rows.clear()
+
+        bulk_pipeline._append_point_row_and_maybe_flush(
+            rows,
+            {"place": "Manaus, AM"},
+            batch_size=2,
+            flush_callback=flush,
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(flushed, [])
+
+        bulk_pipeline._append_point_row_and_maybe_flush(
+            rows,
+            {"place": "Tefe, AM"},
+            batch_size=2,
+            flush_callback=flush,
+        )
+
+        self.assertEqual(rows, [])
+        self.assertEqual(
+            flushed,
+            [[{"place": "Manaus, AM"}, {"place": "Tefe, AM"}]],
+        )
+
     def test_point_from_result_record_reuses_coordinates_from_latest_bulk_rows(self) -> None:
         record = SimpleNamespace(
             destiny_name="Manaus, AM",
