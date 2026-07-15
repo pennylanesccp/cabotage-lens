@@ -7,6 +7,55 @@ from app.main.utils import state
 
 
 class StreamlitStateTests(unittest.TestCase):
+    def test_ensure_port_ops_enabled_overrides_restored_false_state(self) -> None:
+        session_state = {"include_port_ops": False}
+
+        state.ensure_port_ops_enabled(session_state)
+
+        self.assertTrue(session_state["include_port_ops"])
+
+    def test_ensure_visible_map_layers_recovers_empty_route_map(self) -> None:
+        session_state = {
+            "map_show_first_last": False,
+            "map_show_sea": False,
+            "map_show_direct": False,
+            "map_show_ports": False,
+            "map_show_labels": False,
+        }
+        defaults = {
+            "map_show_first_last": True,
+            "map_show_sea": True,
+            "map_show_direct": True,
+            "map_show_ports": True,
+            "map_show_labels": True,
+        }
+
+        state.ensure_visible_map_layers(session_state, defaults)
+
+        self.assertTrue(all(session_state[key] for key in defaults))
+
+    def test_ensure_visible_map_layers_preserves_an_intentional_subset(self) -> None:
+        session_state = {
+            "map_show_first_last": False,
+            "map_show_sea": False,
+            "map_show_direct": True,
+            "map_show_ports": False,
+            "map_show_labels": False,
+        }
+
+        state.ensure_visible_map_layers(session_state, state.DEFAULTS)
+
+        self.assertEqual(
+            session_state,
+            {
+                "map_show_first_last": False,
+                "map_show_sea": False,
+                "map_show_direct": True,
+                "map_show_ports": False,
+                "map_show_labels": False,
+            },
+        )
+
     def test_streamlit_log_handler_writes_when_script_context_exists(self) -> None:
         fake_streamlit = SimpleNamespace(session_state={})
         handler = state.StreamlitLogHandler(max_lines=5)

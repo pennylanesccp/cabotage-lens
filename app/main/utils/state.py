@@ -25,6 +25,17 @@ from app.main.utils.constants import DEFAULTS, ROOT
 
 _log = get_logger("streamlit_app")
 
+_MAP_ROUTE_VISIBILITY_KEYS = (
+    "map_show_first_last",
+    "map_show_sea",
+    "map_show_direct",
+)
+_MAP_LAYER_VISIBILITY_KEYS = (
+    *_MAP_ROUTE_VISIBILITY_KEYS,
+    "map_show_ports",
+    "map_show_labels",
+)
+
 
 class StreamlitLogHandler(logging.Handler):
     """Push log lines into Streamlit session state."""
@@ -94,6 +105,20 @@ def resolve_runtime_db_target() -> str:
         return str(DEFAULTS["db_target_str"])
 
 
+def ensure_visible_map_layers(session_state: Any, defaults: Mapping[str, Any]) -> None:
+    """Recover sessions that would otherwise render only endpoint markers."""
+    if any(bool(session_state.get(key, defaults.get(key, True))) for key in _MAP_ROUTE_VISIBILITY_KEYS):
+        return
+
+    for key in _MAP_LAYER_VISIBILITY_KEYS:
+        session_state[key] = bool(defaults.get(key, True))
+
+
+def ensure_port_ops_enabled(session_state: Any) -> None:
+    """Keep port operations inside the app calculation boundary."""
+    session_state["include_port_ops"] = True
+
+
 def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     runtime_defaults: dict[str, Any] = dict(defaults or DEFAULTS)
     runtime_environment = detect_runtime_environment(secret_value("APP_ENV", None))
@@ -127,6 +152,14 @@ def init_state(defaults: Mapping[str, Any] | None = None) -> None:
 
     for key, value in runtime_defaults.items():
         st.session_state.setdefault(key, value)
+
+    ensure_port_ops_enabled(st.session_state)
+
+    # An old or partially restored Streamlit widget state can leave every
+    # route layer disabled. That combination produces a valid but useless map
+    # containing only the origin and destination markers, so restore the
+    # documented default layer set before the sidebar widgets are created.
+    ensure_visible_map_layers(st.session_state, runtime_defaults)
 
     st.session_state.setdefault("ui_logs", [])
     st.session_state.setdefault("last_geo", None)

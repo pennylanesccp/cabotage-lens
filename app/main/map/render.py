@@ -162,8 +162,8 @@ def build_map_deck(geo: Mapping[str, Any], results: Mapping[str, Any] | None, st
                 get_text="label",
                 get_size=11,
                 get_color=[245, 247, 250, 250],
-                get_text_anchor="middle",
-                get_alignment_baseline="center",
+                get_text_anchor='"middle"',
+                get_alignment_baseline='"center"',
                 pickable=False,
             )
         )
@@ -203,8 +203,8 @@ def build_map_deck(geo: Mapping[str, Any], results: Mapping[str, Any] | None, st
                 get_text="kind",
                 get_size=13,
                 get_color=[248, 250, 252, 245],
-                get_text_anchor="middle",
-                get_alignment_baseline="bottom",
+                get_text_anchor='"middle"',
+                get_alignment_baseline='"bottom"',
                 pickable=False,
             )
         )

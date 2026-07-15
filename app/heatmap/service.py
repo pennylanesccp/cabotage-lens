@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.costs.diesel_prices import normalize_uf
+from modules.costs.fuel_price_refresh import refresh_fuel_prices
 from modules.infra.database_manager import (
     BulkRunSelector,
     db_session,
@@ -1474,15 +1475,17 @@ def run_heatmap(
     destination_set_id: str | None = None,
 ) -> HeatmapDataset:
     _require_postgres()
+    scenario = replace(scenario, include_port_ops=True)
+    fuel_prices = refresh_fuel_prices()
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     destination_label = _destination_label(resolved_destination_set_id)
     all_destinations = list(_heatmap_destinations(resolved_destination_set_id))
     if not all_destinations:
         raise HeatmapDataError(f"Heatmap destinations file is empty: {resolved_destination_set_id}")
 
-    if rerun:
+    if rerun or fuel_prices.prices_changed:
         destinations_to_process = all_destinations
-        mode_label = "rerun"
+        mode_label = "rerun" if rerun else "fuel-price-refresh"
     else:
         destinations_to_process = pending_destinations(scenario, destination_set_id=resolved_destination_set_id)
         mode_label = "run-missing"
@@ -1534,6 +1537,8 @@ def run_heatmap(
             progress_callback=progress_callback,
             max_geocode_workers=1,
             max_route_workers=2,
+            diesel_csv_path=fuel_prices.diesel_csv_path,
+            bunker_price_override_brl_mt=fuel_prices.bunker_price_brl_mt,
         )
         _log.info(
             (

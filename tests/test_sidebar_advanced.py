@@ -54,6 +54,13 @@ class SidebarAdvancedTests(unittest.TestCase):
         self.assertEqual(db_target_call.kwargs["value"], "postgresql://***")
         self.assertNotIn("key", db_target_call.kwargs)
 
+        include_port_ops_call = next(
+            call
+            for call in fake_streamlit.checkbox.call_args_list
+            if call.args and call.args[0] == "Include port ops"
+        )
+        self.assertTrue(include_port_ops_call.kwargs["disabled"])
+
     def test_heatmap_sidebar_has_no_advanced_controls(self) -> None:
         fake_streamlit = SimpleNamespace(
             sidebar=contextlib.nullcontext(),

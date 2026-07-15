@@ -1523,6 +1523,8 @@ def run_bulk_evaluation(
     max_geocode_workers: int = 2,
     max_route_workers: int = 2,
     persist_batch_size: int = 64,
+    diesel_csv_path: Path | None = None,
+    bunker_price_override_brl_mt: float | None = None,
 ) -> Dict[str, Any]:
     from modules.multimodal.bulk_pipeline import run_bulk_evaluation_pipeline
 
@@ -1557,4 +1559,6 @@ def run_bulk_evaluation(
         max_geocode_workers=max_geocode_workers,
         max_route_workers=max_route_workers,
         persist_batch_size=persist_batch_size,
+        diesel_csv_path=diesel_csv_path,
+        bunker_price_override_brl_mt=bunker_price_override_brl_mt,
     )

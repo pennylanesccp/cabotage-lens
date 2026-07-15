@@ -4,6 +4,7 @@ import math
 from typing import Any, Callable, Dict, Mapping, Tuple
 
 from modules.infra.log_manager import get_logger
+from modules.costs.fuel_price_refresh import refresh_fuel_prices
 from modules.multimodal import build_path_geometry, evaluate_path
 
 from app.main.utils.state import resolve_runtime_db_target
@@ -45,7 +46,7 @@ def build_scenario_payload(session_state: Mapping[str, Any]) -> Dict[str, Any]:
         "include_hoteling": bool(session_state.get("include_hoteling", True)),
         "hoteling_hours_per_call": float(session_state.get("hoteling_hours_per_call", 14.0)),
         "port_calls": int(session_state.get("port_calls", 2)),
-        "include_port_ops": bool(session_state.get("include_port_ops", True)),
+        "include_port_ops": True,
         "full_call_mode": bool(session_state.get("full_call_mode", False)),
         "port_moves_per_call": (
             None
@@ -76,6 +77,8 @@ def run_analysis(
     *,
     progress_callback: _ProgressCallback | None = None,
 ) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None, str]:
+    payload = dict(payload)
+    payload["include_port_ops"] = True
     total_steps = 3
 
     def _emit_progress(message: str, *, current: int, phase: str = "working") -> None:
@@ -119,6 +122,8 @@ def run_analysis(
         payload["allocation_mode"] or "auto",
     )
     _emit_progress("Preparing router analysis...", current=0)
+
+    fuel_prices = refresh_fuel_prices()
 
     db_target = resolve_runtime_db_target()
     _trace_single(
@@ -177,6 +182,8 @@ def run_analysis(
         full_call_mode=payload["full_call_mode"],
         port_ops_scenario=payload["port_ops_scenario"],
         port_ops_observed_ports=payload.get("port_ops_observed_ports"),
+        diesel_csv_path=fuel_prices.diesel_csv_path,
+        bunker_price_override_brl_mt=fuel_prices.bunker_price_brl_mt,
         debug_trace=True,
     )
     if not results:

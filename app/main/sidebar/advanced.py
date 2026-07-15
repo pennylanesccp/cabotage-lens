@@ -39,7 +39,12 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.checkbox("Include hoteling", key="include_hoteling")
     st.number_input("Hoteling hours per call", min_value=0.0, step=1.0, key="hoteling_hours_per_call")
     st.number_input("Port calls per voyage", min_value=0, step=1, key="port_calls")
-    st.checkbox("Include port ops", key="include_port_ops")
+    st.checkbox(
+        "Include port ops",
+        key="include_port_ops",
+        disabled=True,
+        help="Port operations are always included in Router calculations.",
+    )
     st.checkbox("Full-call mode (terminal-level)", key="full_call_mode")
     st.number_input("Tonnes per TEU default", min_value=0.1, step=0.5, key="t_per_teu_default")
     st.number_input("Port moves per call override (0 uses defaults)", min_value=0.0, step=1.0, key="port_moves_per_call_input")

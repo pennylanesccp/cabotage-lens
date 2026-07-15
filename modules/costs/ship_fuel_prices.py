@@ -76,12 +76,20 @@ def _read_latest_bunker_price(path_str: str, mtime_ns: int) -> tuple[Optional[fl
     return float(parts[2]), str(parts[0])
 
 
-def get_bunker_price(default_price_brl_mt: float = 3500.0) -> float:
+def get_bunker_price(
+    default_price_brl_mt: float = 3500.0,
+    *,
+    price_path: str | Path | None = None,
+) -> float:
     """
     Get the latest VLSFO price in BRL/mt from the local text file.
     If file is missing or malformed, returns the provided default.
     """
-    path = resolve_data_asset_path(Path(DEFAULT_OUTPUT_TXT)).resolve()
+    path = (
+        resolve_data_asset_path(Path(DEFAULT_OUTPUT_TXT)).resolve()
+        if price_path is None
+        else Path(price_path).resolve()
+    )
 
     if not path.exists():
         _log.warning(

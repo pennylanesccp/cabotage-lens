@@ -770,6 +770,8 @@ def run_bulk_evaluation_pipeline(
     max_geocode_workers: int = 2,
     max_route_workers: int = 2,
     persist_batch_size: int = 64,
+    diesel_csv_path: Path | None = None,
+    bunker_price_override_brl_mt: float | None = None,
 ) -> Dict[str, Any]:
     deduped_destinations = _dedupe_preserve_order(dest_list)
     requested_destination_count = len([item for item in dest_list if str(item).strip()])
@@ -1079,12 +1081,14 @@ def run_bulk_evaluation_pipeline(
                     "port_ops_scenario": port_ops_scenario,
                     "prepared_context": prepare_evaluation_context(
                         truck_key=truck_key,
+                        diesel_csv_path=diesel_csv_path,
                         vessel_class=vessel_class,
                         include_hoteling=include_hoteling,
                         hoteling_hours_per_call=hoteling_hours_per_call,
                         port_calls=port_calls,
                         include_port_ops=include_port_ops,
                         port_ops_scenario=port_ops_scenario,
+                        bunker_price_override_brl_mt=bunker_price_override_brl_mt,
                     ),
                 }
 

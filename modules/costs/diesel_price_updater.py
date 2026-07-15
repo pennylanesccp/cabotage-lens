@@ -73,10 +73,10 @@ def file_is_fresh(path: Path, max_age_days: int = 7) -> bool:
     return datetime.now() - mtime < timedelta(days=max_age_days)
 
 
-def download_anp_file(url: str, save_path: Path) -> bool:
+def download_anp_file(url: str, save_path: Path, *, timeout: float = 30.0) -> bool:
     logger.info(f"Downloading ANP diesel price Excel → {save_path}")
     try:
-        res = requests.get(url, stream=True, timeout=30)
+        res = requests.get(url, stream=True, timeout=timeout)
         if res.status_code != 200:
             logger.warning(f"ANP download failed, status={res.status_code}")
             return False

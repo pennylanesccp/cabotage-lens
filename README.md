@@ -123,6 +123,10 @@ The app reads `.streamlit/secrets.toml` for local runs, shows the Router and Hea
 
 When `SUPABASE_STORAGE_DATA_BUCKET` is configured, runtime loaders prefer the bucket copy of processed cabotage artifacts and cache them locally under `.cache/supabase_data/`.
 
+Every Router calculation and Heatmap run attempts to refresh the ANP Diesel S10 table and the Ship & Bunker Santos VLSFO price before evaluation. Refreshed inputs are kept under `.cache/runtime_fuel_prices/`. If either external source is unavailable or cannot be parsed, the run continues with the last valid persisted input and records the fallback in the live logs. A Heatmap run recalculates all destinations when the refreshed fuel values differ, preventing mixed-price surfaces.
+
+Port operations are always included in Router and Heatmap calculations. The Router displays this setting as a locked control so restored browser/session state cannot silently remove the port-operation boundary.
+
 ## Run the CLIs
 
 Single comparison:

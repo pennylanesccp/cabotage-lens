@@ -1,4 +1,6 @@
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from app.main.utils.pipeline import build_scenario_payload, run_analysis
@@ -19,7 +21,21 @@ class MainPipelineTests(unittest.TestCase):
         )
 
         self.assertEqual(payload["ors_profile"], "driving-car")
+        self.assertTrue(payload["include_port_ops"])
         self.assertNotIn("port_ops_observed_ports", payload)
+
+    def test_build_scenario_payload_forces_port_ops_when_session_state_is_false(self) -> None:
+        payload = build_scenario_payload(
+            {
+                "origin": "Sao Paulo, SP",
+                "destiny": "Manaus, AM",
+                "cargo_t": 14.0,
+                "truck_key": "semi_27t",
+                "include_port_ops": False,
+            }
+        )
+
+        self.assertTrue(payload["include_port_ops"])
 
     def test_build_scenario_payload_preserves_optional_observed_port_ops(self) -> None:
         observed = [{"port_name": "Porto A", "fuel_kg": 10.0, "cargo_teu": 2.0}]
@@ -79,6 +95,12 @@ class MainPipelineTests(unittest.TestCase):
             "app.main.utils.pipeline.resolve_runtime_db_target",
             return_value="local",
         ), patch(
+            "app.main.utils.pipeline.refresh_fuel_prices",
+            return_value=SimpleNamespace(
+                diesel_csv_path=Path("runtime-diesel.csv"),
+                bunker_price_brl_mt=3210.0,
+            ),
+        ), patch(
             "app.main.utils.pipeline.build_path_geometry",
             return_value=geo,
         ) as geometry_mock, patch(
@@ -94,6 +116,8 @@ class MainPipelineTests(unittest.TestCase):
         self.assertTrue(geometry_mock.call_args.kwargs["debug_trace"])
         self.assertTrue(evaluate_mock.call_args.kwargs["debug_trace"])
         self.assertIs(evaluate_mock.call_args.kwargs["port_ops_observed_ports"], observed)
+        self.assertEqual(evaluate_mock.call_args.kwargs["diesel_csv_path"], Path("runtime-diesel.csv"))
+        self.assertEqual(evaluate_mock.call_args.kwargs["bunker_price_override_brl_mt"], 3210.0)
         trace_text = "\n".join(captured.output)
         self.assertIn("single_eval stage=request status=start source=streamlit_session_state", trace_text)
         self.assertIn("single_eval stage=request status=complete source=single_eval_pipeline", trace_text)

@@ -1,5 +1,6 @@
 import contextlib
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -527,6 +528,13 @@ class HeatmapServiceTests(unittest.TestCase):
         dataset = SimpleNamespace(points=[1, 2, 3])
 
         with patch("app.heatmap.service._require_postgres"), patch(
+            "app.heatmap.service.refresh_fuel_prices",
+            return_value=SimpleNamespace(
+                diesel_csv_path="runtime-diesel.csv",
+                bunker_price_brl_mt=3210.0,
+                prices_changed=False,
+            ),
+        ), patch(
             "app.heatmap.service._heatmap_destinations",
             return_value=("Manaus, AM", "Belem, PA", "Rio Branco, AC"),
         ), patch(
@@ -546,6 +554,40 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertFalse(run_bulk_mock.call_args.kwargs["overwrite_road"])
         self.assertEqual(run_bulk_mock.call_args.kwargs["max_geocode_workers"], 1)
         self.assertEqual(run_bulk_mock.call_args.kwargs["max_route_workers"], 2)
+        self.assertEqual(run_bulk_mock.call_args.kwargs["diesel_csv_path"], "runtime-diesel.csv")
+        self.assertEqual(run_bulk_mock.call_args.kwargs["bunker_price_override_brl_mt"], 3210.0)
+
+    def test_run_heatmap_recalculates_all_destinations_when_fuel_prices_change(self) -> None:
+        scenario = replace(self._scenario(), include_port_ops=False)
+        dataset = SimpleNamespace(points=[1, 2, 3])
+
+        with patch("app.heatmap.service._require_postgres"), patch(
+            "app.heatmap.service.refresh_fuel_prices",
+            return_value=SimpleNamespace(
+                diesel_csv_path="runtime-diesel.csv",
+                bunker_price_brl_mt=3300.0,
+                prices_changed=True,
+            ),
+        ), patch(
+            "app.heatmap.service._heatmap_destinations",
+            return_value=("Manaus, AM", "Belem, PA", "Rio Branco, AC"),
+        ), patch(
+            "app.heatmap.service.pending_destinations",
+        ) as pending_mock, patch(
+            "app.heatmap.service.run_bulk_evaluation",
+        ) as run_bulk_mock, patch(
+            "app.heatmap.service.load_current_dataset",
+            return_value=dataset,
+        ):
+            result = run_heatmap(scenario, rerun=False)
+
+        self.assertIs(result, dataset)
+        pending_mock.assert_not_called()
+        self.assertEqual(
+            run_bulk_mock.call_args.kwargs["dest_list"],
+            ["Manaus, AM", "Belem, PA", "Rio Branco, AC"],
+        )
+        self.assertTrue(run_bulk_mock.call_args.kwargs["include_port_ops"])
 
 
 if __name__ == "__main__":

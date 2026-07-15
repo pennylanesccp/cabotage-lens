@@ -353,6 +353,7 @@ def prepare_evaluation_context(
     port_ops_scenario: str = DEFAULT_PORT_OPS_SCENARIO,
     port_ops_params_path: Optional[Path] = None,
     bunker_price_brl_mt: float = 3500.0,
+    bunker_price_override_brl_mt: Optional[float] = None,
 ) -> PreparedEvaluationContext:
     """Prepare scenario-wide evaluator inputs once for reuse across many destinations."""
     hoteling_hours_total = max(float(hoteling_hours_per_call), 0.0) * max(int(port_calls), 0)
@@ -391,7 +392,11 @@ def prepare_evaluation_context(
         truck_spec=get_truck_spec(truck_key),
         diesel_lookup=diesel_lookup,
         diesel_price_override=diesel_price_override,
-        bunker_price_ton=float(get_bunker_price(default_price_brl_mt=bunker_price_brl_mt)),
+        bunker_price_ton=(
+            float(bunker_price_override_brl_mt)
+            if bunker_price_override_brl_mt is not None
+            else float(get_bunker_price(default_price_brl_mt=bunker_price_brl_mt))
+        ),
         vessel_eff=vessel_eff,
         hoteling_sel=hoteling_sel,
         port_ops_selection=port_ops_selection,
@@ -438,6 +443,7 @@ def evaluate_path(
     prepared_context: PreparedEvaluationContext | None = None,
     diesel_default_price_r_per_l: float = 6.0,
     diesel_csv_path: Optional[Path] = None,
+    bunker_price_override_brl_mt: Optional[float] = None,
     debug_trace: bool = False,
 ) -> Dict[str, Any]:
     """Assess costs and emissions for a path geometry payload."""
@@ -492,6 +498,7 @@ def evaluate_path(
             include_port_ops=include_port_ops,
             port_ops_scenario=port_ops_scenario,
             port_ops_params_path=port_ops_params_path,
+            bunker_price_override_brl_mt=bunker_price_override_brl_mt,
         )
     except Exception as exc:
         _log.error("Failed to prepare evaluation context: %s", exc)
