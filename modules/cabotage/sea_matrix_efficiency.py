@@ -9,17 +9,20 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from modules.cabotage.sea_matrix import SeaMatrix
 from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SEA_MATRIX_PATH = Path("data/sea_matrix.json")
 DEFAULT_VOYAGES_CSV_PATH = Path("data/processed/cabotage_data/tabular/antaq_voyages.csv")
 DEFAULT_STOPS_CSV_PATH = Path("data/processed/cabotage_data/tabular/antaq_voyage_stops.csv")
 DEFAULT_MRV_JSON_PATH = Path("data/processed/cabotage_data/mrv_average_efficiency_by_imo.json")
 PARSER_VERSION = "sea_matrix_efficiency_v1"
 _KM_PER_NAUTICAL_MILE = 1.852
+DEPLOYMENT_REQUIRED_ROUTE = ("Porto de Santos", "Porto de Manaus")
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,12 @@ def enrich_sea_matrix_with_efficiency(
     matched_pairs_only: bool = True,
     prefer_local_voyage_inputs: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    sea_matrix_resolved = resolve_data_asset_path(sea_matrix_path)
+    sea_matrix_candidate = Path(sea_matrix_path)
+    sea_matrix_resolved = (
+        sea_matrix_candidate.resolve()
+        if sea_matrix_candidate.is_file()
+        else resolve_data_asset_path(sea_matrix_candidate)
+    )
     mrv_resolved = resolve_data_asset_path(mrv_json_path)
     if prefer_local_voyage_inputs:
         voyages_resolved = Path(voyages_csv_path).resolve()
@@ -102,14 +110,16 @@ def enrich_sea_matrix_with_efficiency(
         "possible_pairs_only": bool(possible_pairs_only),
         "matched_pairs_only": bool(matched_pairs_only),
         "inputs": {
-            "sea_matrix_path": str(Path(sea_matrix_resolved)),
-            "voyages_csv_path": str(Path(voyages_resolved)),
-            "stops_csv_path": str(Path(stops_resolved)),
-            "mrv_json_path": str(Path(mrv_resolved)),
+            "sea_matrix_path": _metadata_input_path(sea_matrix_path),
+            "voyages_csv_path": _metadata_input_path(voyages_csv_path),
+            "stops_csv_path": _metadata_input_path(stops_csv_path),
+            "mrv_json_path": _metadata_input_path(mrv_json_path),
         },
         "segment_summary": segment_meta,
         "possible_pairs_summary": possible_pairs_meta,
     }
+
+    validate_enriched_sea_matrix_payload(payload)
 
     summary = {
         "directional_pairs": sum(len(v) for v in directional_stats.values()),
@@ -129,16 +139,111 @@ def write_enriched_sea_matrix(
     *,
     output_path: Path | str = DEFAULT_SEA_MATRIX_PATH,
 ) -> Path:
+    validate_enriched_sea_matrix_payload(payload)
     target = Path(output_path).resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return target
 
 
+def validate_enriched_sea_matrix_payload(
+    payload: dict[str, Any],
+    *,
+    required_route: tuple[str, str] | None = None,
+) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("Sea matrix payload must be a JSON object.")
+
+    sea_matrix = SeaMatrix.from_json_dict(payload)
+    usable_distance_pairs = sum(
+        1
+        for origin, destinations in sea_matrix.matrix.items()
+        for destination, distance_km in destinations.items()
+        if _norm(origin) != _norm(destination) and _float_or_none(distance_km) is not None
+        and float(distance_km) > 0.0
+    )
+    if usable_distance_pairs <= 0:
+        raise ValueError("Sea matrix payload contains no usable positive port-pair distances.")
+
+    usable_directional_pairs = sum(
+        1
+        for destinations in sea_matrix.directional_efficiency.values()
+        for stats in destinations.values()
+        if _float_or_none(stats.get("distance_km")) is not None
+        and float(stats["distance_km"]) > 0.0
+        and _float_or_none(stats.get("fuel_g_per_tnm_weighted_mean")) is not None
+        and float(stats["fuel_g_per_tnm_weighted_mean"]) > 0.0
+    )
+    if usable_directional_pairs <= 0:
+        raise ValueError(
+            "Sea matrix payload contains no usable ANTAQ+MRV directional efficiency pairs."
+        )
+
+    result: dict[str, Any] = {
+        "usable_distance_pairs": usable_distance_pairs,
+        "usable_directional_pairs": usable_directional_pairs,
+    }
+    if required_route is None:
+        return result
+
+    origin, destination = required_route
+    stats = sea_matrix.best_directional_stats(origin, destination)
+    if not stats:
+        raise ValueError(
+            f"Sea matrix payload has no usable ANTAQ+MRV directional route for "
+            f"{origin} -> {destination}."
+        )
+
+    required_positive_fields = (
+        "segment_count",
+        "matched_segment_count",
+        "unique_imo_count",
+        "matched_imo_count",
+        "match_rate_segments",
+        "match_rate_tonne_nm",
+    )
+    missing_coverage = [
+        field
+        for field in required_positive_fields
+        if _float_or_none(stats.get(field)) is None or float(stats[field]) <= 0.0
+    ]
+    if missing_coverage:
+        raise ValueError(
+            f"Sea matrix directional route {origin} -> {destination} is missing positive "
+            f"segment/IMO coverage fields: {', '.join(missing_coverage)}."
+        )
+
+    result["required_route"] = {
+        "origin": origin,
+        "destination": destination,
+        "distance_km": stats.get("distance_km"),
+        "fuel_g_per_tnm_weighted_mean": stats.get("fuel_g_per_tnm_weighted_mean"),
+        "segment_count": stats.get("segment_count"),
+        "matched_segment_count": stats.get("matched_segment_count"),
+        "unique_imo_count": stats.get("unique_imo_count"),
+        "matched_imo_count": stats.get("matched_imo_count"),
+        "match_rate_segments": stats.get("match_rate_segments"),
+        "match_rate_tonne_nm": stats.get("match_rate_tonne_nm"),
+        "corridor_leg_count": stats.get("corridor_leg_count"),
+        "corridor_port_path": stats.get("corridor_port_path"),
+    }
+    return result
+
+
 def _load_csv_rows(path: Path | str) -> list[dict[str, str]]:
     resolved = Path(path)
     with resolved.open("r", encoding="utf-8-sig", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def _metadata_input_path(path: Path | str) -> str:
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        return candidate.as_posix()
+    try:
+        return candidate.resolve().relative_to(_REPO_ROOT).as_posix()
+    except ValueError:
+        return str(candidate)
 
 
 def _load_latest_imo_efficiency(path: Path | str) -> dict[str, float]:

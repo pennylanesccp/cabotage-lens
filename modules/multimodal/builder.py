@@ -152,7 +152,9 @@ def load_routing_assets(
     sea_cache_before = _cached_sea_matrix.cache_info()
     ors = _cached_ors_client(ors_keys, locationiq_keys)
     ports = _cached_ports(str(resolved_ports_path))
-    sea_matrix = _cached_sea_matrix(str(resolved_sea_matrix_path))
+    # Keep the canonical local path as the cache key so SeaMatrix can reject an
+    # invalid remote/cache asset and fall back to the tracked local artifact.
+    sea_matrix = _cached_sea_matrix(str(s_json))
     if debug_trace:
         ports_cache_after = _cached_ports.cache_info()
         sea_cache_after = _cached_sea_matrix.cache_info()

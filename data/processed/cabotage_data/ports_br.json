@@ -323,7 +323,14 @@
         "state": "AM",
         "lat": -3.1567,
         "lon": -60.0079,
-        "aliases": ["Manaus", "BRMAO"],
+        "aliases": [
+          "Manaus",
+          "BRMAO",
+          "Porto Chibatão",
+          "Super Terminais Comércio e Indústria",
+          "BRAM006",
+          "BRAM012"
+        ],
         "gates": []
     },
     {

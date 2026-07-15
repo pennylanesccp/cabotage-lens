@@ -10,6 +10,10 @@ from io import StringIO
 from pathlib import Path
 from typing import Any, Iterable
 
+from modules.cabotage.sea_matrix_efficiency import (
+    DEPLOYMENT_REQUIRED_ROUTE,
+    validate_enriched_sea_matrix_payload,
+)
 from modules.infra.data_assets import build_data_assets_client, load_data_assets_settings
 from modules.infra.log_manager import get_logger
 
@@ -17,6 +21,7 @@ _log = get_logger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_DATA_ROOT = _REPO_ROOT / "data"
+_CANONICAL_SEA_MATRIX_OBJECT_PATH = "data/sea_matrix.json"
 _CARGA_PATTERN = re.compile(r"^data/raw/cabotage_data/(?P<year>\d{4})Carga\.txt$")
 _CARGA_COLUMNS = (
     "IDAtracacao",
@@ -150,6 +155,26 @@ def build_upload_plan(
             transformed = True
         else:
             payload = source_path.read_bytes()
+
+        if object_path == _CANONICAL_SEA_MATRIX_OBJECT_PATH:
+            try:
+                sea_matrix_payload = json.loads(payload.decode("utf-8-sig"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise ValueError(
+                    f"Canonical sea matrix is not valid JSON: {source_path}"
+                ) from exc
+            validation = validate_enriched_sea_matrix_payload(
+                sea_matrix_payload,
+                required_route=DEPLOYMENT_REQUIRED_ROUTE,
+            )
+            _log.info(
+                "Validated canonical sea matrix before sync path=%s distances=%s "
+                "directional_pairs=%s required_route=%s",
+                source_path,
+                validation["usable_distance_pairs"],
+                validation["usable_directional_pairs"],
+                validation["required_route"],
+            )
 
         storage_object_path = object_path
         if len(payload) > max_file_size_bytes:

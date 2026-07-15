@@ -164,10 +164,36 @@ class SeaMatrix:
     @classmethod
     def from_json_path(cls, path: Path | str) -> "SeaMatrix":
         resolved = resolve_data_asset_path(path)
+        try:
+            return cls._from_resolved_json_path(resolved)
+        except ValueError:
+            local_path = Path(path).resolve()
+            if resolved.resolve() == local_path or not local_path.is_file():
+                raise
+
+            _log.warning(
+                "Rejected invalid resolved sea matrix asset=%s; falling back to local asset=%s",
+                resolved,
+                local_path,
+            )
+            return cls._from_resolved_json_path(local_path)
+
+    @classmethod
+    def _from_resolved_json_path(cls, resolved: Path) -> "SeaMatrix":
         with resolved.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
         _log.debug("SeaMatrix loaded from %s", resolved)
-        return cls.from_json_dict(payload)
+        sea_matrix = cls.from_json_dict(payload)
+        has_usable_distance = any(
+            _norm(origin) != _norm(destiny) and _positive_float(distance_km) is not None
+            for origin, destinations in sea_matrix.matrix.items()
+            for destiny, distance_km in destinations.items()
+        )
+        if not has_usable_distance:
+            raise ValueError(
+                f"Sea matrix asset contains no usable positive port-pair distances: {resolved}"
+            )
+        return sea_matrix
 
     def size(self) -> int:
         return len(self._canon)

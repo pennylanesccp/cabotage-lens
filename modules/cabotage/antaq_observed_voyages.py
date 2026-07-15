@@ -248,7 +248,11 @@ def _read_atracacao_map(years: list[str], raw_root: Path) -> dict[str, Any]:
             mapping[id_atracacao] = {
                 "id_atracacao": id_atracacao,
                 "year": year,
-                "imo": get_field(fields, "n_do_imo").strip(),
+                # The real ANTAQ header `Nº do IMO` normalizes to `no_do_imo`.
+                "imo": (
+                    get_field(fields, "no_do_imo")
+                    or get_field(fields, "n_do_imo")
+                ).strip(),
                 "atracacao_at": _parse_antaq_date(get_field(fields, "data_atracacao")),
                 "chegada_at": _parse_antaq_date(get_field(fields, "data_chegada")),
                 "desatracacao_at": _parse_antaq_date(get_field(fields, "data_desatracacao")),

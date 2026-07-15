@@ -151,7 +151,7 @@ Upload `data/` to the Supabase Storage data bucket:
   --dry-run
 ```
 
-The uploader preserves the `data/...` object layout in Storage and filters ANTAQ `YYYYCarga.txt` files down to the rows and columns used by the codebase before upload.
+The uploader preserves the `data/...` object layout in Storage and filters ANTAQ `YYYYCarga.txt` files down to the rows and columns used by the codebase before upload. Before synchronizing the canonical `data/sea_matrix.json`, it rejects empty artifacts and verifies that Santos–Manaus has a usable ANTAQ+MRV directional route with segment and IMO coverage.
 
 Materialize the observed ANTAQ voyages JSON into flat tables:
 
@@ -171,7 +171,7 @@ Enrich the repository sea matrix with directional MRV fuel-per-transport-work av
   --output-json .\data\sea_matrix.json
 ```
 
-The enricher preserves the existing `matrix` block and appends directional KPI stats under a new top-level section. When the ANTAQ tabular CSVs or MRV lookup JSON are missing locally, it can resolve them from the configured Supabase Storage data bucket.
+The enricher preserves the existing `matrix` block and appends directional KPI stats under a new top-level section. An explicitly available local matrix is always used as the base, preventing an invalid remote cache from overwriting it. When the ANTAQ tabular CSVs or MRV lookup JSON are missing locally, it can resolve them from the configured Supabase Storage data bucket.
 By default it also prunes the `matrix` down to port pairs observed in ANTAQ with at least one usable MRV KPI match; pass `--keep-unmatched-pairs` to keep ANTAQ-observed pairs without MRV coverage, or `--keep-all-matrix-pairs` to retain the full original matrix.
 
 ## Logging

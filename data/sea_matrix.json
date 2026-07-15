@@ -267,7 +267,11 @@
       "slug": "porto-manaus",
       "slug_candidates": [
         "porto-manaus",
-        "porto-brmao"
+        "porto-brmao",
+        "porto-chibatao",
+        "super-terminais-comercio-e-industria",
+        "porto-bram006",
+        "porto-bram012"
       ],
       "lat": -3.1567,
       "lon": -60.0079
@@ -1146,6 +1150,27 @@
     }
   },
   "voyage_fuel_g_per_tnm_directional": {
+    "Porto de Fortaleza": {
+      "Porto de Manaus": {
+        "distance_km": 2991.0,
+        "distance_nm": 1615.011,
+        "fuel_g_per_tnm_weighted_mean": 10.212235,
+        "fuel_g_per_tnm_mean": 14.846667,
+        "fuel_g_per_tnm_median": 6.29,
+        "segment_count": 4,
+        "matched_segment_count": 3,
+        "voyage_count": 4,
+        "matched_voyage_count": 3,
+        "unique_imo_count": 3,
+        "matched_imo_count": 2,
+        "cargo_weight_t_total": 3000.671,
+        "cargo_weight_t_matched_total": 2521.949,
+        "tonne_nm_total": 4846116.07,
+        "tonne_nm_matched_total": 4072974.87,
+        "match_rate_segments": 0.75,
+        "match_rate_tonne_nm": 0.840462
+      }
+    },
     "Porto de Imbituba": {
       "Porto de Itajaí": {
         "distance_km": 172.0,
@@ -1244,44 +1269,6 @@
       }
     },
     "Porto de Itaguaí": {
-      "Porto de Itajaí": {
-        "distance_km": 678.0,
-        "distance_nm": 366.091,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 1,
-        "matched_segment_count": 0,
-        "voyage_count": 1,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 1,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 932.25,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 341288.067,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
-      },
-      "Porto de Paranaguá": {
-        "distance_km": 596.0,
-        "distance_nm": 321.814,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 1,
-        "matched_segment_count": 0,
-        "voyage_count": 1,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 1,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 2161.686,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 695661.369,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
-      },
       "Porto de Salvador": {
         "distance_km": 1506.0,
         "distance_nm": 813.175,
@@ -1338,25 +1325,6 @@
         "tonne_nm_matched_total": 8572410.151,
         "match_rate_segments": 0.333333,
         "match_rate_tonne_nm": 0.304717
-      },
-      "Porto do Rio de Janeiro": {
-        "distance_km": 167.0,
-        "distance_nm": 90.173,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 5,
-        "matched_segment_count": 0,
-        "voyage_count": 4,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 3,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 13944.971,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 1257456.888,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
       }
     },
     "Porto de Itajaí": {
@@ -1473,6 +1441,103 @@
         "tonne_nm_matched_total": 174091.134,
         "match_rate_segments": 0.333333,
         "match_rate_tonne_nm": 0.073293
+      }
+    },
+    "Porto de Manaus": {
+      "Porto de Fortaleza": {
+        "distance_km": 2991.0,
+        "distance_nm": 1615.011,
+        "fuel_g_per_tnm_weighted_mean": 13.308417,
+        "fuel_g_per_tnm_mean": 15.315714,
+        "fuel_g_per_tnm_median": 7.94,
+        "segment_count": 9,
+        "matched_segment_count": 7,
+        "voyage_count": 9,
+        "matched_voyage_count": 7,
+        "unique_imo_count": 5,
+        "matched_imo_count": 4,
+        "cargo_weight_t_total": 5602.358,
+        "cargo_weight_t_matched_total": 4596.592,
+        "tonne_nm_total": 9047868.671,
+        "tonne_nm_matched_total": 7423545.719,
+        "match_rate_segments": 0.777778,
+        "match_rate_tonne_nm": 0.820475
+      },
+      "Porto de Itajaí": {
+        "distance_km": 6425.0,
+        "distance_nm": 3469.222,
+        "fuel_g_per_tnm_weighted_mean": 7.43,
+        "fuel_g_per_tnm_mean": 7.43,
+        "fuel_g_per_tnm_median": 7.43,
+        "segment_count": 1,
+        "matched_segment_count": 1,
+        "voyage_count": 1,
+        "matched_voyage_count": 1,
+        "unique_imo_count": 1,
+        "matched_imo_count": 1,
+        "cargo_weight_t_total": 28371.231,
+        "cargo_weight_t_matched_total": 28371.231,
+        "tonne_nm_total": 98426111.866,
+        "tonne_nm_matched_total": 98426111.866,
+        "match_rate_segments": 1.0,
+        "match_rate_tonne_nm": 1.0
+      },
+      "Porto de Paranaguá": {
+        "distance_km": 6353.0,
+        "distance_nm": 3430.346,
+        "fuel_g_per_tnm_weighted_mean": 7.43,
+        "fuel_g_per_tnm_mean": 7.43,
+        "fuel_g_per_tnm_median": 7.43,
+        "segment_count": 2,
+        "matched_segment_count": 1,
+        "voyage_count": 2,
+        "matched_voyage_count": 1,
+        "unique_imo_count": 2,
+        "matched_imo_count": 1,
+        "cargo_weight_t_total": 7048.056,
+        "cargo_weight_t_matched_total": 4458.356,
+        "tonne_nm_total": 24177267.693,
+        "tonne_nm_matched_total": 15293701.765,
+        "match_rate_segments": 0.5,
+        "match_rate_tonne_nm": 0.632565
+      },
+      "Porto de Santos": {
+        "distance_km": 6112.0,
+        "distance_nm": 3300.216,
+        "fuel_g_per_tnm_weighted_mean": 8.199808,
+        "fuel_g_per_tnm_mean": 8.224,
+        "fuel_g_per_tnm_median": 8.19,
+        "segment_count": 21,
+        "matched_segment_count": 10,
+        "voyage_count": 21,
+        "matched_voyage_count": 10,
+        "unique_imo_count": 9,
+        "matched_imo_count": 3,
+        "cargo_weight_t_total": 173490.386,
+        "cargo_weight_t_matched_total": 79893.015,
+        "tonne_nm_total": 572555744.726,
+        "tonne_nm_matched_total": 263664205.011,
+        "match_rate_segments": 0.47619,
+        "match_rate_tonne_nm": 0.460504
+      },
+      "Porto de Suape": {
+        "distance_km": 3790.0,
+        "distance_nm": 2046.436,
+        "fuel_g_per_tnm_weighted_mean": 5.520251,
+        "fuel_g_per_tnm_mean": 5.864444,
+        "fuel_g_per_tnm_median": 5.41,
+        "segment_count": 30,
+        "matched_segment_count": 9,
+        "voyage_count": 20,
+        "matched_voyage_count": 2,
+        "unique_imo_count": 9,
+        "matched_imo_count": 2,
+        "cargo_weight_t_total": 302254.06,
+        "cargo_weight_t_matched_total": 137922.587,
+        "tonne_nm_total": 618543675.702,
+        "tonne_nm_matched_total": 282249786.571,
+        "match_rate_segments": 0.3,
+        "match_rate_tonne_nm": 0.456313
       }
     },
     "Porto de Paranaguá": {
@@ -1725,25 +1790,6 @@
         "match_rate_segments": 0.210526,
         "match_rate_tonne_nm": 0.143229
       },
-      "Porto de Vitória": {
-        "distance_km": 893.0,
-        "distance_nm": 482.181,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 5,
-        "matched_segment_count": 0,
-        "voyage_count": 5,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 5,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 4358.27,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 2101476.841,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
-      },
       "Porto do Rio Grande": {
         "distance_km": 2738.0,
         "distance_nm": 1478.402,
@@ -1898,25 +1944,6 @@
         "match_rate_segments": 0.565217,
         "match_rate_tonne_nm": 0.51153
       },
-      "Porto de Vitória": {
-        "distance_km": 889.0,
-        "distance_nm": 480.022,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 7,
-        "matched_segment_count": 0,
-        "voyage_count": 7,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 3,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 42536.021,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 20418208.785,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
-      },
       "Porto do Rio Grande": {
         "distance_km": 1122.0,
         "distance_nm": 605.832,
@@ -1994,6 +2021,25 @@
         "tonne_nm_matched_total": 3452162.025,
         "match_rate_segments": 1.0,
         "match_rate_tonne_nm": 1.0
+      },
+      "Porto de Manaus": {
+        "distance_km": 3790.0,
+        "distance_nm": 2046.436,
+        "fuel_g_per_tnm_weighted_mean": 7.43,
+        "fuel_g_per_tnm_mean": 7.43,
+        "fuel_g_per_tnm_median": 7.43,
+        "segment_count": 7,
+        "matched_segment_count": 3,
+        "voyage_count": 7,
+        "matched_voyage_count": 3,
+        "unique_imo_count": 5,
+        "matched_imo_count": 1,
+        "cargo_weight_t_total": 59378.728,
+        "cargo_weight_t_matched_total": 35446.622,
+        "tonne_nm_total": 121514783.542,
+        "tonne_nm_matched_total": 72539253.445,
+        "match_rate_segments": 0.428571,
+        "match_rate_tonne_nm": 0.596958
       },
       "Porto de Paranaguá": {
         "distance_km": 2573.0,
@@ -2110,84 +2156,6 @@
         "tonne_nm_matched_total": 1086468.985,
         "match_rate_segments": 1.0,
         "match_rate_tonne_nm": 1.0
-      }
-    },
-    "Porto de Vitória": {
-      "Porto de Itaguaí": {
-        "distance_km": 648.0,
-        "distance_nm": 349.892,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 17,
-        "matched_segment_count": 0,
-        "voyage_count": 17,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 14,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 86892.656,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 30403045.944,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
-      },
-      "Porto de Salvador": {
-        "distance_km": 893.0,
-        "distance_nm": 482.181,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 4,
-        "matched_segment_count": 0,
-        "voyage_count": 4,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 3,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 20180.239,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 9730536.408,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
-      },
-      "Porto de Santos": {
-        "distance_km": 889.0,
-        "distance_nm": 480.022,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 46,
-        "matched_segment_count": 0,
-        "voyage_count": 40,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 3,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 154228.526,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 74033023.55,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
-      },
-      "Porto do Rio de Janeiro": {
-        "distance_km": 522.0,
-        "distance_nm": 281.857,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 27,
-        "matched_segment_count": 0,
-        "voyage_count": 27,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 5,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 87136.048,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 24559944.415,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
       }
     },
     "Porto do Rio Grande": {
@@ -2402,25 +2370,6 @@
         "match_rate_segments": 0.466667,
         "match_rate_tonne_nm": 0.54182
       },
-      "Porto de Vitória": {
-        "distance_km": 522.0,
-        "distance_nm": 281.857,
-        "fuel_g_per_tnm_weighted_mean": null,
-        "fuel_g_per_tnm_mean": null,
-        "fuel_g_per_tnm_median": null,
-        "segment_count": 39,
-        "matched_segment_count": 0,
-        "voyage_count": 39,
-        "matched_voyage_count": 0,
-        "unique_imo_count": 2,
-        "matched_imo_count": 0,
-        "cargo_weight_t_total": 169667.775,
-        "cargo_weight_t_matched_total": 0,
-        "tonne_nm_total": 47822126.647,
-        "tonne_nm_matched_total": 0,
-        "match_rate_segments": 0.0,
-        "match_rate_tonne_nm": 0.0
-      },
       "Porto do Rio Grande": {
         "distance_km": 1398.0,
         "distance_nm": 754.86,
@@ -2444,25 +2393,28 @@
   },
   "voyage_fuel_g_per_tnm_directional_meta": {
     "parser_version": "sea_matrix_efficiency_v1",
-    "generated_at": "2026-03-27T17:36:32.892598+00:00",
+    "generated_at": "2026-07-15T20:28:30.356574+00:00",
     "source": "ANTAQ voyage stop pairs + latest positive MRV fuel per transport work by IMO",
     "weighting": "tonne_nm",
     "segment_cargo_rule": "cumulative net cargo after each stop, applied to the following leg",
+    "possible_pairs_only": false,
+    "matched_pairs_only": true,
     "inputs": {
-      "sea_matrix_path": "data/sea_matrix.json",
-      "voyages_csv_path": ".cache/supabase_data/data/processed/cabotage_data/tabular/antaq_voyages.csv",
-      "stops_csv_path": ".cache/supabase_data/data/processed/cabotage_data/tabular/antaq_voyage_stops.csv",
-      "mrv_json_path": ".cache/supabase_data/data/processed/cabotage_data/mrv_average_efficiency_by_imo.json"
+      "sea_matrix_path": "data/processed/cabotage_data/sea_matrix.json",
+      "voyages_csv_path": "data/processed/cabotage_data/tabular/antaq_voyages.csv",
+      "stops_csv_path": "data/processed/cabotage_data/tabular/antaq_voyage_stops.csv",
+      "mrv_json_path": "data/processed/cabotage_data/mrv_average_efficiency_by_imo.json"
     },
     "segment_summary": {
       "candidate_segments": 5473,
       "positive_cargo_segments": 3457,
-      "mapped_segments": 1650,
-      "matched_segments": 960,
+      "mapped_segments": 1738,
+      "matched_segments": 994,
       "skipped_nonpositive_cargo_segments": 2016,
-      "skipped_unmapped_port_segments": 1807,
+      "skipped_unmapped_port_segments": 1719,
       "skipped_missing_distance_segments": 0,
-      "imo_match_rate_on_mapped_segments": 0.581818
-    }
+      "imo_match_rate_on_mapped_segments": 0.571922
+    },
+    "possible_pairs_summary": null
   }
 }

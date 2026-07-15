@@ -23,9 +23,11 @@ from modules.cabotage.antaq_voyage_tables import (
     write_tables_to_disk,
 )
 from modules.cabotage.sea_matrix_efficiency import (
+    DEPLOYMENT_REQUIRED_ROUTE,
     DEFAULT_MRV_JSON_PATH,
     DEFAULT_SEA_MATRIX_PATH,
     enrich_sea_matrix_with_efficiency,
+    validate_enriched_sea_matrix_payload,
     write_enriched_sea_matrix,
 )
 from modules.infra.data_bucket_sync import build_upload_plan, execute_upload_plan
@@ -199,6 +201,10 @@ def refresh_antaq_pipeline(
         possible_pairs_only=not bool(keep_all_matrix_pairs),
         matched_pairs_only=not bool(keep_unmatched_pairs),
         prefer_local_voyage_inputs=True,
+    )
+    sea_matrix_summary["deployment_validation"] = validate_enriched_sea_matrix_payload(
+        enriched_payload,
+        required_route=DEPLOYMENT_REQUIRED_ROUTE,
     )
     resolved_sea_matrix_path = write_enriched_sea_matrix(
         enriched_payload,
