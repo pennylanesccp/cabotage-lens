@@ -222,7 +222,7 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertEqual(surface.very_sparse_cell_count, 1)
         self.assertEqual(surface.skipped_far_cells, 0)
 
-    def test_build_surface_excludes_triangle_beyond_very_sparse_cap(self) -> None:
+    def test_build_surface_connects_triangle_beyond_previous_very_sparse_cap(self) -> None:
         dataset = self._dataset()
         mock_cells = (
             (
@@ -238,15 +238,13 @@ class HeatmapSurfaceTests(unittest.TestCase):
         ), patch(
             "app.heatmap.surface.HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM",
             120.0,
-        ), patch(
-            "app.heatmap.surface.HEATMAP_SURFACE_VERY_SPARSE_MAX_KM",
-            130.0,
         ):
             surface = build_surface(dataset, "emissions")
 
-        self.assertEqual(surface.cells, [])
-        self.assertEqual(surface.excluded_triangle_count, 1)
-        self.assertEqual(surface.skipped_far_cells, 1)
+        self.assertEqual(len(surface.cells), 1)
+        self.assertEqual(surface.cells[0].interpolation_quality, "very_sparse")
+        self.assertEqual(surface.excluded_triangle_count, 0)
+        self.assertEqual(surface.skipped_far_cells, 0)
 
     def test_build_surface_3d_places_negative_values_below_zero_plane(self) -> None:
         dataset = self._dataset()

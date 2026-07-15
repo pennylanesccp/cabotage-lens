@@ -19,7 +19,6 @@ from app.heatmap.config import (
     HEATMAP_METRICS,
     HEATMAP_PAGE_TITLE,
     HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM,
-    HEATMAP_SURFACE_VERY_SPARSE_MAX_KM,
 )
 from app.heatmap.map import render_heatmap_map
 from app.heatmap.surface import build_surface
@@ -51,7 +50,7 @@ _HEATMAP_METRIC_FIELD = "heatmap_color_metric"
 _HEATMAP_METRIC_STATE_VERSION_FIELD = "_heatmap_metric_state_version"
 _HEATMAP_METRIC_STATE_VERSION = 3
 _HEATMAP_POINT_STATE_VERSION_FIELD = "_heatmap_point_state_version"
-_HEATMAP_POINT_STATE_VERSION = 1
+_HEATMAP_POINT_STATE_VERSION = 2
 _HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD = "_heatmap_route_audit_signature"
 _RUN_LOG_HEIGHT_PX = 260
 
@@ -65,10 +64,10 @@ def _init_page_state() -> None:
     else:
         st.session_state.setdefault(_HEATMAP_METRIC_FIELD, HEATMAP_DEFAULT_METRIC)
     if st.session_state.get(_HEATMAP_POINT_STATE_VERSION_FIELD) != _HEATMAP_POINT_STATE_VERSION:
-        st.session_state["heatmap_show_points"] = True
+        st.session_state["heatmap_show_points"] = False
         st.session_state[_HEATMAP_POINT_STATE_VERSION_FIELD] = _HEATMAP_POINT_STATE_VERSION
     else:
-        st.session_state.setdefault("heatmap_show_points", True)
+        st.session_state.setdefault("heatmap_show_points", False)
     st.session_state.setdefault("heatmap_log_route_audit", False)
     st.session_state.setdefault("heatmap_dataset", None)
     st.session_state.setdefault("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID)
@@ -529,8 +528,8 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
                 (
                     f"Very sparse coverage fills {surface.very_sparse_cell_count} frontier cells supported by only "
                     f"{surface.very_sparse_triangle_count} national-scale triangles above "
-                    f"{HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM:,.0f} km, capped at "
-                    f"{HEATMAP_SURFACE_VERY_SPARSE_MAX_KM:,.0f} km. These cells are intentionally more "
+                    f"{HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM:,.0f} km. There is no hard distance cap, so all "
+                    "valid destination points remain connected. These cells are intentionally more "
                     "transparent and must not be interpreted as local city-level precision."
                 )
             )

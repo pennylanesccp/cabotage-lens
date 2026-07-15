@@ -72,7 +72,7 @@ class HeatmapPageTests(unittest.TestCase):
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_ORIGIN_FIELD], DEFAULT_ORIGIN)
         self.assertEqual(fake_streamlit.session_state["heatmap_cargo"], float(DEFAULTS["cargo_t"]))
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_METRIC_FIELD], "emissions")
-        self.assertTrue(fake_streamlit.session_state["heatmap_show_points"])
+        self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
         self.assertFalse(fake_streamlit.session_state["heatmap_log_route_audit"])
         self.assertEqual(fake_streamlit.session_state["heatmap_destination_set_id"], "city_dests_over50k.txt")
 
@@ -99,10 +99,10 @@ class HeatmapPageTests(unittest.TestCase):
     def test_emissions_is_the_first_color_metric_option(self) -> None:
         self.assertEqual(page.HEATMAP_METRICS[0], "emissions")
 
-    def test_init_page_state_enables_points_once_for_legacy_sessions(self) -> None:
+    def test_init_page_state_disables_points_once_for_legacy_sessions(self) -> None:
         fake_streamlit = SimpleNamespace(
             session_state={
-                "heatmap_show_points": False,
+                "heatmap_show_points": True,
                 page._HEATMAP_POINT_STATE_VERSION_FIELD: 0,
             }
         )
@@ -110,13 +110,13 @@ class HeatmapPageTests(unittest.TestCase):
         with patch.object(page, "st", fake_streamlit):
             page._init_page_state()
 
-        self.assertTrue(fake_streamlit.session_state["heatmap_show_points"])
-        fake_streamlit.session_state["heatmap_show_points"] = False
+        self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
+        fake_streamlit.session_state["heatmap_show_points"] = True
 
         with patch.object(page, "st", fake_streamlit):
             page._init_page_state()
 
-        self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
+        self.assertTrue(fake_streamlit.session_state["heatmap_show_points"])
 
     def test_render_dataset_builds_and_renders_surface(self) -> None:
         dataset = self._empty_dataset()

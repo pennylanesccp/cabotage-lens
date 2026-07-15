@@ -29,7 +29,6 @@ from app.heatmap.config import (
     HEATMAP_SURFACE_MAX_ELEVATION_M,
     HEATMAP_SURFACE_SPARSE_ALPHA,
     HEATMAP_SURFACE_VERY_SPARSE_ALPHA,
-    HEATMAP_SURFACE_VERY_SPARSE_MAX_KM,
 )
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
 
@@ -700,13 +699,8 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         triangle
         for triangle in prepared_triangles
         if float(triangle[8]) > float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM)
-        and float(triangle[8]) <= float(HEATMAP_SURFACE_VERY_SPARSE_MAX_KM)
     )
-    excluded_triangles = tuple(
-        triangle
-        for triangle in prepared_triangles
-        if float(triangle[8]) > float(HEATMAP_SURFACE_VERY_SPARSE_MAX_KM)
-    )
+    excluded_triangles: tuple[_PreparedTriangle, ...] = tuple()
 
     if len(value_samples) < 3 or len(hull_polygon) < 3 or not prepared_triangles or not hull_cells:
         return HeatmapSurface(
@@ -876,7 +870,7 @@ def _log_surface_audit(
             "prepared_triangles=%d dense_triangles=%d sparse_triangles=%d very_sparse_triangles=%d excluded_triangles=%d "
             "dense_cells=%d sparse_cells=%d very_sparse_cells=%d source_cells=%d "
             "skipped_far_cells=%d skipped_outside_boundary_cells=%d dense_limit_km=%.1f sparse_limit_km=%.1f "
-            "very_sparse_limit_km=%.1f detailed_routes=%s"
+            "very_sparse_limit_km=unbounded detailed_routes=%s"
         ),
         metric,
         int(source_points),
@@ -895,7 +889,6 @@ def _log_surface_audit(
         int(skipped_outside_cells),
         float(dense_limit_km),
         float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM),
-        float(HEATMAP_SURFACE_VERY_SPARSE_MAX_KM),
         detailed,
     )
     for uf, routes in sorted(by_uf.items()):
@@ -951,10 +944,8 @@ def _log_surface_audit(
             continue
         if edge_km <= float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM):
             quality = "sparse"
-        elif edge_km <= float(HEATMAP_SURFACE_VERY_SPARSE_MAX_KM):
-            quality = "very_sparse"
         else:
-            quality = "excluded_far"
+            quality = "very_sparse"
         vertices = [geometry_samples[index] for index in triangle[:3]]
         _log.debug(
             "Heatmap interpolation triangle quality=%s max_edge_km=%.1f vertices=%s",
