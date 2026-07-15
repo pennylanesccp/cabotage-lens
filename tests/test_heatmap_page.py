@@ -72,8 +72,6 @@ class HeatmapPageTests(unittest.TestCase):
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_ORIGIN_FIELD], DEFAULT_ORIGIN)
         self.assertEqual(fake_streamlit.session_state["heatmap_cargo"], float(DEFAULTS["cargo_t"]))
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_METRIC_FIELD], "emissions")
-        self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
-        self.assertFalse(fake_streamlit.session_state["heatmap_log_route_audit"])
         self.assertEqual(fake_streamlit.session_state["heatmap_destination_set_id"], "city_dests_over50k.txt")
 
     def test_init_page_state_does_not_reuse_legacy_cost_metric(self) -> None:
@@ -99,29 +97,31 @@ class HeatmapPageTests(unittest.TestCase):
     def test_emissions_is_the_first_color_metric_option(self) -> None:
         self.assertEqual(page.HEATMAP_METRICS[0], "emissions")
 
-    def test_init_page_state_disables_points_once_for_legacy_sessions(self) -> None:
+    def test_current_scenario_ignores_legacy_advanced_state(self) -> None:
         fake_streamlit = SimpleNamespace(
             session_state={
-                "heatmap_show_points": True,
-                page._HEATMAP_POINT_STATE_VERSION_FIELD: 0,
+                page._HEATMAP_ORIGIN_FIELD: "Pelotas, RS",
+                "heatmap_cargo": 30.0,
+                "include_port_ops": False,
+                "truck_key": "legacy-truck",
+                "vessel_class": "legacy-vessel",
+                "allocation_mode": "dwt_share",
             }
         )
 
         with patch.object(page, "st", fake_streamlit):
-            page._init_page_state()
+            scenario = page._current_scenario()
 
-        self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
-        fake_streamlit.session_state["heatmap_show_points"] = True
-
-        with patch.object(page, "st", fake_streamlit):
-            page._init_page_state()
-
-        self.assertTrue(fake_streamlit.session_state["heatmap_show_points"])
+        self.assertTrue(scenario.include_port_ops)
+        self.assertEqual(scenario.truck_key, str(DEFAULTS["truck_key"]))
+        self.assertEqual(scenario.vessel_class, page.DEFAULT_VESSEL_CLASS)
+        self.assertIsNone(scenario.allocation_mode)
+        self.assertEqual(scenario.ors_profile, "driving-car")
 
     def test_render_dataset_builds_and_renders_surface(self) -> None:
         dataset = self._empty_dataset()
         fake_streamlit = SimpleNamespace(
-            session_state={"heatmap_show_points": True, "heatmap_log_route_audit": False},
+            session_state={},
             markdown=Mock(),
             radio=Mock(return_value="emissions"),
             caption=Mock(),
@@ -141,24 +141,8 @@ class HeatmapPageTests(unittest.TestCase):
             page._render_dataset(dataset)
 
         build_mock.assert_called_once_with(dataset, "emissions", log_route_details=False)
-        render_mock.assert_called_once_with(dataset, "emissions", show_points=True, surface=surface)
+        render_mock.assert_called_once_with(dataset, "emissions", show_points=False, surface=surface)
         diagnostics_mock.assert_called_once_with(dataset, surface)
-
-    def test_route_audit_reemits_after_log_level_changes(self) -> None:
-        dataset = self._empty_dataset()
-        fake_streamlit = SimpleNamespace(
-            session_state={"heatmap_log_route_audit": True, "log_level": "INFO"}
-        )
-
-        with patch.object(page, "st", fake_streamlit):
-            self.assertTrue(page._should_log_route_audit(dataset, "emissions"))
-            self.assertFalse(page._should_log_route_audit(dataset, "emissions"))
-            fake_streamlit.session_state["log_level"] = "DEBUG"
-            self.assertTrue(page._should_log_route_audit(dataset, "emissions"))
-            fake_streamlit.session_state["heatmap_log_route_audit"] = False
-            self.assertFalse(page._should_log_route_audit(dataset, "emissions"))
-            fake_streamlit.session_state["heatmap_log_route_audit"] = True
-            self.assertTrue(page._should_log_route_audit(dataset, "emissions"))
 
     def test_clear_loaded_dataset_if_stale_resets_cached_dataset_when_destination_set_changes(self) -> None:
         scenario = HeatmapScenario(

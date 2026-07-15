@@ -7,15 +7,13 @@ import pandas as pd
 import streamlit as st
 
 from modules.infra.log_manager import get_logger
-from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS, list_vessel_classes
-from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
+from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS
+from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO
 
 from app.heatmap.config import (
-    HEATMAP_COORDINATE_PRECISION,
     HEATMAP_DEFAULT_METRIC,
     HEATMAP_DESTINATION_SET_ID,
     heatmap_destination_label,
-    list_heatmap_destination_sets,
     HEATMAP_METRICS,
     HEATMAP_PAGE_TITLE,
     HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM,
@@ -40,7 +38,6 @@ from app.main.run_feedback import (
     status_card as _shared_status_card,
 )
 from app.main.styles import inject_css
-from app.main.utils.antaq import run_antaq_refresh_for_app
 from app.main.utils.constants import DEFAULT_ORIGIN, DEFAULTS
 from app.main.utils.state import attach_streamlit_logging, init_state
 
@@ -49,9 +46,6 @@ _HEATMAP_ORIGIN_FIELD = "heatmap_origin"
 _HEATMAP_METRIC_FIELD = "heatmap_color_metric"
 _HEATMAP_METRIC_STATE_VERSION_FIELD = "_heatmap_metric_state_version"
 _HEATMAP_METRIC_STATE_VERSION = 3
-_HEATMAP_POINT_STATE_VERSION_FIELD = "_heatmap_point_state_version"
-_HEATMAP_POINT_STATE_VERSION = 2
-_HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD = "_heatmap_route_audit_signature"
 _RUN_LOG_HEIGHT_PX = 260
 
 
@@ -63,23 +57,8 @@ def _init_page_state() -> None:
         st.session_state[_HEATMAP_METRIC_STATE_VERSION_FIELD] = _HEATMAP_METRIC_STATE_VERSION
     else:
         st.session_state.setdefault(_HEATMAP_METRIC_FIELD, HEATMAP_DEFAULT_METRIC)
-    if st.session_state.get(_HEATMAP_POINT_STATE_VERSION_FIELD) != _HEATMAP_POINT_STATE_VERSION:
-        st.session_state["heatmap_show_points"] = False
-        st.session_state[_HEATMAP_POINT_STATE_VERSION_FIELD] = _HEATMAP_POINT_STATE_VERSION
-    else:
-        st.session_state.setdefault("heatmap_show_points", False)
-    st.session_state.setdefault("heatmap_log_route_audit", False)
     st.session_state.setdefault("heatmap_dataset", None)
-    st.session_state.setdefault("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID)
-
-
-def _normalize_choice(session_key: str, valid_options: Iterable[str], default_value: str) -> None:
-    options = list(valid_options)
-    if not options:
-        st.session_state[session_key] = default_value
-        return
-    if st.session_state.get(session_key) not in options:
-        st.session_state[session_key] = default_value if default_value in options else options[0]
+    st.session_state["heatmap_destination_set_id"] = HEATMAP_DESTINATION_SET_ID
 
 
 def _optional_positive_float(value: Any) -> float | None:
@@ -91,24 +70,23 @@ def _optional_positive_float(value: Any) -> float | None:
 
 
 def _current_scenario() -> HeatmapScenario:
-    allocation_mode = str(st.session_state.get("allocation_mode", "auto")).strip().lower()
     return HeatmapScenario(
         origin_name=str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
         cargo_t=float(st.session_state.get("heatmap_cargo", float(DEFAULTS["cargo_t"]))),
-        truck_key=str(st.session_state.get("truck_key", "")),
+        truck_key=str(DEFAULTS["truck_key"]),
         ors_profile="driving-car",
-        vessel_class=str(st.session_state.get("vessel_class", "")),
-        include_hoteling=bool(st.session_state.get("include_hoteling", True)),
-        hoteling_hours_per_call=float(st.session_state.get("hoteling_hours_per_call", 14.0)),
-        port_calls=int(st.session_state.get("port_calls", 2)),
-        include_port_ops=bool(st.session_state.get("include_port_ops", True)),
-        port_moves_per_call=_optional_positive_float(st.session_state.get("port_moves_per_call_input", 0.0)),
-        cargo_teu=_optional_positive_float(st.session_state.get("cargo_teu_input", 0.0)),
-        t_per_teu_default=max(float(st.session_state.get("t_per_teu_default", 14.0)), 0.1),
-        allocation_mode=(None if allocation_mode == "auto" else allocation_mode),
-        allocation_load_factor=min(max(float(st.session_state.get("allocation_load_factor", 0.8)), 0.01), 1.0),
-        full_call_mode=bool(st.session_state.get("full_call_mode", False)),
-        port_ops_scenario=str(st.session_state.get("port_ops_scenario", "")),
+        vessel_class=DEFAULT_VESSEL_CLASS,
+        include_hoteling=bool(DEFAULTS["include_hoteling"]),
+        hoteling_hours_per_call=float(DEFAULTS["hoteling_hours_per_call"]),
+        port_calls=int(DEFAULTS["port_calls"]),
+        include_port_ops=True,
+        port_moves_per_call=_optional_positive_float(DEFAULTS["port_moves_per_call_input"]),
+        cargo_teu=_optional_positive_float(DEFAULTS["cargo_teu_input"]),
+        t_per_teu_default=float(DEFAULTS["t_per_teu_default"]),
+        allocation_mode=None,
+        allocation_load_factor=float(DEFAULTS["allocation_load_factor"]),
+        full_call_mode=bool(DEFAULTS["full_call_mode"]),
+        port_ops_scenario=DEFAULT_PORT_OPS_SCENARIO,
     )
 
 
@@ -235,19 +213,6 @@ def _render_live_run_logs(log_box: Any) -> None:
     _shared_render_live_run_logs(log_box)
 
 
-def _render_antaq_refresh_status(summary: dict[str, Any] | None) -> None:
-    status = summary.get("app_refresh_status") if isinstance(summary, dict) else None
-    if not isinstance(status, dict):
-        return
-    message = str(status.get("message") or "").strip()
-    if not message:
-        return
-    if status.get("ok") is False:
-        st.warning(message)
-    elif status.get("used_local_raw_fallback"):
-        st.info(message)
-
-
 def _inject_run_feedback_css() -> None:
     _shared_inject_run_feedback_css()
 
@@ -274,19 +239,16 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
         horizontal=True,
         key=_HEATMAP_METRIC_FIELD,
     )
-    show_points = bool(st.session_state.get("heatmap_show_points", True))
-
-    log_route_details = _should_log_route_audit(dataset, metric)
     surface = build_surface(
         dataset,
         metric,
-        log_route_details=log_route_details,
+        log_route_details=False,
     )
     diagnostics = dataset.diagnostics
     render_heatmap_map(
         dataset,
         metric,
-        show_points=show_points,
+        show_points=False,
         surface=surface,
     )
     st.caption(
@@ -303,100 +265,6 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
             "not represent additional routed cities or local city-level precision."
         )
     _render_dataset_diagnostics(dataset, surface)
-
-
-def _should_log_route_audit(dataset: HeatmapDataset, metric: str) -> bool:
-    if not bool(st.session_state.get("heatmap_log_route_audit", False)):
-        st.session_state.pop(_HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD, None)
-        return False
-    signature = (id(dataset), str(metric), str(st.session_state.get("log_level", "INFO")).upper())
-    if st.session_state.get(_HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD) == signature:
-        return False
-    st.session_state[_HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD] = signature
-    return True
-
-
-def _route_coverage_table(dataset: HeatmapDataset) -> pd.DataFrame:
-    coordinate_counts: dict[tuple[float, float], int] = {}
-    for point in dataset.points:
-        key = (
-            round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
-            round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
-        )
-        coordinate_counts[key] = coordinate_counts.get(key, 0) + 1
-
-    return pd.DataFrame(
-        [
-            {
-                "destination": point.destiny_name,
-                "uf": point.destiny_uf,
-                "latitude": round(float(point.destiny_lat), 6),
-                "longitude": round(float(point.destiny_lon), 6),
-                "rows_at_coordinate": coordinate_counts[
-                    (
-                        round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
-                        round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
-                    )
-                ],
-                "destination_port": point.port_destiny_name,
-                "road_km": point.road_distance_km,
-                "sea_km": point.sea_km,
-                "road_emissions_kg": point.road_emissions_kg,
-                "multimodal_emissions_kg": point.multimodal_emissions_kg,
-                "emissions_delta_kg": point.emissions_delta_kg,
-            }
-            for point in sorted(
-                dataset.points,
-                key=lambda item: (str(item.destiny_uf or ""), item.destiny_name.casefold()),
-            )
-        ]
-    )
-
-
-def _uf_coverage_table(dataset: HeatmapDataset) -> pd.DataFrame:
-    grouped: dict[str, list[Any]] = {}
-    for point in dataset.points:
-        grouped.setdefault(str(point.destiny_uf or "<none>"), []).append(point)
-    return pd.DataFrame(
-        [
-            {
-                "uf": uf,
-                "route_rows": len(points),
-                "unique_coordinates": len(
-                    {
-                        (
-                            round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
-                            round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
-                        )
-                        for point in points
-                    }
-                ),
-                "duplicate_coordinate_rows": len(points)
-                - len(
-                    {
-                        (
-                            round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
-                            round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
-                        )
-                        for point in points
-                    }
-                ),
-            }
-            for uf, points in sorted(grouped.items())
-        ]
-    )
-
-
-def _missing_destination_table(dataset: HeatmapDataset) -> pd.DataFrame:
-    return pd.DataFrame(
-        [
-            {
-                "destination": destination,
-                "uf": destination.rsplit(",", 1)[1].strip().upper() if "," in destination else "<none>",
-            }
-            for destination in dataset.diagnostics.selected_missing_destinations
-        ]
-    )
 
 
 def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface) -> None:
@@ -542,21 +410,6 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
             st.caption(
                 f"Cells without an accepted supporting triangle remain excluded: {surface.skipped_far_cells}."
             )
-        if bool(st.session_state.get("heatmap_log_route_audit", False)):
-            st.markdown("#### Detailed route coverage audit")
-            st.caption(
-                "These are stored destination result summaries, not full route polylines. "
-                "Every result currently supplied to the map is listed below. "
-                "Use `rows_at_coordinate` to identify aliases or destinations collapsed onto the same map point."
-            )
-            st.dataframe(_uf_coverage_table(dataset), hide_index=True, width="stretch")
-            if diagnostics.selected_missing_destinations:
-                st.caption(
-                    f"Destinations not currently plotted in the selected set: "
-                    f"{len(diagnostics.selected_missing_destinations)}."
-                )
-                st.dataframe(_missing_destination_table(dataset), hide_index=True, width="stretch", height=320)
-            st.dataframe(_route_coverage_table(dataset), hide_index=True, width="stretch", height=440)
         if loaded_from_route_cache:
             st.caption(
                 "This page reused the normalized routes cache and recalculated evaluation outputs in memory; it did not call routing providers or overwrite the routes cache."
@@ -573,37 +426,17 @@ def render_page() -> None:
     inject_css()
     _inject_run_feedback_css()
 
-    class_options = list(list_vessel_classes())
-    _normalize_choice("vessel_class", class_options, DEFAULT_VESSEL_CLASS)
-    _normalize_choice("allocation_mode", ["auto", "teu_share", "dwt_share"], "auto")
-    try:
-        st.session_state.allocation_load_factor = min(max(float(st.session_state.allocation_load_factor), 0.01), 1.0)
-    except (TypeError, ValueError):
-        st.session_state.allocation_load_factor = 0.8
-    port_ops_scenarios = list(list_port_ops_scenarios())
-    _normalize_choice("port_ops_scenario", port_ops_scenarios, DEFAULT_PORT_OPS_SCENARIO)
-
     attach_streamlit_logging(
         level=str(st.session_state.log_level),
         archive_to_storage=bool(st.session_state.archive_logs),
     )
 
-    destination_set_id = str(st.session_state.get("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID))
-    destination_set_options = list(list_heatmap_destination_sets())
-    if destination_set_id not in destination_set_options:
-        destination_set_options = sorted(set(destination_set_options + [destination_set_id]))
-
-    render_sidebar(
-        origin_field_key=_HEATMAP_ORIGIN_FIELD,
-        destination_set_options=destination_set_options,
-        class_options=class_options,
-        port_ops_scenarios=port_ops_scenarios,
-    )
+    render_sidebar(origin_field_key=_HEATMAP_ORIGIN_FIELD)
 
     _render_header()
 
     scenario = _current_scenario()
-    destination_set_id = str(st.session_state.get("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID))
+    destination_set_id = HEATMAP_DESTINATION_SET_ID
     _clear_loaded_dataset_if_stale(scenario, destination_set_id)
 
     if location_is_loading(_HEATMAP_ORIGIN_FIELD):
@@ -720,10 +553,6 @@ def render_page() -> None:
         status_box.markdown(_status_card("Starting run missing...", tone="info"), unsafe_allow_html=True)
         _render_live_run_logs(log_box)
         try:
-            if bool(st.session_state.get("refresh_antaq_before_run", False)):
-                _render_antaq_refresh_status(
-                    run_antaq_refresh_for_app(progress_callback=progress_callback)
-                )
             dataset = run_heatmap(
                 scenario,
                 rerun=False,
@@ -767,10 +596,6 @@ def render_page() -> None:
         status_box.markdown(_status_card("Starting rerun...", tone="info"), unsafe_allow_html=True)
         _render_live_run_logs(log_box)
         try:
-            if bool(st.session_state.get("refresh_antaq_before_run", False)):
-                _render_antaq_refresh_status(
-                    run_antaq_refresh_for_app(progress_callback=progress_callback)
-                )
             dataset = rerun_heatmap(
                 scenario,
                 progress_callback=progress_callback,

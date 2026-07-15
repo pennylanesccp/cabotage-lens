@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Iterable, Tuple
+from typing import Tuple
 
 import streamlit as st
 
 from app.access import render_logout_control
-from app.heatmap.config import heatmap_destination_label
 from app.main.sidebar.branding import render_sidebar_brand
-from modules.fuel.truck_specs import list_truck_keys
 
 from app.main.sidebar.filters import (
     LOCATION_RESOLUTION_POLL_SECONDS,
@@ -20,28 +18,22 @@ from app.main.sidebar.filters import (
     sync_location_resolution,
 )
 from app.main.sidebar.styles import apply_sidebar_styles
-from app.main.utils.antaq import antaq_refresh_label
 from app.main.utils.formatters import clean_place_label
 
 
 def render_sidebar(
     *,
     origin_field_key: str,
-    destination_set_options: list[str],
-    class_options: Iterable[str],
-    port_ops_scenarios: Iterable[str],
 ) -> None:
     with st.sidebar:
         render_sidebar_brand()
         st.markdown("<p class='sidebar-section-label'>Heatmap scenario</p>", unsafe_allow_html=True)
         _render_origin_field(origin_field_key)
         st.number_input("Cargo (t)", min_value=0.0, step=0.5, format="%g", key="heatmap_cargo")
-        with st.expander("Advanced", expanded=False):
-            _render_advanced(
-                destination_set_options=destination_set_options,
-                class_options=class_options,
-                port_ops_scenarios=port_ops_scenarios,
-            )
+        st.caption(
+            "Fixed methodology: driving-car routing, default truck and vessel assumptions, with hoteling and port "
+            "operations included. Existing road-route cache entries are never overwritten."
+        )
 
 
 def render_run_actions(*, has_origin: bool, has_loaded_dataset: bool) -> Tuple[bool, bool, bool]:
@@ -106,108 +98,3 @@ def _render_origin_field(field_name: str) -> None:
             st.rerun()
 
     _poll_origin_resolution()
-
-
-def _render_advanced(
-    *,
-    destination_set_options: Iterable[str],
-    class_options: Iterable[str],
-    port_ops_scenarios: Iterable[str],
-) -> None:
-    st.checkbox(
-        "Show destination points",
-        key="heatmap_show_points",
-        help="Overlay the source destination-city points for hover inspection.",
-    )
-
-    _section_label("Routing")
-    st.session_state["profile"] = "driving-car"
-    st.caption("Heatmap routing is locked to `driving-car` with 5s provider timeouts and no HTTP retries.")
-    st.caption("Routes cache is never overwritten from the heatmap page.")
-
-    _section_label("Road")
-    st.selectbox("Truck", options=sorted(list_truck_keys()), key="truck_key")
-
-    _section_label("Maritime")
-    st.selectbox("Vessel class", options=list(class_options), key="vessel_class")
-    st.selectbox("Allocation mode", options=["auto", "teu_share", "dwt_share"], key="allocation_mode")
-    st.number_input(
-        "TEU load factor",
-        min_value=0.01,
-        max_value=1.0,
-        step=0.05,
-        key="allocation_load_factor",
-        disabled=(st.session_state.allocation_mode == "dwt_share"),
-    )
-
-    _section_label("Port")
-    st.number_input("Cargo (TEU, optional)", min_value=0.0, step=1.0, key="cargo_teu_input")
-    st.checkbox("Include hoteling", key="include_hoteling")
-    st.number_input("Hoteling hours per call", min_value=0.0, step=1.0, key="hoteling_hours_per_call")
-    st.number_input("Port calls per voyage", min_value=0, step=1, key="port_calls")
-    st.checkbox("Include port ops", key="include_port_ops")
-    st.checkbox("Full-call mode (terminal-level)", key="full_call_mode")
-    st.number_input("Tonnes per TEU default", min_value=0.1, step=0.5, key="t_per_teu_default")
-    st.number_input(
-        "Port moves per call override (0 uses defaults)",
-        min_value=0.0,
-        step=1.0,
-        key="port_moves_per_call_input",
-    )
-    st.selectbox("Port ops scenario", options=list(port_ops_scenarios), key="port_ops_scenario")
-
-    _section_label("App")
-    st.checkbox(
-        "Detailed route coverage audit",
-        key="heatmap_log_route_audit",
-        help=(
-            "Write one INFO record per stored destination result the next time this dataset is rendered; "
-            "shared coordinates are included at INFO and interpolation triangles at DEBUG. The audit runs once "
-            "per dataset and metric, and the accepted/missing lists also appear in the diagnostics tables."
-        ),
-    )
-    st.selectbox(
-        "Run scope destination set",
-        options=list(destination_set_options),
-        key="heatmap_destination_set_id",
-        format_func=heatmap_destination_label,
-        help="This file only scopes Run missing and Rerun all. The rendered heatmap surface still uses all stored points for the selected origin and cargo.",
-    )
-    st.checkbox(
-        antaq_refresh_label(),
-        key="refresh_antaq_before_run",
-        help=(
-            "Before running the heatmap pipeline, refresh ANTAQ raw files from 2020 through the latest year, "
-            "rebuild voyage tables, update the sea matrix, and sync the data bucket when configured."
-        ),
-    )
-    st.text_input(
-        "Database target",
-        value=str(st.session_state.get("db_target_str", "")),
-        help="Shows the active Supabase Postgres target configured through Streamlit secrets.",
-        disabled=True,
-    )
-    st.selectbox("Log level", options=["INFO", "DEBUG", "WARNING", "ERROR"], key="log_level")
-    st.checkbox(
-        "Archive logs to Supabase",
-        key="archive_logs",
-        help="Local runs always append logs under ./logs. This toggle controls Supabase Storage archival when credentials are configured.",
-    )
-    if st.session_state.get("write_local_logs", False):
-        local_path = st.session_state.get("local_log_path")
-        if local_path:
-            st.caption(f"Local file logging is active: `{local_path}`")
-        else:
-            st.caption("Local file logging is active for this session under ./logs.")
-    if st.session_state.get("effective_archive_logs", False):
-        archive_path = st.session_state.get("archive_log_path")
-        if archive_path:
-            st.caption(f"Supabase archival is active: `{archive_path}`")
-    policy_message = st.session_state.get("logging_policy_message")
-    if policy_message:
-        st.caption(str(policy_message))
-    st.slider("Debug log lines", min_value=50, max_value=1000, step=50, key="log_last_n")
-
-
-def _section_label(title: str) -> None:
-    st.markdown(f"<p class='sidebar-section-label'>{title}</p>", unsafe_allow_html=True)
