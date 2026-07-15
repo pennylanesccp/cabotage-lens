@@ -113,7 +113,7 @@ def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     runtime_defaults["db_target_str"] = str(resolve_runtime_db_target())
     runtime_defaults["runtime_environment"] = runtime_environment
     runtime_defaults["log_level"] = validated_log_level(
-        runtime_defaults.get("log_level", "INFO"),
+        secret_value("LOG_LEVEL", runtime_defaults.get("log_level", "INFO")),
         default=str(runtime_defaults.get("log_level", "INFO")),
     )
     runtime_defaults["archive_logs"] = bool_from_any(

@@ -234,6 +234,60 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
 
         self.assertEqual(prepared_result, plain_result)
 
+    def test_single_eval_debug_trace_reports_calculation_sources(self) -> None:
+        context = evaluator.PreparedEvaluationContext(
+            truck_spec={"axles": 5, "payload_t": 27.0, "ref_weight_t": 20.0, "empty_efficiency_gain": 0.18},
+            diesel_lookup=DieselPriceLookup(
+                source_csv="diesel.csv",
+                default_price_r_per_l=6.0,
+                uf_to_price={"SP": 6.12, "RJ": 6.15},
+                row_count=2,
+            ),
+            diesel_price_override=None,
+            bunker_price_ton=2572.34,
+            vessel_eff=self._fake_vessel(),
+            hoteling_sel=None,
+            port_ops_selection=None,
+        )
+        path_data = self._path_data()
+        path_data["road_direct"]["source"] = "cache"
+        path_data["first_mile"]["source"] = "ors"
+        path_data["last_mile"]["source"] = "locationiq"
+        path_data["sea_leg"].update(
+            {
+                "source": "directional_direct",
+                "fuel_g_per_tnm": 10.5,
+                "fuel_g_per_tnm_source": "sea_matrix_directional_weighted_mean",
+            }
+        )
+
+        with patch.object(
+            evaluator,
+            "estimate_leg_liters",
+            side_effect=self._estimate_leg_liters,
+        ), self.assertLogs("modules.multimodal.evaluator", level="DEBUG") as captured:
+            result = evaluator.evaluate_path(
+                path_data,
+                cargo_t=30.0,
+                truck_key="semi_27t",
+                include_hoteling=False,
+                include_port_ops=False,
+                prepared_context=context,
+                debug_trace=True,
+            )
+
+        self.assertTrue(result)
+        trace_text = "\n".join(captured.output)
+        self.assertIn("stage=diesel_price status=complete source=latest_diesel_prices_csv", trace_text)
+        self.assertIn("stage=calculate_road_direct status=complete source=cache", trace_text)
+        self.assertIn(
+            "stage=calculate_sea_sailing status=complete source=sea_matrix_directional_weighted_mean",
+            trace_text,
+        )
+        self.assertIn("stage=calculate_hoteling status=complete source=disabled_by_user", trace_text)
+        self.assertIn("stage=calculate_port_ops status=complete source=disabled_by_user", trace_text)
+        self.assertIn("stage=evaluation status=complete source=calculated_single_eval_outputs", trace_text)
+
 
 if __name__ == "__main__":
     unittest.main()

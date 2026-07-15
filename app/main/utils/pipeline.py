@@ -12,6 +12,18 @@ _log = get_logger("streamlit_app")
 _ProgressCallback = Callable[[dict[str, Any]], None]
 
 
+def _trace_single(stage: str, status: str, source: str, **details: Any) -> None:
+    detail_text = " ".join(f"{key}={value!r}" for key, value in details.items())
+    suffix = f" {detail_text}" if detail_text else ""
+    _log.debug(
+        "single_eval stage=%s status=%s source=%s%s",
+        stage,
+        status,
+        source,
+        suffix,
+    )
+
+
 def build_scenario_payload(session_state: Mapping[str, Any]) -> Dict[str, Any]:
     cargo_teu_value = float(session_state.get("cargo_teu_input", 0.0))
     t_per_teu_default = max(float(session_state.get("t_per_teu_default", 14.0)), 0.1)
@@ -78,6 +90,22 @@ def run_analysis(
             }
         )
 
+    _trace_single(
+        "request",
+        "start",
+        "streamlit_session_state",
+        origin=payload["origin"],
+        destiny=payload["destiny"],
+        cargo_t=payload["cargo_t"],
+        cargo_teu=payload["cargo_teu"],
+        truck_key=payload["truck_key"],
+        ors_profile=payload["ors_profile"],
+        vessel_class=payload["vessel_class"],
+        allocation_mode=payload["allocation_mode"] or "auto",
+        include_hoteling=payload["include_hoteling"],
+        include_port_ops=payload["include_port_ops"],
+        observed_port_ops_count=len(payload.get("port_ops_observed_ports") or []),
+    )
     _log.info(
         (
             "Single analysis start origin=%s destiny=%s cargo_t=%.3f truck=%s profile=%s "
@@ -93,18 +121,27 @@ def run_analysis(
     _emit_progress("Preparing router analysis...", current=0)
 
     db_target = resolve_runtime_db_target()
+    _trace_single(
+        "runtime_configuration",
+        "complete",
+        "streamlit_secrets_and_environment",
+        db_target=db_target,
+    )
 
     _emit_progress("Building route geometry...", current=0)
+    _trace_single("geometry", "start", "routing_cache_then_configured_providers")
     geo = build_path_geometry(
         payload["origin"],
         payload["destiny"],
         ors_profile=payload["ors_profile"],
         overwrite_road=payload["overwrite_road"],
         cooldown_callback=progress_callback,
+        debug_trace=True,
     )
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")
         _emit_progress("Failed to build route geometry.", current=0, phase="error")
+        _trace_single("geometry", "failed", "routing_cache_then_configured_providers")
         return None, None, "Failed to build route geometry. Check inputs and API key.", str(db_target)
     _emit_progress("Route geometry ready.", current=1)
 
@@ -122,6 +159,7 @@ def run_analysis(
 
     _log.info("Calculating costs and emissions...")
     _emit_progress("Calculating costs and emissions...", current=1)
+    _trace_single("costs_and_emissions", "start", "geometry_and_tracked_model_inputs")
     results = evaluate_path(
         geo,
         cargo_t=payload["cargo_t"],
@@ -139,17 +177,23 @@ def run_analysis(
         full_call_mode=payload["full_call_mode"],
         port_ops_scenario=payload["port_ops_scenario"],
         port_ops_observed_ports=payload.get("port_ops_observed_ports"),
+        debug_trace=True,
     )
     if not results:
         _log.error("Failed to evaluate route.")
         _emit_progress("Failed to evaluate route.", current=1, phase="error")
+        _trace_single("costs_and_emissions", "failed", "geometry_and_tracked_model_inputs")
         return (
             geo,
             None,
-            "Failed to evaluate route. Ensure the required cabotage data assets are available locally or in Supabase Storage.",
+            (
+                "Failed to evaluate route. Ensure the required cabotage data assets "
+                "are available locally or in Supabase Storage."
+            ),
             str(db_target),
         )
     _emit_progress("Route evaluation completed.", current=2)
+    _trace_single("costs_and_emissions", "complete", "calculated_single_eval_outputs")
 
     comparison = results.get("comparison", {})
     road_only = results.get("road_only", {})
@@ -174,4 +218,14 @@ def run_analysis(
         db_target,
     )
     _emit_progress("Router analysis completed.", current=3, phase="complete")
+    _trace_single(
+        "request",
+        "complete",
+        "single_eval_pipeline",
+        db_target=db_target,
+        road_distance_km=geo["road_direct"].get("distance_km"),
+        sea_distance_km=geo["sea_leg"].get("distance_km"),
+        cost_savings_pct=comparison.get("savings_pct"),
+        emissions_savings_pct=emissions_savings_pct,
+    )
     return geo, results, None, str(db_target)

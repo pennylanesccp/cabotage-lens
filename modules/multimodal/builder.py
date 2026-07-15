@@ -28,6 +28,7 @@ from modules.addressing.coords import parse_lat_lon_string
 from modules.addressing.resolver import resolve_point_null_safe
 from modules.addressing.text import ascii_place_text
 from modules.cabotage.sea_matrix import SeaMatrix
+from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.database_manager import db_session, find_place_point, upsert_place_point
 from modules.infra.log_manager import get_logger
 from modules.multimodal.distance_provenance import build_maritime_distance_provenance
@@ -44,6 +45,19 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_PORTS_JSON = _REPO_ROOT / "data" / "processed" / "cabotage_data" / "ports_br.json"
 _DEFAULT_SEA_MATRIX_JSON = _REPO_ROOT / "data" / "sea_matrix.json"
 _CooldownCallback = Callable[[Dict[str, Any]], None]
+
+
+def _trace_single(stage: str, status: str, source: str, **details: Any) -> None:
+    """Emit one structured DEBUG line for the single-evaluation path."""
+    detail_text = " ".join(f"{key}={value!r}" for key, value in details.items())
+    suffix = f" {detail_text}" if detail_text else ""
+    _log.debug(
+        "single_eval stage=%s status=%s source=%s%s",
+        stage,
+        status,
+        source,
+        suffix,
+    )
 
 
 class Point(TypedDict):
@@ -124,17 +138,38 @@ def load_routing_assets(
     ports_json_path: Optional[Path] = None,
     sea_matrix_path: Optional[Path] = None,
     db_path: Optional[Path | str] = None,
+    debug_trace: bool = False,
 ) -> tuple[ORSClient, list[Dict[str, Any]], SeaMatrix, Optional[Path | str]]:
     """Load reusable routing dependencies for one or many evaluations."""
     p_json = _resolve_path(ports_json_path, _DEFAULT_PORTS_JSON)
     s_json = _resolve_path(sea_matrix_path, _DEFAULT_SEA_MATRIX_JSON)
+    resolved_ports_path = resolve_data_asset_path(p_json).resolve()
+    resolved_sea_matrix_path = resolve_data_asset_path(s_json).resolve()
 
-    ors = _cached_ors_client(
-        tuple(get_configured_ors_api_keys()),
-        tuple(get_configured_locationiq_api_keys()),
-    )
-    ports = _cached_ports(str(p_json))
-    sea_matrix = _cached_sea_matrix(str(s_json))
+    ors_keys = tuple(get_configured_ors_api_keys())
+    locationiq_keys = tuple(get_configured_locationiq_api_keys())
+    ports_cache_before = _cached_ports.cache_info()
+    sea_cache_before = _cached_sea_matrix.cache_info()
+    ors = _cached_ors_client(ors_keys, locationiq_keys)
+    ports = _cached_ports(str(resolved_ports_path))
+    sea_matrix = _cached_sea_matrix(str(resolved_sea_matrix_path))
+    if debug_trace:
+        ports_cache_after = _cached_ports.cache_info()
+        sea_cache_after = _cached_sea_matrix.cache_info()
+        _trace_single(
+            "routing_assets",
+            "complete",
+            "configured_secrets_and_data_assets",
+            ports_path=str(resolved_ports_path),
+            ports_count=len(ports),
+            ports_cache_hit=ports_cache_after.hits > ports_cache_before.hits,
+            sea_matrix_path=str(resolved_sea_matrix_path),
+            sea_matrix_labels=sea_matrix.size(),
+            sea_matrix_cache_hit=sea_cache_after.hits > sea_cache_before.hits,
+            ors_keys_configured=len(ors_keys),
+            locationiq_keys_configured=len(locationiq_keys),
+            db_target="runtime_default" if db_path is None else str(db_path),
+        )
     return ors, ports, sea_matrix, db_path
 
 
@@ -233,20 +268,47 @@ def resolve_point_for_geometry(
     *,
     db_path: Optional[Path | str] = None,
     point_cache: Optional[MutableMapping[str, Point]] = None,
+    debug_trace_label: Optional[str] = None,
 ) -> Optional[Point]:
     """Resolve one origin/destination input into the normalized geometry shape."""
     cache_key = ascii_place_text((value or {}).get("label")) if isinstance(value, dict) else ascii_place_text(value)
     if point_cache is not None and cache_key and cache_key in point_cache:
-        return dict(point_cache[cache_key])
+        point = dict(point_cache[cache_key])
+        if debug_trace_label:
+            _trace_single(
+                f"resolve_{debug_trace_label}",
+                "complete",
+                "in_memory_point_cache",
+                input=cache_key,
+                label=point.get("label"),
+                uf=point.get("uf"),
+            )
+        return point
 
     cached_point = _cached_point_for_geometry(value, db_path=db_path)
     if cached_point is not None:
         if point_cache is not None and cache_key:
             point_cache[cache_key] = dict(cached_point)
+        if debug_trace_label:
+            _trace_single(
+                f"resolve_{debug_trace_label}",
+                "complete",
+                "supabase_location_cache",
+                input=cache_key,
+                label=cached_point.get("label"),
+                uf=cached_point.get("uf"),
+            )
         return cached_point
 
     point = resolve_point_null_safe(value, ors, _log)
     if not point:
+        if debug_trace_label:
+            _trace_single(
+                f"resolve_{debug_trace_label}",
+                "failed",
+                "coordinate_input_or_geocoding_provider",
+                input=cache_key,
+            )
         return None
     resolved_point = {
         "label": ascii_place_text(point.label),
@@ -258,6 +320,25 @@ def resolve_point_for_geometry(
         resolved_point = _persist_point_for_geometry(cache_key, resolved_point, db_path=db_path)
     if point_cache is not None and cache_key:
         point_cache[cache_key] = dict(resolved_point)
+    if debug_trace_label:
+        has_explicit_coordinates = (
+            (hasattr(value, "lat") and hasattr(value, "lon"))
+            or (
+                isinstance(value, dict)
+                and (value.get("lat") or value.get("latitude")) is not None
+                and (value.get("lon") or value.get("longitude")) is not None
+            )
+            or (isinstance(value, str) and parse_lat_lon_string(value) is not None)
+        )
+        _trace_single(
+            f"resolve_{debug_trace_label}",
+            "complete",
+            "explicit_coordinates" if has_explicit_coordinates else "geocoding_provider",
+            input=cache_key,
+            label=resolved_point.get("label"),
+            uf=resolved_point.get("uf"),
+            location_cache_write_requested=bool(cache_key),
+        )
     return resolved_point
 
 
@@ -466,12 +547,14 @@ def build_path_geometry(
     sea_matrix_path: Optional[Path] = None,
     db_path: Optional[Path | str] = None,
     cooldown_callback: Optional[_CooldownCallback] = None,
+    debug_trace: bool = False,
 ) -> Optional[PathGeometry]:
     """Resolve and compute all legs needed for multimodal comparison."""
     ors, ports, sea_matrix, _ = load_routing_assets(
         ports_json_path=ports_json_path,
         sea_matrix_path=sea_matrix_path,
         db_path=db_path,
+        debug_trace=debug_trace,
     )
     previous_cooldown_callback = None
     if hasattr(ors, "set_cooldown_callback"):
@@ -479,9 +562,29 @@ def build_path_geometry(
     if hasattr(ors, "reset_metrics"):
         ors.reset_metrics()
 
+    if debug_trace:
+        _trace_single(
+            "geometry",
+            "start",
+            "single_eval_inputs",
+            origin=origin_input,
+            destiny=destiny_input,
+            ors_profile=ors_profile,
+            overwrite_road=overwrite_road,
+        )
     _log.debug("Resolving endpoints: %r -> %r", origin_input, destiny_input)
-    origin_pt = resolve_point_for_geometry(origin_input, ors, db_path=db_path)
-    destiny_pt = resolve_point_for_geometry(destiny_input, ors, db_path=db_path)
+    origin_pt = resolve_point_for_geometry(
+        origin_input,
+        ors,
+        db_path=db_path,
+        debug_trace_label="origin" if debug_trace else None,
+    )
+    destiny_pt = resolve_point_for_geometry(
+        destiny_input,
+        ors,
+        db_path=db_path,
+        debug_trace_label="destiny" if debug_trace else None,
+    )
 
     if not origin_pt or not destiny_pt:
         _log.error("Failed to geocode one or both endpoints. Aborting geometry build.")
@@ -507,6 +610,43 @@ def build_path_geometry(
 
     if geometry and geometry.get("status") == "ok":
         provider_calls = ors.metrics_snapshot() if hasattr(ors, "metrics_snapshot") else {}
+        if debug_trace:
+            _trace_single(
+                "select_ports",
+                "complete",
+                "ports_data_asset_nearest_port",
+                origin_port=geometry["port_origin"].get("name"),
+                destiny_port=geometry["port_destiny"].get("name"),
+            )
+            for leg_name in ("road_direct", "first_mile", "last_mile"):
+                leg = geometry[leg_name]
+                _trace_single(
+                    leg_name,
+                    "complete",
+                    str(leg.get("source") or "unknown"),
+                    provider=leg.get("provider"),
+                    cached=leg.get("cached"),
+                    profile_requested=leg.get("profile_requested"),
+                    profile_used=leg.get("profile_used"),
+                    distance_km=leg.get("distance_km"),
+                )
+            sea_leg = geometry["sea_leg"]
+            _trace_single(
+                "sea_leg",
+                "complete",
+                str(sea_leg.get("source") or "unknown"),
+                distance_km=sea_leg.get("distance_km"),
+                fuel_g_per_tnm_source=sea_leg.get("fuel_g_per_tnm_source"),
+                corridor_leg_count=sea_leg.get("corridor_leg_count"),
+                corridor_port_path=sea_leg.get("corridor_port_path"),
+            )
+            _trace_single(
+                "geometry",
+                "complete",
+                "resolved_geometry",
+                provider_metrics=provider_calls,
+                route_quality_warning_count=len(geometry.get("route_quality_warnings") or []),
+            )
         _log.info(
             (
                 "Single-route geometry summary origin=%s destiny=%s direct_source=%s "

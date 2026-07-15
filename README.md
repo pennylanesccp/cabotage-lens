@@ -177,7 +177,8 @@ By default it also prunes the `matrix` down to port pairs observed in ANTAQ with
 ## Logging
 
 - Console output is always enabled.
-- `LOG_LEVEL` controls verbosity.
+- `LOG_LEVEL` controls the initial Streamlit verbosity and can still be changed in the app sidebar.
+- With `LOG_LEVEL = "DEBUG"`, single-route evaluations emit structured `single_eval` lines for each routing and calculation stage, including cache/provider or tracked-asset provenance. Bulk evaluation tracing is unchanged.
 - `LOG_ARCHIVE_ENABLED=true` enables Supabase Storage archival.
 - Archived log entries include timestamp, level, module, message, and any bound run or scenario identifiers.
 

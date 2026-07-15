@@ -75,6 +75,29 @@ class StreamlitStateTests(unittest.TestCase):
         self.assertTrue(fake_streamlit.session_state["write_local_logs"])
         self.assertFalse(fake_streamlit.session_state["archive_logs"])
 
+    def test_init_state_uses_configured_log_level(self) -> None:
+        fake_streamlit = SimpleNamespace(session_state={})
+
+        def _secret_value(key, default=None):
+            return "DEBUG" if key == "LOG_LEVEL" else default
+
+        with patch.object(state, "st", fake_streamlit), patch.object(
+            state,
+            "resolve_runtime_db_target",
+            return_value="postgresql://postgres:***@example.supabase.co:5432/postgres",
+        ), patch.object(
+            state,
+            "detect_runtime_environment",
+            return_value="hosted",
+        ), patch.object(
+            state,
+            "secret_value",
+            side_effect=_secret_value,
+        ):
+            state.init_state()
+
+        self.assertEqual(fake_streamlit.session_state["log_level"], "DEBUG")
+
     def test_attach_streamlit_logging_passes_local_log_policy(self) -> None:
         fake_streamlit = SimpleNamespace(
             session_state={

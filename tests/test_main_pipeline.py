@@ -75,10 +75,13 @@ class MainPipelineTests(unittest.TestCase):
             "multimodal": {"total_co2e": 50.0},
         }
 
-        with patch("app.main.utils.pipeline.resolve_runtime_db_target", return_value="local"), patch(
+        with self.assertLogs("streamlit_app", level="DEBUG") as captured, patch(
+            "app.main.utils.pipeline.resolve_runtime_db_target",
+            return_value="local",
+        ), patch(
             "app.main.utils.pipeline.build_path_geometry",
             return_value=geo,
-        ), patch(
+        ) as geometry_mock, patch(
             "app.main.utils.pipeline.evaluate_path",
             return_value=result,
         ) as evaluate_mock:
@@ -88,7 +91,12 @@ class MainPipelineTests(unittest.TestCase):
         self.assertIs(returned_results, result)
         self.assertIsNone(error)
         self.assertEqual(db_target, "local")
+        self.assertTrue(geometry_mock.call_args.kwargs["debug_trace"])
+        self.assertTrue(evaluate_mock.call_args.kwargs["debug_trace"])
         self.assertIs(evaluate_mock.call_args.kwargs["port_ops_observed_ports"], observed)
+        trace_text = "\n".join(captured.output)
+        self.assertIn("single_eval stage=request status=start source=streamlit_session_state", trace_text)
+        self.assertIn("single_eval stage=request status=complete source=single_eval_pipeline", trace_text)
 
 
 if __name__ == "__main__":

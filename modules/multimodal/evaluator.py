@@ -31,7 +31,7 @@ from modules.costs.diesel_prices import (
     get_average_price_from_lookup,
     normalize_uf,
 )
-from modules.costs.ship_fuel_prices import get_bunker_price
+from modules.costs.ship_fuel_prices import DEFAULT_OUTPUT_TXT, get_bunker_price
 from modules.fuel.emissions import get_ef_kg_per_kg
 from modules.fuel.road_fuel_model import estimate_leg_liters
 from modules.fuel.truck_specs import get_truck_spec
@@ -360,11 +360,38 @@ def evaluate_path(
     prepared_context: PreparedEvaluationContext | None = None,
     diesel_default_price_r_per_l: float = 6.0,
     diesel_csv_path: Optional[Path] = None,
+    debug_trace: bool = False,
 ) -> Dict[str, Any]:
     """Assess costs and emissions for a path geometry payload."""
+
+    def _trace(stage: str, status: str, source: str, **details: Any) -> None:
+        if not debug_trace:
+            return
+        detail_text = " ".join(f"{key}={value!r}" for key, value in details.items())
+        suffix = f" {detail_text}" if detail_text else ""
+        _log.debug(
+            "single_eval stage=%s status=%s source=%s%s",
+            stage,
+            status,
+            source,
+            suffix,
+        )
+
     if not path_data or path_data.get("status") != "ok":
         _log.warning("Cannot evaluate invalid path geometry.")
+        _trace("evaluation", "failed", "path_geometry", reason="invalid_geometry")
         return {}
+
+    _trace(
+        "evaluation",
+        "start",
+        "resolved_path_geometry_and_user_scenario",
+        cargo_t=cargo_t,
+        truck_key=truck_key,
+        vessel_class=vessel_class,
+        include_hoteling=include_hoteling,
+        include_port_ops=include_port_ops,
+    )
 
     include_hoteling = bool(include_hoteling)
     include_port_ops = bool(include_port_ops)
@@ -390,12 +417,34 @@ def evaluate_path(
         )
     except Exception as exc:
         _log.error("Failed to prepare evaluation context: %s", exc)
+        _trace("evaluation_context", "failed", "tracked_data_assets", error=str(exc))
         return {}
+
+    _trace(
+        "evaluation_context",
+        "complete",
+        "tracked_parameters_and_data_assets",
+        prepared_context_reused=prepared_context is not None,
+        truck_key=truck_key,
+        vessel_class_requested=context.vessel_eff.requested_class,
+        vessel_class_resolved=context.vessel_eff.vessel_class,
+        vessel_efficiency_path=str(context.vessel_eff.source_path),
+        vessel_sample_size=context.vessel_eff.sample_size,
+        diesel_mode="explicit_override" if context.diesel_price_override is not None else "csv_lookup",
+        diesel_csv_path=None if context.diesel_lookup is None else context.diesel_lookup.source_csv,
+        diesel_row_count=0 if context.diesel_lookup is None else context.diesel_lookup.row_count,
+        bunker_price_brl_mt=context.bunker_price_ton,
+        bunker_price_source="santos_bunker_data_asset_with_default_fallback",
+        bunker_price_configured_path=DEFAULT_OUTPUT_TXT,
+        hoteling_source=None if context.hoteling_sel is None else str(context.hoteling_sel.source_path),
+        port_ops_source=None if context.port_ops_selection is None else str(context.port_ops_selection.source_path),
+    )
 
     try:
         cargo_t = float(cargo_t)
     except (TypeError, ValueError):
         _log.error("Invalid cargo_t for path evaluation: %r", cargo_t)
+        _trace("validate_cargo", "failed", "user_input", cargo_t=cargo_t)
         return {}
 
     calculation_warnings: list[str] = []
@@ -464,6 +513,19 @@ def evaluate_path(
         price_l = float(diesel_meta.get("price_r_per_l", diesel_default_price_r_per_l))
         diesel_source = str(diesel_meta.get("source", "latest_diesel_prices_csv"))
 
+    _trace(
+        "diesel_price",
+        "complete",
+        diesel_source,
+        price_r_per_l=price_l,
+        uf_origin=origin_uf or None,
+        uf_destiny=destiny_uf or None,
+        price_origin=diesel_meta.get("price_origin"),
+        price_destiny=diesel_meta.get("price_destiny"),
+        fallback_used=diesel_meta.get("fallback_used"),
+        csv_path=diesel_meta.get("csv_path") or diesel_meta.get("source_csv"),
+    )
+
     _log.debug(
         (
             "Evaluator inputs: cargo_t=%.3f truck=%s diesel=R$ %.4f/L uf_o=%s uf_d=%s "
@@ -479,17 +541,28 @@ def evaluate_path(
         include_port_ops,
     )
 
-    def _calc_road(leg: Dict[str, Any]) -> Dict[str, Any]:
+    def _calc_road(leg_name: str, leg: Dict[str, Any]) -> Dict[str, Any]:
         dist_raw = leg.get("distance_km")
         dist_km = float(dist_raw) if dist_raw is not None else 0.0
         if dist_km <= 0.0:
-            return {
+            result = {
                 "distance_km": dist_km,
                 "trips": 0,
                 "liters": 0.0,
                 "cost": 0.0,
                 "co2e": 0.0,
             }
+            _trace(
+                f"calculate_{leg_name}",
+                "complete",
+                str(leg.get("source") or "route_geometry"),
+                distance_km=dist_km,
+                trips=0,
+                liters=0.0,
+                cost_brl=0.0,
+                co2e_kg=0.0,
+            )
+            return result
 
         liters, _, _, trips, _, _ = estimate_leg_liters(
             distance_km=dist_km,
@@ -502,17 +575,31 @@ def evaluate_path(
         cost = liters * price_l
         co2e = liters * _DIESEL_EF_KG_CO2E_PER_L
 
-        return {
+        result = {
             "distance_km": dist_km,
             "trips": int(trips),
             "liters": liters,
             "cost": float(cost),
             "co2e": float(co2e),
         }
+        _trace(
+            f"calculate_{leg_name}",
+            "complete",
+            str(leg.get("source") or "route_geometry"),
+            distance_km=dist_km,
+            trips=int(trips),
+            liters=liters,
+            diesel_price_r_per_l=price_l,
+            diesel_emission_factor_kg_co2e_per_l=_DIESEL_EF_KG_CO2E_PER_L,
+            diesel_emission_factor_source="tracked_model_constant",
+            cost_brl=float(cost),
+            co2e_kg=float(co2e),
+        )
+        return result
 
-    res_direct = _calc_road(path_data.get("road_direct", {}))
-    res_first = _calc_road(path_data.get("first_mile", {}))
-    res_last = _calc_road(path_data.get("last_mile", {}))
+    res_direct = _calc_road("road_direct", path_data.get("road_direct", {}))
+    res_first = _calc_road("first_mile", path_data.get("first_mile", {}))
+    res_last = _calc_road("last_mile", path_data.get("last_mile", {}))
 
     route_quality_warnings = [
         dict(item)
@@ -570,6 +657,25 @@ def evaluate_path(
         ship_fuel_kg = sea_dist_nm * vessel_eff.fuel_per_nm
         sea_fuel_sailing_kg = ship_fuel_kg * cargo_share
         sailing_fuel_mode = "vessel_fuel_share_fallback"
+
+    _trace(
+        "calculate_sea_sailing",
+        "complete",
+        str(sea_fuel_g_per_tnm_source or "vessel_class_efficiency_fallback"),
+        distance_km=sea_dist_km,
+        distance_nm=sea_dist_nm,
+        distance_source=sea_leg_data.get("source"),
+        cargo_t=cargo_t,
+        cargo_allocation_mode=allocation_debug.get("allocation_mode_used"),
+        cargo_allocation_share=cargo_share,
+        fuel_g_per_tnm=fuel_g_per_tnm,
+        calculation_mode=sailing_fuel_mode,
+        fuel_kg=sea_fuel_sailing_kg,
+        bunker_price_brl_mt=bunker_price_ton,
+        bunker_price_source="santos_bunker_data_asset_with_default_fallback",
+        marine_emission_factor_kg_co2e_per_kg=_BUNKER_EF_KG_CO2E_PER_KG,
+        marine_emission_factor_source="tracked_fuel_emission_factors",
+    )
 
     hoteling_exclusion_reason: str | None = None
     if hoteling_disabled_for_transport_work:
@@ -630,6 +736,19 @@ def evaluate_path(
         hoteling_fuel_ship_kg = hoteling_hours_total * hoteling_rate_t_per_h * _KG_PER_TONNE
         hoteling_fuel_kg = hoteling_fuel_ship_kg * cargo_share
 
+    _trace(
+        "calculate_hoteling",
+        "complete",
+        hoteling_source_path or hoteling_exclusion_reason or "not_included",
+        requested=include_hoteling,
+        included=hoteling_effective,
+        exclusion_reason=hoteling_exclusion_reason,
+        source_level=hoteling_source_level,
+        basis=hoteling_basis,
+        hours_total=hoteling_hours_total,
+        fuel_kg=hoteling_fuel_kg,
+    )
+
     sea_fuel_marine_kg = sea_fuel_sailing_kg + hoteling_fuel_kg
     sea_cost_marine = (sea_fuel_marine_kg / _KG_PER_TONNE) * bunker_price_ton
     sea_co2e_marine = sea_fuel_marine_kg * _BUNKER_EF_KG_CO2E_PER_KG
@@ -677,11 +796,44 @@ def evaluate_path(
             port_ops_cost_brl = float(totals.get("cost_brl") or 0.0)
         except Exception as exc:
             _log.error("Failed to resolve/evaluate port-ops artifact: %s", exc)
+            _trace("calculate_port_ops", "failed", "port_ops_data_asset", error=str(exc))
             return {}
     elif not include_port_ops:
         port_ops_exclusion_reason = "disabled_by_user"
     elif port_calls <= 0:
         port_ops_exclusion_reason = "zero_activity"
+
+    _trace(
+        "calculate_port_ops",
+        "complete",
+        (
+            str(port_ops_payload.get("source_path") or "port_ops_data_asset")
+            if isinstance(port_ops_payload, dict)
+            else (port_ops_exclusion_reason or "not_included")
+        ),
+        requested=include_port_ops,
+        included=isinstance(port_ops_payload, dict),
+        exclusion_reason=port_ops_exclusion_reason,
+        scenario_requested=port_ops_scenario,
+        scenario_resolved=(
+            None if not isinstance(port_ops_payload, dict) else port_ops_payload.get("resolved_scenario")
+        ),
+        calculation_basis=(
+            None if not isinstance(port_ops_payload, dict) else port_ops_payload.get("calculation_basis")
+        ),
+        source_level=(
+            None if not isinstance(port_ops_payload, dict) else port_ops_payload.get("source_level")
+        ),
+        source_level_counts=(
+            None if not isinstance(port_ops_payload, dict) else port_ops_payload.get("source_level_counts")
+        ),
+        observed_record_count=(
+            0 if not isinstance(port_ops_payload, dict) else port_ops_payload.get("observed_port_ops_record_count")
+        ),
+        fuel_kg=port_ops_fuel_kg,
+        cost_brl=port_ops_cost_brl,
+        co2e_kg=port_ops_co2e_kg,
+    )
 
     sea_fuel_total_kg = sea_fuel_marine_kg + port_ops_fuel_kg
     sea_cost_total = sea_cost_marine + port_ops_cost_brl
@@ -797,6 +949,20 @@ def evaluate_path(
     road_cost = float(res_direct["cost"])
     road_co2e = float(res_direct["co2e"])
 
+    _trace(
+        "evaluation",
+        "complete",
+        "calculated_single_eval_outputs",
+        road_cost_brl=road_cost,
+        road_co2e_kg=road_co2e,
+        multimodal_cost_brl=mm_cost,
+        multimodal_co2e_kg=mm_co2e,
+        delta_cost_brl=mm_cost - road_cost,
+        delta_co2e_kg=mm_co2e - road_co2e,
+        calculation_warning_count=len(calculation_warnings),
+        route_quality_warning_count=len(route_quality_warnings),
+    )
+
     return {
         "inputs": {
             "cargo_t": cargo_t,
@@ -910,7 +1076,9 @@ def evaluate_path(
                 None if not isinstance(port_ops_payload, dict) else port_ops_payload.get("source_level")
             ),
             "port_ops_source_level_counts": (
-                {} if not isinstance(port_ops_payload, dict) else dict(port_ops_payload.get("source_level_counts") or {})
+                {}
+                if not isinstance(port_ops_payload, dict)
+                else dict(port_ops_payload.get("source_level_counts") or {})
             ),
             "port_ops_has_unavailable": port_ops_has_unavailable,
             "port_ops_totals_complete": port_ops_totals_complete,

@@ -197,6 +197,7 @@ def main() -> int:
         args.destiny,
         ors_profile=args.profile,
         overwrite_road=args.overwrite,
+        debug_trace=True,
     )
     if not geo or geo.get("status") != "ok":
         _log.error("Failed to build route geometry.")
@@ -218,6 +219,7 @@ def main() -> int:
         allocation_load_factor=float(args.allocation_load_factor),
         full_call_mode=bool(args.full_call_mode),
         port_ops_scenario=str(args.port_ops_scenario),
+        debug_trace=True,
     )
     if not results:
         _log.error("Failed to evaluate path.")
