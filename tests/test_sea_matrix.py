@@ -112,6 +112,22 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(sea_leg["fuel_g_per_tnm"], expected["fuel_g_per_tnm_weighted_mean"])
         self.assertEqual(sea_leg["matched_segment_count"], expected["matched_segment_count"])
         self.assertEqual(sea_leg["matched_imo_count"], expected["matched_imo_count"])
+        observed_legs = sea_leg["observed_port_pair_legs"]
+        self.assertEqual(len(observed_legs), 2)
+        self.assertEqual(observed_legs[0]["origin_port"], "Porto de Santos")
+        self.assertEqual(observed_legs[0]["destination_port"], "Porto de Suape")
+        self.assertEqual(observed_legs[1]["origin_port"], "Porto de Suape")
+        self.assertEqual(observed_legs[1]["destination_port"], "Porto de Manaus")
+        for observed_leg in observed_legs:
+            self.assertGreater(observed_leg["observed_segment_count"], 0)
+            self.assertGreater(observed_leg["distinct_voyage_count"], 0)
+            self.assertGreater(observed_leg["distinct_imo_count"], 0)
+            self.assertGreater(observed_leg["average_cargo_t"], 0.0)
+            self.assertGreater(observed_leg["distance_nm"], 0.0)
+            self.assertGreater(
+                observed_leg["weighted_fuel_intensity_g_per_tnm"],
+                0.0,
+            )
 
 
 if __name__ == "__main__":

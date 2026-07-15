@@ -232,9 +232,14 @@ class SeaMatrix:
             weighted_mean = _positive_float(direct_stats.get("fuel_g_per_tnm_weighted_mean"))
             distance_km = _positive_float(direct_stats.get("distance_km"))
             if weighted_mean is not None and distance_km is not None:
+                origin = self._resolve_label(a_label)
+                destination = self._resolve_label(b_label)
                 direct_stats["distance_source"] = "directional_direct"
                 direct_stats["corridor_leg_count"] = 1
-                direct_stats["corridor_port_path"] = [self._resolve_label(a_label), self._resolve_label(b_label)]
+                direct_stats["corridor_port_path"] = [origin, destination]
+                direct_stats["observed_port_pair_legs"] = [
+                    self._observed_port_pair_leg(origin, destination, direct_stats)
+                ]
                 return direct_stats
         return self.corridor_stats(a_label, b_label)
 
@@ -390,6 +395,11 @@ class SeaMatrix:
         if distance_nm_total > 0.0:
             weighted_mean = weighted_fuel_distance_total / distance_nm_total
 
+        observed_port_pair_legs = [
+            self._observed_port_pair_leg(origin, destination, stats)
+            for origin, destination, stats in zip(path[:-1], path[1:], edge_stats)
+        ]
+
         return {
             "distance_km": round(distance_km_total, 3),
             "distance_nm": round(distance_nm_total, 3),
@@ -415,6 +425,40 @@ class SeaMatrix:
             "distance_source": "directional_corridor",
             "corridor_leg_count": len(edge_stats),
             "corridor_port_path": list(path),
+            "observed_port_pair_legs": observed_port_pair_legs,
+        }
+
+    @staticmethod
+    def _observed_port_pair_leg(
+        origin: str | None,
+        destination: str | None,
+        stats: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        segment_count = int(stats.get("segment_count") or 0)
+        cargo_total_t = float(stats.get("cargo_weight_t_total") or 0.0)
+        average_cargo_t = cargo_total_t / segment_count if segment_count > 0 else None
+        distance_km = _positive_float(stats.get("distance_km"))
+        distance_nm = _positive_float(stats.get("distance_nm"))
+        if distance_nm is None and distance_km is not None:
+            distance_nm = distance_km / 1.852
+
+        return {
+            "origin_port": origin,
+            "destination_port": destination,
+            "observed_segment_count": segment_count,
+            "matched_segment_count": int(stats.get("matched_segment_count") or 0),
+            "distinct_voyage_count": int(stats.get("voyage_count") or 0),
+            "matched_voyage_count": int(stats.get("matched_voyage_count") or 0),
+            "distinct_imo_count": int(stats.get("unique_imo_count") or 0),
+            "matched_imo_count": int(stats.get("matched_imo_count") or 0),
+            "average_cargo_t": (
+                None if average_cargo_t is None else round(average_cargo_t, 6)
+            ),
+            "distance_km": distance_km,
+            "distance_nm": distance_nm,
+            "weighted_fuel_intensity_g_per_tnm": _positive_float(
+                stats.get("fuel_g_per_tnm_weighted_mean")
+            ),
         }
 
 

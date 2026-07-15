@@ -288,6 +288,75 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         self.assertIn("stage=calculate_port_ops status=complete source=disabled_by_user", trace_text)
         self.assertIn("stage=evaluation status=complete source=calculated_single_eval_outputs", trace_text)
 
+    def test_pipeline_json_reports_observed_port_pair_metrics_for_cargo(self) -> None:
+        context = evaluator.PreparedEvaluationContext(
+            truck_spec={"axles": 5, "payload_t": 27.0, "ref_weight_t": 20.0, "empty_efficiency_gain": 0.18},
+            diesel_lookup=DieselPriceLookup(
+                source_csv="diesel.csv",
+                default_price_r_per_l=6.0,
+                uf_to_price={"SP": 6.12, "RJ": 6.15},
+                row_count=2,
+            ),
+            diesel_price_override=None,
+            bunker_price_ton=2572.34,
+            vessel_eff=self._fake_vessel(),
+            hoteling_sel=None,
+            port_ops_selection=None,
+        )
+        path_data = self._path_data()
+        path_data["sea_leg"].update(
+            {
+                "source": "directional_direct",
+                "fuel_g_per_tnm": 10.5,
+                "fuel_g_per_tnm_source": "sea_matrix_directional_weighted_mean",
+                "observed_port_pair_legs": [
+                    {
+                        "origin_port": "Port A",
+                        "destination_port": "Port B",
+                        "observed_segment_count": 12,
+                        "matched_segment_count": 8,
+                        "distinct_voyage_count": 7,
+                        "matched_voyage_count": 5,
+                        "distinct_imo_count": 3,
+                        "matched_imo_count": 2,
+                        "average_cargo_t": 200.0,
+                        "distance_km": 185.2,
+                        "distance_nm": 100.0,
+                        "weighted_fuel_intensity_g_per_tnm": 10.5,
+                    }
+                ],
+            }
+        )
+
+        with patch.object(
+            evaluator,
+            "estimate_leg_liters",
+            side_effect=self._estimate_leg_liters,
+        ):
+            result = evaluator.evaluate_path(
+                path_data,
+                cargo_t=14.0,
+                truck_key="semi_27t",
+                include_hoteling=False,
+                include_port_ops=False,
+                prepared_context=context,
+            )
+
+        observed_leg = result["multimodal"]["sea"]["observed_port_pair_legs"][0]
+        self.assertEqual(observed_leg["observed_segment_count"], 12)
+        self.assertEqual(observed_leg["distinct_voyage_count"], 7)
+        self.assertEqual(observed_leg["distinct_imo_count"], 3)
+        self.assertEqual(observed_leg["average_cargo_t"], 200.0)
+        self.assertEqual(observed_leg["distance_nm"], 100.0)
+        self.assertEqual(observed_leg["weighted_fuel_intensity_g_per_tnm"], 10.5)
+        self.assertEqual(observed_leg["attributed_cargo_t"], 14.0)
+        self.assertAlmostEqual(observed_leg["attributed_vlsfo_fuel_kg"], 14.7)
+        self.assertAlmostEqual(observed_leg["attributed_co2e_kg"], 45.7758)
+        self.assertEqual(
+            observed_leg["emission_factor_kg_co2e_per_kg_vlsfo"],
+            3.114,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

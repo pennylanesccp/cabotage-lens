@@ -130,6 +130,84 @@ def _positive_float_or_none(value: Any) -> float | None:
     return parsed if parsed > 0.0 else None
 
 
+def _build_observed_port_pair_legs(
+    sea_leg_data: Mapping[str, Any],
+    *,
+    cargo_t: float,
+) -> list[Dict[str, Any]]:
+    """Enrich observed port-pair statistics with scenario cargo attribution."""
+    raw_legs = sea_leg_data.get("observed_port_pair_legs")
+    if not isinstance(raw_legs, list):
+        return []
+
+    attributed_cargo_t = max(float(cargo_t), 0.0)
+    enriched_legs: list[Dict[str, Any]] = []
+    for raw_leg in raw_legs:
+        if not isinstance(raw_leg, Mapping):
+            continue
+
+        distance_nm = _positive_float_or_none(raw_leg.get("distance_nm"))
+        intensity = _positive_float_or_none(
+            raw_leg.get("weighted_fuel_intensity_g_per_tnm")
+        )
+        attributed_fuel_kg = (
+            None
+            if distance_nm is None or intensity is None
+            else intensity * attributed_cargo_t * distance_nm / _KG_PER_TONNE
+        )
+        attributed_co2e_kg = (
+            None
+            if attributed_fuel_kg is None
+            else attributed_fuel_kg * _BUNKER_EF_KG_CO2E_PER_KG
+        )
+
+        enriched_legs.append(
+            {
+                "origin_port": raw_leg.get("origin_port"),
+                "destination_port": raw_leg.get("destination_port"),
+                "observed_segment_count": int(
+                    raw_leg.get("observed_segment_count") or 0
+                ),
+                "distinct_voyage_count": int(
+                    raw_leg.get("distinct_voyage_count") or 0
+                ),
+                "distinct_imo_count": int(raw_leg.get("distinct_imo_count") or 0),
+                "average_cargo_t": _positive_float_or_none(
+                    raw_leg.get("average_cargo_t")
+                ),
+                "distance_nm": distance_nm,
+                "weighted_fuel_intensity_g_per_tnm": intensity,
+                "attributed_cargo_t": attributed_cargo_t,
+                "attributed_vlsfo_fuel_kg": attributed_fuel_kg,
+                "attributed_co2e_kg": attributed_co2e_kg,
+                "emission_factor_kg_co2e_per_kg_vlsfo": (
+                    _BUNKER_EF_KG_CO2E_PER_KG
+                ),
+                "matched_segment_count": int(
+                    raw_leg.get("matched_segment_count") or 0
+                ),
+                "matched_voyage_count": int(
+                    raw_leg.get("matched_voyage_count") or 0
+                ),
+                "matched_imo_count": int(raw_leg.get("matched_imo_count") or 0),
+                "distance_km": _positive_float_or_none(raw_leg.get("distance_km")),
+                "average_cargo_basis": (
+                    "cargo_weight_t_total / observed_segment_count"
+                ),
+                "fuel_attribution_formula": (
+                    "weighted_fuel_intensity_g_per_tnm * attributed_cargo_t "
+                    "* distance_nm / 1000"
+                ),
+                "emissions_formula": (
+                    "attributed_vlsfo_fuel_kg "
+                    "* emission_factor_kg_co2e_per_kg_vlsfo"
+                ),
+            }
+        )
+
+    return enriched_legs
+
+
 def _resolve_cargo_teu(cargo_t: float, cargo_teu: float | None, t_per_teu_default: float) -> int:
     if cargo_teu is not None:
         try:
@@ -658,6 +736,11 @@ def evaluate_path(
         sea_fuel_sailing_kg = ship_fuel_kg * cargo_share
         sailing_fuel_mode = "vessel_fuel_share_fallback"
 
+    observed_port_pair_legs = _build_observed_port_pair_legs(
+        sea_leg_data,
+        cargo_t=cargo_t,
+    )
+
     _trace(
         "calculate_sea_sailing",
         "complete",
@@ -675,6 +758,7 @@ def evaluate_path(
         bunker_price_source="santos_bunker_data_asset_with_default_fallback",
         marine_emission_factor_kg_co2e_per_kg=_BUNKER_EF_KG_CO2E_PER_KG,
         marine_emission_factor_source="tracked_fuel_emission_factors",
+        observed_port_pair_leg_count=len(observed_port_pair_legs),
     )
 
     hoteling_exclusion_reason: str | None = None
@@ -867,6 +951,7 @@ def evaluate_path(
         "route_matched_imo_count": int(sea_leg_data.get("matched_imo_count") or 0),
         "route_corridor_leg_count": int(sea_leg_data.get("corridor_leg_count") or 0),
         "route_corridor_port_path": list(sea_leg_data.get("corridor_port_path") or []),
+        "observed_port_pair_legs": observed_port_pair_legs,
         "size_proxy_t_median": (
             None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
         ),

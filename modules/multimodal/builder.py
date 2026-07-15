@@ -97,6 +97,7 @@ class SeaResult(TypedDict, total=False):
     matched_imo_count: int
     match_rate_segments: float
     match_rate_tonne_nm: float
+    observed_port_pair_legs: list[Dict[str, Any]]
 
 
 class PathGeometry(TypedDict):
@@ -495,6 +496,11 @@ def build_path_geometry_from_resolved(
         corridor_port_path = directional_stats.get("corridor_port_path")
         if isinstance(corridor_port_path, list) and corridor_port_path:
             sea_leg["corridor_port_path"] = [str(item) for item in corridor_port_path]
+        observed_port_pair_legs = directional_stats.get("observed_port_pair_legs")
+        if isinstance(observed_port_pair_legs, list) and observed_port_pair_legs:
+            sea_leg["observed_port_pair_legs"] = [
+                dict(item) for item in observed_port_pair_legs if isinstance(item, dict)
+            ]
         for key in (
             "fuel_g_per_tnm_mean",
             "fuel_g_per_tnm_median",

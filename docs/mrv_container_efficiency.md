@@ -101,6 +101,22 @@ Runtime sailing fuel uses:
 
 - `fuel_kg_sailing = (fuel_g_per_tnm * cargo_t * distance_nm) / 1000`
 
+For routes backed by directional ANTAQ+MRV observations, the single-evaluation
+pipeline JSON also exposes each observed port-pair leg under
+`results.multimodal.sea.observed_port_pair_legs`. Each item reports observed
+segment, voyage, and IMO counts; average observed cargo; distance in nautical
+miles; weighted fuel intensity; and the fuel and emissions attributed to the
+scenario cargo. The derived fields use:
+
+- `average_cargo_t = cargo_weight_t_total / observed_segment_count`
+- `attributed_vlsfo_fuel_kg = weighted_fuel_intensity_g_per_tnm * attributed_cargo_t * distance_nm / 1000`
+- `attributed_co2e_kg = attributed_vlsfo_fuel_kg * 3.114 kg CO2e/kg VLSFO`
+
+`attributed_cargo_t` is the scenario input (14 t for a 14 t evaluation), not a
+hard-coded constant. The observed-count and average-cargo fields remain scoped
+to each direct port pair so corridor aggregation does not imply globally
+distinct voyages or IMOs across multiple legs.
+
 Fallback (only when `fuel_g_per_tnm` is missing) scales vessel-level fuel by cargo share based on class median `size_proxy_t`.
 
 ## Filtering
