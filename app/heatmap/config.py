@@ -8,7 +8,7 @@ from modules.infra.data_assets import build_data_assets_client, load_data_assets
 
 HEATMAP_PAGE_TITLE = "Heatmap"
 HEATMAP_PAGE_ICON = "🗺️"
-HEATMAP_DEFAULT_METRIC = "cost"
+HEATMAP_DEFAULT_METRIC = "emissions"
 HEATMAP_METRICS = ("cost", "emissions")
 HEATMAP_DESTINATIONS_DIR = ROOT / "data" / "processed" / "destinies"
 HEATMAP_DEFAULT_DESTINATION_SET_ID = "city_dests_over50k.txt"

@@ -22,6 +22,7 @@ class HeatmapPageTests(unittest.TestCase):
 
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_ORIGIN_FIELD], DEFAULT_ORIGIN)
         self.assertEqual(fake_streamlit.session_state["heatmap_cargo"], float(DEFAULTS["cargo_t"]))
+        self.assertEqual(fake_streamlit.session_state["heatmap_metric"], "emissions")
         self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
         self.assertEqual(fake_streamlit.session_state["heatmap_destination_set_id"], "city_dests_over50k.txt")
 
