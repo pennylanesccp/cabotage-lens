@@ -17,6 +17,9 @@ class HeatmapSurfaceTests(unittest.TestCase):
         heatmap_surface._hull_cells.cache_clear()
         heatmap_surface._surface_geometry_cached.cache_clear()
         heatmap_surface._build_surface_cached.cache_clear()
+        boundary_patcher = patch("app.heatmap.surface._brazil_boundary_rings", return_value=tuple())
+        boundary_patcher.start()
+        self.addCleanup(boundary_patcher.stop)
 
     def _dataset(self) -> HeatmapDataset:
         scenario = HeatmapScenario(
@@ -167,6 +170,80 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertGreater(surface.cells[0].elevation_m, 0.0)
         self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
         self.assertEqual(surface.hull_vertex_count, 3)
+
+    def test_build_surface_fills_long_supported_triangle_as_sparse_coverage(self) -> None:
+        dataset = self._dataset()
+        mock_cells = (
+            (
+                ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
+                0.5,
+                0.5,
+            ),
+        )
+
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells), patch(
+            "app.heatmap.surface._triangle_edge_limit_km",
+            return_value=100.0,
+        ):
+            surface = build_surface(dataset, "emissions")
+
+        self.assertEqual(len(surface.cells), 1)
+        self.assertEqual(surface.cells[0].interpolation_quality, "sparse")
+        self.assertEqual(surface.cells[0].fill_color[3], heatmap_surface.HEATMAP_SURFACE_SPARSE_ALPHA)
+        self.assertEqual(surface.dense_cell_count, 0)
+        self.assertEqual(surface.sparse_cell_count, 1)
+        self.assertEqual(surface.skipped_far_cells, 0)
+
+    def test_build_surface_marks_national_scale_triangle_as_very_sparse(self) -> None:
+        dataset = self._dataset()
+        mock_cells = (
+            (
+                ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
+                0.5,
+                0.5,
+            ),
+        )
+
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells), patch(
+            "app.heatmap.surface._triangle_edge_limit_km",
+            return_value=100.0,
+        ), patch(
+            "app.heatmap.surface.HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM",
+            120.0,
+        ):
+            surface = build_surface(dataset, "emissions")
+
+        self.assertEqual(len(surface.cells), 1)
+        self.assertEqual(surface.cells[0].interpolation_quality, "very_sparse")
+        self.assertEqual(surface.cells[0].fill_color[3], heatmap_surface.HEATMAP_SURFACE_VERY_SPARSE_ALPHA)
+        self.assertEqual(surface.very_sparse_cell_count, 1)
+        self.assertEqual(surface.skipped_far_cells, 0)
+
+    def test_build_surface_excludes_triangle_beyond_very_sparse_cap(self) -> None:
+        dataset = self._dataset()
+        mock_cells = (
+            (
+                ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
+                0.5,
+                0.5,
+            ),
+        )
+
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells), patch(
+            "app.heatmap.surface._triangle_edge_limit_km",
+            return_value=100.0,
+        ), patch(
+            "app.heatmap.surface.HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM",
+            120.0,
+        ), patch(
+            "app.heatmap.surface.HEATMAP_SURFACE_VERY_SPARSE_MAX_KM",
+            130.0,
+        ):
+            surface = build_surface(dataset, "emissions")
+
+        self.assertEqual(surface.cells, [])
+        self.assertEqual(surface.excluded_triangle_count, 1)
+        self.assertEqual(surface.skipped_far_cells, 1)
 
     def test_build_surface_3d_places_negative_values_below_zero_plane(self) -> None:
         dataset = self._dataset()

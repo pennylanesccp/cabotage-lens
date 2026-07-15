@@ -13,6 +13,7 @@ from app.heatmap.config import (
     HEATMAP_BRAZIL_CENTER_LAT,
     HEATMAP_BRAZIL_CENTER_LON,
     HEATMAP_BRAZIL_ZOOM,
+    HEATMAP_COORDINATE_PRECISION,
     HEATMAP_MAP_STYLE,
     HEATMAP_MAP_HEIGHT,
     HEATMAP_POINT_OVERLAY_RADIUS_M,
@@ -41,6 +42,13 @@ def _reference_city_label(name: str, uf: str | None) -> str:
 
 def _surface_tooltip_html(cell: HeatmapSurfaceCell, metric: str) -> str:
     reference_label = _reference_city_label(cell.nearest_destiny_name, cell.nearest_destiny_uf)
+    quality = str(getattr(cell, "interpolation_quality", "dense") or "dense").strip().lower()
+    if quality == "very_sparse":
+        quality_label = "Very sparse interpolation"
+    elif quality == "sparse":
+        quality_label = "Sparse interpolation"
+    else:
+        quality_label = "Dense interpolation"
     if metric == "cost":
         percentage_label = "Cost advantage"
         absolute_label = "Cost difference"
@@ -55,12 +63,26 @@ def _surface_tooltip_html(cell: HeatmapSurfaceCell, metric: str) -> str:
         f"<div style='font-weight: 700; margin-bottom: 4px;'>Surface cell</div>"
         f"<div>{escape(percentage_label)}: {cell.percentage_value:,.2f}%</div>"
         f"<div>{escape(absolute_label)}: {escape(absolute_value)}</div>"
+        f"<div>Coverage: {escape(quality_label)}</div>"
         f"<div>Reference city: {escape(reference_label)}</div>"
         f"</div>"
     )
 
 
-def _point_tooltip_html(point: HeatmapPoint) -> str:
+def _point_tooltip_html(point: HeatmapPoint, *, coordinate_points: List[HeatmapPoint] | None = None) -> str:
+    shared_points = coordinate_points or [point]
+    shared_labels = sorted(
+        {
+            _reference_city_label(candidate.destiny_name, candidate.destiny_uf)
+            for candidate in shared_points
+        }
+    )
+    shared_html = ""
+    if len(shared_points) > 1:
+        shared_html = (
+            f"<div>Stored rows at coordinate: {len(shared_points)}</div>"
+            f"<div>Destination labels: {escape(' | '.join(shared_labels))}</div>"
+        )
     return (
         f"<div style='font-family: sans-serif; min-width: 240px;'>"
         f"<div style='font-weight: 700; margin-bottom: 4px;'>{escape(point.destiny_name)}</div>"
@@ -73,6 +95,7 @@ def _point_tooltip_html(point: HeatmapPoint) -> str:
         f"<div>Emissions difference: {_format_signed_emissions(point.emissions_delta_kg)}</div>"
         f"<div>Emissions advantage (%): {_safe_percentage(point.emissions_savings_pct, point.emissions_delta_kg, point.road_emissions_kg):,.2f}%</div>"
         f"<div>Nearest destination port: {escape(point.port_destiny_name or 'n/a')}</div>"
+        f"{shared_html}"
         f"</div>"
     )
 
@@ -99,16 +122,27 @@ def _surface_cap_rows(surface: HeatmapSurface, metric: str) -> List[dict[str, An
 
 
 def _point_rows(dataset: HeatmapDataset) -> List[dict[str, Any]]:
-    return [
-        {
-            "position": [float(point.destiny_lon), float(point.destiny_lat)],
-            "radius": float(HEATMAP_POINT_OVERLAY_RADIUS_M),
-            "fill_color": [19, 31, 45, 170],
-            "line_color": [255, 255, 255, 220],
-            "tooltip_html": _point_tooltip_html(point),
-        }
-        for point in dataset.points
-    ]
+    by_coordinate: dict[tuple[float, float], List[HeatmapPoint]] = {}
+    for point in dataset.points:
+        key = (
+            round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
+            round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
+        )
+        by_coordinate.setdefault(key, []).append(point)
+
+    rows: List[dict[str, Any]] = []
+    for coordinate_points in by_coordinate.values():
+        point = coordinate_points[0]
+        rows.append(
+            {
+                "position": [float(point.destiny_lon), float(point.destiny_lat)],
+                "radius": float(HEATMAP_POINT_OVERLAY_RADIUS_M),
+                "fill_color": [19, 31, 45, 170],
+                "line_color": [255, 255, 255, 220],
+                "tooltip_html": _point_tooltip_html(point, coordinate_points=coordinate_points),
+            }
+        )
+    return rows
 
 
 def _inject_heatmap_map_css() -> None:

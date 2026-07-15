@@ -6,6 +6,23 @@ from app.heatmap import map as heatmap_map
 
 
 class HeatmapMapTests(unittest.TestCase):
+    def _point(self, name: str, lat: float, lon: float) -> SimpleNamespace:
+        return SimpleNamespace(
+            destiny_name=name,
+            destiny_uf="AA",
+            destiny_lat=lat,
+            destiny_lon=lon,
+            road_cost_r=100.0,
+            multimodal_cost_r=80.0,
+            cost_delta_r=20.0,
+            cost_savings_pct=20.0,
+            road_emissions_kg=100.0,
+            multimodal_emissions_kg=70.0,
+            emissions_delta_kg=30.0,
+            emissions_savings_pct=30.0,
+            port_destiny_name="Port Alpha",
+        )
+
     def _surface(self) -> SimpleNamespace:
         cell = SimpleNamespace(
             polygon=((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),
@@ -16,6 +33,7 @@ class HeatmapMapTests(unittest.TestCase):
             nearest_destiny_name="Alpha",
             nearest_destiny_uf="AA",
             nearest_distance_km=24.0,
+            interpolation_quality="sparse",
         )
         return SimpleNamespace(cells=[cell])
 
@@ -36,6 +54,7 @@ class HeatmapMapTests(unittest.TestCase):
             ],
         )
         self.assertEqual(len(rows[0]["polygon"][0]), 3)
+        self.assertIn("Sparse interpolation", rows[0]["tooltip_html"])
 
     def test_surface_cap_rows_place_negative_cells_below_zero_plane(self) -> None:
         surface = self._surface()
@@ -57,6 +76,19 @@ class HeatmapMapTests(unittest.TestCase):
         deck = render_mock.call_args.args[0]
         self.assertIs(returned_surface, surface)
         self.assertEqual(len(deck.layers), 1)
+
+    def test_point_rows_collapse_aliases_at_surface_coordinate_precision(self) -> None:
+        dataset = SimpleNamespace(
+            points=[
+                self._point("Alpha", -3.123441, -60.123441),
+                self._point("Alpha alias", -3.123449, -60.123449),
+            ]
+        )
+
+        rows = heatmap_map._point_rows(dataset)
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn("Stored rows at coordinate: 2", rows[0]["tooltip_html"])
 
 
 if __name__ == "__main__":

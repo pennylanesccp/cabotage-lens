@@ -69,6 +69,8 @@ class BulkResultRecord:
     emissions_savings_pct: Optional[float]
     road_distance_km: Optional[float]
     sea_km: Optional[float]
+    road_route_id: Optional[int]
+    last_mile_route_id: Optional[int]
     is_approximation: bool
     route_source: Optional[str]
     approximation_reference_destiny: Optional[str]
@@ -85,6 +87,7 @@ class BulkResultSummary:
     fail_count: int
     latest_updated_timestamp: Any
     latest_run_id: Optional[str]
+    profile_route_refresh_count: int = 0
 
 
 def _normalize_text(value: Any) -> Optional[str]:
@@ -220,6 +223,8 @@ def _latest_results_cte(
             , i.emissions_savings_pct
             , i.road_distance_km
             , i.sea_km
+            , {_item_column_sql(item_columns, "road_route_id")} AS road_route_id
+            , {_item_column_sql(item_columns, "last_mile_route_id")} AS last_mile_route_id
             , i.is_approximation
             , i.route_source
             , approx_dest.label AS approximation_reference_destiny
@@ -304,7 +309,14 @@ def _latest_results_for_selector_cte(
     *,
     include_destination_set: bool,
     item_columns: set[str],
+    item_status_filter: Optional[bool] = None,
 ) -> str:
+    if item_status_filter is True:
+        item_status_join_sql = "\n               AND i.status = 'ok'"
+    elif item_status_filter is False:
+        item_status_join_sql = "\n               AND i.status <> 'ok'"
+    else:
+        item_status_join_sql = ""
     return f"""
     WITH matching_runs AS (
         SELECT
@@ -384,6 +396,8 @@ def _latest_results_for_selector_cte(
             , i.emissions_savings_pct
             , i.road_distance_km
             , i.sea_km
+            , {_item_column_sql(item_columns, "road_route_id")} AS road_route_id
+            , {_item_column_sql(item_columns, "last_mile_route_id")} AS last_mile_route_id
             , i.is_approximation
             , i.route_source
             , approx_dest.label AS approximation_reference_destiny
@@ -397,7 +411,7 @@ def _latest_results_for_selector_cte(
               ) AS row_rank
         FROM {items_table} AS i
         INNER JOIN matching_runs AS r
-                ON r.run_id = i.run_id
+                ON r.run_id = i.run_id{item_status_join_sql}
         LEFT JOIN {locations_table} AS dest
                ON dest.id = i.destination_location_id
         LEFT JOIN {locations_table} AS port_origin
@@ -437,6 +451,10 @@ def _latest_summary_cte(
               i.run_id
             , i.input_destiny
             , i.status
+            , {_item_column_sql(item_columns, "road_route_id")} AS road_route_id
+            , COALESCE({_item_column_sql(item_columns, "is_approximation", default_sql="FALSE")}, FALSE) AS is_approximation
+            , {_item_column_sql(item_columns, "route_source")} AS route_source
+            , {_item_column_sql(item_columns, "road_distance_km")} AS road_distance_km
             , i.updated_timestamp
             , {insertion_timestamp_sql} AS insertion_timestamp
             , ROW_NUMBER() OVER (
@@ -500,13 +518,15 @@ def _row_to_record(row: Sequence[Any]) -> BulkResultRecord:
         emissions_savings_pct=to_float(row[45]),
         road_distance_km=to_float(row[46]),
         sea_km=to_float(row[47]),
-        is_approximation=bool(row[48]),
-        route_source=_normalize_text(row[49]),
-        approximation_reference_destiny=_normalize_text(row[50]),
-        approximation_reference_distance_km=to_float(row[51]),
-        approximation_delta_straight_line_km=to_float(row[52]),
-        approximation_notes=_normalize_text(row[53]),
-        updated_timestamp=row[54],
+        road_route_id=(None if row[48] is None else int(row[48])),
+        last_mile_route_id=(None if row[49] is None else int(row[49])),
+        is_approximation=bool(row[50]),
+        route_source=_normalize_text(row[51]),
+        approximation_reference_destiny=_normalize_text(row[52]),
+        approximation_reference_distance_km=to_float(row[53]),
+        approximation_delta_straight_line_km=to_float(row[54]),
+        approximation_notes=_normalize_text(row[55]),
+        updated_timestamp=row[56],
     )
 
 
@@ -530,13 +550,14 @@ def summarize_results(
         locations_table=locations,
         route_table=routes,
     )
+    item_cols = table_columns(conn, items)
 
     row = conn.execute(
         _latest_summary_cte(
             items,
             runs,
             locations,
-            item_columns={"insertion_timestamp"},
+            item_columns=item_cols,
         )
         + """
         SELECT
@@ -551,19 +572,30 @@ def summarize_results(
                 ORDER BY updated_timestamp DESC, run_id DESC
                 LIMIT 1
               ) AS latest_run_id
+            , SUM(
+                CASE
+                    WHEN status = 'ok'
+                     AND NOT is_approximation
+                     AND COALESCE(NULLIF(TRIM(road_distance_km::text), '')::double precision, 0.0) > 0
+                     AND RIGHT(COALESCE(route_source, ''), 6) = '_exact'
+                     AND road_route_id IS NULL
+                    THEN 1 ELSE 0
+                END
+              ) AS profile_route_refresh_count
         FROM ranked
         WHERE row_rank = 1
         """,
         (selector_hash(selector),),
     ).fetchone()
     if not row:
-        return BulkResultSummary(0, 0, 0, None, None)
+        return BulkResultSummary(0, 0, 0, None, None, 0)
     return BulkResultSummary(
         row_count=_safe_int(row[0]),
         success_count=_safe_int(row[1]),
         fail_count=_safe_int(row[2]),
         latest_updated_timestamp=row[3],
         latest_run_id=_normalize_text(row[4]),
+        profile_route_refresh_count=_safe_int(row[5]),
     )
 
 
@@ -648,6 +680,8 @@ def list_results(
             , emissions_savings_pct
             , road_distance_km
             , sea_km
+            , road_route_id
+            , last_mile_route_id
             , is_approximation
             , route_source
             , approximation_reference_destiny
@@ -705,6 +739,7 @@ def list_results_for_origin_scenario(
             routes,
             include_destination_set=(not include_all_destination_sets),
             item_columns=item_cols,
+            item_status_filter=(True if only_success is True else None),
         )
         + f"""
         SELECT
@@ -756,6 +791,8 @@ def list_results_for_origin_scenario(
             , emissions_savings_pct
             , road_distance_km
             , sea_km
+            , road_route_id
+            , last_mile_route_id
             , is_approximation
             , route_source
             , approximation_reference_destiny

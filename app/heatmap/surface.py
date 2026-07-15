@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import json
 import math
 from functools import lru_cache
@@ -13,6 +14,7 @@ from app.heatmap.config import (
     HEATMAP_COLOR_MID,
     HEATMAP_COLOR_NEGATIVE,
     HEATMAP_COLOR_POSITIVE,
+    HEATMAP_COORDINATE_PRECISION,
     HEATMAP_SURFACE_ALPHA,
     HEATMAP_SURFACE_CELL_SIZE_DEGREES,
     HEATMAP_SURFACE_COLOR_QUANTILE,
@@ -25,6 +27,9 @@ from app.heatmap.config import (
     HEATMAP_SURFACE_INTERPOLATION_RADIUS_MIN_KM,
     HEATMAP_SURFACE_INTERPOLATION_RADIUS_QUANTILE,
     HEATMAP_SURFACE_MAX_ELEVATION_M,
+    HEATMAP_SURFACE_SPARSE_ALPHA,
+    HEATMAP_SURFACE_VERY_SPARSE_ALPHA,
+    HEATMAP_SURFACE_VERY_SPARSE_MAX_KM,
 )
 from app.heatmap.types import HeatmapDataset, HeatmapPoint, HeatmapSurface, HeatmapSurfaceCell
 
@@ -37,6 +42,8 @@ _Coordinate = tuple[float, float]
 _HullPolygon = tuple[_Coordinate, ...]
 _Cell = tuple[_HullPolygon, float, float]
 _PreparedTriangle = tuple[int, int, int, float, float, float, float, float, float]
+_RouteAuditSample = tuple[str, str, float, float, str, float | None, float | None, float, float]
+_SurfaceAuditStats = tuple[float | int, ...]
 
 _log = get_logger(__name__)
 
@@ -131,14 +138,42 @@ def _dataset_signature(dataset: HeatmapDataset, metric: str) -> tuple[_Sample, .
                 (
                     point.destiny_name,
                     str(point.destiny_uf or "").strip(),
-                    round(float(point.destiny_lat), 4),
-                    round(float(point.destiny_lon), 4),
+                    round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
+                    round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
                     round(_metric_percentage(point, metric), 4),
                     round(_metric_absolute(point, metric), 4),
                 )
                 for point in dataset.points
             ),
             key=lambda item: (item[0], item[1], item[2], item[3]),
+        )
+    )
+
+
+def _optional_rounded(value: float | None, digits: int = 3) -> float | None:
+    if value is None:
+        return None
+    return round(float(value), digits)
+
+
+def _route_audit_signature(dataset: HeatmapDataset, metric: str) -> tuple[_RouteAuditSample, ...]:
+    return tuple(
+        sorted(
+            (
+                (
+                    point.destiny_name,
+                    str(point.destiny_uf or "").strip(),
+                    round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
+                    round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
+                    str(point.port_destiny_name or "").strip(),
+                    _optional_rounded(point.road_distance_km),
+                    _optional_rounded(point.sea_km),
+                    round(_metric_percentage(point, metric), 4),
+                    round(_metric_absolute(point, metric), 4),
+                )
+                for point in dataset.points
+            ),
+            key=lambda item: (item[1], item[0], item[2], item[3]),
         )
     )
 
@@ -591,13 +626,28 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
     elevation_scale = _robust_abs_scale([float(sample[5]) for sample in value_samples], HEATMAP_SURFACE_ELEVATION_QUANTILE)
     brazil_boundary_rings = _brazil_boundary_rings()
     triangle_edge_limit_km = _triangle_edge_limit_km(prepared_triangles)
-    accepted_triangles = tuple(
+    dense_triangles = tuple(
         triangle
         for triangle in prepared_triangles
         if triangle_edge_limit_km <= 0.0 or float(triangle[8]) <= triangle_edge_limit_km
     )
-    if not accepted_triangles:
-        accepted_triangles = prepared_triangles
+    sparse_triangles = tuple(
+        triangle
+        for triangle in prepared_triangles
+        if float(triangle[8]) > triangle_edge_limit_km
+        and float(triangle[8]) <= float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM)
+    )
+    very_sparse_triangles = tuple(
+        triangle
+        for triangle in prepared_triangles
+        if float(triangle[8]) > float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM)
+        and float(triangle[8]) <= float(HEATMAP_SURFACE_VERY_SPARSE_MAX_KM)
+    )
+    excluded_triangles = tuple(
+        triangle
+        for triangle in prepared_triangles
+        if float(triangle[8]) > float(HEATMAP_SURFACE_VERY_SPARSE_MAX_KM)
+    )
 
     if len(value_samples) < 3 or len(hull_polygon) < 3 or not prepared_triangles or not hull_cells:
         return HeatmapSurface(
@@ -619,16 +669,39 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
     cells: list[HeatmapSurfaceCell] = []
     skipped_far_cells = 0
     skipped_outside_boundary_cells = 0
+    dense_cell_count = 0
+    sparse_cell_count = 0
+    very_sparse_cell_count = 0
     for polygon, center_lat, center_lon in hull_cells:
         if brazil_boundary_rings and not _point_in_any_ring(center_lon, center_lat, brazil_boundary_rings):
             skipped_outside_boundary_cells += 1
             continue
-        interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, accepted_triangles)
+        interpolation_quality = "dense"
+        interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, dense_triangles)
+        if interpolated is None and sparse_triangles:
+            interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, sparse_triangles)
+            interpolation_quality = "sparse"
+        if interpolated is None and very_sparse_triangles:
+            interpolated = _triangulated_interpolate(center_lat, center_lon, value_samples, very_sparse_triangles)
+            interpolation_quality = "very_sparse"
         if interpolated is None:
             skipped_far_cells += 1
             continue
         percentage_value, absolute_value, nearest_name, nearest_uf, nearest_distance = interpolated
         signed_quantitative_value = _align_quantitative_sign(percentage_value, absolute_value)
+        fill_color = _color_for_value(
+            signed_quantitative_value,
+            negative_color_scale,
+            positive_color_scale,
+        )
+        if interpolation_quality == "very_sparse":
+            fill_color = (*fill_color[:3], int(HEATMAP_SURFACE_VERY_SPARSE_ALPHA))
+            very_sparse_cell_count += 1
+        elif interpolation_quality == "sparse":
+            fill_color = (*fill_color[:3], int(HEATMAP_SURFACE_SPARSE_ALPHA))
+            sparse_cell_count += 1
+        else:
+            dense_cell_count += 1
         cells.append(
             HeatmapSurfaceCell(
                 polygon=polygon,
@@ -636,15 +709,12 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
                 center_lon=center_lon,
                 percentage_value=percentage_value,
                 absolute_value=signed_quantitative_value,
-                fill_color=_color_for_value(
-                    signed_quantitative_value,
-                    negative_color_scale,
-                    positive_color_scale,
-                ),
+                fill_color=fill_color,
                 elevation_m=_elevation_for_value(signed_quantitative_value, elevation_scale),
                 nearest_destiny_name=nearest_name,
                 nearest_destiny_uf=nearest_uf,
                 nearest_distance_km=nearest_distance,
+                interpolation_quality=interpolation_quality,
             )
         )
 
@@ -662,10 +732,149 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
         interpolation_radius_km=triangle_edge_limit_km,
         skipped_far_cells=skipped_far_cells,
         skipped_outside_boundary_cells=skipped_outside_boundary_cells,
+        prepared_triangle_count=len(prepared_triangles),
+        dense_triangle_count=len(dense_triangles),
+        sparse_triangle_count=len(sparse_triangles),
+        very_sparse_triangle_count=len(very_sparse_triangles),
+        excluded_triangle_count=len(excluded_triangles),
+        dense_cell_count=dense_cell_count,
+        sparse_cell_count=sparse_cell_count,
+        very_sparse_cell_count=very_sparse_cell_count,
     )
 
 
-def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
+def _format_audit_distance(value: float | None) -> str:
+    return "<none>" if value is None else f"{float(value):.3f}"
+
+
+def _log_surface_audit(
+    route_signature: tuple[_RouteAuditSample, ...],
+    points_signature: tuple[_Sample, ...],
+    metric: str,
+    stats: _SurfaceAuditStats,
+    detailed: bool,
+) -> None:
+    (
+        source_points,
+        unique_coordinates,
+        prepared_triangles,
+        dense_triangles,
+        sparse_triangles,
+        very_sparse_triangles,
+        excluded_triangles,
+        dense_cells,
+        sparse_cells,
+        very_sparse_cells,
+        skipped_far_cells,
+        skipped_outside_cells,
+        dense_limit_km,
+    ) = stats
+    by_uf: dict[str, list[_RouteAuditSample]] = defaultdict(list)
+    by_coordinate: dict[tuple[float, float], list[_RouteAuditSample]] = defaultdict(list)
+    for route in route_signature:
+        by_uf[route[1] or "<none>"].append(route)
+        by_coordinate[(route[2], route[3])].append(route)
+
+    duplicate_groups = [routes for routes in by_coordinate.values() if len(routes) > 1]
+    _log.info(
+        (
+            "Heatmap coverage audit metric=%s route_rows=%d unique_coordinates=%d duplicate_coordinate_rows=%d "
+            "prepared_triangles=%d dense_triangles=%d sparse_triangles=%d very_sparse_triangles=%d excluded_triangles=%d "
+            "dense_cells=%d sparse_cells=%d very_sparse_cells=%d "
+            "skipped_far_cells=%d skipped_outside_boundary_cells=%d dense_limit_km=%.1f sparse_limit_km=%.1f "
+            "very_sparse_limit_km=%.1f detailed_routes=%s"
+        ),
+        metric,
+        int(source_points),
+        int(unique_coordinates),
+        sum(len(routes) - 1 for routes in duplicate_groups),
+        int(prepared_triangles),
+        int(dense_triangles),
+        int(sparse_triangles),
+        int(very_sparse_triangles),
+        int(excluded_triangles),
+        int(dense_cells),
+        int(sparse_cells),
+        int(very_sparse_cells),
+        int(skipped_far_cells),
+        int(skipped_outside_cells),
+        float(dense_limit_km),
+        float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM),
+        float(HEATMAP_SURFACE_VERY_SPARSE_MAX_KM),
+        detailed,
+    )
+    for uf, routes in sorted(by_uf.items()):
+        unique_uf_coordinates = len({(route[2], route[3]) for route in routes})
+        _log.debug(
+            "Heatmap coverage by UF uf=%s route_rows=%d unique_coordinates=%d duplicate_coordinate_rows=%d",
+            uf,
+            len(routes),
+            unique_uf_coordinates,
+            len(routes) - unique_uf_coordinates,
+        )
+
+    if not detailed:
+        return
+    _log.info(
+        "Detailed heatmap audit requested; per-route records are emitted once at INFO and interpolation triangles at DEBUG."
+    )
+    detail_log = _log.info
+    for index, route in enumerate(route_signature, start=1):
+        name, uf, lat, lon, port, road_km, sea_km, percentage, absolute = route
+        detail_log(
+            (
+                "Heatmap plotted route index=%d/%d destiny=%s uf=%s lat=%.6f lon=%.6f port_destiny=%s "
+                "road_km=%s sea_km=%s metric=%s advantage_pct=%.4f delta=%.4f"
+            ),
+            index,
+            len(route_signature),
+            name,
+            uf or "<none>",
+            lat,
+            lon,
+            port or "<none>",
+            _format_audit_distance(road_km),
+            _format_audit_distance(sea_km),
+            metric,
+            percentage,
+            absolute,
+        )
+
+    for routes in sorted(duplicate_groups, key=lambda group: (-len(group), group[0][2], group[0][3])):
+        detail_log(
+            "Heatmap shared coordinate lat=%.6f lon=%.6f route_rows=%d destinies=%s",
+            routes[0][2],
+            routes[0][3],
+            len(routes),
+            " | ".join(f"{route[0]}, {route[1]}" for route in routes),
+        )
+
+    geometry_samples, _hull, triangles, _cells = _surface_geometry_cached(_geometry_signature(points_signature))
+    for triangle in sorted(triangles, key=lambda item: float(item[8]), reverse=True):
+        edge_km = float(triangle[8])
+        if edge_km <= float(dense_limit_km):
+            continue
+        if edge_km <= float(HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM):
+            quality = "sparse"
+        elif edge_km <= float(HEATMAP_SURFACE_VERY_SPARSE_MAX_KM):
+            quality = "very_sparse"
+        else:
+            quality = "excluded_far"
+        vertices = [geometry_samples[index] for index in triangle[:3]]
+        _log.debug(
+            "Heatmap interpolation triangle quality=%s max_edge_km=%.1f vertices=%s",
+            quality,
+            edge_km,
+            " | ".join(f"{sample[0]}, {sample[1]} ({sample[2]:.6f},{sample[3]:.6f})" for sample in vertices),
+        )
+
+
+def build_surface(
+    dataset: HeatmapDataset,
+    metric: str,
+    *,
+    log_route_details: bool = False,
+) -> HeatmapSurface:
     normalized_metric = "emissions" if str(metric).strip().lower() == "emissions" else "cost"
     points_signature = _dataset_signature(dataset, normalized_metric)
     surface = _build_surface_cached(points_signature, normalized_metric)
@@ -686,5 +895,26 @@ def build_surface(dataset: HeatmapDataset, metric: str) -> HeatmapSurface:
         surface.interpolation_radius_km,
         surface.skipped_far_cells,
         surface.skipped_outside_boundary_cells,
+    )
+    _log_surface_audit(
+        _route_audit_signature(dataset, normalized_metric),
+        points_signature,
+        normalized_metric,
+        (
+            surface.source_point_count,
+            surface.unique_source_coordinate_count,
+            surface.prepared_triangle_count,
+            surface.dense_triangle_count,
+            surface.sparse_triangle_count,
+            surface.very_sparse_triangle_count,
+            surface.excluded_triangle_count,
+            surface.dense_cell_count,
+            surface.sparse_cell_count,
+            surface.very_sparse_cell_count,
+            surface.skipped_far_cells,
+            surface.skipped_outside_boundary_cells,
+            surface.interpolation_radius_km,
+        ),
+        bool(log_route_details),
     )
     return surface

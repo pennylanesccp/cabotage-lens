@@ -39,6 +39,94 @@ class HeatmapServiceTests(unittest.TestCase):
             port_ops_scenario="baseline",
         )
 
+    def test_selected_coverage_audit_reports_expected_and_missing_by_uf(self) -> None:
+        plotted, rows, missing = heatmap_service._selected_coverage_audit(
+            ["Manaus, AM", "Tefe, AM", "Belem, PA"],
+            {
+                heatmap_service._destination_identity("Manaus, Amazonas"),
+                heatmap_service._destination_identity("Belem, Para"),
+            },
+        )
+
+        self.assertEqual(plotted, 2)
+        self.assertEqual(
+            rows,
+            [
+                {"uf": "AM", "expected": 2, "plotted": 1, "not_plotted": 1},
+                {"uf": "PA", "expected": 1, "plotted": 1, "not_plotted": 0},
+            ],
+        )
+        self.assertEqual(missing, ["Tefe, AM"])
+
+    def test_destination_identity_matches_uf_and_full_state_aliases(self) -> None:
+        self.assertEqual(
+            heatmap_service._destination_identity("Acrelandia, AC"),
+            heatmap_service._destination_identity("Acrelandia, Acre"),
+        )
+        self.assertEqual(heatmap_service._destination_uf("Manaus, Amazonas"), "AM")
+
+    def test_pending_destinations_refreshes_exact_success_without_route_reference(self) -> None:
+        records = [
+            SimpleNamespace(
+                input_destiny="Belo Horizonte, MG",
+                status="ok",
+                is_approximation=False,
+                road_distance_km=585.0,
+                route_source="cache_exact",
+                road_route_id=None,
+            ),
+            SimpleNamespace(
+                input_destiny="Manaus, AM",
+                status="ok",
+                is_approximation=False,
+                road_distance_km=3900.0,
+                route_source="cache_exact",
+                road_route_id=123,
+            ),
+        ]
+
+        with patch(
+            "app.heatmap.service._heatmap_destinations",
+            return_value=("Belo Horizonte, MG", "Manaus, AM"),
+        ):
+            pending = heatmap_service._pending_destination_list(
+                records,
+                destination_set_id="city_dests_over50k.txt",
+            )
+
+        self.assertEqual(pending, ["Belo Horizonte, MG"])
+        self.assertEqual(heatmap_service._profile_route_refresh_count(records), 1)
+
+    def test_cached_route_candidates_accept_selected_alias_location_id(self) -> None:
+        route = {
+            "destiny": "Balneario Camboriu, SC",
+            "destiny_location_id": 42,
+        }
+        with patch(
+            "app.heatmap.service._origin_name_variants",
+            return_value=("Pelotas, RS",),
+        ), patch(
+            "app.heatmap.service.list_runs",
+            return_value=[route],
+        ), patch(
+            "app.heatmap.service._all_heatmap_destination_keys",
+            return_value=frozenset({heatmap_service._destination_identity("Camboriu, SC")}),
+        ), patch(
+            "app.heatmap.service._all_heatmap_destinations",
+            return_value=("Camboriu, SC",),
+        ), patch(
+            "app.heatmap.service.list_cached_place_points",
+            return_value={
+                "camboriu, sc": {
+                    "location_id": 42,
+                    "label": "Balneario Camboriu, SC",
+                }
+            },
+        ):
+            rows = heatmap_service._load_cached_route_rows_for_surface(object(), self._scenario())
+
+        self.assertEqual(rows, [route])
+
     def test_list_origin_options_normalizes_and_dedupes_labels(self) -> None:
         with patch("app.heatmap.service._require_postgres"), patch(
             "app.heatmap.service.db_session",
@@ -59,6 +147,7 @@ class HeatmapServiceTests(unittest.TestCase):
             fail_count=20,
             latest_updated_timestamp="2026-03-11 09:30:00",
             latest_run_id="run-123",
+            profile_route_refresh_count=0,
         )
         latest_completed = SimpleNamespace(
             run_id="run-122",
@@ -82,16 +171,6 @@ class HeatmapServiceTests(unittest.TestCase):
         ) as summarize_mock, patch(
             "app.heatmap.service.get_latest_completed_run",
             return_value=latest_completed,
-        ), patch(
-            "app.heatmap.service.list_bulk_results",
-            return_value=[
-                SimpleNamespace(input_destiny=f"City retry {idx}", status="timeout")
-                for idx in range(6)
-            ]
-            + [
-                SimpleNamespace(input_destiny=f"City terminal {idx}", status="no_road_route")
-                for idx in range(14)
-            ],
         ):
             status = get_heatmap_status(scenario)
 
@@ -164,6 +243,9 @@ class HeatmapServiceTests(unittest.TestCase):
         with patch("app.heatmap.service.get_heatmap_status", return_value=status), patch(
             "app.heatmap.service._require_postgres"
         ), patch(
+            "app.heatmap.service._heatmap_destinations",
+            return_value=("Manaus, AM", "Belem, PA"),
+        ), patch(
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
         ), patch(
@@ -230,6 +312,9 @@ class HeatmapServiceTests(unittest.TestCase):
 
         with patch("app.heatmap.service.get_heatmap_status", return_value=status), patch(
             "app.heatmap.service._require_postgres"
+        ), patch(
+            "app.heatmap.service._heatmap_destinations",
+            return_value=("Manaus, AM",),
         ), patch(
             "app.heatmap.service.db_session",
             return_value=contextlib.nullcontext(object()),
@@ -320,7 +405,10 @@ class HeatmapServiceTests(unittest.TestCase):
             ),
         ]
 
-        with patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
+        with patch(
+            "app.heatmap.service._heatmap_destinations",
+            return_value=("Manaus, AM", "Belem, PA", "Sao Luis, MA"),
+        ), patch("app.heatmap.service.db_session", return_value=contextlib.nullcontext(object())), patch(
             "app.heatmap.service.list_bulk_run_results",
             return_value=[],
         ), patch(
@@ -337,64 +425,43 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertEqual(dataset.diagnostics.loaded_bulk_rows, 3)
         self.assertEqual(dataset.diagnostics.loaded_single_compare_rows, 0)
 
-    def test_load_current_dataset_returns_single_compare_rows_even_without_bulk_successes(self) -> None:
-        scenario = self._scenario()
-        status = SimpleNamespace(
-            run_id=None,
-            origin_name="Pelotas, RS",
-            cargo_t=30.0,
-            destination_count=608,
-            found_count=0,
-            success_count=0,
-            fail_count=0,
-            missing_count=608,
-            pending_count=608,
-            duration_s=None,
-            completed_timestamp=None,
-            updated_timestamp=None,
-            destination_set_id="city_dests_over50k.txt",
+    def test_load_map_rows_does_not_mix_legacy_single_compare_results(self) -> None:
+        bulk_row = heatmap_service._LoadedHeatmapRow(
+            source_kind="bulk",
+            source_detail="city_dests_over50k.txt",
+            input_destiny="Rio Branco, AC",
+            destiny_name="Rio Branco, AC",
+            destiny_lat=-9.97499,
+            destiny_lon=-67.8243,
+            destiny_uf="AC",
+            port_destiny_name="Manaus",
+            road_cost_r=12000.0,
+            multimodal_cost_r=9500.0,
+            cost_delta_r=2500.0,
+            cost_savings_pct=20.8333,
+            road_emissions_kg=6400.0,
+            multimodal_emissions_kg=4100.0,
+            emissions_delta_kg=2300.0,
+            emissions_savings_pct=35.9375,
+            road_distance_km=3600.0,
+            sea_km=2900.0,
+            updated_timestamp="2026-03-24 08:00:00",
         )
-        rows = [
-            SimpleNamespace(
-                source_kind="single_compare",
-                input_destiny="Rio Branco, AC",
-                destiny_name="Rio Branco, AC",
-                destiny_lat=-9.97499,
-                destiny_lon=-67.8243,
-                destiny_uf="AC",
-                port_destiny_name="Manaus",
-                road_cost_r=12000.0,
-                multimodal_cost_r=9500.0,
-                cost_delta_r=2500.0,
-                cost_savings_pct=20.8333,
-                road_emissions_kg=6400.0,
-                multimodal_emissions_kg=4100.0,
-                emissions_delta_kg=2300.0,
-                emissions_savings_pct=35.9375,
-                road_distance_km=3600.0,
-                sea_km=2900.0,
-                updated_timestamp="2026-03-24 08:00:00",
-            ),
-        ]
 
-        with patch("app.heatmap.service.get_heatmap_status", return_value=status), patch(
-            "app.heatmap.service.db_session",
-            return_value=contextlib.nullcontext(object()),
+        with patch(
+            "app.heatmap.service._load_bulk_rows_for_map",
+            return_value=[bulk_row],
         ), patch(
-            "app.heatmap.service.list_bulk_run_results",
-            return_value=[],
-        ), patch(
-            "app.heatmap.service._load_map_rows",
-            return_value=rows,
-        ):
-            dataset = load_current_dataset(scenario)
+            "app.heatmap.service._load_single_compare_rows_for_map",
+        ) as legacy_loader:
+            rows = heatmap_service._load_map_rows(
+                object(),
+                self._scenario(),
+                "city_dests_over50k.txt",
+            )
 
-        self.assertIsNotNone(dataset)
-        assert dataset is not None
-        self.assertEqual(len(dataset.points), 1)
-        self.assertEqual(dataset.points[0].destiny_name, "Rio Branco, AC")
-        self.assertEqual(dataset.diagnostics.loaded_bulk_rows, 0)
-        self.assertEqual(dataset.diagnostics.loaded_single_compare_rows, 1)
+        self.assertEqual(rows, [bulk_row])
+        legacy_loader.assert_not_called()
 
     def test_list_failed_destinations_returns_selected_run_diagnostics(self) -> None:
         scenario = self._scenario()

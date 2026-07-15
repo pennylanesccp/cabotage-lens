@@ -11,19 +11,22 @@ from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS, list_v
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO, list_port_ops_scenarios
 
 from app.heatmap.config import (
+    HEATMAP_COORDINATE_PRECISION,
     HEATMAP_DEFAULT_METRIC,
     HEATMAP_DESTINATION_SET_ID,
     heatmap_destination_label,
     list_heatmap_destination_sets,
     HEATMAP_METRICS,
     HEATMAP_PAGE_TITLE,
+    HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM,
+    HEATMAP_SURFACE_VERY_SPARSE_MAX_KM,
 )
 from app.heatmap.map import render_heatmap_map
 from app.heatmap.surface import build_surface
 from app.heatmap.service import (
     HeatmapConfigurationError,
     HeatmapDataError,
-    load_cached_surface_dataset,
+    load_current_dataset,
     rerun_heatmap,
     run_heatmap,
 )
@@ -46,7 +49,10 @@ _log = get_logger(__name__)
 _HEATMAP_ORIGIN_FIELD = "heatmap_origin"
 _HEATMAP_METRIC_FIELD = "heatmap_color_metric"
 _HEATMAP_METRIC_STATE_VERSION_FIELD = "_heatmap_metric_state_version"
-_HEATMAP_METRIC_STATE_VERSION = 2
+_HEATMAP_METRIC_STATE_VERSION = 3
+_HEATMAP_POINT_STATE_VERSION_FIELD = "_heatmap_point_state_version"
+_HEATMAP_POINT_STATE_VERSION = 1
+_HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD = "_heatmap_route_audit_signature"
 _RUN_LOG_HEIGHT_PX = 260
 
 
@@ -58,7 +64,12 @@ def _init_page_state() -> None:
         st.session_state[_HEATMAP_METRIC_STATE_VERSION_FIELD] = _HEATMAP_METRIC_STATE_VERSION
     else:
         st.session_state.setdefault(_HEATMAP_METRIC_FIELD, HEATMAP_DEFAULT_METRIC)
-    st.session_state.setdefault("heatmap_show_points", False)
+    if st.session_state.get(_HEATMAP_POINT_STATE_VERSION_FIELD) != _HEATMAP_POINT_STATE_VERSION:
+        st.session_state["heatmap_show_points"] = True
+        st.session_state[_HEATMAP_POINT_STATE_VERSION_FIELD] = _HEATMAP_POINT_STATE_VERSION
+    else:
+        st.session_state.setdefault("heatmap_show_points", True)
+    st.session_state.setdefault("heatmap_log_route_audit", False)
     st.session_state.setdefault("heatmap_dataset", None)
     st.session_state.setdefault("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID)
 
@@ -264,25 +275,139 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
         horizontal=True,
         key=_HEATMAP_METRIC_FIELD,
     )
-    show_points = bool(st.session_state.get("heatmap_show_points", False))
+    show_points = bool(st.session_state.get("heatmap_show_points", True))
 
-    surface = build_surface(dataset, metric)
+    log_route_details = _should_log_route_audit(dataset, metric)
+    surface = build_surface(
+        dataset,
+        metric,
+        log_route_details=log_route_details,
+    )
     diagnostics = dataset.diagnostics
     render_heatmap_map(
         dataset,
         metric,
-        show_points=bool(show_points),
+        show_points=show_points,
         surface=surface,
     )
     st.caption(
-        f"{diagnostics.plottable_points} destination points currently shape the 3D surface from all stored sources for this origin/cargo."
+        (
+            f"{diagnostics.plottable_points} stored route results shape the surface through "
+            f"{surface.unique_source_coordinate_count} unique city coordinates. "
+            f"Cells: {surface.dense_cell_count} dense + {surface.sparse_cell_count} sparse + "
+            f"{surface.very_sparse_cell_count} very sparse."
+        )
     )
+    if surface.sparse_cell_count > 0 or surface.very_sparse_cell_count > 0:
+        st.caption(
+            "Transparent sparse cells interpolate between distant stored destinations; they fill visual gaps but do "
+            "not represent additional routed cities or local city-level precision."
+        )
     _render_dataset_diagnostics(dataset, surface)
+
+
+def _should_log_route_audit(dataset: HeatmapDataset, metric: str) -> bool:
+    if not bool(st.session_state.get("heatmap_log_route_audit", False)):
+        st.session_state.pop(_HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD, None)
+        return False
+    signature = (id(dataset), str(metric), str(st.session_state.get("log_level", "INFO")).upper())
+    if st.session_state.get(_HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD) == signature:
+        return False
+    st.session_state[_HEATMAP_ROUTE_AUDIT_SIGNATURE_FIELD] = signature
+    return True
+
+
+def _route_coverage_table(dataset: HeatmapDataset) -> pd.DataFrame:
+    coordinate_counts: dict[tuple[float, float], int] = {}
+    for point in dataset.points:
+        key = (
+            round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
+            round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
+        )
+        coordinate_counts[key] = coordinate_counts.get(key, 0) + 1
+
+    return pd.DataFrame(
+        [
+            {
+                "destination": point.destiny_name,
+                "uf": point.destiny_uf,
+                "latitude": round(float(point.destiny_lat), 6),
+                "longitude": round(float(point.destiny_lon), 6),
+                "rows_at_coordinate": coordinate_counts[
+                    (
+                        round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
+                        round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
+                    )
+                ],
+                "destination_port": point.port_destiny_name,
+                "road_km": point.road_distance_km,
+                "sea_km": point.sea_km,
+                "road_emissions_kg": point.road_emissions_kg,
+                "multimodal_emissions_kg": point.multimodal_emissions_kg,
+                "emissions_delta_kg": point.emissions_delta_kg,
+            }
+            for point in sorted(
+                dataset.points,
+                key=lambda item: (str(item.destiny_uf or ""), item.destiny_name.casefold()),
+            )
+        ]
+    )
+
+
+def _uf_coverage_table(dataset: HeatmapDataset) -> pd.DataFrame:
+    grouped: dict[str, list[Any]] = {}
+    for point in dataset.points:
+        grouped.setdefault(str(point.destiny_uf or "<none>"), []).append(point)
+    return pd.DataFrame(
+        [
+            {
+                "uf": uf,
+                "route_rows": len(points),
+                "unique_coordinates": len(
+                    {
+                        (
+                            round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
+                            round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
+                        )
+                        for point in points
+                    }
+                ),
+                "duplicate_coordinate_rows": len(points)
+                - len(
+                    {
+                        (
+                            round(float(point.destiny_lat), HEATMAP_COORDINATE_PRECISION),
+                            round(float(point.destiny_lon), HEATMAP_COORDINATE_PRECISION),
+                        )
+                        for point in points
+                    }
+                ),
+            }
+            for uf, points in sorted(grouped.items())
+        ]
+    )
+
+
+def _missing_destination_table(dataset: HeatmapDataset) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "destination": destination,
+                "uf": destination.rsplit(",", 1)[1].strip().upper() if "," in destination else "<none>",
+            }
+            for destination in dataset.diagnostics.selected_missing_destinations
+        ]
+    )
 
 
 def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface) -> None:
     diagnostics = dataset.diagnostics
-    latest_failed_destinations = max(dataset.run.pending_count - dataset.run.missing_count, 0)
+    latest_failed_destinations = max(
+        dataset.run.pending_count
+        - dataset.run.missing_count
+        - dataset.run.profile_route_refresh_count,
+        0,
+    )
     loaded_from_route_cache = diagnostics.loaded_route_cache_rows > 0
 
     with st.expander("Diagnostics and data coverage", expanded=False):
@@ -333,6 +458,27 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
 
         if latest_failed_destinations > 0:
             st.caption(f"Latest failed destinations queued by Run missing: {latest_failed_destinations}")
+        if dataset.run.profile_route_refresh_count > 0:
+            st.warning(
+                (
+                    f"{dataset.run.profile_route_refresh_count} stored successes were excluded because their direct "
+                    f"road route was not tied to the selected `{dataset.scenario.ors_profile}` profile. "
+                    "Run missing will recalculate those destinations with the correct profile-specific cache."
+                )
+            )
+        if diagnostics.selected_coverage_by_uf:
+            st.caption(
+                (
+                    f"Selected-set coverage: {diagnostics.selected_plottable_points}/"
+                    f"{diagnostics.selected_destination_count} "
+                    "destinations have a complete stored result currently supplied to the map."
+                )
+            )
+            st.dataframe(
+                pd.DataFrame(diagnostics.selected_coverage_by_uf),
+                hide_index=True,
+                width="stretch",
+            )
         if diagnostics.failed_destinations:
             st.caption(
                 "Latest run failure counts by step: "
@@ -369,6 +515,44 @@ def _render_dataset_diagnostics(dataset: HeatmapDataset, surface: HeatmapSurface
                     "coordinates, so the interpolated surface uses fewer unique vertices."
                 )
             )
+        if surface.sparse_cell_count > 0:
+            st.caption(
+                (
+                    f"Sparse coverage filled {surface.sparse_cell_count} cells that were previously blank because their "
+                    f"Delaunay support triangles exceeded the dense {surface.interpolation_radius_km:,.0f} km limit. "
+                    f"Sparse interpolation extends up to {HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM:,.0f} km and "
+                    "is identified in each cell tooltip."
+                )
+            )
+        if surface.very_sparse_cell_count > 0:
+            st.caption(
+                (
+                    f"Very sparse coverage fills {surface.very_sparse_cell_count} frontier cells supported by only "
+                    f"{surface.very_sparse_triangle_count} national-scale triangles above "
+                    f"{HEATMAP_SURFACE_INTERPOLATION_RADIUS_MAX_KM:,.0f} km, capped at "
+                    f"{HEATMAP_SURFACE_VERY_SPARSE_MAX_KM:,.0f} km. These cells are intentionally more "
+                    "transparent and must not be interpreted as local city-level precision."
+                )
+            )
+        if surface.skipped_far_cells > 0:
+            st.caption(
+                f"Cells without an accepted supporting triangle remain excluded: {surface.skipped_far_cells}."
+            )
+        if bool(st.session_state.get("heatmap_log_route_audit", False)):
+            st.markdown("#### Detailed route coverage audit")
+            st.caption(
+                "These are stored destination result summaries, not full route polylines. "
+                "Every result currently supplied to the map is listed below. "
+                "Use `rows_at_coordinate` to identify aliases or destinations collapsed onto the same map point."
+            )
+            st.dataframe(_uf_coverage_table(dataset), hide_index=True, width="stretch")
+            if diagnostics.selected_missing_destinations:
+                st.caption(
+                    f"Destinations not currently plotted in the selected set: "
+                    f"{len(diagnostics.selected_missing_destinations)}."
+                )
+                st.dataframe(_missing_destination_table(dataset), hide_index=True, width="stretch", height=320)
+            st.dataframe(_route_coverage_table(dataset), hide_index=True, width="stretch", height=440)
         if loaded_from_route_cache:
             st.caption(
                 "This page reused the normalized routes cache and recalculated evaluation outputs in memory; it did not call routing providers or overwrite the routes cache."
@@ -434,7 +618,7 @@ def render_page() -> None:
 
     if load_clicked:
         _log.info(
-            "Heatmap UI requested cache-backed surface load origin=%s cargo_t=%.3f",
+            "Heatmap UI requested stored-result surface load origin=%s cargo_t=%.3f",
             scenario.origin_name,
             scenario.cargo_t,
         )
@@ -445,19 +629,18 @@ def render_page() -> None:
         log_box = st.empty()
         progress_callback = _progress_callback(progress_bar, status_box, cooldown_box, log_box)
         status_box.markdown(
-            _status_card("Loading cached-route surface...", tone="info"),
+            _status_card("Loading stored heatmap results...", tone="info"),
             unsafe_allow_html=True,
         )
         _render_live_run_logs(log_box)
         try:
-            dataset = load_cached_surface_dataset(
+            dataset = load_current_dataset(
                 scenario,
                 destination_set_id=destination_set_id,
-                progress_callback=progress_callback,
             )
         except HeatmapConfigurationError as exc:
             _log.error(
-                "Heatmap route-cache surface load unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
+                "Heatmap stored-result load unavailable due to configuration origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
                 exc,
@@ -465,12 +648,12 @@ def render_page() -> None:
             progress_bar.empty()
             cooldown_box.empty()
             _render_live_run_logs(log_box)
-            status_box.markdown(_status_card("Cached-route load failed.", tone="error"), unsafe_allow_html=True)
+            status_box.markdown(_status_card("Stored-result load failed.", tone="error"), unsafe_allow_html=True)
             st.error(str(exc))
             st.session_state.heatmap_dataset = None
         except HeatmapDataError as exc:
             _log.warning(
-                "Cached-route heatmap load produced no plottable surface origin=%s cargo_t=%.3f error=%s",
+                "Stored heatmap results produced no plottable surface origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
                 exc,
@@ -478,12 +661,12 @@ def render_page() -> None:
             progress_bar.empty()
             cooldown_box.empty()
             _render_live_run_logs(log_box)
-            status_box.markdown(_status_card("Cached-route load failed.", tone="error"), unsafe_allow_html=True)
+            status_box.markdown(_status_card("Stored-result load failed.", tone="error"), unsafe_allow_html=True)
             st.warning(str(exc))
             st.session_state.heatmap_dataset = None
         except Exception as exc:
             _log.error(
-                "Failed to load cache-backed heatmap surface origin=%s cargo_t=%.3f error=%s",
+                "Failed to load stored-result heatmap surface origin=%s cargo_t=%.3f error=%s",
                 scenario.origin_name,
                 scenario.cargo_t,
                 exc,
@@ -491,8 +674,8 @@ def render_page() -> None:
             progress_bar.empty()
             cooldown_box.empty()
             _render_live_run_logs(log_box)
-            status_box.markdown(_status_card("Cached-route load failed.", tone="error"), unsafe_allow_html=True)
-            st.error(f"Failed to load the cached-route heatmap surface: {exc}")
+            status_box.markdown(_status_card("Stored-result load failed.", tone="error"), unsafe_allow_html=True)
+            st.error(f"Failed to load the stored-result heatmap surface: {exc}")
             st.session_state.heatmap_dataset = None
         else:
             if dataset is None:
@@ -500,12 +683,12 @@ def render_page() -> None:
                 cooldown_box.empty()
                 log_box.empty()
                 status_box.markdown(
-                    _status_card("No cached heatmap routes were found for this origin yet.", tone="warning"),
+                    _status_card("No stored heatmap results were found for this scenario yet.", tone="warning"),
                     unsafe_allow_html=True,
                 )
                 st.info(
-                    "No cached direct routes were found for this origin across the tracked heatmap cities yet. "
-                    "Use Run missing or Rerun all to trace them first."
+                    "No successful stored destination results were found for this scenario yet. "
+                    "Use Run missing or Rerun all to calculate them first."
                 )
                 st.session_state.heatmap_dataset = None
             else:
@@ -513,7 +696,7 @@ def render_page() -> None:
                 cooldown_box.empty()
                 log_box.empty()
                 status_box.markdown(
-                    _status_card("Cached-route surface loaded.", tone="success"),
+                    _status_card("Stored-result surface loaded.", tone="success"),
                     unsafe_allow_html=True,
                 )
                 st.session_state.heatmap_dataset = dataset
@@ -618,7 +801,7 @@ def render_page() -> None:
         st.markdown(
             """
             <section class='empty-state'>
-                Load cached routes or run the missing destinations from the sidebar to render the comparison surface.
+                Load stored results or run the missing destinations from the sidebar to render the comparison surface.
                 The page keeps missing rows, failures, and skipped points visible in diagnostics once data are available.
             </section>
             """,

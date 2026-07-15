@@ -200,7 +200,7 @@ class RouteCacheResolutionTests(unittest.TestCase):
         self.assertEqual(upsert_mock.call_args.kwargs["place"], "Sao Paulo, SP")
         fake_conn.commit.assert_called_once_with()
 
-    def test_get_run_ignores_requested_profile_and_uses_latest_route_for_pair(self) -> None:
+    def test_get_run_filters_cached_route_by_requested_profile(self) -> None:
         conn = _FakeConnection(
             row=(
                 91,
@@ -212,8 +212,8 @@ class RouteCacheResolutionTests(unittest.TestCase):
                 "Manaus, AM",
                 -3.119,
                 -60.0217,
-                False,
-                None,
+                True,
+                "driving-hgv",
                 "ors",
                 3921.4,
                 198765.0,
@@ -236,15 +236,14 @@ class RouteCacheResolutionTests(unittest.TestCase):
         self.assertIsNotNone(row)
         assert row is not None
         self.assertEqual(row["id"], 91)
-        self.assertEqual(row["profile_requested"], "driving-car")
+        self.assertEqual(row["profile_requested"], "driving-hgv")
         self.assertEqual(row["distance_km"], 3921.4)
         self.assertIsNotNone(conn.last_sql)
         assert conn.last_sql is not None
-        self.assertNotIn("rc.is_hgv = ?", conn.last_sql)
-        self.assertIn("ORDER BY rc.updated_timestamp DESC", conn.last_sql)
-        self.assertEqual(conn.last_params, (10, 20))
+        self.assertIn("rc.is_hgv = ?", conn.last_sql)
+        self.assertEqual(conn.last_params, (10, 20, True))
 
-    def test_list_runs_by_label_keys_maps_latest_pair_row_to_any_requested_profile(self) -> None:
+    def test_list_runs_by_label_keys_keeps_requested_profiles_separate(self) -> None:
         conn = _FakeConnection(
             rows=[
                 (
@@ -264,7 +263,25 @@ class RouteCacheResolutionTests(unittest.TestCase):
                     198765.0,
                     "2026-03-18 09:00:00",
                     "2026-03-19 08:00:00",
-                )
+                ),
+                (
+                    45,
+                    10,
+                    20,
+                    "Pelotas, RS",
+                    -31.7654,
+                    -52.3376,
+                    "Manaus, AM",
+                    -3.119,
+                    -60.0217,
+                    True,
+                    "driving-hgv",
+                    "ors",
+                    4001.2,
+                    205000.0,
+                    "2026-03-18 10:00:00",
+                    "2026-03-19 09:00:00",
+                ),
             ]
         )
         points = {
@@ -287,16 +304,16 @@ class RouteCacheResolutionTests(unittest.TestCase):
         self.assertEqual(len(rows), 2)
         self.assertIn(("pelotas, rs", "manaus, am", "driving-hgv"), rows)
         self.assertIn(("pelotas, rs", "manaus, am", "driving-car"), rows)
-        self.assertEqual(rows[("pelotas, rs", "manaus, am", "driving-hgv")]["id"], 44)
+        self.assertEqual(rows[("pelotas, rs", "manaus, am", "driving-hgv")]["id"], 45)
         self.assertEqual(rows[("pelotas, rs", "manaus, am", "driving-car")]["id"], 44)
         self.assertIsNotNone(conn.last_sql)
         assert conn.last_sql is not None
-        self.assertIn("DISTINCT ON (rc.origin_location_id, rc.destiny_location_id)", conn.last_sql)
-        self.assertNotIn("rc.is_hgv = ?", conn.last_sql)
-        self.assertEqual(conn.last_params, [10, 20, 10, 20])
+        self.assertIn("DISTINCT ON (rc.origin_location_id, rc.destiny_location_id, rc.is_hgv)", conn.last_sql)
+        self.assertIn("w.is_hgv = rc.is_hgv", conn.last_sql)
+        self.assertEqual(conn.last_params, [10, 20, True, 10, 20, False])
 
-    def test_delete_key_removes_all_cached_variants_for_pair(self) -> None:
-        conn = _FakeConnection(rowcount=2)
+    def test_delete_key_removes_only_requested_profile_for_pair(self) -> None:
+        conn = _FakeConnection(rowcount=1)
 
         with patch(
             "modules.infra.db.road_cache.get_location_by_coords",
@@ -313,12 +330,12 @@ class RouteCacheResolutionTests(unittest.TestCase):
                 profile_requested="driving-hgv",
             )
 
-        self.assertEqual(deleted, 2)
+        self.assertEqual(deleted, 1)
         self.assertIsNotNone(conn.last_sql)
         assert conn.last_sql is not None
         self.assertIn("DELETE FROM route_cache_entries", conn.last_sql)
-        self.assertNotIn("is_hgv", conn.last_sql)
-        self.assertEqual(conn.last_params, (10, 20))
+        self.assertIn("is_hgv = ?", conn.last_sql)
+        self.assertEqual(conn.last_params, (10, 20, True))
 
 
 if __name__ == "__main__":

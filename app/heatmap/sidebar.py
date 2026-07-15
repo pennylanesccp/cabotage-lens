@@ -48,12 +48,15 @@ def render_run_actions(*, has_origin: bool, has_loaded_dataset: bool) -> Tuple[b
     with st.sidebar:
         st.markdown("<p class='sidebar-section-label'>Actions</p>", unsafe_allow_html=True)
         load_clicked = st.button(
-            "Load from route cache",
+            "Load stored results",
             type="primary",
             width="stretch",
             disabled=(not has_origin),
             key="heatmap_load_surface_button",
-            help="Reuse all cached road routes already traced for this origin, then recalculate multimodal costs and emissions without calling ORS or LocationIQ.",
+            help=(
+                "Load every successful comparison result stored in Supabase for this exact scenario, across tracked "
+                "destination sets, without calling ORS or LocationIQ."
+            ),
         )
         run_missing_clicked = st.button(
             "Run missing",
@@ -154,6 +157,15 @@ def _render_advanced(
     st.selectbox("Port ops scenario", options=list(port_ops_scenarios), key="port_ops_scenario")
 
     _section_label("App")
+    st.checkbox(
+        "Detailed route coverage audit",
+        key="heatmap_log_route_audit",
+        help=(
+            "Write one INFO record per stored destination result the next time this dataset is rendered; "
+            "shared coordinates are included at INFO and interpolation triangles at DEBUG. The audit runs once "
+            "per dataset and metric, and the accepted/missing lists also appear in the diagnostics tables."
+        ),
+    )
     st.selectbox(
         "Run scope destination set",
         options=list(destination_set_options),

@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from modules.addressing.text import ascii_place_key, ascii_place_text
+from modules.costs.diesel_prices import normalize_uf
 from modules.infra.database_manager import (
     BulkRunSelector,
     db_session,
@@ -100,6 +101,85 @@ def _dedupe_preserve_order(values: List[str]) -> List[str]:
     return deduped
 
 
+def _destination_uf(value: str) -> str:
+    text = str(value or "").strip()
+    if "," not in text:
+        return "<none>"
+    candidate = normalize_uf(text.rsplit(",", 1)[1].strip())
+    return candidate or "<none>"
+
+
+def _destination_identity(value: str) -> str:
+    text = ascii_place_text(normalize_bulk_place_input(value))
+    if not text:
+        return ""
+    if "," not in text:
+        return text.casefold()
+    city, state = text.rsplit(",", 1)
+    uf = normalize_uf(state)
+    city_key = ascii_place_key(city)
+    if not city_key or not uf:
+        return text.casefold()
+    return f"{city_key}|{uf.casefold()}"
+
+
+def _selected_coverage_audit(
+    expected_destinations: List[str],
+    plotted_destination_keys: set[str],
+) -> tuple[int, List[dict[str, int | str]], List[str]]:
+    expected_by_uf: dict[str, list[tuple[str, str]]] = {}
+    for destination in expected_destinations:
+        normalized_key = _destination_identity(destination)
+        if not normalized_key:
+            continue
+        expected_by_uf.setdefault(_destination_uf(destination), []).append((destination, normalized_key))
+
+    coverage_rows: List[dict[str, int | str]] = []
+    missing_destinations: List[str] = []
+    plotted_total = 0
+    for uf, destinations in sorted(expected_by_uf.items()):
+        plotted = sum(1 for _destination, key in destinations if key in plotted_destination_keys)
+        missing = [destination for destination, key in destinations if key not in plotted_destination_keys]
+        plotted_total += plotted
+        missing_destinations.extend(missing)
+        coverage_rows.append(
+            {
+                "uf": uf,
+                "expected": len(destinations),
+                "plotted": plotted,
+                "not_plotted": len(missing),
+            }
+        )
+    return plotted_total, coverage_rows, missing_destinations
+
+
+def _log_selected_coverage_audit(
+    *,
+    destination_set_id: str,
+    coverage_rows: List[dict[str, int | str]],
+    missing_destinations: List[str],
+) -> None:
+    for row in coverage_rows:
+        _log.debug(
+            "Heatmap selected-set coverage destination_set=%s uf=%s expected=%d plotted=%d not_plotted=%d",
+            destination_set_id,
+            row["uf"],
+            row["expected"],
+            row["plotted"],
+            row["not_plotted"],
+        )
+    chunk_size = 50
+    for start in range(0, len(missing_destinations), chunk_size):
+        chunk = missing_destinations[start : start + chunk_size]
+        _log.debug(
+            "Heatmap selected-set missing destinations destination_set=%s offset=%d count=%d values=%s",
+            destination_set_id,
+            start,
+            len(chunk),
+            " | ".join(chunk),
+        )
+
+
 def _resolve_destination_set_id(destination_set_id: str | None = None) -> str:
     try:
         return normalize_heatmap_destination_set_id(destination_set_id)
@@ -119,18 +199,23 @@ def _heatmap_destinations(destination_set_id: str = HEATMAP_DESTINATION_SET_ID) 
 
 
 @lru_cache(maxsize=1)
-def _all_heatmap_destination_keys() -> frozenset[str]:
-    keys: set[str] = set()
+def _all_heatmap_destinations() -> tuple[str, ...]:
+    destinations: list[str] = []
     for destination_set_id in list_heatmap_destination_sets():
         try:
-            destinations = _heatmap_destinations(destination_set_id)
+            destinations.extend(_heatmap_destinations(destination_set_id))
         except FileNotFoundError:
             continue
-        for destination in destinations:
-            normalized = normalize_bulk_place_input(destination).casefold()
-            if normalized:
-                keys.add(normalized)
-    return frozenset(keys)
+    return tuple(_dedupe_preserve_order(destinations))
+
+
+@lru_cache(maxsize=1)
+def _all_heatmap_destination_keys() -> frozenset[str]:
+    return frozenset(
+        identity
+        for identity in (_destination_identity(destination) for destination in _all_heatmap_destinations())
+        if identity
+    )
 
 
 def _require_postgres() -> None:
@@ -160,6 +245,7 @@ def _to_run_info(
     success_count: int,
     fail_count: int,
     failed_destination_count: int,
+    profile_route_refresh_count: int,
     latest_updated_timestamp: Any,
     latest_run_id: Optional[str],
     duration_s: Optional[float],
@@ -167,11 +253,12 @@ def _to_run_info(
 ) -> HeatmapRunInfo:
     destination_count = len(_heatmap_destinations(destination_set_id))
     found_count = max(min(int(row_count), destination_count), 0)
-    success_total = max(min(int(success_count), destination_count), 0)
+    invalid_success_total = max(min(int(profile_route_refresh_count), destination_count), 0)
+    success_total = max(min(int(success_count) - invalid_success_total, destination_count), 0)
     fail_total = max(min(int(fail_count), destination_count), 0)
     missing_count = max(destination_count - found_count, 0)
     failed_total = max(min(int(failed_destination_count), destination_count), 0)
-    pending_count = max(min(missing_count + failed_total, destination_count), 0)
+    pending_count = max(min(missing_count + failed_total + invalid_success_total, destination_count), 0)
     return HeatmapRunInfo(
         run_id=latest_run_id,
         origin_name=scenario.origin_name,
@@ -186,6 +273,7 @@ def _to_run_info(
         completed_timestamp=completed_timestamp,
         updated_timestamp=latest_updated_timestamp,
         destination_set_id=destination_set_id,
+        profile_route_refresh_count=invalid_success_total,
     )
 
 
@@ -311,7 +399,9 @@ def _loaded_row_from_single_compare(record: Any, cached_point: Optional[Dict[str
 
 
 def _loaded_row_key(record: _LoadedHeatmapRow) -> str:
-    return normalize_bulk_place_input(record.input_destiny or record.destiny_name).casefold()
+    return _destination_identity(
+        getattr(record, "input_destiny", "") or getattr(record, "destiny_name", "")
+    )
 
 
 def _timestamp_sort_key(value: Any) -> tuple[int, str]:
@@ -326,8 +416,8 @@ def _row_preference_key(record: _LoadedHeatmapRow) -> tuple[Any, ...]:
         1 if record.destiny_lat is not None and record.destiny_lon is not None else 0,
         1 if record.road_cost_r is not None and record.multimodal_cost_r is not None else 0,
         1 if record.road_emissions_kg is not None and record.multimodal_emissions_kg is not None else 0,
-        _timestamp_sort_key(record.updated_timestamp),
         1 if record.source_kind == "bulk" else 0,
+        _timestamp_sort_key(record.updated_timestamp),
     )
 
 
@@ -426,19 +516,41 @@ def _failed_destination_count(records: List[Any]) -> int:
     return sum(1 for record in records if str(getattr(record, "status", "")).strip().lower() != "ok")
 
 
+def _success_requires_profile_route_refresh(record: Any) -> bool:
+    if str(getattr(record, "status", "")).strip().lower() != "ok":
+        return False
+    if bool(getattr(record, "is_approximation", False)):
+        return False
+    try:
+        road_distance_km = float(getattr(record, "road_distance_km", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return False
+    route_source = str(getattr(record, "route_source", "") or "").strip().lower()
+    if road_distance_km <= 0.0 or not route_source.endswith("_exact"):
+        return False
+    return getattr(record, "road_route_id", None) is None
+
+
+def _profile_route_refresh_count(records: List[Any]) -> int:
+    return sum(1 for record in records if _success_requires_profile_route_refresh(record))
+
+
 def _pending_destination_list(records: List[Any], *, destination_set_id: str) -> List[str]:
-    latest_statuses: dict[str, str] = {}
+    latest_statuses: dict[str, tuple[str, bool]] = {}
     for record in records:
         normalized_input = normalize_bulk_place_input(getattr(record, "input_destiny", ""))
         if not normalized_input:
             continue
-        latest_statuses[normalized_input.casefold()] = str(getattr(record, "status", "")).strip().lower()
+        latest_statuses[normalized_input.casefold()] = (
+            str(getattr(record, "status", "")).strip().lower(),
+            _success_requires_profile_route_refresh(record),
+        )
 
     pending: list[str] = []
     for destination in _heatmap_destinations(destination_set_id):
         normalized_input = normalize_bulk_place_input(destination).casefold()
-        status = latest_statuses.get(normalized_input)
-        if status is None or status != "ok":
+        latest = latest_statuses.get(normalized_input)
+        if latest is None or latest[0] != "ok" or latest[1]:
             pending.append(destination)
     return pending
 
@@ -480,7 +592,27 @@ def _load_bulk_rows_for_map(
         only_success=True,
         include_all_destination_sets=True,
     )
-    return [_loaded_row_from_bulk(record) for record in records]
+    invalid_records = [record for record in records if _success_requires_profile_route_refresh(record)]
+    if invalid_records:
+        _log.warning(
+            "Excluded stored heatmap successes without a profile-specific direct-route reference count=%d profile=%s",
+            len(invalid_records),
+            scenario.ors_profile,
+        )
+        for start in range(0, len(invalid_records), 50):
+            chunk = invalid_records[start : start + 50]
+            _log.debug(
+                "Profile-specific route refresh destinations profile=%s offset=%d count=%d values=%s",
+                scenario.ors_profile,
+                start,
+                len(chunk),
+                " | ".join(str(getattr(record, "input_destiny", "<unknown>")) for record in chunk),
+            )
+    return [
+        _loaded_row_from_bulk(record)
+        for record in records
+        if not _success_requires_profile_route_refresh(record)
+    ]
 
 
 def _load_single_compare_rows_for_map(conn: Any, scenario: HeatmapScenario) -> List[_LoadedHeatmapRow]:
@@ -511,18 +643,18 @@ def _load_map_rows(
     destination_set_id: str,
 ) -> List[_LoadedHeatmapRow]:
     bulk_rows = _load_bulk_rows_for_map(conn, scenario, destination_set_id)
-    single_compare_rows = _load_single_compare_rows_for_map(conn, scenario)
-    merged_rows = _merge_loaded_rows([*bulk_rows, *single_compare_rows])
+    # analysis_results does not persist the complete heatmap scenario (truck/profile,
+    # vessel and port assumptions), so it cannot safely participate in an exact-scenario load.
+    merged_rows = _merge_loaded_rows(bulk_rows)
     _log.info(
         (
-            "Resolved aggregated heatmap rows origin=%s cargo_t=%.3f selected_destination_set=%s "
-            "bulk_rows=%d single_compare_rows=%d merged_rows=%d"
+            "Resolved exact-scenario heatmap rows origin=%s cargo_t=%.3f selected_destination_set=%s "
+            "bulk_rows=%d merged_rows=%d legacy_single_compare_included=false"
         ),
         scenario.origin_name,
         scenario.cargo_t,
         destination_set_id,
         len(bulk_rows),
-        len(single_compare_rows),
         len(merged_rows),
     )
     return merged_rows
@@ -603,9 +735,9 @@ def get_heatmap_status(
         )
         with db_session() as conn:
             selector, summary, latest_completed = _select_active_selector(conn, scenario, resolved_destination_set_id)
-            latest_rows = list_bulk_results(conn, selector=selector, only_success=None)
 
-        failed_destination_count = _failed_destination_count(latest_rows)
+        failed_destination_count = int(summary.fail_count)
+        profile_route_refresh_count = int(summary.profile_route_refresh_count)
         status = _to_run_info(
             scenario,
             destination_set_id=resolved_destination_set_id,
@@ -613,6 +745,7 @@ def get_heatmap_status(
             success_count=summary.success_count,
             fail_count=summary.fail_count,
             failed_destination_count=failed_destination_count,
+            profile_route_refresh_count=profile_route_refresh_count,
             latest_updated_timestamp=(
                 summary.latest_updated_timestamp
                 or (None if latest_completed is None else latest_completed.updated_timestamp)
@@ -624,7 +757,7 @@ def get_heatmap_status(
         _log.info(
             (
                 "Heatmap comparison status origin=%s cargo_t=%.3f found=%d success=%d fail=%d "
-                "missing=%d failed_latest=%d pending=%d latest_run_id=%s selector_hash=%s"
+                "missing=%d failed_latest=%d profile_route_refresh=%d pending=%d latest_run_id=%s selector_hash=%s"
             ),
             scenario.origin_name,
             scenario.cargo_t,
@@ -633,6 +766,7 @@ def get_heatmap_status(
             status.fail_count,
             status.missing_count,
             failed_destination_count,
+            profile_route_refresh_count,
             status.pending_count,
             status.run_id or "<none>",
             selector_hash(selector),
@@ -665,17 +799,19 @@ def pending_destinations(
 
     pending = _pending_destination_list(latest_rows, destination_set_id=resolved_destination_set_id)
     failed_destinations = _failed_destination_count(latest_rows)
+    profile_route_refresh_count = _profile_route_refresh_count(latest_rows)
     missing_count = max(len(_heatmap_destinations(resolved_destination_set_id)) - len(latest_rows), 0)
     _log.info(
         (
             "Computed pending heatmap destinations origin=%s cargo_t=%.3f pending=%d missing=%d "
-            "failed=%d total=%d"
+            "failed=%d profile_route_refresh=%d total=%d"
         ),
         scenario.origin_name,
         scenario.cargo_t,
         len(pending),
         missing_count,
         failed_destinations,
+        profile_route_refresh_count,
         len(_heatmap_destinations(resolved_destination_set_id)),
     )
     return pending
@@ -692,11 +828,13 @@ def _emit_progress(progress_callback: Optional[Any], **payload: Any) -> None:
 
 def _route_cache_point(row: Dict[str, Any], *, role: str) -> Dict[str, Any]:
     prefix = "origin" if role == "origin" else "destiny"
+    label = ascii_place_text(row.get(prefix) or "")
+    uf = _destination_uf(label)
     point: dict[str, Any] = {
-        "label": ascii_place_text(row.get(prefix) or ""),
+        "label": label,
         "lat": float(row[f"{prefix}_lat"]),
         "lon": float(row[f"{prefix}_lon"]),
-        "uf": None,
+        "uf": None if uf == "<none>" else uf,
     }
     location_id = row.get(f"{prefix}_location_id")
     if location_id is not None:
@@ -720,14 +858,23 @@ def _load_cached_route_rows_for_surface(conn: Any, scenario: HeatmapScenario) ->
             break
 
     allowed_destinations = _all_heatmap_destination_keys()
-    origin_key = normalize_bulk_place_input(scenario.origin_name).casefold()
+    allowed_points = list_cached_place_points(conn, places=_all_heatmap_destinations())
+    allowed_location_ids = {
+        int(point["location_id"])
+        for point in allowed_points.values()
+        if point.get("location_id") is not None
+    }
+    origin_key = _destination_identity(scenario.origin_name)
     latest_by_destiny: dict[str, Dict[str, Any]] = {}
     for row in rows:
         destiny_label = ascii_place_text(row.get("destiny") or "")
-        destiny_key = normalize_bulk_place_input(destiny_label).casefold()
-        if not destiny_key or destiny_key not in allowed_destinations or destiny_key == origin_key:
+        destiny_key = _destination_identity(destiny_label)
+        destiny_location_id = row.get("destiny_location_id")
+        location_match = destiny_location_id is not None and int(destiny_location_id) in allowed_location_ids
+        if (not location_match and destiny_key not in allowed_destinations) or destiny_key == origin_key:
             continue
-        latest_by_destiny.setdefault(destiny_key, row)
+        dedupe_key = f"location:{int(destiny_location_id)}" if location_match else destiny_key
+        latest_by_destiny.setdefault(dedupe_key, row)
 
     filtered = sorted(
         latest_by_destiny.values(),
@@ -763,6 +910,7 @@ def load_cached_surface_dataset(
 ) -> Optional[HeatmapDataset]:
     _require_postgres()
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
+    selected_destinations = list(_heatmap_destinations(resolved_destination_set_id))
     with bind_log_context(
         origin=scenario.origin_name,
         destination_set_id=resolved_destination_set_id,
@@ -782,6 +930,16 @@ def load_cached_surface_dataset(
             total=1,
         )
         with db_session() as conn:
+            selected_points = list_cached_place_points(conn, places=selected_destinations)
+            selected_identity_by_location_id: dict[int, str] = {}
+            for destination in selected_destinations:
+                selected_point = selected_points.get(ascii_place_key(destination))
+                if selected_point is None or selected_point.get("location_id") is None:
+                    continue
+                selected_identity_by_location_id.setdefault(
+                    int(selected_point["location_id"]),
+                    _destination_identity(destination),
+                )
             cached_rows = _load_cached_route_rows_for_surface(conn, scenario)
             if not cached_rows:
                 return None
@@ -888,6 +1046,7 @@ def load_cached_surface_dataset(
             ) from exc
 
         points: list[HeatmapPoint] = []
+        plotted_selected_destination_keys: set[str] = set()
         skipped_missing_coordinates = 0
         skipped_missing_costs = 0
         skipped_missing_emissions = 0
@@ -1016,6 +1175,14 @@ def load_cached_surface_dataset(
                 skipped_missing_emissions += 1
                 continue
             points.append(point)
+            destiny_location_id = row.get("destiny_location_id")
+            plotted_key = (
+                selected_identity_by_location_id.get(int(destiny_location_id))
+                if destiny_location_id is not None
+                else None
+            ) or _destination_identity(str(row.get("destiny") or destination_name))
+            if plotted_key:
+                plotted_selected_destination_keys.add(plotted_key)
             success_count += 1
             if latest_updated_timestamp is None or _timestamp_sort_key(row.get("updated_timestamp")) > _timestamp_sort_key(latest_updated_timestamp):
                 latest_updated_timestamp = row.get("updated_timestamp")
@@ -1037,6 +1204,15 @@ def load_cached_surface_dataset(
                 )
             return None
 
+        selected_plottable_points, selected_coverage_by_uf, selected_missing_destinations = _selected_coverage_audit(
+            selected_destinations,
+            plotted_selected_destination_keys,
+        )
+        _log_selected_coverage_audit(
+            destination_set_id=resolved_destination_set_id,
+            coverage_rows=selected_coverage_by_uf,
+            missing_destinations=selected_missing_destinations,
+        )
         diagnostics = HeatmapDatasetDiagnostics(
             successful_rows=success_count,
             plottable_points=len(points),
@@ -1045,6 +1221,10 @@ def load_cached_surface_dataset(
             skipped_missing_emissions=skipped_missing_emissions,
             loaded_route_cache_rows=len(cached_rows),
             failed_destinations=failures,
+            selected_destination_count=len(selected_destinations),
+            selected_plottable_points=selected_plottable_points,
+            selected_coverage_by_uf=selected_coverage_by_uf,
+            selected_missing_destinations=selected_missing_destinations,
         )
         dataset = HeatmapDataset(
             scenario=scenario,
@@ -1072,7 +1252,8 @@ def load_cached_surface_dataset(
             (
                 "Loaded heatmap dataset from route cache origin=%s cargo_t=%.3f selected_destination_set=%s "
                 "cached_rows=%d plottable_points=%d failures=%d skipped_missing_coordinates=%d "
-                "skipped_missing_costs=%d skipped_missing_emissions=%d"
+                "skipped_missing_costs=%d skipped_missing_emissions=%d selected_plottable=%d "
+                "selected_not_plotted=%d"
             ),
             scenario.origin_name,
             scenario.cargo_t,
@@ -1083,6 +1264,8 @@ def load_cached_surface_dataset(
             skipped_missing_coordinates,
             skipped_missing_costs,
             skipped_missing_emissions,
+            diagnostics.selected_plottable_points,
+            len(diagnostics.selected_missing_destinations),
         )
         return dataset
 
@@ -1170,6 +1353,13 @@ def load_current_dataset(
         )
 
     points: List[HeatmapPoint] = []
+    selected_destinations = list(_heatmap_destinations(resolved_destination_set_id))
+    selected_destination_keys = {
+        _destination_identity(destination)
+        for destination in selected_destinations
+        if _destination_identity(destination)
+    }
+    plotted_selected_destination_keys: set[str] = set()
     skipped_missing_coordinates = 0
     skipped_missing_costs = 0
     skipped_missing_emissions = 0
@@ -1187,9 +1377,21 @@ def load_current_dataset(
         point = _to_point(row)
         if point is not None:
             points.append(point)
+            row_key = _loaded_row_key(row)
+            if row_key in selected_destination_keys:
+                plotted_selected_destination_keys.add(row_key)
 
     loaded_bulk_rows = sum(1 for row in aggregated_rows if row.source_kind == "bulk")
     loaded_single_compare_rows = sum(1 for row in aggregated_rows if row.source_kind == "single_compare")
+    selected_plottable_points, selected_coverage_by_uf, selected_missing_destinations = _selected_coverage_audit(
+        selected_destinations,
+        plotted_selected_destination_keys,
+    )
+    _log_selected_coverage_audit(
+        destination_set_id=resolved_destination_set_id,
+        coverage_rows=selected_coverage_by_uf,
+        missing_destinations=selected_missing_destinations,
+    )
     if not points:
         _log.warning(
             (
@@ -1219,6 +1421,10 @@ def load_current_dataset(
         loaded_bulk_rows=loaded_bulk_rows,
         loaded_single_compare_rows=loaded_single_compare_rows,
         failed_destinations=failed_destinations,
+        selected_destination_count=len(selected_destinations),
+        selected_plottable_points=selected_plottable_points,
+        selected_coverage_by_uf=selected_coverage_by_uf,
+        selected_missing_destinations=selected_missing_destinations,
     )
     dataset = HeatmapDataset(
         scenario=scenario,
@@ -1233,7 +1439,7 @@ def load_current_dataset(
             "Loaded aggregated heatmap dataset origin=%s cargo_t=%.3f selected_destination_set=%s "
             "loaded_rows=%d bulk_rows=%d single_compare_rows=%d plottable_points=%d "
             "skipped_missing_coordinates=%d skipped_missing_costs=%d skipped_missing_emissions=%d "
-            "failed_destinations=%d selected_missing=%d"
+            "failed_destinations=%d selected_plottable=%d selected_not_plotted=%d"
         ),
         scenario.origin_name,
         scenario.cargo_t,
@@ -1246,7 +1452,8 @@ def load_current_dataset(
         diagnostics.skipped_missing_costs,
         diagnostics.skipped_missing_emissions,
         len(diagnostics.failed_destinations),
-        status.missing_count,
+        diagnostics.selected_plottable_points,
+        len(diagnostics.selected_missing_destinations),
     )
     return dataset
 

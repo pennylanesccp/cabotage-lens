@@ -254,7 +254,7 @@ class BulkRunPersistenceTests(unittest.TestCase):
 
     def test_bulk_results_summary_and_listing_map_latest_normalized_rows(self) -> None:
         selector = self._selector()
-        conn = _RecordingConnection(row=(2, 1, 1, "2026-03-11 09:30:00", "run-2"))
+        conn = _RecordingConnection(row=(2, 1, 1, "2026-03-11 09:30:00", "run-2", 0))
         conn.queue(
             rows=[
                 (
@@ -306,6 +306,8 @@ class BulkRunPersistenceTests(unittest.TestCase):
                     42.2222,
                     3900.0,
                     3400.0,
+                    None,
+                    None,
                     True,
                     "nearest_exact_delta_straight_line",
                     "Belem, PA",
@@ -397,6 +399,8 @@ class BulkRunPersistenceTests(unittest.TestCase):
                     42.2222,
                     3900.0,
                     3400.0,
+                    None,
+                    None,
                     True,
                     "nearest_exact_delta_straight_line",
                     "Belem, PA",

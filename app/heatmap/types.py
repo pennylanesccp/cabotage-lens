@@ -39,6 +39,7 @@ class HeatmapRunInfo:
     completed_timestamp: Any
     updated_timestamp: Any
     destination_set_id: str
+    profile_route_refresh_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,10 @@ class HeatmapDatasetDiagnostics:
     loaded_single_compare_rows: int = 0
     loaded_route_cache_rows: int = 0
     failed_destinations: List[HeatmapFailureRecord] = field(default_factory=list)
+    selected_destination_count: int = 0
+    selected_plottable_points: int = 0
+    selected_coverage_by_uf: List[dict[str, int | str]] = field(default_factory=list)
+    selected_missing_destinations: List[str] = field(default_factory=list)
 
     @property
     def skipped_total(self) -> int:
@@ -122,6 +127,7 @@ class HeatmapSurfaceCell:
     nearest_destiny_name: str
     nearest_destiny_uf: Optional[str]
     nearest_distance_km: float
+    interpolation_quality: str = "dense"
 
 
 @dataclass(frozen=True)
@@ -139,3 +145,11 @@ class HeatmapSurface:
     interpolation_radius_km: float
     skipped_far_cells: int = 0
     skipped_outside_boundary_cells: int = 0
+    prepared_triangle_count: int = 0
+    dense_triangle_count: int = 0
+    sparse_triangle_count: int = 0
+    very_sparse_triangle_count: int = 0
+    excluded_triangle_count: int = 0
+    dense_cell_count: int = 0
+    sparse_cell_count: int = 0
+    very_sparse_cell_count: int = 0
