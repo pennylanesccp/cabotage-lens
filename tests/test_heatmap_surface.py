@@ -359,6 +359,16 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertNotIn((1.5, 1.5), centers)
         self.assertTrue(all((lon + lat) <= 2.0 + 1e-9 for lon, lat in centers))
 
+    def test_tracked_ibge_boundary_keeps_border_city_inside_and_neighboring_capitals_outside(self) -> None:
+        payload = heatmap_surface.load_brazil_boundary_geojson()
+        geometry = payload["features"][0]["geometry"]
+        rings = tuple(heatmap_surface._extract_rings(geometry))
+
+        self.assertGreater(len(rings[0]), 3_000)
+        self.assertTrue(heatmap_surface._point_in_any_ring(-57.884037, -21.706575, rings))
+        self.assertFalse(heatmap_surface._point_in_any_ring(-57.5759, -25.2637, rings))
+        self.assertFalse(heatmap_surface._point_in_any_ring(-63.1821, -17.7833, rings))
+
     def test_source_anchored_cells_cover_every_observed_destination(self) -> None:
         hull_polygon = ((0.0, 0.0), (2.0, 0.0), (0.0, 2.0))
         geometry_samples = (
@@ -406,6 +416,29 @@ class HeatmapSurfaceTests(unittest.TestCase):
         self.assertEqual(surface.cells[0].nearest_destiny_name, "Alpha")
         self.assertEqual(surface.cells[0].nearest_distance_km, 0.0)
         self.assertAlmostEqual(surface.cells[0].absolute_value, -200.0)
+
+    def test_build_surface_rejects_anchor_when_city_and_cell_center_are_outside_boundary(self) -> None:
+        dataset = self._dataset()
+        mock_cells = (
+            (
+                ((-0.1, -0.1), (1.0, -0.1), (1.0, 1.0), (-0.1, 1.0)),
+                0.5,
+                0.5,
+            ),
+        )
+        unrelated_boundary = (((2.0, 2.0), (3.0, 2.0), (3.0, 3.0), (2.0, 3.0)),)
+
+        with patch("app.heatmap.surface._hull_cells", return_value=mock_cells), patch(
+            "app.heatmap.surface._source_anchored_cells",
+            return_value=tuple(),
+        ), patch(
+            "app.heatmap.surface._brazil_boundary_rings",
+            return_value=unrelated_boundary,
+        ):
+            surface = build_surface(dataset, "cost")
+
+        self.assertEqual(surface.cells, [])
+        self.assertEqual(surface.skipped_outside_boundary_cells, 1)
 
 
 if __name__ == "__main__":

@@ -179,7 +179,9 @@ def _route_audit_signature(dataset: HeatmapDataset, metric: str) -> tuple[_Route
 
 @lru_cache(maxsize=1)
 def load_brazil_boundary_geojson() -> dict[str, Any]:
-    boundary_path = resolve_data_asset_path(HEATMAP_BRAZIL_BOUNDARY_PATH)
+    boundary_path = HEATMAP_BRAZIL_BOUNDARY_PATH
+    if not boundary_path.is_file():
+        boundary_path = resolve_data_asset_path(boundary_path)
     with boundary_path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
 
@@ -738,11 +740,19 @@ def _build_surface_cached(points_signature: tuple[_Sample, ...], metric: str) ->
             center_lat,
             brazil_boundary_rings,
         )
-        if not center_inside_boundary and anchor_sample is None:
+        anchor_inside_boundary = anchor_sample is not None and (
+            not brazil_boundary_rings
+            or _point_in_any_ring(
+                float(anchor_sample[3]),
+                float(anchor_sample[2]),
+                brazil_boundary_rings,
+            )
+        )
+        if not center_inside_boundary and not anchor_inside_boundary:
             skipped_outside_boundary_cells += 1
             continue
         interpolation_quality = "dense"
-        if not center_inside_boundary and anchor_sample is not None:
+        if not center_inside_boundary and anchor_inside_boundary and anchor_sample is not None:
             interpolated = (
                 float(anchor_sample[4]),
                 float(anchor_sample[5]),
