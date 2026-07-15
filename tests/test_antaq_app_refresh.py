@@ -13,16 +13,31 @@ class AntaqAppRefreshTests(unittest.TestCase):
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with (
-                patch.object(antaq, "DEFAULT_RAW_DIR", Path(tmpdir)),
-                patch.object(antaq, "load_data_assets_settings", return_value=None),
-                patch.object(antaq, "refresh_antaq_pipeline", side_effect=portal_error),
-            ):
-                summary = antaq.run_antaq_refresh_for_app(start_year=2026)
+            with self.assertLogs("app.main.utils.antaq", level="WARNING") as captured:
+                with (
+                    patch.object(antaq, "DEFAULT_RAW_DIR", Path(tmpdir)),
+                    patch.object(antaq, "load_data_assets_settings", return_value=None),
+                    patch.object(antaq, "refresh_antaq_pipeline", side_effect=portal_error),
+                ):
+                    summary = antaq.run_antaq_refresh_for_app(start_year=2026)
 
         self.assertFalse(summary["app_refresh_status"]["ok"])
         self.assertEqual(summary["app_refresh_status"]["reason"], "portal_unavailable_no_local_raw")
         self.assertTrue(summary["download"]["skipped"])
+        self.assertTrue(any("portal refresh unavailable" in line.lower() for line in captured.output))
+        self.assertFalse(any(line.startswith("ERROR:") for line in captured.output))
+
+    def test_refresh_defaults_use_current_antaq_statistics_host(self) -> None:
+        from modules.cabotage import antaq_refresh
+
+        self.assertEqual(
+            antaq_refresh.DEFAULT_DOWNLOAD_PAGE_URL,
+            "https://estatistica.antaq.gov.br/ea/sense/download.html",
+        )
+        self.assertEqual(
+            antaq_refresh.DEFAULT_TXT_BASE_URL,
+            "https://estatistica.antaq.gov.br/ea/txt/",
+        )
 
     def test_portal_failure_retries_with_skip_download_when_local_raw_exists(self) -> None:
         portal_error = RuntimeError("Failed to reach the ANTAQ download portal.")

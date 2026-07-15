@@ -36,8 +36,8 @@ _log = get_logger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RAW_DIR = Path("data/raw/cabotage_data")
-DEFAULT_DOWNLOAD_PAGE_URL = "https://web3.antaq.gov.br/ea/sense/download.html"
-DEFAULT_TXT_BASE_URL = "https://web3.antaq.gov.br/ea/txt/"
+DEFAULT_DOWNLOAD_PAGE_URL = "https://estatistica.antaq.gov.br/ea/sense/download.html"
+DEFAULT_TXT_BASE_URL = "https://estatistica.antaq.gov.br/ea/txt/"
 DEFAULT_BUCKET = "cabotage-lens"
 DEFAULT_REQUIRED_TABLES = ("Atracacao", "Carga", "TemposAtracacao")
 DEFAULT_DB_MIGRATION_PATH = Path("supabase/migrations/20260327_000006_antaq_voyage_tables.sql")

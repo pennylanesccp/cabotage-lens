@@ -63,8 +63,9 @@ def run_antaq_refresh_for_app(
     except Exception as exc:
         if not _is_antaq_portal_failure(exc):
             raise
-        _log.exception(
-            "ANTAQ portal refresh failed for app runtime; checking for local raw TXT fallback."
+        _log.warning(
+            "ANTAQ portal refresh unavailable for app runtime; checking for local raw TXT fallback. error=%s",
+            exc,
         )
         if _has_required_raw_txt_files(years):
             _log.warning("Retrying ANTAQ refresh with skip_download=True using local raw TXT files.")
