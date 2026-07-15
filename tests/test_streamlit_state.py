@@ -48,10 +48,11 @@ class StreamlitStateTests(unittest.TestCase):
             state,
             "get_script_run_ctx",
             return_value=None,
-        ):
+        ) as context_mock:
             handler.emit(record)
 
         self.assertEqual(fake_streamlit.session_state, {})
+        context_mock.assert_called_once_with(suppress_warning=True)
 
     def test_init_state_defaults_local_file_logging_policy(self) -> None:
         fake_streamlit = SimpleNamespace(session_state={})

@@ -405,7 +405,10 @@ def init_logging(
         except Exception as exc:
             root_logger.warning("Supabase log archival disabled: %s", exc)
 
-    libs = _dedupe_keep_order((silence_libs or []) + ["urllib3", "requests", "matplotlib", "geopy"])
+    libs = _dedupe_keep_order(
+        (silence_libs or [])
+        + ["urllib3", "requests", "matplotlib", "geopy", "watchdog"]
+    )
     for lib_name in libs:
         logging.getLogger(lib_name).setLevel(logging.WARNING)
 

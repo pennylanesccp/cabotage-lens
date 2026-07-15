@@ -50,7 +50,7 @@ class StreamlitLogHandler(logging.Handler):
         if get_script_run_ctx is None:
             return True
         try:
-            return get_script_run_ctx() is not None
+            return get_script_run_ctx(suppress_warning=True) is not None
         except Exception:
             return False
 

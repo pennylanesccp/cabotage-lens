@@ -51,6 +51,12 @@ class LogManagerTests(unittest.TestCase):
         self.assertIsNone(get_current_local_log_path())
         self.assertGreaterEqual(len(logging.getLogger().handlers), 2)
 
+    def test_debug_logging_silences_watchdog_without_hiding_app_debug(self) -> None:
+        init_logging(level="DEBUG", archive_to_storage=False, force_clean=True)
+
+        self.assertEqual(logging.getLogger("watchdog").getEffectiveLevel(), logging.WARNING)
+        self.assertEqual(logging.getLogger("carbon.tests").getEffectiveLevel(), logging.DEBUG)
+
     def test_init_logging_archives_jsonl_gz_to_supabase_storage(self) -> None:
         fake_client = _FakeStorageClient()
 
