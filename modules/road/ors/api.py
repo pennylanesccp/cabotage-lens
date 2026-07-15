@@ -471,13 +471,13 @@ class ORSClient:
                     )
                     previous_provider_name = provider.name
 
-            wait_candidate = self._rate_limit_wait_candidate(
+            wait_candidate = self._transient_cooldown_wait_candidate(
                 failures=failures,
                 cooldown_skips=cooldown_skips,
                 failure_categories=failure_categories,
             )
             if wait_candidate is not None:
-                self._wait_for_rate_limit_retry(
+                self._wait_for_provider_retry(
                     operation=operation,
                     query=query,
                     provider=wait_candidate[0],
@@ -604,7 +604,7 @@ class ORSClient:
         except Exception as exc:
             _log.debug("Provider cooldown callback failed: %s", exc)
 
-    def _rate_limit_wait_candidate(
+    def _transient_cooldown_wait_candidate(
         self,
         *,
         failures: list[tuple[str, Exception]],
@@ -612,15 +612,18 @@ class ORSClient:
         failure_categories: dict[str, str],
     ) -> tuple[str, float, str] | None:
         wait_candidates: list[tuple[str, float, str]] = []
+        transient_reasons = frozenset(_PROVIDER_COOLDOWN_SECONDS)
+        failure_wait_reasons = transient_reasons if cooldown_skips else frozenset({"rate_limited"})
 
         for provider_name, remaining_s, reason in cooldown_skips:
-            if str(reason).strip() != "rate_limited":
+            normalized_reason = str(reason).strip()
+            if normalized_reason not in transient_reasons:
                 return None
-            wait_candidates.append((provider_name, remaining_s, reason))
+            wait_candidates.append((provider_name, remaining_s, normalized_reason))
 
         for provider_name, _exc in failures:
             category = str(failure_categories.get(provider_name) or "").strip()
-            if category != "rate_limited":
+            if category not in failure_wait_reasons:
                 return None
             remaining_s, reason = self._provider_cooldown_state(provider_name)
             if remaining_s > 0.0:
@@ -630,7 +633,7 @@ class ORSClient:
             return None
         return min(wait_candidates, key=lambda item: item[1])
 
-    def _wait_for_rate_limit_retry(
+    def _wait_for_provider_retry(
         self,
         *,
         operation: str,
@@ -642,7 +645,7 @@ class ORSClient:
         wait_s = max(float(remaining_s) + 1.0, 1.0)
         retry_epoch_s = time.time() + wait_s
         _log.warning(
-            "All providers are cooling down for %s; waiting %.1fs before retrying provider=%s reason=%s query=%s",
+            "All providers are temporarily unavailable for %s; waiting %.1fs before retrying provider=%s reason=%s query=%s",
             operation,
             wait_s,
             provider,

@@ -45,13 +45,19 @@ from app.main.utils.state import attach_streamlit_logging, init_state
 _log = get_logger(__name__)
 _HEATMAP_ORIGIN_FIELD = "heatmap_origin"
 _HEATMAP_METRIC_FIELD = "heatmap_color_metric"
+_HEATMAP_METRIC_STATE_VERSION_FIELD = "_heatmap_metric_state_version"
+_HEATMAP_METRIC_STATE_VERSION = 2
 _RUN_LOG_HEIGHT_PX = 260
 
 
 def _init_page_state() -> None:
     st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, str(DEFAULT_ORIGIN))
     st.session_state.setdefault("heatmap_cargo", float(DEFAULTS["cargo_t"]))
-    st.session_state.setdefault(_HEATMAP_METRIC_FIELD, HEATMAP_DEFAULT_METRIC)
+    if st.session_state.get(_HEATMAP_METRIC_STATE_VERSION_FIELD) != _HEATMAP_METRIC_STATE_VERSION:
+        st.session_state[_HEATMAP_METRIC_FIELD] = HEATMAP_DEFAULT_METRIC
+        st.session_state[_HEATMAP_METRIC_STATE_VERSION_FIELD] = _HEATMAP_METRIC_STATE_VERSION
+    else:
+        st.session_state.setdefault(_HEATMAP_METRIC_FIELD, HEATMAP_DEFAULT_METRIC)
     st.session_state.setdefault("heatmap_show_points", False)
     st.session_state.setdefault("heatmap_dataset", None)
     st.session_state.setdefault("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID)

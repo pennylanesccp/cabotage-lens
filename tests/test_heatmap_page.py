@@ -27,7 +27,13 @@ class HeatmapPageTests(unittest.TestCase):
         self.assertEqual(fake_streamlit.session_state["heatmap_destination_set_id"], "city_dests_over50k.txt")
 
     def test_init_page_state_does_not_reuse_legacy_cost_metric(self) -> None:
-        fake_streamlit = SimpleNamespace(session_state={"heatmap_metric": "cost"})
+        fake_streamlit = SimpleNamespace(
+            session_state={
+                "heatmap_metric": "cost",
+                page._HEATMAP_METRIC_FIELD: "cost",
+                page._HEATMAP_METRIC_STATE_VERSION_FIELD: 1,
+            }
+        )
 
         with patch.object(page, "st", fake_streamlit):
             page._init_page_state()
@@ -39,6 +45,9 @@ class HeatmapPageTests(unittest.TestCase):
             page._init_page_state()
 
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_METRIC_FIELD], "cost")
+
+    def test_emissions_is_the_first_color_metric_option(self) -> None:
+        self.assertEqual(page.HEATMAP_METRICS[0], "emissions")
 
     def test_clear_loaded_dataset_if_stale_resets_cached_dataset_when_destination_set_changes(self) -> None:
         scenario = HeatmapScenario(
