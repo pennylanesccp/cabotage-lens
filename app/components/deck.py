@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import base64
-
 import pydeck as pdk
 import streamlit as st
 
@@ -84,11 +82,6 @@ def inject_modifier_wheel_zoom(deck_html: str) -> str:
     )
 
 
-def _html_to_data_url(html: str) -> str:
-    payload = base64.b64encode(html.encode("utf-8")).decode("ascii")
-    return f"data:text/html;charset=utf-8;base64,{payload}"
-
-
 def render_deck_chart(deck: pdk.Deck, *, height: int, require_ctrl_for_wheel_zoom: bool = False) -> None:
     deck_html = deck.to_html(
         as_string=True,
@@ -98,4 +91,7 @@ def render_deck_chart(deck: pdk.Deck, *, height: int, require_ctrl_for_wheel_zoo
     )
     if require_ctrl_for_wheel_zoom:
         deck_html = inject_modifier_wheel_zoom(deck_html)
-    st.iframe(_html_to_data_url(deck_html), height=height)
+    # Streamlit embeds raw HTML through the iframe document content. A base64
+    # data URL can exceed browser URL limits for large heatmap payloads and
+    # silently render an empty frame.
+    st.iframe(deck_html, height=height)
