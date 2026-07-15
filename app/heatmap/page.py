@@ -44,13 +44,14 @@ from app.main.utils.state import attach_streamlit_logging, init_state
 
 _log = get_logger(__name__)
 _HEATMAP_ORIGIN_FIELD = "heatmap_origin"
+_HEATMAP_METRIC_FIELD = "heatmap_color_metric"
 _RUN_LOG_HEIGHT_PX = 260
 
 
 def _init_page_state() -> None:
     st.session_state.setdefault(_HEATMAP_ORIGIN_FIELD, str(DEFAULT_ORIGIN))
     st.session_state.setdefault("heatmap_cargo", float(DEFAULTS["cargo_t"]))
-    st.session_state.setdefault("heatmap_metric", HEATMAP_DEFAULT_METRIC)
+    st.session_state.setdefault(_HEATMAP_METRIC_FIELD, HEATMAP_DEFAULT_METRIC)
     st.session_state.setdefault("heatmap_show_points", False)
     st.session_state.setdefault("heatmap_dataset", None)
     st.session_state.setdefault("heatmap_destination_set_id", HEATMAP_DESTINATION_SET_ID)
@@ -255,7 +256,7 @@ def _render_dataset(dataset: HeatmapDataset) -> None:
         options=list(HEATMAP_METRICS),
         format_func=lambda value: "Cost" if value == "cost" else "Emissions",
         horizontal=True,
-        key="heatmap_metric",
+        key=_HEATMAP_METRIC_FIELD,
     )
     show_points = bool(st.session_state.get("heatmap_show_points", False))
 

@@ -22,9 +22,23 @@ class HeatmapPageTests(unittest.TestCase):
 
         self.assertEqual(fake_streamlit.session_state[page._HEATMAP_ORIGIN_FIELD], DEFAULT_ORIGIN)
         self.assertEqual(fake_streamlit.session_state["heatmap_cargo"], float(DEFAULTS["cargo_t"]))
-        self.assertEqual(fake_streamlit.session_state["heatmap_metric"], "emissions")
+        self.assertEqual(fake_streamlit.session_state[page._HEATMAP_METRIC_FIELD], "emissions")
         self.assertFalse(fake_streamlit.session_state["heatmap_show_points"])
         self.assertEqual(fake_streamlit.session_state["heatmap_destination_set_id"], "city_dests_over50k.txt")
+
+    def test_init_page_state_does_not_reuse_legacy_cost_metric(self) -> None:
+        fake_streamlit = SimpleNamespace(session_state={"heatmap_metric": "cost"})
+
+        with patch.object(page, "st", fake_streamlit):
+            page._init_page_state()
+
+        self.assertEqual(fake_streamlit.session_state[page._HEATMAP_METRIC_FIELD], "emissions")
+
+        fake_streamlit.session_state[page._HEATMAP_METRIC_FIELD] = "cost"
+        with patch.object(page, "st", fake_streamlit):
+            page._init_page_state()
+
+        self.assertEqual(fake_streamlit.session_state[page._HEATMAP_METRIC_FIELD], "cost")
 
     def test_clear_loaded_dataset_if_stale_resets_cached_dataset_when_destination_set_changes(self) -> None:
         scenario = HeatmapScenario(
