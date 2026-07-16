@@ -22,6 +22,92 @@ from app.main.utils.formatters import (
     safe_float,
 )
 
+_INTENSITY_SOURCE_LABELS = {
+    "eu_mrv_imo_latest": "EU MRV latest record by IMO",
+    "mrv_imo": "EU MRV match by IMO",
+    "imo": "IMO-specific intensity",
+    "eu_mrv_vessel_class_mean": "EU MRV vessel-class mean",
+    "mrv_vessel_class_mean": "EU MRV vessel-class mean",
+    "vessel_class": "Vessel-class fallback",
+    "class_fallback": "Vessel-class fallback",
+    "eu_mrv_ship_type_mean": "EU MRV ship-type mean",
+    "mrv_ship_type_mean": "EU MRV ship-type mean",
+    "ship_type": "Ship-type fallback",
+    "type_fallback": "Ship-type fallback",
+    "unavailable": "Unavailable",
+    "unresolved": "Unresolved",
+}
+
+_DISTANCE_SOURCE_LABELS = {
+    "sea_matrix": "Sea matrix",
+    "matrix": "Sea matrix",
+    "haversine_fallback": "Haversine fallback",
+    "unavailable": "Unavailable",
+}
+
+
+def _first_available(mapping: Mapping[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = mapping.get(key)
+        if value is not None:
+            return value
+    return None
+
+
+def _format_optional_measure(value: Any, unit: str) -> str:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return "Unavailable"
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        text = clean_text(value)
+        return text or "Unavailable"
+    return f"{format_significant(value)} {unit}"
+
+
+def _intensity_source_label(value: Any) -> str | None:
+    text = clean_text(value)
+    if not text:
+        return None
+    return _INTENSITY_SOURCE_LABELS.get(
+        text,
+        text.replace("_", " ").strip().capitalize(),
+    )
+
+
+def _intensity_source_counts_text(value: Any) -> str | None:
+    if not isinstance(value, Mapping) or not value:
+        return None
+
+    preferred_order = tuple(_INTENSITY_SOURCE_LABELS)
+    keys = [key for key in preferred_order if key in value]
+    keys.extend(str(key) for key in value if str(key) not in keys)
+    parts: list[str] = []
+    for key in keys:
+        raw_count = value.get(key)
+        if isinstance(raw_count, bool):
+            continue
+        try:
+            count = int(raw_count)
+        except (TypeError, ValueError):
+            continue
+        if count <= 0:
+            continue
+        label = _intensity_source_label(key)
+        if label:
+            parts.append(f"{label}: {count}")
+    return "; ".join(parts) or None
+
+
+def _distance_source_label(value: Any) -> str:
+    text = clean_text(value)
+    if not text:
+        return "Unavailable"
+    return _DISTANCE_SOURCE_LABELS.get(
+        text,
+        text.replace("_", " ").strip().capitalize(),
+    )
+
 
 def _maritime_component_breakdown(results: Mapping[str, Any]) -> dict[str, float]:
     sea = results.get("multimodal", {}).get("sea", {})
@@ -216,6 +302,97 @@ def _port_call_breakdown_table(results: Mapping[str, Any]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _selected_corridor_sublegs_table(results: Mapping[str, Any]) -> pd.DataFrame:
+    sea = results.get("multimodal", {}).get("sea", {})
+    if not isinstance(sea, Mapping):
+        return pd.DataFrame()
+
+    raw_sublegs = _first_available(
+        sea,
+        "selected_corridor_sublegs",
+        "selected_corridor_legs",
+    )
+    if not isinstance(raw_sublegs, (list, tuple)) or not raw_sublegs:
+        return pd.DataFrame()
+
+    rows: list[dict[str, str]] = []
+    for raw_subleg in raw_sublegs:
+        if not isinstance(raw_subleg, Mapping):
+            continue
+
+        distance_nm = _first_available(raw_subleg, "distance_nm")
+        distance_km = _first_available(raw_subleg, "distance_km")
+        if distance_nm is not None:
+            distance = _format_optional_measure(distance_nm, "nm")
+        else:
+            distance = _format_optional_measure(distance_km, "km")
+
+        source_counts = _intensity_source_counts_text(
+            raw_subleg.get("intensity_source_counts")
+        )
+        source = source_counts or _intensity_source_label(
+            _first_available(
+                raw_subleg,
+                "intensity_source",
+                "fuel_g_per_tnm_source",
+                "intensity_source_level",
+            )
+        )
+
+        rows.append(
+            {
+                "From port": clean_text(
+                    _first_available(raw_subleg, "origin_port", "from_port_name")
+                )
+                or "-",
+                "To port": clean_text(
+                    _first_available(raw_subleg, "destination_port", "to_port_name")
+                )
+                or "-",
+                "Distance": distance,
+                "Distance source": _distance_source_label(
+                    raw_subleg.get("distance_source")
+                ),
+                "ANTAQ cargo aboard": _format_optional_measure(
+                    _first_available(
+                        raw_subleg,
+                        "observed_cargo_t",
+                        "average_cargo_t",
+                        "cargo_weight_t",
+                    ),
+                    "t",
+                ),
+                "Fuel intensity": _format_optional_measure(
+                    _first_available(
+                        raw_subleg,
+                        "fuel_g_per_tnm",
+                        "weighted_fuel_intensity_g_per_tnm",
+                    ),
+                    "g/(t·nm)",
+                ),
+                "Intensity source": source or "Unavailable",
+                "Observed fuel": _format_optional_measure(
+                    _first_available(
+                        raw_subleg,
+                        "observed_fuel_kg",
+                        "observed_fuel_kg_total",
+                    ),
+                    "kg",
+                ),
+                "Scenario-attributed fuel": _format_optional_measure(
+                    _first_available(
+                        raw_subleg,
+                        "scenario_fuel_kg",
+                        "attributed_vlsfo_fuel_kg",
+                    ),
+                    "kg",
+                ),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
 def render_breakdown(results: Mapping[str, Any]) -> None:
     st.caption(
         "Emissions are operational TTW CO2e estimates from the current fuel-factor boundary. "
@@ -227,6 +404,14 @@ def render_breakdown(results: Mapping[str, Any]) -> None:
     st.markdown("**Multimodal component breakdown**")
     st.caption("Port operations and hoteling remain visible as separate components when requested or resolved.")
     st.dataframe(_legs_table(results), hide_index=True, width="stretch")
+    sublegs_table = _selected_corridor_sublegs_table(results)
+    if not sublegs_table.empty:
+        st.markdown("**Selected observed maritime sublegs**")
+        st.caption(
+            "ANTAQ cargo aboard and observed fuel describe the selected historical voyage corridor. "
+            "Scenario-attributed fuel applies the modeled cargo to each selected subleg."
+        )
+        st.dataframe(sublegs_table, hide_index=True, width="stretch")
     port_call_table = _port_call_breakdown_table(results)
     if not port_call_table.empty:
         st.markdown("**Port-call provenance**")

@@ -98,6 +98,26 @@ class SeaResult(TypedDict, total=False):
     match_rate_segments: float
     match_rate_tonne_nm: float
     observed_port_pair_legs: list[Dict[str, Any]]
+    route_observation_mode: str
+    corridor_count: int
+    candidate_voyage_count: int
+    selected_corridor_candidate_voyage_count: int
+    direct_voyage_count: int
+    multistop_voyage_count: int
+    selection_criterion: str
+    selected_corridor_id: str
+    resolved_voyage_count: int
+    imo_intensity_voyage_count: int
+    class_fallback_voyage_count: int
+    type_fallback_voyage_count: int
+    fallback_voyage_count: int
+    unresolved_intensity_voyage_count: int
+    intensity_source_counts: Dict[str, int]
+    observed_transport_work_tnm: float
+    observed_fuel_kg: float
+    candidate_observed_transport_work_tnm: float
+    candidate_observed_fuel_kg: float
+    selected_corridor_sublegs: list[Dict[str, Any]]
 
 
 class PathGeometry(TypedDict):
@@ -466,6 +486,9 @@ def build_path_geometry_from_resolved(
     )
     if directional_stats:
         corridor_leg_count = int(directional_stats.get("corridor_leg_count") or 0)
+        route_observation_mode = str(
+            directional_stats.get("route_observation_mode") or ""
+        ).strip()
         route_distance_km = directional_stats.get("distance_km")
         if isinstance(route_distance_km, (int, float)) and float(route_distance_km) > 0.0:
             directional_source = str(directional_stats.get("distance_source") or sea_src)
@@ -486,11 +509,21 @@ def build_path_geometry_from_resolved(
         weighted_mean = directional_stats.get("fuel_g_per_tnm_weighted_mean")
         if isinstance(weighted_mean, (int, float)) and float(weighted_mean) > 0.0:
             sea_leg["fuel_g_per_tnm"] = float(weighted_mean)
-            sea_leg["fuel_g_per_tnm_source"] = (
-                "sea_matrix_directional_corridor_weighted_mean"
-                if corridor_leg_count > 1
-                else "sea_matrix_directional_weighted_mean"
-            )
+            generated_intensity_source = str(
+                directional_stats.get("fuel_g_per_tnm_source") or ""
+            ).strip()
+            if generated_intensity_source:
+                sea_leg["fuel_g_per_tnm_source"] = generated_intensity_source
+            elif route_observation_mode == "observed_voyage_corridors":
+                sea_leg["fuel_g_per_tnm_source"] = (
+                    "observed_voyage_corridor_sublegs"
+                )
+            else:
+                sea_leg["fuel_g_per_tnm_source"] = (
+                    "sea_matrix_directional_corridor_weighted_mean"
+                    if corridor_leg_count > 1
+                    else "sea_matrix_directional_weighted_mean"
+                )
         if corridor_leg_count > 0:
             sea_leg["corridor_leg_count"] = corridor_leg_count
         corridor_port_path = directional_stats.get("corridor_port_path")
@@ -501,6 +534,68 @@ def build_path_geometry_from_resolved(
             sea_leg["observed_port_pair_legs"] = [
                 dict(item) for item in observed_port_pair_legs if isinstance(item, dict)
             ]
+        selected_corridor_sublegs = directional_stats.get(
+            "selected_corridor_sublegs"
+        )
+        if isinstance(selected_corridor_sublegs, list):
+            sea_leg["selected_corridor_sublegs"] = [
+                dict(item)
+                for item in selected_corridor_sublegs
+                if isinstance(item, dict)
+            ]
+        for key in (
+            "route_observation_mode",
+            "selection_criterion",
+            "selected_corridor_id",
+        ):
+            value = directional_stats.get(key)
+            if value is not None and str(value).strip():
+                sea_leg[key] = str(value)
+        for key in (
+            "corridor_count",
+            "candidate_voyage_count",
+            "candidate_voyage_observation_count",
+            "selected_corridor_candidate_voyage_count",
+            "direct_voyage_count",
+            "multistop_voyage_count",
+            "resolved_voyage_count",
+            "imo_intensity_voyage_count",
+            "class_fallback_voyage_count",
+            "type_fallback_voyage_count",
+            "fallback_voyage_count",
+            "unresolved_intensity_voyage_count",
+            "haversine_fallback_segment_count",
+        ):
+            value = directional_stats.get(key)
+            if isinstance(value, (int, float)):
+                sea_leg[key] = int(value)
+        intensity_source_counts = directional_stats.get("intensity_source_counts")
+        if isinstance(intensity_source_counts, dict):
+            sea_leg["intensity_source_counts"] = {
+                str(key): int(value)
+                for key, value in intensity_source_counts.items()
+                if isinstance(value, (int, float))
+            }
+        for key in (
+            "distance_source_counts",
+            "selected_corridor_distance_source_counts",
+        ):
+            value = directional_stats.get(key)
+            if isinstance(value, dict):
+                sea_leg[key] = {
+                    str(source): int(count)
+                    for source, count in value.items()
+                    if isinstance(count, (int, float))
+                }
+        for key in (
+            "observed_transport_work_tnm",
+            "observed_fuel_kg",
+            "candidate_observed_transport_work_tnm",
+            "candidate_observed_fuel_kg",
+        ):
+            value = directional_stats.get(key)
+            if isinstance(value, (int, float)):
+                sea_leg[key] = float(value)
         for key in (
             "fuel_g_per_tnm_mean",
             "fuel_g_per_tnm_median",

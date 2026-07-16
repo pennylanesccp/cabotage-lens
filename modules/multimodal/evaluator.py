@@ -130,6 +130,158 @@ def _positive_float_or_none(value: Any) -> float | None:
     return parsed if parsed > 0.0 else None
 
 
+def _nonnegative_float_or_none(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0.0 else None
+
+
+def _first_mapping_value(payload: Mapping[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = payload.get(key)
+        if value is not None:
+            return value
+    return None
+
+
+def _build_selected_corridor_sublegs(
+    sea_leg_data: Mapping[str, Any],
+    *,
+    cargo_t: float,
+) -> tuple[list[Dict[str, Any]], bool]:
+    """Attribute scenario cargo to every subleg of one selected observed voyage."""
+    raw_legs = sea_leg_data.get("selected_corridor_sublegs")
+    if not isinstance(raw_legs, list):
+        return [], False
+
+    scenario_cargo_t = max(float(cargo_t), 0.0)
+    enriched_legs: list[Dict[str, Any]] = []
+    all_sublegs_resolved = True
+    for raw_leg in raw_legs:
+        if not isinstance(raw_leg, Mapping):
+            all_sublegs_resolved = False
+            continue
+
+        distance_km = _positive_float_or_none(raw_leg.get("distance_km"))
+        distance_nm = _positive_float_or_none(raw_leg.get("distance_nm"))
+        if distance_nm is None and distance_km is not None:
+            distance_nm = distance_km / _NM_TO_KM
+        if distance_km is None and distance_nm is not None:
+            distance_km = distance_nm * _NM_TO_KM
+
+        fuel_g_per_tnm = _positive_float_or_none(
+            _first_mapping_value(
+                raw_leg,
+                "fuel_g_per_tnm",
+                "intensity_g_per_tnm",
+                "weighted_fuel_intensity_g_per_tnm",
+            )
+        )
+        observed_cargo_t = _nonnegative_float_or_none(
+            _first_mapping_value(
+                raw_leg,
+                "observed_cargo_t",
+                "average_cargo_onboard_t",
+                "cargo_onboard_t",
+                "cargo_weight_t",
+            )
+        )
+        transport_work_tnm = _nonnegative_float_or_none(
+            _first_mapping_value(
+                raw_leg,
+                "transport_work_tnm",
+                "observed_transport_work_tnm",
+                "tonne_nm",
+            )
+        )
+        if (
+            transport_work_tnm is None
+            and observed_cargo_t is not None
+            and distance_nm is not None
+        ):
+            transport_work_tnm = observed_cargo_t * distance_nm
+
+        observed_fuel_kg = _nonnegative_float_or_none(
+            _first_mapping_value(
+                raw_leg,
+                "observed_fuel_kg",
+                "fuel_consumption_kg",
+                "fuel_kg",
+            )
+        )
+        if observed_fuel_kg is None:
+            observed_fuel_g = _nonnegative_float_or_none(
+                raw_leg.get("fuel_consumption_g")
+            )
+            if observed_fuel_g is not None:
+                observed_fuel_kg = observed_fuel_g / _KG_PER_TONNE
+        if (
+            observed_fuel_kg is None
+            and fuel_g_per_tnm is not None
+            and transport_work_tnm is not None
+        ):
+            observed_fuel_kg = fuel_g_per_tnm * transport_work_tnm / _KG_PER_TONNE
+
+        scenario_fuel_kg = (
+            None
+            if distance_nm is None or fuel_g_per_tnm is None
+            else fuel_g_per_tnm * scenario_cargo_t * distance_nm / _KG_PER_TONNE
+        )
+        if scenario_fuel_kg is None:
+            all_sublegs_resolved = False
+
+        enriched = dict(raw_leg)
+        enriched.update(
+            {
+                "origin_port": _first_mapping_value(
+                    raw_leg,
+                    "origin_port",
+                    "from_port_name",
+                    "from_port",
+                    "origin",
+                ),
+                "destination_port": _first_mapping_value(
+                    raw_leg,
+                    "destination_port",
+                    "to_port_name",
+                    "to_port",
+                    "destination",
+                ),
+                "distance_km": distance_km,
+                "distance_nm": distance_nm,
+                "observed_cargo_t": observed_cargo_t,
+                "transport_work_tnm": transport_work_tnm,
+                "fuel_g_per_tnm": fuel_g_per_tnm,
+                "intensity_source": _first_mapping_value(
+                    raw_leg,
+                    "intensity_source",
+                    "fuel_g_per_tnm_source",
+                ),
+                "intensity_source_level": _first_mapping_value(
+                    raw_leg,
+                    "intensity_source_level",
+                    "source_level",
+                ),
+                "observed_fuel_kg": observed_fuel_kg,
+                "scenario_cargo_t": scenario_cargo_t,
+                "scenario_fuel_kg": scenario_fuel_kg,
+                "scenario_co2e_kg": (
+                    None
+                    if scenario_fuel_kg is None
+                    else scenario_fuel_kg * _BUNKER_EF_KG_CO2E_PER_KG
+                ),
+                "scenario_fuel_formula": (
+                    "fuel_g_per_tnm * scenario_cargo_t * distance_nm / 1000"
+                ),
+            }
+        )
+        enriched_legs.append(enriched)
+
+    return enriched_legs, bool(enriched_legs) and all_sublegs_resolved
+
+
 def _build_observed_port_pair_legs(
     sea_leg_data: Mapping[str, Any],
     *,
@@ -715,14 +867,96 @@ def evaluate_path(
         cargo_share = 0.0
         allocation_debug["cargo_allocation_suppressed_reason"] = "nonpositive_cargo_mass"
 
+    selected_corridor_sublegs, selected_corridor_sublegs_complete = (
+        _build_selected_corridor_sublegs(
+            sea_leg_data,
+            cargo_t=cargo_t,
+        )
+    )
+    route_observation_mode = str(
+        sea_leg_data.get("route_observation_mode") or ""
+    ).strip()
+    raw_intensity_source_counts = sea_leg_data.get("intensity_source_counts")
+    intensity_source_counts = (
+        dict(raw_intensity_source_counts)
+        if isinstance(raw_intensity_source_counts, Mapping)
+        else {}
+    )
+    raw_distance_source_counts = sea_leg_data.get("distance_source_counts")
+    distance_source_counts = (
+        dict(raw_distance_source_counts)
+        if isinstance(raw_distance_source_counts, Mapping)
+        else {}
+    )
+    raw_selected_distance_source_counts = sea_leg_data.get(
+        "selected_corridor_distance_source_counts"
+    )
+    selected_corridor_distance_source_counts = (
+        dict(raw_selected_distance_source_counts)
+        if isinstance(raw_selected_distance_source_counts, Mapping)
+        else {}
+    )
+    if route_observation_mode == "observed_voyage_corridors":
+        if not selected_corridor_sublegs:
+            calculation_warnings.append(
+                "selected observed voyage corridor has no subleg details; "
+                "aggregate maritime intensity fallback was applied"
+            )
+        elif not selected_corridor_sublegs_complete:
+            calculation_warnings.append(
+                "selected observed voyage corridor has unresolved subleg distance or "
+                "intensity; aggregate maritime intensity fallback was applied"
+            )
+        if int(
+            selected_corridor_distance_source_counts.get(
+                "haversine_fallback", 0
+            )
+            or 0
+        ) > 0:
+            calculation_warnings.append(
+                "selected observed voyage corridor includes subleg distances "
+                "estimated by coordinate haversine fallback"
+            )
+
     sea_leg_fuel_g_per_tnm = _positive_float_or_none(sea_leg_data.get("fuel_g_per_tnm"))
     vessel_fuel_g_per_tnm = _positive_float_or_none(vessel_eff.fuel_g_per_tnm)
-    fuel_g_per_tnm = sea_leg_fuel_g_per_tnm if sea_leg_fuel_g_per_tnm is not None else vessel_fuel_g_per_tnm
-    sea_fuel_g_per_tnm_source = (
-        str(sea_leg_data.get("fuel_g_per_tnm_source") or "").strip()
-        if sea_leg_fuel_g_per_tnm is not None
-        else ("vessel_class_transport_work_intensity" if vessel_fuel_g_per_tnm is not None else "")
-    ) or None
+    corridor_distance_weighted_intensity = None
+    if selected_corridor_sublegs_complete:
+        corridor_distance_nm = sum(
+            float(item["distance_nm"])
+            for item in selected_corridor_sublegs
+            if item.get("distance_nm") is not None
+        )
+        if corridor_distance_nm > 0.0:
+            corridor_distance_weighted_intensity = sum(
+                float(item["fuel_g_per_tnm"]) * float(item["distance_nm"])
+                for item in selected_corridor_sublegs
+            ) / corridor_distance_nm
+
+    fuel_g_per_tnm = (
+        corridor_distance_weighted_intensity
+        if corridor_distance_weighted_intensity is not None
+        else (
+            sea_leg_fuel_g_per_tnm
+            if sea_leg_fuel_g_per_tnm is not None
+            else vessel_fuel_g_per_tnm
+        )
+    )
+    if selected_corridor_sublegs_complete:
+        sea_fuel_g_per_tnm_source = (
+            str(sea_leg_data.get("fuel_g_per_tnm_source") or "").strip()
+            or "observed_voyage_corridor_sublegs"
+        )
+    else:
+        sea_fuel_g_per_tnm_source = (
+            str(sea_leg_data.get("fuel_g_per_tnm_source") or "").strip()
+            if sea_leg_fuel_g_per_tnm is not None
+            else (
+                "vessel_class_transport_work_intensity"
+                if vessel_fuel_g_per_tnm is not None
+                else ""
+            )
+        ) or None
     sailing_fuel_mode = (
         "sea_matrix_directional_transport_work_intensity"
         if sea_leg_fuel_g_per_tnm is not None
@@ -734,7 +968,14 @@ def evaluate_path(
         and isinstance(fuel_g_per_tnm, (int, float))
         and float(fuel_g_per_tnm) > 0.0
     )
-    if isinstance(fuel_g_per_tnm, (int, float)) and fuel_g_per_tnm > 0:
+    if selected_corridor_sublegs_complete:
+        sea_fuel_sailing_kg = sum(
+            float(item["scenario_fuel_kg"])
+            for item in selected_corridor_sublegs
+            if item.get("scenario_fuel_kg") is not None
+        )
+        sailing_fuel_mode = "observed_voyage_corridor_sublegs"
+    elif isinstance(fuel_g_per_tnm, (int, float)) and fuel_g_per_tnm > 0:
         # Preferred MRV metric: g fuel/(t*nm) allocated directly to cargo and distance.
         sea_fuel_sailing_kg = (float(fuel_g_per_tnm) * cargo_t * sea_dist_nm) / _KG_PER_TONNE
     else:
@@ -766,6 +1007,9 @@ def evaluate_path(
         marine_emission_factor_kg_co2e_per_kg=_BUNKER_EF_KG_CO2E_PER_KG,
         marine_emission_factor_source="tracked_fuel_emission_factors",
         observed_port_pair_leg_count=len(observed_port_pair_legs),
+        selected_corridor_subleg_count=len(selected_corridor_sublegs),
+        selected_corridor_sublegs_complete=selected_corridor_sublegs_complete,
+        selected_corridor_id=sea_leg_data.get("selected_corridor_id"),
     )
 
     hoteling_exclusion_reason: str | None = None
@@ -958,6 +1202,64 @@ def evaluate_path(
         "route_matched_imo_count": int(sea_leg_data.get("matched_imo_count") or 0),
         "route_corridor_leg_count": int(sea_leg_data.get("corridor_leg_count") or 0),
         "route_corridor_port_path": list(sea_leg_data.get("corridor_port_path") or []),
+        "route_observation_mode": route_observation_mode or None,
+        "corridor_count": int(sea_leg_data.get("corridor_count") or 0),
+        "candidate_voyage_count": int(
+            sea_leg_data.get("candidate_voyage_count") or 0
+        ),
+        "candidate_voyage_observation_count": int(
+            sea_leg_data.get("candidate_voyage_observation_count") or 0
+        ),
+        "selected_corridor_candidate_voyage_count": int(
+            sea_leg_data.get("selected_corridor_candidate_voyage_count") or 0
+        ),
+        "direct_voyage_count": int(sea_leg_data.get("direct_voyage_count") or 0),
+        "multistop_voyage_count": int(
+            sea_leg_data.get("multistop_voyage_count") or 0
+        ),
+        "selection_criterion": sea_leg_data.get("selection_criterion"),
+        "selected_corridor_id": sea_leg_data.get("selected_corridor_id"),
+        "resolved_voyage_count": int(
+            sea_leg_data.get("resolved_voyage_count") or 0
+        ),
+        "imo_intensity_voyage_count": int(
+            sea_leg_data.get("imo_intensity_voyage_count") or 0
+        ),
+        "class_fallback_voyage_count": int(
+            sea_leg_data.get("class_fallback_voyage_count") or 0
+        ),
+        "type_fallback_voyage_count": int(
+            sea_leg_data.get("type_fallback_voyage_count") or 0
+        ),
+        "fallback_voyage_count": int(
+            sea_leg_data.get("fallback_voyage_count") or 0
+        ),
+        "unresolved_intensity_voyage_count": int(
+            sea_leg_data.get("unresolved_intensity_voyage_count") or 0
+        ),
+        "intensity_source_counts": intensity_source_counts,
+        "distance_source_counts": distance_source_counts,
+        "selected_corridor_distance_source_counts": (
+            selected_corridor_distance_source_counts
+        ),
+        "haversine_fallback_segment_count": int(
+            sea_leg_data.get("haversine_fallback_segment_count") or 0
+        ),
+        "observed_transport_work_tnm": _nonnegative_float_or_none(
+            sea_leg_data.get("observed_transport_work_tnm")
+        ),
+        "observed_fuel_kg": _nonnegative_float_or_none(
+            sea_leg_data.get("observed_fuel_kg")
+        ),
+        "candidate_observed_transport_work_tnm": _nonnegative_float_or_none(
+            sea_leg_data.get("candidate_observed_transport_work_tnm")
+        ),
+        "candidate_observed_fuel_kg": _nonnegative_float_or_none(
+            sea_leg_data.get("candidate_observed_fuel_kg")
+        ),
+        "selected_corridor_sublegs": selected_corridor_sublegs,
+        "selected_corridor_subleg_count": len(selected_corridor_sublegs),
+        "selected_corridor_sublegs_complete": selected_corridor_sublegs_complete,
         "observed_port_pair_legs": observed_port_pair_legs,
         "size_proxy_t_median": (
             None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
@@ -1088,6 +1390,78 @@ def evaluate_path(
             "sea_route_matched_imo_count": int(sea_leg_data.get("matched_imo_count") or 0),
             "sea_route_corridor_leg_count": int(sea_leg_data.get("corridor_leg_count") or 0),
             "sea_route_corridor_port_path": list(sea_leg_data.get("corridor_port_path") or []),
+            "sea_route_observation_mode": route_observation_mode or None,
+            "sea_route_corridor_count": int(
+                sea_leg_data.get("corridor_count") or 0
+            ),
+            "sea_route_candidate_voyage_count": int(
+                sea_leg_data.get("candidate_voyage_count") or 0
+            ),
+            "sea_route_candidate_voyage_observation_count": int(
+                sea_leg_data.get("candidate_voyage_observation_count") or 0
+            ),
+            "sea_route_selected_corridor_candidate_voyage_count": int(
+                sea_leg_data.get("selected_corridor_candidate_voyage_count") or 0
+            ),
+            "sea_route_direct_voyage_count": int(
+                sea_leg_data.get("direct_voyage_count") or 0
+            ),
+            "sea_route_multistop_voyage_count": int(
+                sea_leg_data.get("multistop_voyage_count") or 0
+            ),
+            "sea_route_selection_criterion": sea_leg_data.get(
+                "selection_criterion"
+            ),
+            "sea_route_selected_corridor_id": sea_leg_data.get(
+                "selected_corridor_id"
+            ),
+            "sea_route_resolved_voyage_count": int(
+                sea_leg_data.get("resolved_voyage_count") or 0
+            ),
+            "sea_route_imo_intensity_voyage_count": int(
+                sea_leg_data.get("imo_intensity_voyage_count") or 0
+            ),
+            "sea_route_class_fallback_voyage_count": int(
+                sea_leg_data.get("class_fallback_voyage_count") or 0
+            ),
+            "sea_route_type_fallback_voyage_count": int(
+                sea_leg_data.get("type_fallback_voyage_count") or 0
+            ),
+            "sea_route_fallback_voyage_count": int(
+                sea_leg_data.get("fallback_voyage_count") or 0
+            ),
+            "sea_route_unresolved_intensity_voyage_count": int(
+                sea_leg_data.get("unresolved_intensity_voyage_count") or 0
+            ),
+            "sea_route_intensity_source_counts": intensity_source_counts,
+            "sea_route_distance_source_counts": distance_source_counts,
+            "sea_route_selected_corridor_distance_source_counts": (
+                selected_corridor_distance_source_counts
+            ),
+            "sea_route_haversine_fallback_segment_count": int(
+                sea_leg_data.get("haversine_fallback_segment_count") or 0
+            ),
+            "sea_route_observed_transport_work_tnm": _nonnegative_float_or_none(
+                sea_leg_data.get("observed_transport_work_tnm")
+            ),
+            "sea_route_observed_fuel_kg": _nonnegative_float_or_none(
+                sea_leg_data.get("observed_fuel_kg")
+            ),
+            "sea_route_candidate_observed_transport_work_tnm": (
+                _nonnegative_float_or_none(
+                    sea_leg_data.get("candidate_observed_transport_work_tnm")
+                )
+            ),
+            "sea_route_candidate_observed_fuel_kg": _nonnegative_float_or_none(
+                sea_leg_data.get("candidate_observed_fuel_kg")
+            ),
+            "sea_route_selected_corridor_sublegs": selected_corridor_sublegs,
+            "sea_route_selected_corridor_subleg_count": len(
+                selected_corridor_sublegs
+            ),
+            "sea_route_selected_corridor_sublegs_complete": (
+                selected_corridor_sublegs_complete
+            ),
             "size_proxy_t_median": (
                 None if vessel_eff.size_proxy_t_median is None else float(vessel_eff.size_proxy_t_median)
             ),

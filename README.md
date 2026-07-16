@@ -155,7 +155,7 @@ Upload `data/` to the Supabase Storage data bucket:
   --dry-run
 ```
 
-The uploader preserves the `data/...` object layout in Storage and filters ANTAQ `YYYYCarga.txt` files down to the rows and columns used by the codebase before upload. Before synchronizing the canonical `data/sea_matrix.json`, it rejects empty artifacts and verifies that Santos–Manaus has a usable ANTAQ+MRV directional route with segment and IMO coverage.
+The uploader preserves the `data/...` object layout in Storage and filters ANTAQ `YYYYCarga.txt` files down to the rows and columns used by the codebase before upload. Before synchronizing the canonical `data/sea_matrix.json`, it rejects empty artifacts and verifies that Santos–Manaus has a usable ANTAQ+MRV directional route with resolved intensity coverage and explicit IMO/fallback provenance.
 
 Materialize the observed ANTAQ voyages JSON into flat tables:
 
@@ -167,7 +167,7 @@ Materialize the observed ANTAQ voyages JSON into flat tables:
 
 This writes `antaq_voyages.csv`, `antaq_voyage_stops.csv`, and `antaq_voyage_stop_calls.csv`, and can optionally upsert the same rows into Supabase Postgres after the corresponding migration is applied.
 
-Enrich the repository sea matrix with directional MRV fuel-per-transport-work averages derived from observed ANTAQ voyage legs:
+Enrich the repository sea matrix with directional MRV fuel-per-transport-work averages derived from complete observed ANTAQ voyage corridors:
 
 ```powershell
 .\venv\Scripts\python.exe .\scripts\enrich_sea_matrix_with_voyage_efficiency.py `
@@ -175,8 +175,15 @@ Enrich the repository sea matrix with directional MRV fuel-per-transport-work av
   --output-json .\data\sea_matrix.json
 ```
 
-The enricher preserves the existing `matrix` block and appends directional KPI stats under a new top-level section. An explicitly available local matrix is always used as the base, preventing an invalid remote cache from overwriting it. When the ANTAQ tabular CSVs or MRV lookup JSON are missing locally, it can resolve them from the configured Supabase Storage data bucket.
-By default it also prunes the `matrix` down to port pairs observed in ANTAQ with at least one usable MRV KPI match; pass `--keep-unmatched-pairs` to keep ANTAQ-observed pairs without MRV coverage, or `--keep-all-matrix-pairs` to retain the full original matrix.
+For every voyage, the enricher evaluates every ordered origin-destination port pair, including direct voyages and complete multi-stop corridors. A voyage contributes once to a given ordered pair; when repeated port calls create more than one eligible slice, the same current rule is applied within that voyage (direct first, otherwise shortest distance). Fuel is summed over the observed sublegs using the reconstructed cargo aboard, subleg distance, and voyage intensity. Corridors are never assembled from legs belonging to different voyages. Across voyages, the current selection rule remains explicit: prefer an observed direct corridor; otherwise select the shortest complete observed corridor.
+
+Known ANTAQ terminal names are resolved to their canonical port complex. Consecutive calls that resolve to the same canonical port are collapsed only after all cargo movements have been retained and summed. Distinct port pairs use a positive sea-matrix distance first; if that value is absent or nonpositive, the enricher uses the tracked port coordinates as an explicit `haversine_fallback` and reports that source in the corridor indicators.
+
+The voyage-stop input is the normalized containerized-cargo call sequence produced by the ANTAQ pipeline; it should not be read as an inventory of physical calls with no observed container movement. When a resolved voyage or subleg has zero observed transport work, observed fuel remains zero while the resolved vessel intensities are retained through an explicitly labeled arithmetic mean so scenario cargo can still be evaluated without a `0/0` gap.
+
+Intensity resolution is recorded per voyage. The hierarchy is an exact latest positive EU MRV match by IMO, then an available vessel-class mean, then a ship-type mean (the container-ship type is the documented default for the containerized ANTAQ scope). Aggregate indicators keep exact IMO matches separate from class/type fallbacks.
+
+The enricher preserves the existing `matrix` block and appends selected-corridor statistics, evaluated corridor alternatives, subleg calculations, and intensity provenance under the directional section. An explicitly available local matrix is always used as the base, preventing an invalid remote cache from overwriting it. When the ANTAQ tabular CSVs or MRV lookup JSON are missing locally, it can resolve them from the configured Supabase Storage data bucket. By default it prunes the distance matrix to observed usable combinations; pass `--keep-unmatched-pairs` to retain observed pairs with unresolved intensity, or `--keep-all-matrix-pairs` to retain the full original distance matrix.
 
 ## Logging
 

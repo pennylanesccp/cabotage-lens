@@ -22,9 +22,10 @@ from typing import Any, Dict, Optional, Tuple
 from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
-__all__ = ["SeaMatrix"]
+__all__ = ["OBSERVED_VOYAGE_CORRIDORS_MODE", "SeaMatrix"]
 
 _log = get_logger(__name__)
+OBSERVED_VOYAGE_CORRIDORS_MODE = "observed_voyage_corridors"
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -75,6 +76,136 @@ def _clean_directional_payload(payload: Any) -> Dict[str, Dict[str, Dict[str, An
     return cleaned
 
 
+def _clean_route_observation_mode(value: Any) -> str:
+    return str(value or "").strip().casefold()
+
+
+def _first_value(payload: Dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = payload.get(key)
+        if value is not None:
+            return value
+    return None
+
+
+def _canonical_corridor_subleg(payload: Dict[str, Any]) -> Dict[str, Any]:
+    subleg = dict(payload)
+    subleg["origin_port"] = _first_value(
+        payload,
+        "origin_port",
+        "from_port_name",
+        "from_port",
+        "origin",
+    )
+    subleg["destination_port"] = _first_value(
+        payload,
+        "destination_port",
+        "to_port_name",
+        "to_port",
+        "destination",
+    )
+
+    aliases = {
+        "distance_km": ("distance_km",),
+        "distance_nm": ("distance_nm",),
+        "observed_cargo_t": (
+            "observed_cargo_t",
+            "average_cargo_onboard_t",
+            "cargo_onboard_t",
+            "cargo_weight_t",
+        ),
+        "transport_work_tnm": (
+            "transport_work_tnm",
+            "observed_transport_work_tnm",
+            "tonne_nm",
+        ),
+        "resolved_transport_work_tnm": (
+            "resolved_transport_work_tnm",
+            "transport_work_resolved_tnm",
+        ),
+        "fuel_g_per_tnm": (
+            "fuel_g_per_tnm",
+            "intensity_g_per_tnm",
+            "weighted_fuel_intensity_g_per_tnm",
+            "fuel_g_per_tnm_weighted_mean",
+        ),
+        "intensity_source": ("intensity_source", "fuel_g_per_tnm_source"),
+        "intensity_source_level": ("intensity_source_level", "source_level"),
+    }
+    for canonical, candidates in aliases.items():
+        value = _first_value(payload, *candidates)
+        if value is not None:
+            subleg[canonical] = value
+
+    observed_fuel_kg = _first_value(
+        payload,
+        "observed_fuel_kg",
+        "fuel_consumption_kg",
+        "fuel_kg",
+    )
+    if observed_fuel_kg is None:
+        observed_fuel_g = _positive_float(payload.get("fuel_consumption_g"))
+        if observed_fuel_g is not None:
+            observed_fuel_kg = observed_fuel_g / 1000.0
+    if observed_fuel_kg is not None:
+        subleg["observed_fuel_kg"] = observed_fuel_kg
+
+    if subleg.get("fuel_g_per_tnm") is None:
+        resolved_transport_work_tnm = _positive_float(
+            subleg.get("resolved_transport_work_tnm")
+        )
+        if resolved_transport_work_tnm is None:
+            observed_count = _positive_float(payload.get("observed_segment_count"))
+            resolved_count = _positive_float(payload.get("resolved_segment_count"))
+            if (
+                observed_count is not None
+                and resolved_count is not None
+                and observed_count == resolved_count
+            ):
+                resolved_transport_work_tnm = _positive_float(
+                    subleg.get("transport_work_tnm")
+                )
+        observed_fuel = _positive_float(subleg.get("observed_fuel_kg"))
+        if observed_fuel is not None and resolved_transport_work_tnm is not None:
+            subleg["fuel_g_per_tnm"] = (
+                observed_fuel * 1000.0 / resolved_transport_work_tnm
+            )
+
+    source_counts = payload.get("intensity_source_counts")
+    if isinstance(source_counts, dict) and source_counts:
+        positive_sources = [
+            str(key)
+            for key, value in source_counts.items()
+            if _positive_float(value) is not None and str(key) != "unavailable"
+        ]
+        if subleg.get("intensity_source") is None:
+            if not positive_sources:
+                subleg["intensity_source"] = "unavailable"
+            else:
+                subleg["intensity_source"] = (
+                    positive_sources[0] if len(positive_sources) == 1 else "mixed"
+                )
+        if subleg.get("intensity_source_level") is None:
+            levels = {
+                "eu_mrv_imo_latest": "imo",
+                "eu_mrv_vessel_class_mean": "vessel_class",
+                "eu_mrv_ship_type_mean": "ship_type",
+                "eu_mrv_ship_type_mean_default_container_ship": "ship_type",
+            }
+            resolved_levels = {
+                levels[source] for source in positive_sources if source in levels
+            }
+            if not positive_sources:
+                subleg["intensity_source_level"] = "unresolved"
+            else:
+                subleg["intensity_source_level"] = (
+                    next(iter(resolved_levels))
+                    if len(resolved_levels) == 1
+                    else "mixed"
+                )
+    return subleg
+
+
 @dataclass
 class SeaMatrix:
     """
@@ -84,6 +215,7 @@ class SeaMatrix:
     matrix: Dict[str, Dict[str, float]]
     coastline_factor: float = 1.0
     directional_efficiency: Dict[str, Dict[str, Dict[str, Any]]] | None = None
+    route_observation_mode: str = ""
 
     _canon: Dict[str, str] = None  # type: ignore[assignment]
     _directional_graph: Dict[str, tuple[tuple[str, Dict[str, Any]], ...]] = None  # type: ignore[assignment]
@@ -100,6 +232,7 @@ class SeaMatrix:
         self.matrix = cleaned_matrix
         self.coastline_factor = float(self.coastline_factor)
         self.directional_efficiency = _clean_directional_payload(self.directional_efficiency)
+        self.route_observation_mode = _clean_route_observation_mode(self.route_observation_mode)
 
         self._canon = {}
         for origin, destinations in self.matrix.items():
@@ -119,17 +252,18 @@ class SeaMatrix:
 
         self._directional_graph = {}
         self._corridor_cache = {}
-        for origin, destinations in self.directional_efficiency.items():
-            edges: list[tuple[str, Dict[str, Any]]] = []
-            for destiny, stats in destinations.items():
-                if (
-                    _positive_float(stats.get("distance_km")) is None
-                    or _positive_float(stats.get("fuel_g_per_tnm_weighted_mean")) is None
-                ):
-                    continue
-                edges.append((destiny, dict(stats)))
-            if edges:
-                self._directional_graph[origin] = tuple(edges)
+        if self.route_observation_mode != OBSERVED_VOYAGE_CORRIDORS_MODE:
+            for origin, destinations in self.directional_efficiency.items():
+                edges: list[tuple[str, Dict[str, Any]]] = []
+                for destiny, stats in destinations.items():
+                    if (
+                        _positive_float(stats.get("distance_km")) is None
+                        or _positive_float(stats.get("fuel_g_per_tnm_weighted_mean")) is None
+                    ):
+                        continue
+                    edges.append((destiny, dict(stats)))
+                if edges:
+                    self._directional_graph[origin] = tuple(edges)
 
         _log.debug(
             (
@@ -149,7 +283,37 @@ class SeaMatrix:
 
         matrix = payload.get("matrix") or {}
         coastline_factor = float(payload.get("coastline_factor", 1.0))
+        directional_meta = payload.get("voyage_fuel_g_per_tnm_directional_meta") or {}
+        route_observation_mode = _clean_route_observation_mode(
+            payload.get("route_observation_mode")
+            or (
+                directional_meta.get("route_observation_mode")
+                if isinstance(directional_meta, dict)
+                else None
+            )
+        )
         directional = payload.get("voyage_fuel_g_per_tnm_directional") or {}
+        if not route_observation_mode and isinstance(directional, dict):
+            for destinations in directional.values():
+                if not isinstance(destinations, dict):
+                    continue
+                for stats in destinations.values():
+                    if not isinstance(stats, dict):
+                        continue
+                    route_observation_mode = _clean_route_observation_mode(
+                        stats.get("route_observation_mode")
+                    )
+                    if route_observation_mode:
+                        break
+                if route_observation_mode:
+                    break
+        if route_observation_mode == OBSERVED_VOYAGE_CORRIDORS_MODE:
+            observed_corridors = (
+                payload.get("observed_voyage_corridors_directional")
+                or payload.get("voyage_corridors_directional")
+            )
+            if isinstance(observed_corridors, dict):
+                directional = observed_corridors
 
         cleaned_matrix: Dict[str, Dict[str, float]] = {
             str(origin): {str(destiny): float(value) for destiny, value in (destinations or {}).items()}
@@ -159,15 +323,16 @@ class SeaMatrix:
             matrix=cleaned_matrix,
             coastline_factor=coastline_factor,
             directional_efficiency=_clean_directional_payload(directional),
+            route_observation_mode=route_observation_mode,
         )
 
     @classmethod
     def from_json_path(cls, path: Path | str) -> "SeaMatrix":
         resolved = resolve_data_asset_path(path)
+        local_path = Path(path).resolve()
         try:
-            return cls._from_resolved_json_path(resolved)
+            sea_matrix = cls._from_resolved_json_path(resolved)
         except ValueError:
-            local_path = Path(path).resolve()
             if resolved.resolve() == local_path or not local_path.is_file():
                 raise
 
@@ -177,6 +342,28 @@ class SeaMatrix:
                 local_path,
             )
             return cls._from_resolved_json_path(local_path)
+
+        if (
+            resolved.resolve() != local_path
+            and local_path.is_file()
+            and sea_matrix.route_observation_mode
+            != OBSERVED_VOYAGE_CORRIDORS_MODE
+        ):
+            local_matrix = cls._from_resolved_json_path(local_path)
+            if (
+                local_matrix.route_observation_mode
+                == OBSERVED_VOYAGE_CORRIDORS_MODE
+            ):
+                _log.warning(
+                    (
+                        "Resolved sea matrix asset=%s uses a legacy route schema; "
+                        "using tracked observed-voyage corridor asset=%s"
+                    ),
+                    resolved,
+                    local_path,
+                )
+                return local_matrix
+        return sea_matrix
 
     @classmethod
     def _from_resolved_json_path(cls, resolved: Path) -> "SeaMatrix":
@@ -226,8 +413,180 @@ class SeaMatrix:
             return None
         return dict(stats)
 
+    @staticmethod
+    def _selected_observed_corridor_stats(stats: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Normalize the corridor selected offline without selecting or stitching at runtime."""
+        merged = dict(stats)
+        selected = None
+        for key in ("selected_corridor", "selected_voyage_corridor", "selected_route"):
+            candidate = stats.get(key)
+            if isinstance(candidate, dict):
+                selected = dict(candidate)
+                break
+
+        selected_corridor_id = _first_value(
+            stats,
+            "selected_corridor_id",
+            "selected_route_id",
+        )
+        if selected is None and selected_corridor_id is not None:
+            candidates = _first_value(stats, "corridors", "candidate_corridors", "routes")
+            if isinstance(candidates, list):
+                for candidate in candidates:
+                    if not isinstance(candidate, dict):
+                        continue
+                    candidate_id = _first_value(candidate, "corridor_id", "route_id", "voyage_id")
+                    if str(candidate_id or "") == str(selected_corridor_id):
+                        selected = dict(candidate)
+                        break
+
+        if selected is not None:
+            merged.update(selected)
+        selected_corridor_id = _first_value(
+            merged,
+            "selected_corridor_id",
+            "corridor_id",
+            "selected_route_id",
+            "route_id",
+            "voyage_id",
+        )
+        if selected_corridor_id is not None:
+            merged["selected_corridor_id"] = str(selected_corridor_id)
+
+        aliases: dict[str, tuple[str, ...]] = {
+            "corridor_count": ("corridor_count", "observed_corridor_count"),
+            "candidate_voyage_count": ("candidate_voyage_count", "candidate_count", "voyage_count"),
+            "candidate_voyage_observation_count": (
+                "candidate_voyage_observation_count",
+                "candidate_voyage_count",
+            ),
+            "direct_voyage_count": ("direct_voyage_count", "direct_count"),
+            "multistop_voyage_count": (
+                "multistop_voyage_count",
+                "multi_stop_voyage_count",
+                "indirect_voyage_count",
+            ),
+            "resolved_voyage_count": ("resolved_voyage_count", "complete_calculation_count"),
+            "imo_intensity_voyage_count": (
+                "imo_intensity_voyage_count",
+                "imo_resolved_voyage_count",
+                "mrv_imo_voyage_count",
+            ),
+            "class_fallback_voyage_count": (
+                "class_fallback_voyage_count",
+                "vessel_class_fallback_voyage_count",
+            ),
+            "type_fallback_voyage_count": (
+                "type_fallback_voyage_count",
+                "ship_type_fallback_voyage_count",
+            ),
+            "fallback_voyage_count": ("fallback_voyage_count",),
+            "unresolved_intensity_voyage_count": (
+                "unresolved_intensity_voyage_count",
+                "unresolved_voyage_count",
+            ),
+            "haversine_fallback_segment_count": (
+                "haversine_fallback_segment_count",
+            ),
+            "observed_transport_work_tnm": (
+                "observed_transport_work_tnm",
+                "transport_work_tnm_total",
+                "tonne_nm_total",
+            ),
+            "observed_fuel_kg": (
+                "observed_fuel_kg",
+                "fuel_consumption_kg_total",
+                "fuel_kg_total",
+            ),
+        }
+        for canonical, candidates in aliases.items():
+            value = _first_value(merged, *candidates)
+            if value is not None:
+                merged[canonical] = value
+
+        if merged.get("observed_fuel_kg") is None:
+            observed_fuel_g = _positive_float(merged.get("fuel_consumption_g_total"))
+            if observed_fuel_g is not None:
+                merged["observed_fuel_kg"] = observed_fuel_g / 1000.0
+
+        raw_sublegs = _first_value(
+            merged,
+            "selected_corridor_sublegs",
+            "subleg_details",
+            "sublegs",
+            "legs",
+        )
+        sublegs = [
+            _canonical_corridor_subleg(dict(item))
+            for item in (raw_sublegs or [])
+            if isinstance(item, dict)
+        ] if isinstance(raw_sublegs, list) else []
+        if sublegs:
+            merged["selected_corridor_sublegs"] = sublegs
+            merged["corridor_leg_count"] = int(
+                _first_value(merged, "corridor_leg_count", "subleg_count", "leg_count")
+                or len(sublegs)
+            )
+
+        port_path = _first_value(merged, "corridor_port_path", "port_path")
+        if isinstance(port_path, list) and port_path:
+            merged["corridor_port_path"] = [str(item) for item in port_path]
+        elif sublegs:
+            derived_path = [str(sublegs[0].get("origin_port") or "")]
+            derived_path.extend(str(item.get("destination_port") or "") for item in sublegs)
+            if all(derived_path):
+                merged["corridor_port_path"] = derived_path
+
+        distance_km = _positive_float(
+            _first_value(merged, "distance_km", "distance_km_total")
+        )
+        distance_nm = _positive_float(
+            _first_value(merged, "distance_nm", "distance_nm_total")
+        )
+        if distance_km is None and sublegs:
+            values = [_positive_float(item.get("distance_km")) for item in sublegs]
+            if all(value is not None for value in values):
+                distance_km = sum(float(value) for value in values if value is not None)
+        if distance_nm is None and sublegs:
+            values = [_positive_float(item.get("distance_nm")) for item in sublegs]
+            if all(value is not None for value in values):
+                distance_nm = sum(float(value) for value in values if value is not None)
+        if distance_km is None and distance_nm is not None:
+            distance_km = distance_nm * 1.852
+        if distance_nm is None and distance_km is not None:
+            distance_nm = distance_km / 1.852
+        if distance_km is not None:
+            merged["distance_km"] = float(distance_km)
+        if distance_nm is not None:
+            merged["distance_nm"] = float(distance_nm)
+
+        if merged.get("fuel_g_per_tnm_weighted_mean") is None and sublegs:
+            weighted_total = 0.0
+            distance_total = 0.0
+            for subleg in sublegs:
+                intensity = _positive_float(subleg.get("fuel_g_per_tnm"))
+                leg_distance_nm = _positive_float(subleg.get("distance_nm"))
+                if intensity is None or leg_distance_nm is None:
+                    weighted_total = 0.0
+                    distance_total = 0.0
+                    break
+                weighted_total += intensity * leg_distance_nm
+                distance_total += leg_distance_nm
+            if distance_total > 0.0:
+                merged["fuel_g_per_tnm_weighted_mean"] = weighted_total / distance_total
+
+        if _positive_float(merged.get("distance_km")) is None and not sublegs:
+            return None
+        merged["distance_source"] = "observed_voyage_corridor"
+        merged["route_observation_mode"] = OBSERVED_VOYAGE_CORRIDORS_MODE
+        return merged
+
     def best_directional_stats(self, a_label: str, b_label: str) -> Optional[Dict[str, Any]]:
         direct_stats = self.directional_stats(a_label, b_label)
+        if self.route_observation_mode == OBSERVED_VOYAGE_CORRIDORS_MODE:
+            if not direct_stats:
+                return None
+            return self._selected_observed_corridor_stats(direct_stats)
         if direct_stats:
             weighted_mean = _positive_float(direct_stats.get("fuel_g_per_tnm_weighted_mean"))
             distance_km = _positive_float(direct_stats.get("distance_km"))
@@ -244,6 +603,8 @@ class SeaMatrix:
         return self.corridor_stats(a_label, b_label)
 
     def corridor_stats(self, a_label: str, b_label: str) -> Optional[Dict[str, Any]]:
+        if self.route_observation_mode == OBSERVED_VOYAGE_CORRIDORS_MODE:
+            return None
         a = self._resolve_label(a_label)
         b = self._resolve_label(b_label)
         if not a or not b or a == b:

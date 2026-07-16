@@ -48,13 +48,13 @@
 
 \chapter*{Resumo}
 \addcontentsline{toc}{chapter}{Resumo}
-Este trabalho documenta, em formato de relatório técnico-científico, a formulação metodológica e a implementação computacional do projeto CabotageLens, voltado à comparação \emph{door-to-door} entre transporte rodoviário e alternativas multimodais com cabotagem no Brasil. O problema de pesquisa parte da elevada dependência da matriz brasileira de cargas em relação ao modo rodoviário e da necessidade de um instrumento reprodutível para estimar, com rastreabilidade, combustível, emissões e custo energético em corredores candidatos à substituição modal. A principal contribuição metodológica do trabalho é a construção de uma base observada de cabotagens conteinerizadas brasileiras a partir da ANTAQ, segmentada por viagem e por parada portuária, e sua combinação com indicadores do EU MRV associados por IMO, com o objetivo de estimar uma intensidade média de combustível por rota marítima observada. No recorte operacional atualmente consolidado, a base da ANTAQ reúne \num{1324} viagens, \num{6797} paradas, \num{7103} ocorrências de chamadas portuárias e \num{389} IMOs únicos para o ano de 2025. Desses IMOs, \num{243} foram associados com sucesso a indicadores positivos de consumo por \emph{transport work} na base MRV, cobrindo \num{62.5}\% dos IMOs, \num{59.5}\% das viagens, \num{52.9}\% da carga observada em toneladas e \num{50.6}\% da carga observada em TEU. A partir dessa interseção ANTAQ+MRV, a matriz marítima do projeto foi enriquecida com \num{67} pares direcionais porto--porto, calculados por média ponderada em tonelada-milha náutica dos trechos efetivamente observados. O texto também descreve como o benchmark operacional de \num{1} contêiner e \num{14} toneladas foi incorporado ao motor de avaliação e como a planilha de referência associada aos estudos de Gustavo Costa foi transformada em roteiro de comparação programática. Ao final, argumenta-se que o projeto já se encontra em um patamar metodologicamente mais sólido do que abordagens baseadas em fatores médios genéricos por classe de navio, embora ainda preserve limitações relacionadas à cobertura do MRV, à observabilidade de rotas e ao escopo predominantemente \emph{tank-to-wheel} do modelo.
+Este trabalho documenta, em formato de relatório técnico-científico, a formulação metodológica e a implementação computacional do projeto CabotageLens, voltado à comparação \emph{door-to-door} entre transporte rodoviário e alternativas multimodais com cabotagem no Brasil. O problema de pesquisa parte da elevada dependência da matriz brasileira de cargas em relação ao modo rodoviário e da necessidade de um instrumento reprodutível para estimar, com rastreabilidade, combustível, emissões e custo energético em corredores candidatos à substituição modal. A principal contribuição metodológica do trabalho é a construção de uma base observada de cabotagens conteinerizadas brasileiras a partir da ANTAQ, segmentada por viagem e por parada portuária, e sua combinação com indicadores do EU MRV associados por IMO, com o objetivo de estimar uma intensidade média de combustível por rota marítima observada. No recorte operacional atualmente consolidado, a base da ANTAQ reúne \num{1324} viagens, \num{6797} paradas, \num{7103} ocorrências de chamadas portuárias e \num{389} IMOs únicos para o ano de 2025. Desses IMOs, \num{243} foram associados com sucesso a indicadores positivos de consumo por \emph{transport work} na base MRV, cobrindo \num{62.5}\% dos IMOs, \num{59.5}\% das viagens, \num{52.9}\% da carga observada em toneladas e \num{50.6}\% da carga observada em TEU. Para as demais viagens, o cálculo registra uma média de classe ou tipo de navio como fallback. A matriz marítima resultante contém \num{177} pares direcionais, construídos a partir de corredores completos observados dentro da mesma viagem e do somatório de seus subtrechos com carga a bordo. O texto também descreve como o benchmark operacional de \num{1} contêiner e \num{14} toneladas foi incorporado ao motor de avaliação e como a planilha de referência associada aos estudos de Gustavo Costa foi transformada em roteiro de comparação programática. Ao final, argumenta-se que o projeto oferece uma formulação híbrida e auditável, embora ainda preserve limitações relacionadas à cobertura exata por IMO, à observabilidade de rotas e ao escopo predominantemente \emph{tank-to-wheel} do modelo.
 
 \noindent\textbf{Palavras-chave:} cabotagem; transporte multimodal; ANTAQ; EU MRV; emissões; combustível; logística.
 
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
-This report documents the methodological design and software implementation of CabotageLens, a computational tool built to compare all-road freight transport with multimodal alternatives that include Brazilian coastal shipping. The research problem stems from the strong dependence of Brazilian freight flows on road transport and from the lack of reproducible tools able to estimate fuel use, direct emissions, and energy-related cost in a transparent door-to-door manner. The core methodological contribution is the combination of an observed 2025 cabotage dataset built from ANTAQ port-call and cargo records with ship-level EU MRV indicators matched by IMO, in order to estimate route-level maritime fuel intensity from vessels that actually operated the observed corridors. In the current operational cut, the ANTAQ-derived base contains \num{1324} voyages, \num{6797} stops, \num{7103} port-call occurrences, and \num{389} unique IMOs. Among those IMOs, \num{243} were successfully matched to positive MRV transport-work fuel indicators, covering \num{62.5}\% of unique IMOs, \num{59.5}\% of voyages, \num{52.9}\% of observed loaded weight, and \num{50.6}\% of observed loaded TEU. This intersection was used to enrich the maritime distance matrix with \num{67} directional port pairs whose fuel intensity is computed as a tonne-nautical-mile weighted mean of observed voyage segments. The report further explains how a benchmark cargo of one container and fourteen tonnes was embedded into the single-evaluation workflow and how the workbook associated with Gustavo Costa's studies was transformed into a programmatic comparison benchmark. The resulting pipeline is argued to be methodologically stronger than generic class-average sea factors, while still subject to MRV coverage limits, route observability constraints, and the predominantly tank-to-wheel scope of the current implementation.
+This report documents the methodological design and software implementation of CabotageLens, a computational tool built to compare all-road freight transport with multimodal alternatives that include Brazilian coastal shipping. The research problem stems from the strong dependence of Brazilian freight flows on road transport and from the lack of reproducible tools able to estimate fuel use, direct emissions, and energy-related cost in a transparent door-to-door manner. The core methodological contribution is the combination of an observed 2025 cabotage dataset built from ANTAQ port-call and cargo records with ship-level EU MRV indicators matched by IMO, in order to estimate route-level maritime fuel intensity from vessels that actually operated the observed corridors. In the current operational cut, the ANTAQ-derived base contains \num{1324} voyages, \num{6797} stops, \num{7103} port-call occurrences, and \num{389} unique IMOs. Among those IMOs, \num{243} were successfully matched to positive MRV transport-work fuel indicators, covering \num{62.5}\% of unique IMOs, \num{59.5}\% of voyages, \num{52.9}\% of observed loaded weight, and \num{50.6}\% of observed loaded TEU. The remaining voyages use a recorded vessel-class or ship-type mean fallback. The resulting maritime matrix contains \num{177} directional port pairs built from complete corridors observed within the same voyage and the sum of their cargo-aware sublegs. The report further explains how a benchmark cargo of one container and fourteen tonnes was embedded into the single-evaluation workflow and how the workbook associated with Gustavo Costa's studies was transformed into a programmatic comparison benchmark. The resulting pipeline is a hybrid, auditable formulation that remains subject to exact-IMO coverage limits, route observability constraints, and the predominantly tank-to-wheel scope of the current implementation.
 
 \noindent\textbf{Keywords:} coastal shipping; multimodal freight; ANTAQ; EU MRV; emissions; fuel use; logistics.
 
@@ -265,24 +265,23 @@ Esses números mostram que a cobertura ainda é parcial, mas já suficientemente
 
 \section{Construção do KPI marítimo direcional por rota}
 
-A simples existência de um KPI por navio ainda não resolve o problema do modelo, porque o objetivo final da ferramenta é avaliar pares porto--porto ou origem--destino, e não apenas navios isolados. Para isso, o projeto enriquece a \texttt{sea\_matrix} com um indicador direcional médio calculado a partir dos trechos consecutivos observados na base da ANTAQ.
+A simples existência de um KPI por navio ainda não resolve o problema do modelo, porque o objetivo final da ferramenta é avaliar pares porto--porto ou origem--destino, e não apenas navios isolados. Para isso, o projeto percorre a sequência normalizada de paradas de cada viagem e retém o corredor completo sempre que a origem aparece antes do destino. Cada \texttt{voyage\_id} contribui uma vez para cada par direcional; se chamadas repetidas produzirem mais de um recorte elegível, aplica-se dentro da viagem o mesmo critério do modelo: corredor direto primeiro e, na ausência dele, menor distância completa.
 
-Considere um trecho observado \(s\) entre dois portos consecutivos, com distância marítima \(d_s\), carga a bordo \(m_s\) e intensidade MRV do navio \(I_s\), em g/(t$\cdot$nm). O peso do trecho na composição da rota é dado pelo seu trabalho de transporte:
+Considere uma viagem \(v\) e o conjunto \(\mathcal{S}_{v,o,d}\) de subtrechos contíguos entre a origem \(o\) e o destino \(d\). Para cada subtrecho \(s\), sejam \(d_s\) a distância marítima, \(m_s\) a carga reconstruída a bordo e \(I_v\) a intensidade resolvida para o navio, em g/(t$\cdot$nm). O trabalho de transporte da viagem no corredor é:
 \begin{equation}
-w_s = m_s \cdot d_s.
+W_{v,o,d} = \sum_{s \in \mathcal{S}_{v,o,d}} m_s \cdot d_s.
 \label{eq:segment-weight}
 \end{equation}
 
-O KPI direcional médio da rota \(o \rightarrow d\) é então calculado por média ponderada:
+O consumo observado atribuído à carga conteinerizada nessa viagem é calculado pela soma dos subtrechos:
 \begin{equation}
-\bar{I}_{o,d} =
-\frac{\sum_{s \in \mathcal{S}_{o,d}} I_s \cdot w_s}
-{\sum_{s \in \mathcal{S}_{o,d}} w_s},
+F_{v,o,d} = \frac{1}{1000}
+\sum_{s \in \mathcal{S}_{v,o,d}} I_v \cdot m_s \cdot d_s.
 \label{eq:route-intensity}
 \end{equation}
-em que \(\mathcal{S}_{o,d}\) é o conjunto de trechos observados e mapeados na rota direcional \(o \rightarrow d\).
+Viagens com a mesma sequência portuária formam uma alternativa de corredor. Sua intensidade é a razão entre o combustível somado e o trabalho de transporte somado. Quando todo o trabalho observado de um subtrecho ou corredor é zero, preserva-se a média aritmética das intensidades resolvidas, explicitamente marcada no artefato, enquanto o combustível observado permanece zero. Essa regra permite avaliar uma carga de cenário sem converter uma divisão \(0/0\) em ausência de intensidade.
 
-Esse ponto é central para o avanço metodológico do projeto. O modelo deixa de perguntar apenas ``qual a classe típica do navio desta rota?'' e passa a perguntar ``qual foi a intensidade média observada, em tonelada-milha, dos navios que de fato operaram esta ligação na base ANTAQ?''.
+Antes do cálculo, a intensidade é procurada pelo IMO no EU MRV. Sem correspondência positiva, utiliza-se a média disponível da classe e depois a média do tipo de navio; para o recorte conteinerizado sem metadado de tipo, \emph{container ship} é o fallback documentado. A fonte efetivamente usada permanece registrada por viagem. O modelo avalia todas as sequências observadas dentro de uma mesma viagem, sem montar um caminho sintético com pernas de viagens diferentes, e seleciona primeiro um corredor direto utilizável ou, na sua ausência, o corredor completo de menor distância.
 
 No artefato atual da \texttt{sea\_matrix}, o enriquecimento direcional resultou em:
 
@@ -294,33 +293,39 @@ No artefato atual da \texttt{sea\_matrix}, o enriquecimento direcional resultou 
 \toprule
 Indicador & Valor \\
 \midrule
-Pares direcionais com KPI & \num{67} \\
-Nós de origem com ao menos um par válido & \num{11} \\
-Trechos candidatos & \num{5473} \\
-Trechos com carga positiva & \num{3457} \\
-Trechos mapeados para a matriz & \num{1650} \\
-Trechos com match MRV útil & \num{960} \\
-Taxa de match MRV nos trechos mapeados & \num{58.2}\% \\
+Pares direcionais com KPI & \num{177} \\
+Nós de origem com ao menos um par válido & \num{16} \\
+Trechos candidatos antes do colapso de aliases & \num{5473} \\
+Trechos canônicos calculados & \num{5438} \\
+Trechos com distância da matriz & \num{5023} \\
+Trechos com fallback haversine & \num{415} \\
+Trechos com intensidade por IMO & \num{3290} \\
+Trechos com fallback de intensidade & \num{2148} \\
+Observações viagem--OD preservadas & \num{12025} \\
+Taxa de resolução de intensidade & \num{100.0}\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-O filtro é deliberadamente estrito: somente pares efetivamente observados na ANTAQ e com cobertura MRV útil permanecem como pares válidos do enriquecimento direcional. Isso evita preencher a matriz com estimativas artificiais para rotas sem base observada.
+O filtro permanece restrito a corredores presentes na sequência normalizada de uma mesma viagem. Nenhum subtrecho foi descartado por nome de terminal, distância ausente ou intensidade não resolvida no artefato atual. Quatro nomes de terminais foram associados a seus portos canônicos; chamadas consecutivas no mesmo complexo foram colapsadas somente depois de somar seus movimentos de carga. Para pares canônicos distintos sem distância positiva na matriz, o fallback haversine é registrado como aproximação. As sequências normalizadas derivam das chamadas com movimentação conteinerizada disponíveis no pipeline e, portanto, não devem ser interpretadas como inventário de toda atracação física sem carga observada.
 
 \section{Lógica de avaliação marítima no motor do projeto}
 
-Com a nova \texttt{sea\_matrix} enriquecida, a avaliação unitária passou a priorizar o KPI direcional por rota sempre que ele estiver disponível. Se a ligação porto--porto consultada possui um valor \(\bar{I}_{o,d}\), o combustível marítimo da remessa é calculado por:
+Com a nova \texttt{sea\_matrix} enriquecida, a avaliação unitária carrega o corredor completo previamente selecionado no processamento offline. Para uma carga de cenário \(M\), o combustível marítimo de navegação é calculado pela soma de seus subtrechos:
 \begin{equation}
-F_{\text{mar}} = \frac{\bar{I}_{o,d} \cdot M \cdot d_{\text{nm}}}{1000},
+F_{\text{mar}} = \frac{1}{1000}
+\sum_{s \in \mathcal{S}^{*}_{o,d}} \bar{I}_s \cdot M \cdot d_s,
 \label{eq:sea-fuel-route}
 \end{equation}
-em que \(M\) é a massa da carga em toneladas e \(d_{\text{nm}}\) é a distância da perna marítima em milhas náuticas.
+em que \(\mathcal{S}^{*}_{o,d}\) é a cadeia selecionada, \(\bar{I}_s\) é a intensidade agregada do subtrecho e \(d_s\) é sua distância em milhas náuticas. A carga ANTAQ permanece como dado diagnóstico da construção da intensidade; ela não substitui a carga informada no cenário.
 
-Quando esse KPI direcional não existe, o motor recorre a fatores por classe de navio obtidos do processamento MRV. Ou seja, o modelo atual é hierárquico:
+O modelo atual é hierárquico:
 
 \begin{enumerate}
-  \item prioriza o KPI direcional observado por rota;
-  \item na ausência desse KPI, utiliza o fator robusto por classe de navio;
+  \item resolve a intensidade de cada viagem por IMO, classe ou tipo, nessa ordem;
+  \item agrega todos os subtrechos de cada viagem e todas as viagens do mesmo corredor;
+  \item seleciona entre corredores completos observados sem costurar viagens distintas;
+  \item atribui combustível à carga do cenário pela soma dos subtrechos selecionados;
   \item em usos específicos de decomposição, mantém submodelos de hoteling e operações portuárias.
 \end{enumerate}
 
@@ -395,7 +400,7 @@ Apesar do avanço metodológico, o projeto ainda possui limitações claras.
 
 Em primeiro lugar, a base observada está concentrada no recorte de 2025. Isso implica que a amostra de viagens, ainda que grande, não representa automaticamente a dinâmica de outros anos. Além disso, como toda janela de observação temporal limitada, a segmentação por IMO pode produzir primeiras e últimas viagens parciais.
 
-Em segundo lugar, a cobertura do MRV é parcial. Nem todos os navios observados na ANTAQ aparecem com KPI aproveitável de \emph{transport work}. Isso restringe o número de pares direcionais com média de rota observada e impede a generalização do método para todo o espaço de corredores possíveis.
+Em segundo lugar, a cobertura exata por IMO no MRV é parcial. Das \num{1324} viagens, \num{788} usam intensidade específica por IMO e \num{536} dependem, no artefato atual, da média do tipo \emph{container ship}; o fallback por classe também é suportado, mas não foi acionado pelos metadados disponíveis nesse recorte. A taxa de resolução numérica é, portanto, completa, mas a qualidade da evidência não é homogênea. Resultados com fallback devem ser interpretados com incerteza maior do que aqueles associados diretamente ao IMO.
 
 Em terceiro lugar, a escolha de porto por proximidade geográfica ainda é uma heurística simplificadora. Em termos reais, a escolha do porto depende de oferta de serviço, contrato logístico, tempo de trânsito, custo portuário, disponibilidade de equipamento e frequência de escalas. Incorporar esses fatores exigirá uma camada adicional de modelagem de serviço, não apenas de geometria.
 

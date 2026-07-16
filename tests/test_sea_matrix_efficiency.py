@@ -6,97 +6,557 @@ from pathlib import Path
 from unittest.mock import patch
 
 from modules.cabotage.sea_matrix_efficiency import (
+    CORRIDOR_SELECTION_CRITERION,
+    ROUTE_OBSERVATION_MODE,
     _build_port_lookup,
     _resolve_matrix_port_name,
     enrich_sea_matrix_with_efficiency,
+    validate_enriched_sea_matrix_payload,
 )
 
 
 class SeaMatrixEfficiencyTests(unittest.TestCase):
-    def test_existing_local_base_matrix_is_not_replaced_by_remote_asset(self) -> None:
+    def test_direct_observed_voyage_uses_latest_exact_imo_intensity(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            matrix_path = root / "sea_matrix.json"
-            voyages_path = root / "voyages.csv"
-            stops_path = root / "stops.csv"
-            mrv_path = root / "mrv.json"
-
-            matrix_path.write_text(
-                json.dumps(
-                    {
-                        "ports": [
-                            {"name": "Port A", "slug": "port-a"},
-                            {"name": "Port B", "slug": "port-b"},
+            payload, summary = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port B"],
+                matrix=self._symmetric_matrix({("Port A", "Port B"): 185.2}),
+                voyages=[{"voyage_id": "voyage-1", "imo": "1234567"}],
+                stops=[
+                    self._stop("voyage-1", 0, "Port A", 100.0, 5.0),
+                    self._stop("voyage-1", 1, "Port B", -100.0, -5.0),
+                ],
+                ships=[
+                    self._ship(
+                        "1234567",
+                        [
+                            self._record(2022, 99.0, source_file="old.xlsx"),
+                            self._record(2024, 7.5, source_file="latest.xlsx"),
                         ],
-                        "matrix": {
-                            "Port A": {"Port B": 185.2},
-                            "Port B": {"Port A": 185.2},
-                        },
-                    }
-                ),
-                encoding="utf-8",
-            )
-            self._write_csv(
-                voyages_path,
-                ["voyage_id", "imo"],
-                [["voyage-1", "1234567"]],
-            )
-            self._write_csv(
-                stops_path,
-                [
-                    "voyage_id",
-                    "sequence",
-                    "port_name",
-                    "net_weight_t",
-                    "net_teu",
-                ],
-                [
-                    ["voyage-1", 0, "Port A", 100.0, 5.0],
-                    ["voyage-1", 1, "Port B", -100.0, -5.0],
+                    )
                 ],
             )
-            mrv_path.write_text(
-                json.dumps(
-                    {
-                        "ships": [
-                            {
-                                "imo": "1234567",
-                                "records": [
-                                    {
-                                        "reporting_period": 2024,
-                                        "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.5,
-                                    }
-                                ],
-                            }
-                        ]
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            def resolve_non_matrix_asset(candidate: Path | str) -> Path:
-                resolved_candidate = Path(candidate).resolve()
-                self.assertNotEqual(resolved_candidate, matrix_path.resolve())
-                return resolved_candidate
-
-            with patch(
-                "modules.cabotage.sea_matrix_efficiency.resolve_data_asset_path",
-                side_effect=resolve_non_matrix_asset,
-            ):
-                payload, summary = enrich_sea_matrix_with_efficiency(
-                    sea_matrix_path=matrix_path,
-                    voyages_csv_path=voyages_path,
-                    stops_csv_path=stops_path,
-                    mrv_json_path=mrv_path,
-                    possible_pairs_only=False,
-                    matched_pairs_only=True,
-                    prefer_local_voyage_inputs=True,
-                )
 
         stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
         self.assertEqual(stats["fuel_g_per_tnm_weighted_mean"], 7.5)
+        self.assertEqual(stats["observed_transport_work_tnm"], 10000.0)
+        self.assertEqual(stats["observed_fuel_kg"], 75.0)
         self.assertEqual(stats["matched_segment_count"], 1)
+        self.assertEqual(stats["resolved_segment_count"], 1)
+        self.assertEqual(stats["imo_intensity_voyage_count"], 1)
+        self.assertEqual(stats["corridor_port_path"], ["Port A", "Port B"])
+        self.assertEqual(stats["route_observation_mode"], ROUTE_OBSERVATION_MODE)
         self.assertEqual(summary["directional_pairs"], 1)
+
+        provenance = payload["voyage_intensity_provenance"]["voyage-1"]
+        self.assertEqual(provenance["intensity_source"], "eu_mrv_imo_latest")
+        self.assertEqual(provenance["reporting_period"], 2024)
+        self.assertEqual(provenance["source_file"], "latest.xlsx")
+        self.assertFalse(provenance["is_fallback"])
+
+    def test_multistop_voyage_sums_variable_onboard_cargo(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port X", "Port B"],
+                matrix=self._symmetric_matrix(
+                    {
+                        ("Port A", "Port X"): 185.2,
+                        ("Port X", "Port B"): 92.6,
+                        ("Port A", "Port B"): 277.8,
+                    }
+                ),
+                voyages=[{"voyage_id": "voyage-multi", "imo": "1111111"}],
+                stops=[
+                    self._stop("voyage-multi", 0, "Port A", 100.0, 10.0),
+                    self._stop("voyage-multi", 1, "Port X", -40.0, -4.0),
+                    self._stop("voyage-multi", 2, "Port B", -60.0, -6.0),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(stats["corridor_port_path"], ["Port A", "Port X", "Port B"])
+        self.assertEqual(stats["corridor_leg_count"], 2)
+        self.assertEqual(stats["segment_count"], 2)
+        self.assertEqual(stats["voyage_count"], 1)
+        self.assertEqual(stats["unique_imo_count"], 1)
+        self.assertEqual(stats["observed_transport_work_tnm"], 13000.0)
+        self.assertEqual(stats["observed_fuel_kg"], 130.0)
+
+        corridor_sublegs = stats["selected_corridor_sublegs"]
+        self.assertEqual(
+            [leg["resolved_transport_work_tnm"] for leg in corridor_sublegs],
+            [10000.0, 3000.0],
+        )
+        self.assertEqual(
+            [leg["average_cargo_onboard_t"] for leg in corridor_sublegs],
+            [100.0, 60.0],
+        )
+        self.assertEqual(
+            [leg["intensity_g_per_tnm"] for leg in corridor_sublegs],
+            [10.0, 10.0],
+        )
+        self.assertEqual(
+            [leg["fuel_g_per_tnm"] for leg in corridor_sublegs],
+            [10.0, 10.0],
+        )
+
+        selected_option = next(
+            option
+            for option in stats["corridor_options"]
+            if option["corridor_port_path"] == stats["corridor_port_path"]
+        )
+        self.assertEqual(selected_option["candidate_voyage_ids"], ["voyage-multi"])
+        sublegs = stats["selected_corridor_sublegs"]
+        self.assertEqual(
+            [leg["average_cargo_onboard_t"] for leg in sublegs],
+            [100.0, 60.0],
+        )
+        self.assertEqual(
+            [leg["observed_fuel_kg"] for leg in sublegs],
+            [100.0, 30.0],
+        )
+
+    def test_same_corridor_sums_voyages_with_mixed_intensity_sources(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port B"],
+                matrix=self._symmetric_matrix({("Port A", "Port B"): 185.2}),
+                voyages=[
+                    {"voyage_id": "exact", "imo": "1111111"},
+                    {
+                        "voyage_id": "class-fallback",
+                        "imo": "2222222",
+                        "vessel_class": "container_feeder",
+                    },
+                ],
+                stops=[
+                    self._stop("exact", 0, "Port A", 100.0, 10.0),
+                    self._stop("exact", 1, "Port B", -100.0, -10.0),
+                    self._stop("class-fallback", 0, "Port A", 50.0, 5.0),
+                    self._stop("class-fallback", 1, "Port B", -50.0, -5.0),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+                class_payload={
+                    "container_feeder": {
+                        "fuel_g_per_tnm": {"mean": 6.0, "count": 10},
+                    }
+                },
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(stats["candidate_voyage_count"], 2)
+        self.assertEqual(stats["observed_transport_work_tnm"], 15000.0)
+        self.assertEqual(stats["observed_fuel_kg"], 130.0)
+        self.assertAlmostEqual(stats["fuel_g_per_tnm_weighted_mean"], 8.666667)
+        self.assertEqual(
+            stats["intensity_source_counts"],
+            {"eu_mrv_imo_latest": 1, "eu_mrv_vessel_class_mean": 1},
+        )
+
+    def test_negative_prefix_reconstructs_initial_cargo_and_keeps_zero_leg(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port X", "Port B"],
+                matrix=self._symmetric_matrix(
+                    {
+                        ("Port A", "Port X"): 185.2,
+                        ("Port X", "Port B"): 92.6,
+                        ("Port A", "Port B"): 277.8,
+                    }
+                ),
+                voyages=[{"voyage_id": "voyage-prefix", "imo": "1111111"}],
+                stops=[
+                    self._stop("voyage-prefix", 0, "Port A", -40.0, -4.0),
+                    self._stop("voyage-prefix", 1, "Port X", 100.0, 10.0),
+                    self._stop("voyage-prefix", 2, "Port B", -60.0, -6.0),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(
+            [
+                leg["average_cargo_onboard_t"]
+                for leg in stats["selected_corridor_sublegs"]
+            ],
+            [0.0, 100.0],
+        )
+        self.assertEqual(
+            [leg["intensity_g_per_tnm"] for leg in stats["selected_corridor_sublegs"]],
+            [10.0, 10.0],
+        )
+        self.assertEqual(
+            [leg["observed_fuel_kg"] for leg in stats["selected_corridor_sublegs"]],
+            [0.0, 50.0],
+        )
+        segment_summary = payload["voyage_fuel_g_per_tnm_directional_meta"][
+            "segment_summary"
+        ]
+        self.assertEqual(segment_summary["voyages_with_reconstructed_initial_cargo"], 1)
+        self.assertEqual(
+            segment_summary["reconstructed_initial_onboard_weight_t_total"], 40.0
+        )
+        self.assertEqual(stats["segment_count"], 2)
+        self.assertEqual(stats["observed_transport_work_tnm"], 5000.0)
+        self.assertEqual(stats["observed_fuel_kg"], 50.0)
+
+    def test_selects_shortest_same_voyage_corridor_without_synthetic_path(self) -> None:
+        ports = ["Port A", "Port Suape", "Port Recife", "Port X", "Port B"]
+        matrix = self._symmetric_matrix(
+            {
+                ("Port A", "Port Suape"): 185.2,
+                ("Port Suape", "Port B"): 185.2,
+                ("Port A", "Port Recife"): 111.12,
+                ("Port Recife", "Port B"): 111.12,
+                ("Port A", "Port X"): 37.04,
+                ("Port X", "Port B"): 37.04,
+                ("Port A", "Port B"): 500.0,
+            }
+        )
+        voyages = [
+            {"voyage_id": "via-suape", "imo": "1111111"},
+            {"voyage_id": "via-recife", "imo": "1111111"},
+            {"voyage_id": "a-to-x-only", "imo": "1111111"},
+            {"voyage_id": "x-to-b-only", "imo": "1111111"},
+        ]
+        stops = [
+            *self._three_stop_voyage("via-suape", "Port A", "Port Suape", "Port B"),
+            *self._three_stop_voyage("via-recife", "Port A", "Port Recife", "Port B"),
+            self._stop("a-to-x-only", 0, "Port A", 100.0, 10.0),
+            self._stop("a-to-x-only", 1, "Port X", -100.0, -10.0),
+            self._stop("x-to-b-only", 0, "Port X", 100.0, 10.0),
+            self._stop("x-to-b-only", 1, "Port B", -100.0, -10.0),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=ports,
+                matrix=matrix,
+                voyages=voyages,
+                stops=stops,
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(stats["corridor_count"], 2)
+        self.assertEqual(
+            stats["corridor_port_path"], ["Port A", "Port Recife", "Port B"]
+        )
+        self.assertEqual(stats["selection_criterion"], CORRIDOR_SELECTION_CRITERION)
+        option_paths = [option["corridor_port_path"] for option in stats["corridor_options"]]
+        self.assertIn(["Port A", "Port Suape", "Port B"], option_paths)
+        self.assertIn(["Port A", "Port Recife", "Port B"], option_paths)
+        self.assertNotIn(["Port A", "Port X", "Port B"], option_paths)
+
+    def test_direct_corridor_precedes_shorter_multistop_corridor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port Recife", "Port B"],
+                matrix=self._symmetric_matrix(
+                    {
+                        ("Port A", "Port B"): 555.6,
+                        ("Port A", "Port Recife"): 111.12,
+                        ("Port Recife", "Port B"): 111.12,
+                    }
+                ),
+                voyages=[
+                    {"voyage_id": "direct", "imo": "1111111"},
+                    {"voyage_id": "indirect", "imo": "1111111"},
+                ],
+                stops=[
+                    self._stop("direct", 0, "Port A", 100.0, 10.0),
+                    self._stop("direct", 1, "Port B", -100.0, -10.0),
+                    *self._three_stop_voyage(
+                        "indirect", "Port A", "Port Recife", "Port B"
+                    ),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(stats["corridor_count"], 2)
+        self.assertEqual(stats["corridor_port_path"], ["Port A", "Port B"])
+        self.assertEqual(stats["corridor_leg_count"], 1)
+
+    def test_zero_transport_work_direct_preserves_resolved_intensity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port X", "Port B"],
+                matrix=self._symmetric_matrix(
+                    {
+                        ("Port A", "Port B"): 500.0,
+                        ("Port A", "Port X"): 100.0,
+                        ("Port X", "Port B"): 100.0,
+                    }
+                ),
+                voyages=[
+                    {"voyage_id": "zero-direct", "imo": "1111111"},
+                    {"voyage_id": "usable-multistop", "imo": "1111111"},
+                ],
+                stops=[
+                    self._stop("zero-direct", 0, "Port A", 0.0, 0.0),
+                    self._stop("zero-direct", 1, "Port B", 0.0, 0.0),
+                    *self._three_stop_voyage(
+                        "usable-multistop", "Port A", "Port X", "Port B"
+                    ),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(stats["corridor_count"], 2)
+        self.assertEqual(stats["candidate_voyage_count"], 2)
+        self.assertEqual(stats["corridor_port_path"], ["Port A", "Port B"])
+        self.assertEqual(stats["fuel_g_per_tnm_weighted_mean"], 10.0)
+        self.assertEqual(stats["observed_fuel_kg"], 0.0)
+        self.assertEqual(
+            stats["intensity_weighting"],
+            "arithmetic_mean_resolved_voyages_zero_transport_work",
+        )
+        direct_option = next(
+            option
+            for option in stats["corridor_options"]
+            if option["corridor_port_path"] == ["Port A", "Port B"]
+        )
+        self.assertEqual(direct_option["fuel_g_per_tnm_weighted_mean"], 10.0)
+
+    def test_repeated_ports_contribute_once_per_voyage_and_od(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port X", "Port B"],
+                matrix=self._symmetric_matrix(
+                    {
+                        ("Port A", "Port X"): 100.0,
+                        ("Port X", "Port B"): 100.0,
+                        ("Port A", "Port B"): 300.0,
+                    }
+                ),
+                voyages=[{"voyage_id": "repeated", "imo": "1111111"}],
+                stops=[
+                    self._stop("repeated", 0, "Port A", 100.0, 10.0),
+                    self._stop("repeated", 1, "Port X", 0.0, 0.0),
+                    self._stop("repeated", 2, "Port B", -100.0, -10.0),
+                    self._stop("repeated", 3, "Port A", 100.0, 10.0),
+                    self._stop("repeated", 4, "Port B", -100.0, -10.0),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(stats["candidate_voyage_count"], 1)
+        self.assertEqual(stats["corridor_count"], 1)
+        self.assertEqual(stats["corridor_port_path"], ["Port A", "Port B"])
+        self.assertEqual(stats["direct_voyage_count"], 1)
+        summary = payload["voyage_fuel_g_per_tnm_directional_meta"]["segment_summary"]
+        self.assertGreater(summary["deduplicated_subroute_occurrences"], 0)
+
+    def test_consecutive_terminal_aliases_are_collapsed_with_all_cargo_moves(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port B"],
+                port_records=[
+                    {
+                        "name": "Port A",
+                        "slug": "port-a",
+                        "slug_candidates": ["terminal-a"],
+                        "lat": 0.0,
+                        "lon": 0.0,
+                    },
+                    {
+                        "name": "Port B",
+                        "slug": "port-b",
+                        "lat": 0.0,
+                        "lon": 1.0,
+                    },
+                ],
+                matrix=self._symmetric_matrix({("Port A", "Port B"): 185.2}),
+                voyages=[{"voyage_id": "alias-voyage", "imo": "1111111"}],
+                stops=[
+                    self._stop("alias-voyage", 0, "Port A", 100.0, 10.0),
+                    self._stop("alias-voyage", 1, "Terminal A", -40.0, -4.0),
+                    self._stop("alias-voyage", 2, "Port B", -60.0, -6.0),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(stats["corridor_port_path"], ["Port A", "Port B"])
+        self.assertEqual(stats["corridor_leg_count"], 1)
+        self.assertEqual(
+            stats["selected_corridor_sublegs"][0]["average_cargo_onboard_t"],
+            60.0,
+        )
+        self.assertEqual(stats["observed_fuel_kg"], 60.0)
+        summary = payload["voyage_fuel_g_per_tnm_directional_meta"]["segment_summary"]
+        self.assertEqual(summary["raw_candidate_segments"], 2)
+        self.assertEqual(summary["candidate_segments"], 1)
+        self.assertEqual(summary["collapsed_consecutive_canonical_stop_calls"], 1)
+
+    def test_missing_positive_matrix_distance_uses_audited_haversine_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port B", "Port C"],
+                port_records=[
+                    {"name": "Port A", "slug": "port-a", "lat": 0.0, "lon": 0.0},
+                    {"name": "Port B", "slug": "port-b", "lat": 0.0, "lon": 1.0},
+                    {"name": "Port C", "slug": "port-c", "lat": 1.0, "lon": 1.0},
+                ],
+                matrix=self._symmetric_matrix(
+                    {
+                        ("Port A", "Port B"): 0.0,
+                        ("Port B", "Port C"): 10.0,
+                    }
+                ),
+                voyages=[{"voyage_id": "fallback-distance", "imo": "1111111"}],
+                stops=[
+                    self._stop("fallback-distance", 0, "Port A", 100.0, 10.0),
+                    self._stop("fallback-distance", 1, "Port B", -100.0, -10.0),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        subleg = stats["selected_corridor_sublegs"][0]
+        self.assertEqual(subleg["distance_source"], "haversine_fallback")
+        self.assertEqual(
+            stats["selected_corridor_distance_source_counts"],
+            {"haversine_fallback": 1},
+        )
+        self.assertGreater(subleg["distance_km"], 111.0)
+        summary = payload["voyage_fuel_g_per_tnm_directional_meta"]["segment_summary"]
+        self.assertEqual(summary["haversine_fallback_segments"], 1)
+        self.assertEqual(summary["skipped_missing_distance_segments"], 0)
+
+    def test_intensity_hierarchy_and_source_counts(self) -> None:
+        ports = [f"Port {letter}" for letter in "ABCDEFGH"]
+        matrix = self._symmetric_matrix(
+            {
+                ("Port A", "Port B"): 185.2,
+                ("Port C", "Port D"): 185.2,
+                ("Port E", "Port F"): 185.2,
+                ("Port G", "Port H"): 185.2,
+            }
+        )
+        voyages = [
+            {
+                "voyage_id": "v-imo",
+                "imo": "1111111",
+                "vessel_class": "container_feeder",
+                "ship_type": "Container ship",
+            },
+            {
+                "voyage_id": "v-class",
+                "imo": "9999999",
+                "vessel_class": "container_feeder",
+                "ship_type": "Container ship",
+            },
+            {
+                "voyage_id": "v-type",
+                "imo": "9999998",
+                "vessel_class": "",
+                "ship_type": "Container ship",
+            },
+            {
+                "voyage_id": "v-default-type",
+                "imo": "9999997",
+                "vessel_class": "",
+                "ship_type": "",
+            },
+        ]
+        stops = []
+        for voyage_id, origin, destination in (
+            ("v-imo", "Port A", "Port B"),
+            ("v-class", "Port C", "Port D"),
+            ("v-type", "Port E", "Port F"),
+            ("v-default-type", "Port G", "Port H"),
+        ):
+            stops.extend(
+                [
+                    self._stop(voyage_id, 0, origin, 100.0, 10.0),
+                    self._stop(voyage_id, 1, destination, -100.0, -10.0),
+                ]
+            )
+        ships = [
+            self._ship(
+                "1111111",
+                [self._record(2022, 99.0), self._record(2024, 4.0)],
+            ),
+            self._ship("2222222", [self._record(2024, 10.0)]),
+            self._ship("3333333", [self._record(2024, 12.0)]),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=ports,
+                matrix=matrix,
+                voyages=voyages,
+                stops=stops,
+                ships=ships,
+                class_payload={
+                    "container_feeder": {
+                        "fuel_g_per_tnm": {"mean": 6.5, "count": 20},
+                        "sample_size": 20,
+                    }
+                },
+            )
+
+        provenance = payload["voyage_intensity_provenance"]
+        self.assertEqual(provenance["v-imo"]["intensity_g_per_tnm"], 4.0)
+        self.assertEqual(provenance["v-imo"]["intensity_source_level"], "imo")
+        self.assertEqual(provenance["v-class"]["intensity_g_per_tnm"], 6.5)
+        self.assertEqual(
+            provenance["v-class"]["intensity_source"],
+            "eu_mrv_vessel_class_mean",
+        )
+        self.assertEqual(provenance["v-class"]["source_file"], "classes.json")
+
+        expected_type_mean = (4.0 + 10.0 + 12.0) / 3.0
+        self.assertAlmostEqual(
+            provenance["v-type"]["intensity_g_per_tnm"], expected_type_mean
+        )
+        self.assertEqual(provenance["v-type"]["sample_size"], 3)
+        self.assertFalse(provenance["v-type"]["used_default_ship_type"])
+        self.assertAlmostEqual(
+            provenance["v-default-type"]["intensity_g_per_tnm"],
+            expected_type_mean,
+        )
+        self.assertTrue(provenance["v-default-type"]["used_default_ship_type"])
+
+        exact_stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        class_stats = payload["voyage_fuel_g_per_tnm_directional"]["Port C"]["Port D"]
+        type_stats = payload["voyage_fuel_g_per_tnm_directional"]["Port E"]["Port F"]
+        self.assertEqual(exact_stats["matched_segment_count"], 1)
+        self.assertEqual(exact_stats["fallback_voyage_count"], 0)
+        self.assertEqual(class_stats["matched_segment_count"], 0)
+        self.assertEqual(class_stats["resolved_segment_count"], 1)
+        self.assertEqual(class_stats["class_fallback_voyage_count"], 1)
+        self.assertEqual(type_stats["type_fallback_voyage_count"], 1)
+        self.assertEqual(
+            type_stats["intensity_source_counts"], {"eu_mrv_ship_type_mean": 1}
+        )
+        validation = validate_enriched_sea_matrix_payload(
+            payload,
+            required_route=("Port C", "Port D"),
+        )
+        self.assertEqual(
+            validation["required_route"]["resolved_segment_count"], 1
+        )
+        self.assertEqual(validation["required_route"]["matched_segment_count"], 0)
+        self.assertEqual(
+            validation["required_route"]["intensity_resolution_rate"], 1.0
+        )
 
     def test_base_matrix_maps_manaus_terminal_names_and_codes(self) -> None:
         matrix_path = (
@@ -121,11 +581,182 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                     "Porto de Manaus",
                 )
 
+    def test_base_matrix_maps_observed_terminal_aliases(self) -> None:
+        matrix_path = (
+            Path(__file__).resolve().parents[1]
+            / "data"
+            / "processed"
+            / "cabotage_data"
+            / "sea_matrix.json"
+        )
+        payload = json.loads(matrix_path.read_text(encoding="utf-8-sig"))
+        lookup = _build_port_lookup(payload)
+
+        aliases = {
+            "DP World Santos": "Porto de Santos",
+            "Porto Itapoá Terminais Portuários": "Porto de Itapoá",
+            "Portonave - Terminais Portuários de Navegantes": (
+                "Porto de Navegantes"
+            ),
+            "Terminal Portuário do Pecém": "Porto do Pecém",
+        }
+        for port_name, expected in aliases.items():
+            with self.subTest(port_name=port_name):
+                self.assertEqual(
+                    _resolve_matrix_port_name({"port_name": port_name}, lookup),
+                    expected,
+                )
+
+    def _run_enrichment(
+        self,
+        root: Path,
+        *,
+        ports: list[str],
+        matrix: dict[str, dict[str, float]],
+        voyages: list[dict[str, object]],
+        stops: list[dict[str, object]],
+        ships: list[dict[str, object]],
+        class_payload: dict[str, object] | None = None,
+        port_records: list[dict[str, object]] | None = None,
+    ) -> tuple[dict[str, object], dict[str, object]]:
+        matrix_path = root / "sea_matrix.json"
+        voyages_path = root / "voyages.csv"
+        stops_path = root / "stops.csv"
+        mrv_path = root / "mrv.json"
+        class_path = root / "classes.json"
+
+        matrix_path.write_text(
+            json.dumps(
+                {
+                    "ports": port_records
+                    or [
+                        {"name": port, "slug": port.lower().replace(" ", "-")}
+                        for port in ports
+                    ],
+                    "matrix": matrix,
+                }
+            ),
+            encoding="utf-8",
+        )
+        self._write_dict_csv(voyages_path, voyages)
+        self._write_dict_csv(stops_path, stops)
+        mrv_path.write_text(json.dumps({"ships": ships}), encoding="utf-8")
+        class_path.write_text(
+            json.dumps(
+                class_payload
+                or {
+                    "container_feeder": {
+                        "fuel_g_per_tnm": {"mean": 6.0, "count": 10},
+                        "sample_size": 10,
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        def resolve_local_asset(candidate: Path | str) -> Path:
+            resolved_candidate = Path(candidate).resolve()
+            self.assertNotEqual(resolved_candidate, matrix_path.resolve())
+            return resolved_candidate
+
+        with patch(
+            "modules.cabotage.sea_matrix_efficiency.resolve_data_asset_path",
+            side_effect=resolve_local_asset,
+        ):
+            return enrich_sea_matrix_with_efficiency(
+                sea_matrix_path=matrix_path,
+                voyages_csv_path=voyages_path,
+                stops_csv_path=stops_path,
+                mrv_json_path=mrv_path,
+                class_efficiency_json_path=class_path,
+                possible_pairs_only=False,
+                matched_pairs_only=True,
+                prefer_local_voyage_inputs=True,
+            )
+
     @staticmethod
-    def _write_csv(path: Path, columns: list[str], rows: list[list[object]]) -> None:
+    def _ship(
+        imo: str,
+        records: list[dict[str, object]],
+        *,
+        ship_type: str = "Container ship",
+        vessel_class: str | None = None,
+    ) -> dict[str, object]:
+        return {
+            "imo": imo,
+            "ship_type": ship_type,
+            "vessel_class": vessel_class,
+            "records": records,
+        }
+
+    @staticmethod
+    def _record(
+        reporting_period: int,
+        intensity: float,
+        *,
+        source_file: str = "mrv.xlsx",
+        source_sheet: str = "2024",
+        metric_basis: str = "dwt",
+    ) -> dict[str, object]:
+        return {
+            "reporting_period": reporting_period,
+            "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": intensity,
+            "fuel_consumption_per_transport_work_source": metric_basis,
+            "source_file": source_file,
+            "source_sheet": source_sheet,
+        }
+
+    @staticmethod
+    def _stop(
+        voyage_id: str,
+        sequence: int,
+        port_name: str,
+        net_weight_t: float,
+        net_teu: float,
+    ) -> dict[str, object]:
+        return {
+            "voyage_id": voyage_id,
+            "sequence": sequence,
+            "port_name": port_name,
+            "port_code": "",
+            "net_weight_t": net_weight_t,
+            "net_teu": net_teu,
+        }
+
+    @classmethod
+    def _three_stop_voyage(
+        cls,
+        voyage_id: str,
+        origin: str,
+        intermediate: str,
+        destination: str,
+    ) -> list[dict[str, object]]:
+        return [
+            cls._stop(voyage_id, 0, origin, 100.0, 10.0),
+            cls._stop(voyage_id, 1, intermediate, 0.0, 0.0),
+            cls._stop(voyage_id, 2, destination, -100.0, -10.0),
+        ]
+
+    @staticmethod
+    def _symmetric_matrix(
+        pairs: dict[tuple[str, str], float]
+    ) -> dict[str, dict[str, float]]:
+        matrix: dict[str, dict[str, float]] = {}
+        for (origin, destination), distance in pairs.items():
+            matrix.setdefault(origin, {})[destination] = distance
+            matrix.setdefault(destination, {})[origin] = distance
+        return matrix
+
+    @staticmethod
+    def _write_dict_csv(path: Path, rows: list[dict[str, object]]) -> None:
+        columns: list[str] = []
+        for row in rows:
+            for key in row:
+                if key not in columns:
+                    columns.append(key)
         with path.open("w", encoding="utf-8-sig", newline="") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(columns)
+            writer = csv.DictWriter(handle, fieldnames=columns)
+            writer.writeheader()
             writer.writerows(rows)
 
 

@@ -357,6 +357,154 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             3.114,
         )
 
+    def test_selected_corridor_sums_scenario_fuel_across_sublegs(self) -> None:
+        context = evaluator.PreparedEvaluationContext(
+            truck_spec={
+                "axles": 5,
+                "payload_t": 27.0,
+                "ref_weight_t": 20.0,
+                "empty_efficiency_gain": 0.18,
+            },
+            diesel_lookup=DieselPriceLookup(
+                source_csv="diesel.csv",
+                default_price_r_per_l=6.0,
+                uf_to_price={"SP": 6.12, "RJ": 6.15},
+                row_count=2,
+            ),
+            diesel_price_override=None,
+            bunker_price_ton=2572.34,
+            vessel_eff=self._fake_vessel(),
+            hoteling_sel=None,
+            port_ops_selection=None,
+        )
+        path_data = self._path_data()
+        path_data["sea_leg"] = {
+            "distance_km": 277.8,
+            "source": "observed_voyage_corridor",
+            "route_observation_mode": "observed_voyage_corridors",
+            "fuel_g_per_tnm": 9.333333333333334,
+            "fuel_g_per_tnm_source": "observed_voyage_corridor_sublegs",
+            "corridor_count": 3,
+            "candidate_voyage_count": 4,
+            "selected_corridor_candidate_voyage_count": 2,
+            "direct_voyage_count": 1,
+            "multistop_voyage_count": 3,
+            "selection_criterion": "direct_first_then_shortest_distance_km",
+            "selected_corridor_id": "voyage-42",
+            "resolved_voyage_count": 3,
+            "imo_intensity_voyage_count": 2,
+            "class_fallback_voyage_count": 1,
+            "type_fallback_voyage_count": 0,
+            "fallback_voyage_count": 1,
+            "unresolved_intensity_voyage_count": 1,
+            "intensity_source_counts": {
+                "eu_mrv_imo_latest": 2,
+                "eu_mrv_vessel_class_mean": 1,
+                "unavailable": 1,
+            },
+            "distance_source_counts": {
+                "sea_matrix": 6,
+                "haversine_fallback": 1,
+            },
+            "selected_corridor_distance_source_counts": {
+                "sea_matrix": 1,
+                "haversine_fallback": 1,
+            },
+            "corridor_leg_count": 2,
+            "corridor_port_path": ["Port A", "Port X", "Port B"],
+            "observed_transport_work_tnm": 13000.0,
+            "observed_fuel_kg": 116.0,
+            "candidate_observed_transport_work_tnm": 26000.0,
+            "candidate_observed_fuel_kg": 231.0,
+            "selected_corridor_sublegs": [
+                {
+                    "origin_port": "Port A",
+                    "destination_port": "Port X",
+                    "distance_km": 185.2,
+                    "distance_nm": 100.0,
+                    "distance_source": "sea_matrix",
+                    "observed_cargo_t": 100.0,
+                    "transport_work_tnm": 10000.0,
+                    "fuel_g_per_tnm": 8.0,
+                    "intensity_source": "eu_mrv_imo_latest",
+                    "intensity_source_level": "imo",
+                    "observed_fuel_kg": 80.0,
+                },
+                {
+                    "origin_port": "Port X",
+                    "destination_port": "Port B",
+                    "distance_km": 92.6,
+                    "distance_nm": 50.0,
+                    "distance_source": "haversine_fallback",
+                    "observed_cargo_t": 0.0,
+                    "transport_work_tnm": 0.0,
+                    "fuel_g_per_tnm": 12.0,
+                    "intensity_source": "eu_mrv_vessel_class_mean",
+                    "intensity_source_level": "vessel_class",
+                    "observed_fuel_kg": 0.0,
+                },
+            ],
+        }
+
+        with patch.object(
+            evaluator,
+            "estimate_leg_liters",
+            side_effect=self._estimate_leg_liters,
+        ):
+            result = evaluator.evaluate_path(
+                path_data,
+                cargo_t=20.0,
+                truck_key="semi_27t",
+                include_hoteling=False,
+                include_port_ops=False,
+                prepared_context=context,
+            )
+
+        sea = result["multimodal"]["sea"]
+        self.assertEqual(sea["sailing_fuel_calc_mode"], "observed_voyage_corridor_sublegs")
+        self.assertAlmostEqual(sea["fuel_kg_sailing"], 28.0)
+        self.assertNotEqual(sea["fuel_kg_sailing"], sea["observed_fuel_kg"])
+        self.assertAlmostEqual(sea["fuel_g_per_tnm"], 9.333333333333334)
+        self.assertEqual(sea["selected_corridor_id"], "voyage-42")
+        self.assertEqual(sea["candidate_voyage_count"], 4)
+        self.assertEqual(sea["selected_corridor_candidate_voyage_count"], 2)
+        self.assertEqual(sea["class_fallback_voyage_count"], 1)
+        self.assertEqual(sea["candidate_observed_fuel_kg"], 231.0)
+        self.assertEqual(
+            sea["selected_corridor_distance_source_counts"][
+                "haversine_fallback"
+            ],
+            1,
+        )
+        self.assertEqual(sea["selected_corridor_sublegs"][0]["scenario_cargo_t"], 20.0)
+        self.assertAlmostEqual(
+            sea["selected_corridor_sublegs"][0]["scenario_fuel_kg"],
+            16.0,
+        )
+        self.assertAlmostEqual(
+            sea["selected_corridor_sublegs"][1]["scenario_fuel_kg"],
+            12.0,
+        )
+        self.assertEqual(
+            result["inputs"]["sea_route_selected_corridor_id"],
+            "voyage-42",
+        )
+        self.assertEqual(
+            result["inputs"]["sea_route_intensity_source_counts"][
+                "eu_mrv_vessel_class_mean"
+            ],
+            1,
+        )
+        self.assertEqual(
+            result["inputs"]["sea_route_selected_corridor_distance_source_counts"][
+                "haversine_fallback"
+            ],
+            1,
+        )
+        self.assertTrue(
+            any("haversine fallback" in item for item in result["calculation_warnings"])
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

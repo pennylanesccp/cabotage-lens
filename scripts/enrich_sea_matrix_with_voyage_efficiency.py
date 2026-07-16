@@ -3,11 +3,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from modules.cabotage.sea_matrix_efficiency import (
+    DEFAULT_CLASS_EFFICIENCY_JSON_PATH,
     DEFAULT_MRV_JSON_PATH,
     DEFAULT_SEA_MATRIX_PATH,
+    DEFAULT_SHIP_TYPE,
     DEFAULT_STOPS_CSV_PATH,
     DEFAULT_VOYAGES_CSV_PATH,
     enrich_sea_matrix_with_efficiency,
@@ -20,7 +27,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Enrich data/sea_matrix.json with directional average fuel-per-transport-work "
-            "statistics derived from ANTAQ voyage segments and MRV IMO KPIs."
+            "statistics derived from complete observed ANTAQ voyage corridors and EU MRV "
+            "IMO, vessel-class, or ship-type intensities."
         )
     )
     parser.add_argument(
@@ -48,6 +56,23 @@ def _build_parser() -> argparse.ArgumentParser:
         help=f"MRV efficiency lookup JSON. Default: {DEFAULT_MRV_JSON_PATH}",
     )
     parser.add_argument(
+        "--class-efficiency-json",
+        type=Path,
+        default=DEFAULT_CLASS_EFFICIENCY_JSON_PATH,
+        help=(
+            "MRV vessel-class efficiency artifact used for explicit class fallbacks. "
+            f"Default: {DEFAULT_CLASS_EFFICIENCY_JSON_PATH}"
+        ),
+    )
+    parser.add_argument(
+        "--default-ship-type",
+        default=DEFAULT_SHIP_TYPE,
+        help=(
+            "Documented ship-type fallback for containerized ANTAQ voyages without "
+            f"explicit type metadata. Default: {DEFAULT_SHIP_TYPE!r}"
+        ),
+    )
+    parser.add_argument(
         "--output-json",
         type=Path,
         default=DEFAULT_SEA_MATRIX_PATH,
@@ -56,12 +81,18 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--keep-all-matrix-pairs",
         action="store_true",
-        help="Keep every original matrix pair instead of pruning to observed possible combinations.",
+        help=(
+            "Keep every original matrix pair instead of pruning to observed possible "
+            "combinations."
+        ),
     )
     parser.add_argument(
         "--keep-unmatched-pairs",
         action="store_true",
-        help="Keep ANTAQ-observed pairs even when no usable MRV KPI match was found for them.",
+        help=(
+            "Keep ANTAQ-observed pairs even when no usable IMO, class, or type "
+            "intensity was resolved."
+        ),
     )
     parser.add_argument(
         "--log-level",
@@ -81,6 +112,8 @@ def main() -> int:
         voyages_csv_path=args.voyages_csv,
         stops_csv_path=args.stops_csv,
         mrv_json_path=args.mrv_json,
+        class_efficiency_json_path=args.class_efficiency_json,
+        default_ship_type=args.default_ship_type,
         possible_pairs_only=not bool(args.keep_all_matrix_pairs),
         matched_pairs_only=not bool(args.keep_unmatched_pairs),
     )

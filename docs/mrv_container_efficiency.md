@@ -97,25 +97,66 @@ The preferred runtime metric for cargo allocation is:
 
 - `fuel_g_per_tnm` (`g/(t*nm)`) from MRV transport-work intensity
 
-Runtime sailing fuel uses:
+For a selected observed voyage corridor, runtime sailing fuel uses the sum of
+its sublegs:
 
-- `fuel_kg_sailing = (fuel_g_per_tnm * cargo_t * distance_nm) / 1000`
+- `fuel_kg_sailing = sum(subleg_fuel_g_per_tnm * cargo_t * subleg_distance_nm) / 1000`
+
+The offline corridor calculation separately reconstructs the observed voyage
+fuel by summing transport work over the actual sublegs for each ordered
+origin/destination pair represented in a voyage:
+
+- `observed_transport_work_tnm = sum(cargo_onboard_t * subleg_distance_nm)`
+- `observed_fuel_kg = sum(intensity_g_per_tnm * cargo_onboard_t * subleg_distance_nm) / 1000`
+
+Only complete corridors observed within one ANTAQ voyage are eligible. A
+corridor is never synthesized by joining port-pair legs from different voyages.
+Each voyage contributes once per ordered origin/destination pair. If repeated
+calls create multiple eligible slices inside the same voyage, direct is
+preferred and otherwise the shortest complete slice is retained, matching the
+model's corridor criterion.
+All observed alternatives are evaluated; the current rule prefers a direct
+observed corridor and otherwise selects the complete corridor with the shortest
+distance.
+
+Terminal aliases in the ANTAQ tables are resolved to canonical port complexes.
+Adjacent calls that resolve to the same canonical port are collapsed after
+their net weight and TEU movements are summed, so no cargo movement is dropped.
+For distinct ports, each subleg uses a positive sea-matrix distance when
+available. Missing or nonpositive values use a coordinate-based haversine
+fallback; `distance_source_counts` and each selected subleg retain that
+provenance because the fallback is an approximation and can affect the
+shortest-distance selection.
+
+The normalized stop sequence is limited to ANTAQ calls represented in the
+containerized-cargo pipeline; physical calls with no observed container
+movement may be absent. If all observed transport work for a resolved subleg or
+corridor is zero, observed fuel stays zero and the resolved vessel intensities
+are retained as an explicitly labeled arithmetic mean. This avoids losing a
+usable scenario intensity through a `0/0` division while preserving the zero
+observed activity.
 
 For routes backed by directional ANTAQ+MRV observations, the single-evaluation
-pipeline JSON also exposes each observed port-pair leg under
-`results.multimodal.sea.observed_port_pair_legs`. Each item reports observed
-segment, voyage, and IMO counts; average observed cargo; distance in nautical
-miles; weighted fuel intensity; and the fuel and emissions attributed to the
-scenario cargo. The derived fields use:
-
-- `average_cargo_t = cargo_weight_t_total / observed_segment_count`
-- `attributed_vlsfo_fuel_kg = weighted_fuel_intensity_g_per_tnm * attributed_cargo_t * distance_nm / 1000`
-- `attributed_co2e_kg = attributed_vlsfo_fuel_kg * 3.114 kg CO2e/kg VLSFO`
+pipeline JSON exposes the selected sublegs under
+`results.multimodal.sea.selected_corridor_sublegs` and keeps the compatible
+`observed_port_pair_legs` view. Each item reports observed cargo aboard,
+distance, weighted fuel intensity, intensity provenance, observed fuel, and the
+fuel attributed to the scenario cargo.
 
 `attributed_cargo_t` is the scenario input (14 t for a 14 t evaluation), not a
-hard-coded constant. The observed-count and average-cargo fields remain scoped
-to each direct port pair so corridor aggregation does not imply globally
-distinct voyages or IMOs across multiple legs.
+hard-coded constant. It must not be confused with the reconstructed ANTAQ cargo
+aboard used to calculate the observed voyage transport work and fuel.
+
+Voyage intensity resolution is auditable and ordered as follows:
+
+1. latest positive EU MRV transport-work intensity matched by IMO;
+2. arithmetic mean for an explicitly available vessel class;
+3. arithmetic mean for an available ship type, using `Container ship` as the
+   documented default for the containerized ANTAQ scope;
+4. explicit unresolved status when none of those sources is usable.
+
+Exact IMO matches and class/type fallbacks remain separate in coverage and
+source-count indicators.
 
 Fallback (only when `fuel_g_per_tnm` is missing) scales vessel-level fuel by cargo share based on class median `size_proxy_t`.
 

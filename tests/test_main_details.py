@@ -3,7 +3,11 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from app.main.details.breakdown import _legs_table, _port_call_breakdown_table
+from app.main.details.breakdown import (
+    _legs_table,
+    _port_call_breakdown_table,
+    _selected_corridor_sublegs_table,
+)
 from app.main.details.provenance import source_level_label
 from app.main.details.assumptions import _assumptions_table
 from app.main.details import render_details
@@ -101,6 +105,93 @@ class MainDetailsTests(unittest.TestCase):
         self.assertEqual(rows["Hoteling data source"]["Value"], "Documented model default")
         self.assertIn("MRV class rate", rows["Hoteling basis"]["Value"])
         self.assertIn("Already covered", rows["Hoteling exclusion reason"]["Value"])
+
+    def test_assumptions_show_observed_corridor_and_intensity_coverage(self) -> None:
+        results = {
+            "inputs": {},
+            "multimodal": {
+                "sea": {
+                    "route_observation_mode": "observed_voyage_corridors",
+                    "route_corridor_port_path": ["Porto A", "Porto C", "Porto B"],
+                    "selection_criterion": "direct_first_then_shortest_distance_km",
+                    "selected_corridor_id": "corridor-a-c-b",
+                    "corridor_count": 2,
+                    "candidate_voyage_count": 4,
+                    "direct_voyage_count": 1,
+                    "multistop_voyage_count": 3,
+                    "resolved_voyage_count": 4,
+                    "imo_intensity_voyage_count": 2,
+                    "class_fallback_voyage_count": 1,
+                    "type_fallback_voyage_count": 1,
+                    "unresolved_intensity_voyage_count": 0,
+                    "intensity_source_counts": {
+                        "eu_mrv_imo_latest": 2,
+                        "eu_mrv_vessel_class_mean": 1,
+                        "eu_mrv_ship_type_mean": 1,
+                    },
+                    "selected_corridor_distance_source_counts": {
+                        "sea_matrix": 1,
+                        "haversine_fallback": 1,
+                    },
+                }
+            },
+        }
+
+        rows = {
+            row["Parameter"]: row
+            for row in _assumptions_table(results=results, payload={}).to_dict("records")
+        }
+
+        selected = rows["Selected observed corridor"]["Value"]
+        self.assertIn("Porto A → Porto C → Porto B", selected)
+        self.assertIn("corridor-a-c-b", selected)
+        self.assertEqual(
+            rows["Corridor selection criterion"]["Value"],
+            "Direct observed corridor first; otherwise shortest observed distance (km)",
+        )
+        coverage = rows["Observed maritime coverage"]["Value"]
+        self.assertIn("observed corridors: 2", coverage)
+        self.assertIn("candidate voyages: 4", coverage)
+        self.assertIn("direct voyages: 1", coverage)
+        self.assertIn("multistop voyages: 3", coverage)
+        intensity_coverage = rows["Maritime intensity coverage"]["Value"]
+        self.assertIn("IMO-specific intensity: 2", intensity_coverage)
+        self.assertIn("vessel-class fallback: 1", intensity_coverage)
+        self.assertIn("ship-type fallback: 1", intensity_coverage)
+        self.assertIn("unresolved intensity: 0", intensity_coverage)
+        source_counts = rows["Maritime intensity sources"]["Value"]
+        self.assertIn("EU MRV latest record by IMO: 2", source_counts)
+        self.assertIn("EU MRV vessel-class mean: 1", source_counts)
+        self.assertIn("EU MRV ship-type mean: 1", source_counts)
+        distance_sources = rows["Selected-corridor distance sources"]["Value"]
+        self.assertIn("Sea-matrix distance: 1", distance_sources)
+        self.assertIn("Coordinate haversine fallback: 1", distance_sources)
+
+    def test_legacy_stitched_corridor_is_not_labeled_as_observed_voyage(self) -> None:
+        results = {
+            "multimodal": {
+                "sea": {
+                    "route_corridor_port_path": ["Porto A", "Porto X", "Porto B"],
+                    "selection_criterion": "shortest_distance_km",
+                    "observed_port_pair_legs": [
+                        {
+                            "origin_port": "Porto A",
+                            "destination_port": "Porto X",
+                            "distance_nm": 10.0,
+                        }
+                    ],
+                }
+            }
+        }
+
+        rows = {
+            row["Parameter"]
+            for row in _assumptions_table(results=results, payload={}).to_dict(
+                "records"
+            )
+        }
+        self.assertNotIn("Selected observed corridor", rows)
+        self.assertTrue(_selected_corridor_sublegs_table(results).empty)
 
     def test_breakdown_rows_include_provenance_without_requiring_metadata(self) -> None:
         results = {
@@ -210,6 +301,61 @@ class MainDetailsTests(unittest.TestCase):
         self.assertEqual(rows[1]["Source"], "Unavailable / not included without defensible data")
         self.assertEqual(rows[1]["Fuel"], "Unavailable")
         self.assertEqual(rows[1]["CO2e"], "Unavailable")
+
+    def test_selected_corridor_sublegs_table_is_compact_and_readable(self) -> None:
+        results = {
+            "multimodal": {
+                "sea": {
+                    "selected_corridor_sublegs": [
+                        {
+                            "origin_port": "Porto A",
+                            "destination_port": "Porto C",
+                            "distance_nm": 100.0,
+                            "distance_source": "sea_matrix",
+                            "observed_cargo_t": 100.0,
+                            "fuel_g_per_tnm": 8.0,
+                            "intensity_source": "eu_mrv_imo_latest",
+                            "observed_fuel_kg": 80.0,
+                            "scenario_fuel_kg": 11.2,
+                        },
+                        {
+                            "origin_port": "Porto C",
+                            "destination_port": "Porto B",
+                            "distance_nm": 50.0,
+                            "observed_cargo_t": 60.0,
+                            "fuel_g_per_tnm": 6.0,
+                            "intensity_source_counts": {
+                                "eu_mrv_vessel_class_mean": 1,
+                            },
+                            "observed_fuel_kg": 18.0,
+                            "scenario_fuel_kg": 4.2,
+                        },
+                    ]
+                }
+            }
+        }
+
+        rows = _selected_corridor_sublegs_table(results).to_dict("records")
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["From port"], "Porto A")
+        self.assertEqual(rows[0]["To port"], "Porto C")
+        self.assertEqual(rows[0]["Distance"], "100 nm")
+        self.assertEqual(rows[0]["Distance source"], "Sea matrix")
+        self.assertEqual(rows[0]["ANTAQ cargo aboard"], "100 t")
+        self.assertEqual(rows[0]["Fuel intensity"], "8.00 g/(t·nm)")
+        self.assertEqual(rows[0]["Intensity source"], "EU MRV latest record by IMO")
+        self.assertEqual(rows[0]["Observed fuel"], "80.0 kg")
+        self.assertEqual(rows[0]["Scenario-attributed fuel"], "11.2 kg")
+        self.assertEqual(
+            rows[1]["Intensity source"],
+            "EU MRV vessel-class mean: 1",
+        )
+
+    def test_selected_corridor_sublegs_table_preserves_legacy_empty_state(self) -> None:
+        results = {"multimodal": {"sea": {}}}
+
+        self.assertTrue(_selected_corridor_sublegs_table(results).empty)
 
 
 if __name__ == "__main__":

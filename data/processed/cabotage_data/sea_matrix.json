@@ -8,7 +8,8 @@
       "slug": "porto-santos",
       "slug_candidates": [
         "porto-santos",
-        "porto-brssz"
+        "porto-brssz",
+        "dp-world-santos"
       ],
       "lat": -23.987012170316707,
       "lon": -46.29338327916457
@@ -63,7 +64,8 @@
       "slug": "porto-itapoa",
       "slug_candidates": [
         "porto-itapoa",
-        "porto-brioa"
+        "porto-brioa",
+        "porto-itapoa-terminais-portuarios"
       ],
       "lat": -26.18091343975542,
       "lon": -48.601644547860545
@@ -75,7 +77,8 @@
         "porto-navegantes",
         "porto-navegantes-portonave",
         "porto-portonave",
-        "porto-brnvt"
+        "porto-brnvt",
+        "portonave-terminais-portuarios-de-navegantes"
       ],
       "lat": -26.893883111955493,
       "lon": -48.660383812900065
@@ -202,7 +205,8 @@
       "slug": "porto-pecem",
       "slug_candidates": [
         "porto-pecem",
-        "porto-brpec"
+        "porto-brpec",
+        "terminal-portuario-do-pecem"
       ],
       "lat": -3.5494778328512973,
       "lon": -38.8147005682275

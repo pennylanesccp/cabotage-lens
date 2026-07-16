@@ -32,12 +32,322 @@ _SOURCE_TYPE_LABELS = {
     "external_reference": "External reference",
 }
 
+_CORRIDOR_SELECTION_LABELS = {
+    "direct_first_then_shortest_distance_km": (
+        "Direct observed corridor first; otherwise shortest observed distance (km)"
+    ),
+    "direct_first_then_shortest_distance": (
+        "Direct observed corridor first; otherwise shortest observed distance"
+    ),
+    "shortest_distance_km": "Shortest observed maritime distance (km)",
+    "shortest_distance": "Shortest observed maritime distance",
+}
+
+_INTENSITY_SOURCE_LABELS = {
+    "eu_mrv_imo_latest": "EU MRV latest record by IMO",
+    "mrv_imo": "EU MRV match by IMO",
+    "imo": "IMO-specific intensity",
+    "eu_mrv_vessel_class_mean": "EU MRV vessel-class mean",
+    "mrv_vessel_class_mean": "EU MRV vessel-class mean",
+    "vessel_class": "Vessel-class fallback",
+    "class_fallback": "Vessel-class fallback",
+    "eu_mrv_ship_type_mean": "EU MRV ship-type mean",
+    "mrv_ship_type_mean": "EU MRV ship-type mean",
+    "ship_type": "Ship-type fallback",
+    "type_fallback": "Ship-type fallback",
+    "unavailable": "Unavailable",
+    "unresolved": "Unresolved",
+}
+
+_DISTANCE_SOURCE_LABELS = {
+    "sea_matrix": "Sea-matrix distance",
+    "matrix": "Sea-matrix distance",
+    "haversine_fallback": "Coordinate haversine fallback",
+    "unavailable": "Unavailable",
+}
+
 
 def _clean_text(value: Any) -> str | None:
     if value is None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _first_value(
+    primary: Mapping[str, Any],
+    primary_keys: tuple[str, ...],
+    secondary: Mapping[str, Any],
+    secondary_keys: tuple[str, ...] = (),
+) -> Any:
+    for source, keys in ((primary, primary_keys), (secondary, secondary_keys)):
+        for key in keys:
+            value = source.get(key)
+            if value is not None:
+                return value
+    return None
+
+
+def _count_or_none(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _readable_code(value: Any, labels: Mapping[str, str]) -> str | None:
+    text = _clean_text(value)
+    if not text:
+        return None
+    return labels.get(text, text.replace("_", " ").strip().capitalize())
+
+
+def _corridor_path_text(value: Any) -> str | None:
+    if not isinstance(value, (list, tuple)):
+        return None
+    ports = [str(item).strip() for item in value if str(item or "").strip()]
+    return " → ".join(ports) if len(ports) >= 2 else None
+
+
+def _intensity_source_counts_text(value: Any) -> str | None:
+    if not isinstance(value, Mapping) or not value:
+        return None
+
+    ordered_keys = (
+        "eu_mrv_imo_latest",
+        "mrv_imo",
+        "imo",
+        "eu_mrv_vessel_class_mean",
+        "mrv_vessel_class_mean",
+        "vessel_class",
+        "class_fallback",
+        "eu_mrv_ship_type_mean",
+        "mrv_ship_type_mean",
+        "ship_type",
+        "type_fallback",
+        "unavailable",
+        "unresolved",
+    )
+    keys = [key for key in ordered_keys if key in value]
+    keys.extend(str(key) for key in value if str(key) not in keys)
+
+    parts: list[str] = []
+    for key in keys:
+        count = _count_or_none(value.get(key))
+        if count is None or count <= 0:
+            continue
+        label = _readable_code(key, _INTENSITY_SOURCE_LABELS)
+        if label:
+            parts.append(f"{label}: {count}")
+    return "; ".join(parts) or None
+
+
+def _distance_source_counts_text(value: Any) -> str | None:
+    if not isinstance(value, Mapping) or not value:
+        return None
+    parts: list[str] = []
+    for key in ("sea_matrix", "matrix", "haversine_fallback", "unavailable"):
+        count = _count_or_none(value.get(key))
+        if count is None or count <= 0:
+            continue
+        label = _DISTANCE_SOURCE_LABELS.get(key, key.replace("_", " ").capitalize())
+        parts.append(f"{label}: {count}")
+    return "; ".join(parts) or None
+
+
+def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
+    inputs = results.get("inputs", {})
+    sea = results.get("multimodal", {}).get("sea", {})
+    if not isinstance(inputs, Mapping):
+        inputs = {}
+    if not isinstance(sea, Mapping):
+        sea = {}
+
+    route_observation_mode = _clean_text(
+        _first_value(
+            sea,
+            ("route_observation_mode",),
+            inputs,
+            ("sea_route_observation_mode",),
+        )
+    )
+    if route_observation_mode != "observed_voyage_corridors":
+        return []
+
+    rows: list[tuple[str, str, str]] = []
+    path = _corridor_path_text(
+        _first_value(
+            sea,
+            ("route_corridor_port_path", "corridor_port_path", "selected_corridor_port_path"),
+            inputs,
+            ("sea_route_corridor_port_path",),
+        )
+    )
+    corridor_id = _clean_text(
+        _first_value(
+            sea,
+            ("selected_corridor_id",),
+            inputs,
+            ("sea_route_selected_corridor_id",),
+        )
+    )
+    if path:
+        selected_value = path
+        if corridor_id:
+            selected_value = f"{selected_value}; record: {corridor_id}"
+        rows.append(
+            (
+                "Selected observed corridor",
+                "Observed ANTAQ port sequence selected for the maritime calculation.",
+                selected_value,
+            )
+        )
+
+    criterion = _readable_code(
+        _first_value(
+            sea,
+            ("selection_criterion", "route_selection_criterion", "corridor_selection_criterion"),
+            inputs,
+            ("sea_route_selection_criterion",),
+        ),
+        _CORRIDOR_SELECTION_LABELS,
+    )
+    if criterion:
+        rows.append(
+            (
+                "Corridor selection criterion",
+                "Rule used to choose among the observed direct and multistop voyage corridors.",
+                criterion,
+            )
+        )
+
+    route_count_fields = (
+        (
+            "observed corridors",
+            ("corridor_count", "route_corridor_count", "observed_corridor_count"),
+            ("sea_route_corridor_count",),
+        ),
+        (
+            "candidate voyages",
+            (
+                "candidate_voyage_observation_count",
+                "candidate_voyage_count",
+                "route_candidate_voyage_count",
+            ),
+            (
+                "sea_route_candidate_voyage_observation_count",
+                "sea_route_candidate_voyage_count",
+            ),
+        ),
+        (
+            "route voyages",
+            ("route_voyage_count", "voyage_count"),
+            ("sea_route_voyage_count",),
+        ),
+        (
+            "direct voyages",
+            ("direct_voyage_count", "route_direct_voyage_count"),
+            ("sea_route_direct_voyage_count",),
+        ),
+        (
+            "multistop voyages",
+            ("multistop_voyage_count", "route_multistop_voyage_count"),
+            ("sea_route_multistop_voyage_count",),
+        ),
+    )
+    coverage_parts: list[str] = []
+    for label, sea_keys, input_keys in route_count_fields:
+        count = _count_or_none(_first_value(sea, sea_keys, inputs, input_keys))
+        if count is not None:
+            coverage_parts.append(f"{label}: {count}")
+    if coverage_parts:
+        rows.append(
+            (
+                "Observed maritime coverage",
+                "Number of observed corridors and ANTAQ voyages considered without combining unrelated voyages.",
+                "; ".join(coverage_parts),
+            )
+        )
+
+    intensity_count_fields = (
+        (
+            "resolved voyages",
+            ("resolved_voyage_count", "route_resolved_voyage_count"),
+            ("sea_route_resolved_voyage_count",),
+        ),
+        (
+            "IMO-specific intensity",
+            ("imo_intensity_voyage_count", "route_imo_intensity_voyage_count"),
+            ("sea_route_imo_intensity_voyage_count",),
+        ),
+        (
+            "vessel-class fallback",
+            ("class_fallback_voyage_count", "route_class_fallback_voyage_count"),
+            ("sea_route_class_fallback_voyage_count",),
+        ),
+        (
+            "ship-type fallback",
+            ("type_fallback_voyage_count", "route_type_fallback_voyage_count"),
+            ("sea_route_type_fallback_voyage_count",),
+        ),
+        (
+            "unresolved intensity",
+            ("unresolved_intensity_voyage_count", "route_unresolved_intensity_voyage_count"),
+            ("sea_route_unresolved_intensity_voyage_count",),
+        ),
+    )
+    intensity_parts: list[str] = []
+    for label, sea_keys, input_keys in intensity_count_fields:
+        count = _count_or_none(_first_value(sea, sea_keys, inputs, input_keys))
+        if count is not None:
+            intensity_parts.append(f"{label}: {count}")
+    if intensity_parts:
+        rows.append(
+            (
+                "Maritime intensity coverage",
+                "Voyage coverage by exact EU MRV IMO match, type/class mean fallback, or unresolved intensity.",
+                "; ".join(intensity_parts),
+            )
+        )
+
+    source_counts = _first_value(
+        sea,
+        ("intensity_source_counts", "route_intensity_source_counts"),
+        inputs,
+        ("sea_route_intensity_source_counts",),
+    )
+    source_counts_text = _intensity_source_counts_text(source_counts)
+    if source_counts_text:
+        rows.append(
+            (
+                "Maritime intensity sources",
+                "Count of candidate voyages across all evaluated corridors by the intensity source actually used.",
+                source_counts_text,
+            )
+        )
+
+    selected_distance_counts = _first_value(
+        sea,
+        ("selected_corridor_distance_source_counts",),
+        inputs,
+        ("sea_route_selected_corridor_distance_source_counts",),
+    )
+    selected_distance_counts_text = _distance_source_counts_text(
+        selected_distance_counts
+    )
+    if selected_distance_counts_text:
+        rows.append(
+            (
+                "Selected-corridor distance sources",
+                "Distance provenance for the sublegs used in the maritime result.",
+                selected_distance_counts_text,
+            )
+        )
+
+    return rows
 
 
 def _maritime_source_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
@@ -272,6 +582,7 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
             f"{safe_float(inputs.get('marine_ef_kg_per_kg')):.4f} kg CO2e/kg",
         ),
         *_maritime_source_rows(results),
+        *_maritime_route_rows(results),
         (
             "Emissions boundary",
             "Displayed emissions use the current operational TTW CO2e boundary unless an explicit override says otherwise.",
