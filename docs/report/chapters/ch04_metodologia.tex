@@ -34,7 +34,7 @@ A Tabela~\ref{tab:unidade-alternativas} estabelece a disciplina comparativa do c
 
 Os insumos metodológicos do \CabotageLens{} pertencem a famílias com força evidenciária distinta. Bases observadas, referências documentadas, APIs de roteamento, preços, fatores técnicos e hipóteses de modelagem não têm o mesmo papel na construção de um resultado. Por isso, a metodologia não trata as fontes apenas como uma lista de entradas: cada insumo deve manter sua origem, sua transformação intermediária e seu limite de uso.
 
-Essa hierarquia sustenta rotas, seleção de portos, distâncias terrestres e marítimas, custos modelados, emissões, operações portuárias, \emph{hoteling} e validação posterior. O inventário detalhado aparece no Apêndice~\ref{app:parametros}; aqui, o ponto central é metodológico. Um dado observado pode apoiar reconstrução histórica de atividade; uma distância de API define uma rota modelada; uma referência marítima documentada fortalece a perna porto-a-porto; um preço ou fator técnico compõe o cálculo apenas dentro da fronteira em que foi implementado.
+Essa hierarquia sustenta rotas, seleção de portos, distâncias terrestres e marítimas, custos modelados, emissões, operações portuárias, \emph{hoteling} e validação posterior. O inventário detalhado aparece no Apêndice~\ref{app:parametros}; aqui, o ponto central é metodológico. Um dado observado pode apoiar a reconstrução da atividade no período; uma distância de API define uma rota modelada; uma referência marítima documentada fortalece a perna porto-a-porto; um preço ou fator técnico compõe o cálculo apenas dentro da fronteira em que foi implementado.
 
 \begin{table}[htbp]
 \centering
@@ -45,10 +45,10 @@ Essa hierarquia sustenta rotas, seleção de portos, distâncias terrestres e ma
 \toprule
 Grupo de fonte & Uso metodológico & Limite de interpretação \\
 \midrule
-ANTAQ e artefatos observados & Evidência histórica de cabotagem, viagens, paradas e chamadas portuárias. & Não comprova disponibilidade atual de serviço, escala ou slot comercial.\\
-MRV e literatura técnica & Aproximações de eficiência marítima, hoteling e classes de embarcação. & Proxy técnico; não substitui dados brasileiros específicos sem revisão.\\
+ANTAQ e artefatos observados & Sequência de escalas, movimentações de carga, viagens de cabotagem e identificação IMO para reconstruir corredores e carga a bordo. & Evidência de atividade no recorte de 2025; não comprova disponibilidade futura de serviço, frequência ou slot comercial.\\
+EU MRV e literatura técnica & Intensidade de combustível por trabalho de transporte, identificação IMO e estatísticas robustas por classe ou tipo de navio. & Proxy técnico europeu; não substitui medições específicas da operação brasileira.\\
 Roteamento terrestre & Distâncias rodoviárias para rota direta, \emph{pre-carriage} e \emph{on-carriage}. & Rota modelada por provedor, não GPS observado nem rota contratual.\\
-Matriz marítima e referências & Distância porto-a-porto e proveniência da perna marítima. & A força depende de \texttt{seamatrix}, \texttt{external\_reference}, \texttt{manual\_override} ou \texttt{haversine\_fallback}.\\
+Matriz marítima e referências & Intensidade representativa do par, corredores observados, distâncias por subtrecho e proveniência da perna marítima. & A confiança da geometria depende de \texttt{seamatrix}, \texttt{external\_reference}, \texttt{manual\_override} ou \texttt{haversine\_fallback}.\\
 Preços e fatores & Insumos de custo modelado e emissões implementadas. & Voláteis e condicionados à fronteira; não são cotações comerciais completas.\\
 \bottomrule
 \end{tabularx}
@@ -122,6 +122,65 @@ R_{\mathrm{multi}} = R_{\mathrm{pre}} + R_{\mathrm{mar}} + R_{\mathrm{port}} + R
 
 Na Equação~\ref{eq:multimodal-aggregation}, \(R_{\mathrm{multi}}\) representa o resultado agregado da alternativa multimodal para uma dimensão de saída, como custo modelado ou emissões operacionais; \(R_{\mathrm{pre}}\) é o acesso rodoviário inicial; \(R_{\mathrm{mar}}\) é a perna marítima; \(R_{\mathrm{port}}\) representa operações portuárias e \emph{hoteling} incluídos; e \(R_{\mathrm{on}}\) é o acesso rodoviário final. A fórmula apenas explicita a composição do total e preserva a separação entre pernas.
 
+\section{Reconstrução das viagens e formulação da intensidade marítima}
+\label{sec:intensidade-maritima}
+
+A estimativa marítima combina os registros de Carga e Atracação da ANTAQ com os indicadores de eficiência do EU MRV. A tabela de Carga registra movimentações associadas às escalas, incluindo massa, quantidade e portos relacionados à origem e ao destino da carga. A tabela de Atracação fornece a sequência temporal das escalas e o número IMO do navio. Depois da normalização dos nomes e códigos portuários, as escalas de cada viagem são ordenadas e chamadas consecutivas pertencentes ao mesmo complexo portuário são consolidadas sem descartar as movimentações de carga correspondentes.
+
+Para um par de portos \((o,d)\), uma observação é elegível quando \(o\) aparece antes de \(d\) na sequência da mesma viagem. O procedimento examina todas as viagens elegíveis e todos os corredores observados entre o par, incluindo ligações diretas e percursos com uma ou mais escalas intermediárias. Não se impõe uma sequência fixa de portos. Se o mesmo par aparecer mais de uma vez dentro de uma viagem, mantém-se uma única observação dessa viagem para evitar dupla contagem; a escolha é determinística, priorizando a ocorrência direta e, na ausência dela, a de menor distância completa.
+
+Seja \(\Delta m_{v,j}\) a movimentação líquida de massa na escala \(j\) da viagem \(v\), positiva para acréscimo líquido de carga a bordo e negativa para redução líquida. Como a janela observada pode começar com carga já embarcada, calcula-se uma carga inicial mínima que impeça valores negativos ao longo da sequência:
+
+\begin{equation}
+m_{v,0}=\max\left(0,-\min_k\sum_{j=1}^{k}\Delta m_{v,j}\right).
+\label{eq:carga-inicial-maritima}
+\end{equation}
+
+A carga a bordo no subtrecho iniciado após a escala \(j\) é, então,
+
+\begin{equation}
+m_{v,j}=\max\left(0,m_{v,0}+\sum_{r=1}^{j}\Delta m_{v,r}\right).
+\label{eq:carga-bordo-subtrecho}
+\end{equation}
+
+Essa reconstrução por saldo acumulado faz com que cada subtrecho use a massa efetivamente representada a bordo naquele ponto da viagem, em vez de atribuir a mesma carga a toda a sequência. Para a observação de \(o\) a \(d\), formada pelos subtrechos \(S_{v,o,d}\), o trabalho de transporte e o consumo de combustível alocado são dados por
+
+\begin{equation}
+\begin{aligned}
+W_{v,o,d} &= \sum_{s\in S_{v,o,d}} m_{v,s}\,d_s, \\
+F_{v,o,d} &= I_v\,W_{v,o,d}.
+\end{aligned}
+\label{eq:trabalho-consumo-viagem}
+\end{equation}
+
+em que \(d_s\) é a distância do subtrecho em milhas náuticas, \(W_{v,o,d}\) é expresso em \(\mathrm{t\,nm}\), \(I_v\) é a intensidade atribuída ao navio em \(\mathrm{g/(t\,nm)}\), e \(F_{v,o,d}\) é obtido em gramas. Assim, uma viagem com escalas intermediárias contribui pela soma de todos os subtrechos entre a origem e o destino, mantendo a carga a bordo e a distância próprias de cada um.
+
+A intensidade \(I_v\) segue uma hierarquia de proveniência. A primeira opção é o valor positivo mais recente do EU MRV associado exatamente ao IMO observado na ANTAQ. Na ausência de correspondência, usa-se a estatística robusta da classe de embarcação, quando a classe está disponível; em seguida, usa-se a estatística do tipo de navio. Para o escopo conteinerizado, \emph{Container ship} é o tipo-padrão documentado quando o registro não oferece classificação mais específica. Se nenhuma etapa produz valor positivo, a intensidade da viagem permanece indisponível e essa ocorrência é contabilizada como não resolvida.
+
+Os valores exatos por IMO são preservados sem corte, pois representam o indicador individual do navio. A regra de outliers aplica-se somente às estatísticas de fallback. Para o tipo de navio, os valores positivos mais recentes por IMO são ordenados e removem-se simetricamente \(\lfloor 0{,}01n\rfloor\) observações de cada cauda antes da média. Quando a amostra é pequena demais para retirar ao menos uma observação de cada lado, usa-se a mediana. Para a classe, utiliza-se a média aparada simétrica de 1\% em cada cauda registrada no artefato, operacionalizada pela exclusão dos valores abaixo do percentil 1 e acima do percentil 99; a mediana é usada quando essa estatística não está disponível. A fonte final registra o nível usado --- IMO, classe ou tipo --- e, nos fallbacks agregados, a estatística, o tamanho da amostra e a regra de outlier aplicável.
+
+Uma única intensidade representativa é calculada para cada par ordenado de portos a partir de todas as observações de viagem com intensidade resolvida, sem restringir a amostra ao corredor escolhido para a geometria. Cada intensidade \(I_v\) recebe como peso o trabalho de transporte completo \(W_{v,o,d}\) da respectiva observação. A intensidade do par é a mediana ponderada, definida pela primeira intensidade na ordem crescente cuja soma acumulada dos pesos alcança 50\% do trabalho de transporte total:
+
+\begin{equation}
+I_{o,d}=\min\left\{x:\sum_{v:I_v\leq x}W_{v,o,d}\geq
+\frac{1}{2}\sum_v W_{v,o,d}\right\}.
+\label{eq:mediana-ponderada-intensidade}
+\end{equation}
+
+Observações com trabalho de transporte nulo não influenciam a Equação~\ref{eq:mediana-ponderada-intensidade} quando existe ao menos um peso positivo. Se todas as observações resolvidas do par tiverem trabalho nulo, adota-se a mediana não ponderada dessas intensidades e a fonte identifica explicitamente essa condição. A ausência de qualquer intensidade resolvida permanece indisponível, sem conversão para zero.
+
+A estatística de intensidade e a escolha do caminho cumprem funções distintas. Todas as observações elegíveis com intensidade resolvida e trabalho positivo, distribuídas entre os diferentes corredores do par, alimentam a intensidade \(I_{o,d}\); o caminho usado no cenário é selecionado apenas para definir a sequência de portos e as distâncias navegadas. O critério geométrico prioriza um corredor direto observado e, entre alternativas da mesma categoria, a menor distância; sem corredor direto utilizável, escolhe-se o corredor multitrecho de menor distância. A intensidade observada do corredor selecionado é preservada como diagnóstico, mas não substitui a intensidade representativa do par.
+
+Para uma remessa de massa \(m_{\mathrm{cen}}\), a navegação no cenário aplica \(I_{o,d}\) a cada distância do caminho selecionado:
+
+\begin{equation}
+F_{\mathrm{mar,cen}}=\frac{I_{o,d}\,m_{\mathrm{cen}}}{1000}
+\sum_{s\in S_{\mathrm{sel}}}d_s,
+\label{eq:combustivel-maritimo-cenario}
+\end{equation}
+
+em que o divisor converte gramas em quilogramas. Essa formulação mantém todos os corredores na estimação estatística, ao mesmo tempo que fornece uma geometria única e auditável para distância, combustível, custo modelado e emissões operacionais do cenário.
+
 \section{Seleção de portos e definição de cenários}
 \label{sec:selecao-portos}
 
@@ -136,7 +195,7 @@ Essa seleção também não equivale a uma otimização comercial de rede. O mé
 \section{Proveniência das distâncias e hierarquia de confiança}
 \label{sec:proveniencia-distancias}
 
-A distância é um dos principais controles metodológicos do capítulo. Na alternativa rodoviária direta, ela define a perna origem-destino. Na alternativa multimodal, ela aparece separadamente no \emph{pre-carriage}, na perna marítima e no \emph{on-carriage}. Por isso, dois cenários com totais calculados semelhantes podem ter força interpretativa diferente se a proveniência das distâncias for diferente.
+A distância é um dos principais controles metodológicos do capítulo. Na alternativa rodoviária direta, ela define a perna origem-destino. Na alternativa multimodal, ela aparece separadamente no \emph{pre-carriage}, nos subtrechos do corredor marítimo selecionado e no \emph{on-carriage}. Por isso, dois cenários com totais calculados semelhantes podem ter força interpretativa diferente se a proveniência das distâncias for diferente. A origem da distância é registrada por subtrecho: usa-se primeiro um valor positivo da matriz marítima e, quando ele não existe para portos canônicos distintos, uma aproximação por coordenadas identificada como \texttt{haversine\_fallback}.
 
 \begin{table}[htbp]
 \centering
@@ -162,7 +221,7 @@ Na Tabela~\ref{tab:proveniencia-distancias}, \texttt{seamatrix} e \texttt{extern
 \section{Cadeias conceituais de cálculo de emissões e custos}
 \label{sec:cadeias-calculo}
 
-Os cálculos são organizados como cadeias conceituais de transformação. Para cada perna rodoviária, a distância, a configuração de veículo e a carga definem o consumo estimado; o consumo e o fator implementado definem emissões operacionais \ttw{} de \cooe{}; o consumo e os insumos econômicos definem custo operacional modelado. Para a perna marítima, a distância porto-a-porto, a carga ou alocação e os parâmetros implementados definem consumo marítimo alocado; esse consumo alimenta as emissões marítimas e o custo marítimo modelado.
+Os cálculos são organizados como cadeias conceituais de transformação. Para cada perna rodoviária, a distância, a configuração de veículo e a carga definem o consumo estimado; o consumo e o fator implementado definem emissões operacionais \ttw{} de \cooe{}; o consumo e os insumos econômicos definem custo operacional modelado. Para a perna marítima, a intensidade representativa do par, a massa da remessa e as distâncias dos subtrechos selecionados definem o consumo de navegação conforme a Equação~\ref{eq:combustivel-maritimo-cenario}; esse consumo alimenta as emissões marítimas e o custo marítimo modelado.
 
 Na alternativa rodoviária direta, há uma única cadeia de perna. Na alternativa multimodal, as cadeias do \emph{pre-carriage}, da perna marítima, dos componentes portuários e do \emph{on-carriage} são calculadas separadamente e depois agregadas. Essa decomposição preserva a distinção entre distância, consumo, custo e emissões, além de permitir que a proveniência de cada componente acompanhe o total.
 
@@ -175,7 +234,7 @@ Operações portuárias e \emph{hoteling} são tratados como componentes da cade
 
 Quando há dado específico para o porto selecionado, o componente pode ser registrado como \texttt{observed}. Quando o dado específico não existe, a ausência não é interpretada como zero. O método usa uma hierarquia explícita: \texttt{estimated\_port\_average}, quando há média ponderada defensável de portos observados; \texttt{literature\_default}, quando há apenas um padrão documentado do modelo; ou \texttt{unavailable}, quando nenhum valor observado ou documentado pode ser atribuído.
 
-A regra de consistência é evitar dupla contagem. Se a intensidade marítima usada no cenário já incorpora consumo operacional agregado associado à permanência em porto, acrescentar \emph{hoteling} separado pode inflar emissões e custos. Quando navegação, permanência em porto e operação de terminal são modeladas separadamente, essa separação deve aparecer nos metadados e na interpretação do resultado.
+A regra de consistência é evitar dupla contagem. Quando o cenário utiliza a intensidade MRV por trabalho de transporte, o indicador anual é tratado, para essa fronteira, como abrangente do consumo reportado do navio e o \emph{hoteling} não é acrescentado separadamente. As operações de terminal permanecem componentes explícitos quando têm proveniência representável. Nos modos em que navegação, permanência em porto e operação de terminal são modeladas separadamente, essa decomposição deve aparecer nos metadados e na interpretação do resultado.
 
 \section{Qualidade de rota, classificação de evidências e limites de uso}
 \label{sec:qualidade-evidencias}
@@ -191,11 +250,11 @@ A classificação de evidências é o mecanismo de controle de qualidade metodol
 \toprule
 Condição ou classificação & Significado metodológico & Uso seguro \\
 \midrule
-\codecell{historical\_diagnostic} & Resultado preservado para rastreabilidade histórica. & Auditoria e evolução metodológica.\\
+\codecell{observed\_input} & Registro de atividade com fonte, período e transformação identificados. & Reconstrução e auditoria dentro do recorte documentado.\\
 \codecell{reference\_needed} & Falta evidência suficiente para distância ou premissa necessária. & Lacuna e prioridade de validação futura.\\
 \codecell{excluded} & Caso inválido ou fora da fronteira adotada. & Justificativa de exclusão, sem uso numérico conclusivo.\\
 \codecell{sensitivity\_only} / \codecell{sensitive} & Cenário ou resultado sob hipótese condicional. & Discussão condicionada, sem substituir caso-base.\\
-\codecell{headline\_candidate} & Categoria reservada para resultado principal futuro. & Nenhum caso atual deve ser promovido a essa classe.\\
+\codecell{headline\_candidate} & Resultado com rota, fonte, unidade, fronteira e comparabilidade suficientes. & Uso como síntese principal somente dentro do escopo documentado.\\
 \bottomrule
 \end{tabularx}
 \end{table}

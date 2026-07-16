@@ -32,22 +32,40 @@ Base bibliográfica & \texttt{docs/references.bib} & Consolida os metadados das 
 
 A Tabela~\ref{tab:app-checklist-metodologico} sintetiza os controles de modelagem, fronteiras e premissas científicas que regem as comparações modais apresentadas.
 
-\begin{table}[htbp]
-\centering
-\small
+\begingroup
+\footnotesize
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{longtable}{L{0.29\textwidth}L{0.65\textwidth}}
 \caption{Checklist de consistência metodológica do framework.}
-\label{tab:app-checklist-metodologico}
-\begin{tabularx}{\textwidth}{L{0.30\textwidth}Y}
+\label{tab:app-checklist-metodologico}\\
 \toprule
 Dimensão de controle & Como é preservado no framework \\
 \midrule
+\endfirsthead
+\toprule
+Dimensão de controle & Como é preservado no framework \\
+\midrule
+\endhead
 Comparação porta a porta & A unidade funcional mantém a origem, o destino e a massa de carga constantes entre a rodovia direta e a cadeia multimodal. \\
 Fronteira ambiental & As emissões operacionais são limitadas estritamente ao escopo tank-to-wheel (\ttw{}) de \cooe{}, diferenciadas de \wtw{} ou LCA. \\
 Fronteira econômica & O custo é tratado como proxy de custo operacional modelado parcial, sem assumir a natureza de frete comercial ou tarifa. \\
+Sequência das viagens ANTAQ & Cada corredor é formado por escalas ordenadas da mesma viagem; a origem deve anteceder o destino e os subtrechos precisam formar uma cadeia completa. \\
+Cobertura de corredores & Ligações diretas e viagens com escalas intermediárias são elegíveis; cada viagem contribui uma vez para cada par ordenado observado. \\
+Carga a bordo & Embarques e desembarques são acumulados por escala com deslocamento inicial mínimo que mantém a carga não negativa em todos os subtrechos. \\
+Trabalho de transporte & A atividade de cada viagem--OD é a soma de massa a bordo multiplicada pela distância em milhas náuticas de cada subtrecho. \\
+Intensidade marítima & A hierarquia prioriza o IMO no EU MRV e utiliza classe ou tipo de navio somente como fallback, com a fonte registrada. \\
+Outliers do fallback & O tipo usa média aparada de 1\% por cauda ou mediana quando o corte não é possível; a classe usa a média aparada do artefato ou mediana quando indisponível; valores exatos por IMO não são aparados. \\
+Agregação do par & A intensidade aplicada é a mediana inferior ponderada pelo trabalho de transporte de todas as viagens elegíveis do mesmo par e de todos os corredores. \\
+Pesos nulos & Observações de peso zero são excluídas se existir trabalho positivo; se todas tiverem peso zero, usa-se mediana não ponderada com fonte explícita. \\
+Seleção de caminho & O caminho usa ligação direta observada quando disponível e, caso contrário, a menor cadeia completa; trechos de viagens distintas nunca são combinados. \\
 Proveniência de distâncias & Cada perna terrestre ou marítima registra explicitamente sua origem (matriz, API, referência externa, fallback ou override). \\
-Componentes portuários & Custos de terminal e emissões de hoteling só entram quando há proveniência declarada, evitando dupla contagem. \\
-Tratamento de dados ausentes & Dados indisponíveis de portops/hoteling são mantidos como lacunas na proveniência, em vez de assumidos como zero. \\
+Componentes portuários & Operações portuárias entram com proveniência declarada; o \emph{hoteling} não é somado separadamente quando a intensidade MRV por trabalho de transporte é tratada como abrangente. \\
+Tratamento de dados ausentes & Dados indisponíveis são mantidos como lacunas na proveniência, em vez de assumidos como zero. \\
+Compatibilidade do artefato & A matriz marítima registra versão de esquema, data de geração, política de intensidade, regra de corredor e contadores de cobertura. \\
 Classificação de evidência & Resultados são categorizados por limites de uso (ex.: sensibilidade, benchmark direcional), restringindo alegações de superioridade universal. \\
 \bottomrule
-\end{tabularx}
-\end{table}
+\end{longtable}
+\endgroup

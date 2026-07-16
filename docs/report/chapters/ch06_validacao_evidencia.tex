@@ -1,199 +1,110 @@
 \chapter{Validação, benchmark e classificação de evidências}
 \label{ch:validacao}
 
-\section{Estratégia de validação como classificação de evidências}
+\section{Estratégia de validação}
 \label{sec:estrategia-validacao}
 
-A validação adotada neste TF foi organizada como classificação de evidências, e não como um veredito binário de aprovação ou reprovação do modelo. Essa escolha é coerente com a natureza do \CabotageLens{}: o protótipo combina distâncias modeladas, seleção de portos, fontes marítimas com níveis diferentes de confiança, custos modelados, emissões operacionais e comparações externas cujas fronteiras nem sempre coincidem. Uma execução numérica, portanto, só pode ser interpretada depois que sua origem, sua hipótese e seu uso permitido estiverem explícitos.
+A validação do \CabotageLens{} combina controles de integridade dos dados, testes das regras de cálculo, inspeção dos artefatos gerados, reprodução de cenários e comparação com evidência externa. Essa estrutura é necessária porque o resultado depende de duas propriedades distintas: a correção computacional da cadeia de cálculo e a qualidade da evidência disponível para representar cada perna logística.
 
-O papel deste capítulo é estabelecer essa leitura antes da apresentação dos resultados. Cada camada de validação contribui com uma forma distinta de evidência: algumas preservam o histórico de diagnóstico, outras documentam decisões metodológicas, testam sensibilidades condicionadas, confrontam o modelo com benchmark externo ou verificam estabilidade computacional. A classificação limita a força da afirmação que pode ser feita a partir de cada linha e evita que resultados exploratórios sejam tratados como conclusões principais.
+Os testes computacionais verificam invariantes que não podem depender do cenário escolhido, como a ordem das escalas, a continuidade dos subtrechos, a reconstrução não negativa da carga a bordo, a resolução da intensidade por IMO ou fallback, a agregação por trabalho de transporte e a proibição de construir um corredor sintético com trechos de viagens diferentes. A validação empírica verifica cobertura, proveniência, ordem de grandeza e sensibilidade a premissas. Em ambos os casos, um valor numericamente disponível só é utilizado com a fonte, a unidade e a fronteira que lhe correspondem.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Papel das camadas de evidência na validação.}
+\caption{Camadas de validação do framework.}
 \label{tab:camadas-validacao}
-\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y Y}
-\toprule
-Camada de evidência & Contribuição para a validação & Limite interpretativo \\
-\midrule
-Batch 001 histórico & Preserva a primeira leitura diagnóstica dos casos OD. & Evidência histórica e motivação para correções, sem uso como resultado final.\\
-Batch 001B metodológico & Organiza decisões, exclusões, bloqueios, lacunas, avisos e sensibilidades. & Controla o uso permitido de cada linha.\\
-Sensibilidades Batch 001B & Testam hipóteses documentadas de distância marítima ou porto alternativo. & Evidência condicionada, sem promoção a \texttt{headline\_candidate}.\\
-Batch 002 benchmark externo & Compara o modelo com uma referência externa. & Apoio direcional com lacuna de magnitude.\\
-Rerun Supabase/cache & Verifica se instabilidade de provedor/cache explica lacunas. & Estabilidade computacional, não validade operacional.\\
-Reconciliação rodoviária & Testa premissas rodoviárias como explicação diagnóstica. & Explica parte do desalinhamento, sem recalibrar a linha de base.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-A Tabela~\ref{tab:camadas-validacao} também antecipa uma regra comum ao restante do relatório: as fronteiras substantivas não mudam entre as camadas. Custos permanecem estimativas modeladas, e emissões permanecem operacionais, expressas em \cooe{} dentro da fronteira implementada. Evidências \wtw{}, LCA, CO$_2$-only ou \cooe{} sob outro escopo só entram como contraste, limitação ou trabalho futuro quando a diferença de fronteira estiver explícita.
-
-\section{Batch 001 como diagnóstico histórico}
-\label{sec:batch001}
-
-O Batch 001 foi a primeira camada histórica de avaliação dos casos de validação. Ele preserva resultados numéricos para cinco pares origem-destino, mas todos os casos ficaram associados à necessidade de referência, revisão posterior ou reclassificação metodológica. A principal limitação diagnosticada foi o uso de distâncias marítimas \texttt{haversine\_fallback} em casos nos quais a distância de navegação e a plausibilidade de serviço exigiam evidência mais forte.
-
-\begin{table}[htbp]
-\centering
-\small
-\caption{Casos históricos Batch 001 e uso seguro no TF.}
-\label{tab:batch001-historico}
-\begin{tabularx}{\textwidth}{L{0.18\textwidth}L{0.24\textwidth}L{0.20\textwidth}Y}
-\toprule
-Caso & Par origem-destino & Portos históricos & Uso seguro \\
-\midrule
-\codecell{TF-VAL-001} & São Paulo, SP -- Santos, SP & Santos -- Santos & Diagnóstico de caso same-port e limite de rota.\\
-\codecell{TF-VAL-002} & São Paulo, SP -- Manaus, AM & Santos -- Manaus & Diagnóstico histórico; base para sensibilidade de distância de referência.\\
-\codecell{TF-VAL-003} & Manaus, AM -- Fortaleza, CE & Manaus -- Fortaleza & Diagnóstico histórico; referência exata de Fortaleza permanece faltante.\\
-\codecell{TF-VAL-004} & Brasília, DF -- Salvador, BA & Angra dos Reis -- Salvador & Diagnóstico histórico; cadeia depois excluída para benchmark conteinerizado.\\
-\codecell{TF-VAL-005} & Porto Alegre, RS -- Recife, PE & Rio Grande -- Recife & Diagnóstico histórico; referência exata de Recife permanece faltante.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-O valor do Batch 001 é, portanto, explicar a origem dos controles posteriores. A Tabela~\ref{tab:batch001-historico} mostra por que foi necessário separar fallback, seleção de porto, sensibilidade, exclusão e lacuna de referência antes de usar qualquer número como evidência. Por essa razão, o lote permanece classificado como \texttt{historical\_diagnostic}: registro técnico útil para rastrear a evolução do método, mas insuficiente para sustentar resultado corrigido ou validação calibrada.
-
-\section{Batch 001B como camada de decisão metodológica}
-\label{sec:batch001b}
-
-O Batch 001B é a etapa em que o diagnóstico histórico foi convertido em decisão metodológica explícita. Em vez de transformar os casos anteriores em resultados finais, essa camada reorganizou a evidência por porto selecionado ou forçado, fonte de distância marítima, unidade, conversão, status metodológico e uso permitido no TF. Ela funciona como ponte entre o inventário inicial e as categorias usadas nos capítulos seguintes.
-
-\begin{table}[htbp]
-\centering
-\small
-\caption{Decisões metodológicas do Batch 001B e uso no TF.}
-\label{tab:batch001b-decisoes}
-\begin{tabularx}{\textwidth}{L{0.28\textwidth}L{0.26\textwidth}Y}
-\toprule
-Status ou decisão & Categoria final associada & Uso seguro no TF \\
-\midrule
-Registro histórico preservado & \codecell{historical\_diagnostic} & Mostrar evolução do método; não apresentar como resultado corrigido.\\
-Caso same-port ou aviso de rota & \codecell{limitation\_example} & Explicar limite de construção de rota; não tratar como cabotagem normal.\\
-Caso fora da fronteira atual & \codecell{excluded} & Justificar exclusão metodológica; não executar nem interpretar como resultado.\\
-Referência exata ausente & \codecell{reference\_needed} & Registrar lacuna para o par de portos selecionado.\\
-Decisão metodológica ausente & \codecell{methodology\_blocked} & Registrar bloqueio e trabalho futuro.\\
-Hipótese preparada ou executada como sensibilidade & \codecell{sensitivity\_discussion} / \codecell{sensitive} & Discutir comportamento sob premissa nomeada.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-A Tabela~\ref{tab:batch001b-decisoes} resume os desdobramentos principais. Santos -- Santos permanece como exemplo same-port e, portanto, como limite da lógica de rota. Angra dos Reis -- Salvador fica excluído para a fronteira atual de benchmark conteinerizado. Manaus -- Fortaleza e Rio Grande -- Recife continuam dependentes de referências exatas para os portos selecionados.
-
-Também é necessário preservar a diferença entre porto selecionado e porto alternativo. Uma referência para Pecém não valida silenciosamente Porto de Fortaleza, e uma referência para Suape não valida silenciosamente Porto do Recife. Quando Pecém ou Suape aparecem em linhas posteriores, eles devem ser lidos como portos alternativos explicitamente rotulados, não como substitutos metodológicos dos portos originalmente selecionados.
-
-\section{Sensibilidades Batch 001B como evidência condicionada}
-\label{sec:sensibilidades-validacao}
-
-Três casos foram executados como sensibilidades do Batch 001B: Santos/Manaus com distância marítima de referência documentada, Manaus/Pecém como sensibilidade de porto alternativo para a região de Fortaleza e Rio Grande/Suape como sensibilidade de porto alternativo para a região de Recife. Esses casos testam hipóteses metodológicas rastreadas: correção de proveniência de distância, uso explícito de porto alternativo e separação entre porto regionalmente próximo e porto originalmente selecionado.
-
-\begin{table}[htbp]
-\centering
-\small
-\caption{Sensibilidades Batch 001B e leitura condicionada.}
-\label{tab:sensibilidades-validacao}
 \begin{tabularx}{\textwidth}{L{0.27\textwidth}Y Y}
 \toprule
-Sensibilidade & Interpretação segura & Limitação \\
+Camada & Verificação principal & Evidência produzida \\
 \midrule
-\codecell{TF-VAL-001B-SENS-002-REFDIST} & Mostra comportamento do modelo quando a distância Santos/Manaus é tratada como hipótese de sensibilidade documentada. & Não valida todos os casos com \codecell{haversine\_fallback}.\\
-\codecell{TF-VAL-001B-SENS-003B-ALTPECEM} & Permite discutir sensibilidade a porto alternativo, acesso rodoviário e distância marítima. & Pecém não valida Porto de Fortaleza.\\
-\codecell{TF-VAL-001B-SENS-005B-ALTSUAPE} & Permite discutir sensibilidade a porto alternativo, acesso rodoviário e distância marítima. & Suape não valida Porto do Recife.\\
+Integridade da ANTAQ & Ordenação das escalas, identidade da viagem, movimentos de carga e aliases portuários. & Viagens e subtrechos coerentes para reconstrução da atividade.\\
+Associação ANTAQ--MRV & Correspondência por IMO, ano positivo mais recente e proveniência dos fallbacks. & Fonte de intensidade identificada para cada viagem resolvida.\\
+Cálculo marítimo & Carga a bordo, distância, trabalho de transporte, combustível e agregação por par direcionado. & Observações viagem--OD e intensidade representativa auditáveis.\\
+Seleção de corredor & Continuidade dentro da mesma viagem, prioridade para ligação direta e menor distância completa. & Caminho físico observado separado do estimador estatístico de intensidade.\\
+Testes automatizados & Casos diretos, múltiplas escalas, corredores distintos, outliers, pesos nulos e dados incompletos. & Invariantes reproduzíveis no código.\\
+Benchmark externo & Sinal modal, ordem de grandeza, fronteira e sensibilidade a premissas. & Evidência comparativa classificada conforme seu limite de uso.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Como resume a Tabela~\ref{tab:sensibilidades-validacao}, essas sensibilidades permitem observar o comportamento do modelo sob hipóteses documentadas, sem converter essas hipóteses em linha de base. Sua leitura adequada é restrita: elas apoiam discussão metodológica sobre distância e porto alternativo, mas continuam condicionadas à fronteira de cada caso.
+\section{Integridade e cobertura da base marítima}
+\label{sec:validacao-base-maritima}
 
-\section{Batch 002 do Prof. Dr. Gustavo Costa como benchmark externo direcional}
-\label{sec:batch002}
+O processamento da base ANTAQ de 2025 identifica \num{1324} viagens, \num{6797} paradas, \num{7103} ocorrências de chamadas portuárias e \num{389} números IMO distintos. O catálogo MRV fornece intensidade positiva por trabalho de transporte para \num{243} desses IMOs. Entre as viagens processadas, \num{788} recebem intensidade específica por IMO e \num{536} utilizam fallback estatístico do tipo de embarcação. A fonte permanece registrada em cada observação e a taxa de resolução numérica não é confundida com cobertura de medição específica por navio.
 
-O Batch 002 acrescenta uma camada de benchmark externo baseada no workbook do Prof. Dr. Gustavo Costa, associado a trabalhos já mapeados na bibliografia do projeto \cite{competitiveness2024,decarb2024}. Esse benchmark é importante para a defesa porque confronta o \CabotageLens{} com uma referência externa ao próprio protótipo. Seu papel, entretanto, é estritamente metodológico: verificar consistência direcional e expor lacunas de comparabilidade, não reproduzir exatamente o workbook nem tratá-lo como referência absoluta.
+A geração da matriz parte de \num{5473} subtrechos candidatos. A normalização de aliases e a contração de \num{35} chamadas consecutivas ao mesmo porto canônico resultam em \num{5438} subtrechos calculados: \num{5023} usam distância da matriz marítima e \num{415} usam fallback haversine identificado. Desses subtrechos, \num{3290} recebem intensidade específica por IMO e \num{2148} recebem fallback robusto. Nenhum subtrecho resolvido é descartado apenas porque a carga reconstruída é nula; essa condição é preservada para que a regra de peso zero seja aplicada de forma explícita na agregação.
+
+O artefato final contém \num{12025} observações viagem--OD e \num{177} pares portuários direcionados com intensidade resolvida. Cada observação representa uma única viagem e um único par ordenado. Quando o mesmo par aparece repetidamente dentro da viagem, a seleção interna prioriza uma ocorrência direta e, na ausência dela, a cadeia completa de menor distância. Essa regra impede que repetições de porto aumentem artificialmente o peso de uma viagem.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Resumo classificatório do Batch 002 externo.}
-\label{tab:batch002-classificacao}
-\begin{tabularx}{\textwidth}{L{0.38\textwidth}r Y}
+\caption{Indicadores de integridade e cobertura do artefato marítimo.}
+\label{tab:integridade-maritima}
+\begin{tabularx}{\textwidth}{Y r Y}
 \toprule
-Item de classificação & Valor & Interpretação segura \\
+Indicador & Valor & Interpretação \\
 \midrule
-Células de matriz parseadas & 36 & Inventário inicial do benchmark; nem todas são comparáveis.\\
-Pares OD positivos e suportados & 21 & Denominador efetivo da comparação direcional.\\
-Células puladas antes da execução & 15 & Seis self-pairs e nove linhas rodoviárias zero ou não positivas.\\
-Pares com acordo direcional & 21 de 21 & Workbook e \CabotageLens{} favorecem cabotagem/multimodal em emissões frente ao road-only.\\
-Classificação rastreada atual & 21 & Todas as linhas são \codecell{same\_direction\_large\_gap}.\\
+Viagens ANTAQ & \num{1324} & Unidade de reconstrução da sequência de escalas.\\
+IMOs únicos / IMOs associados ao MRV & \num{389} / \num{243} & Cobertura específica por embarcação.\\
+Viagens com IMO exato / fallback & \num{788} / \num{536} & Proveniência da intensidade de viagem.\\
+Subtrechos calculados & \num{5438} & Cadeias com porto e distância resolvidos.\\
+Observações viagem--OD & \num{12025} & Uma contribuição por viagem e par ordenado.\\
+Pares direcionados & \num{177} & Relações portuárias disponíveis para o motor multimodal.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-O denominador relevante da Tabela~\ref{tab:batch002-classificacao} é o conjunto de 21 pares OD positivos e suportados, não a matriz inteira sem qualificação. Para esses pares, a concordância direcional mostra que o sinal modal geral não é produzido apenas internamente pelo protótipo. Ao mesmo tempo, a classificação \texttt{same\_direction\_large\_gap} permanece necessária porque a lacuna de magnitude continua material.
+\section{Testes das regras de cálculo}
+\label{sec:testes-regras-maritimas}
 
-Diferenças de distância, seleção de portos, lógica de serviço, carga, alocação, tratamento de port-ops/hoteling e fronteira ambiental podem explicar parte das lacunas. Assim, o benchmark externo sustenta apoio direcional, mas não reprodução calibrada de magnitude nem inferência operacional ou comercial.
+Os testes unitários isolam as regras marítimas com viagens sintéticas pequenas, nas quais a resposta esperada pode ser calculada manualmente. Uma ligação direta verifica a associação ao registro MRV positivo mais recente do IMO. Uma viagem com múltiplas escalas verifica que o consumo é a soma de todos os subtrechos entre origem e destino e que cada parcela utiliza a carga efetivamente reconstruída a bordo. Casos com corredores diferentes verificam que todas as viagens do mesmo par contribuem para a intensidade representativa, embora apenas um corredor completo forneça a geometria da rota.
 
-\section{Rerun Supabase/cache como verificação de estabilidade computacional}
-\label{sec:rerun-cache}
+A política de outliers é testada separadamente. Intensidades específicas por IMO são preservadas, pois representam o valor publicado para a embarcação associada. Para fallbacks de tipo, uma amostra suficiente sofre aparagem simétrica de 1\% em cada cauda, usando a parte inteira da contagem por cauda; amostras pequenas utilizam a mediana. O fallback por classe usa a média aparada disponível no artefato de classes e recorre à mediana quando essa estatística não existe. Os testes confirmam também que a fonte registra se o valor veio de IMO, classe, tipo ou padrão robusto para navio porta-contêineres.
 
-O rerun Supabase/cache testou uma hipótese específica do Batch 002: se a diferença de magnitude entre o benchmark externo e o \CabotageLens{}, especialmente no lado rodoviário, poderia ser explicada por instabilidade de provedor de rota, leitura de cache ou escrita de cache. Essa verificação não buscou recalibrar o modelo nem forçar aproximação numérica ao benchmark; seu objetivo foi separar instabilidade computacional de diferenças metodológicas mais profundas.
+Outros casos verificam o deslocamento mínimo do prefixo de carga para impedir massa negativa, a manutenção de trechos com trabalho nulo, o uso de mediana não ponderada quando todas as viagens resolvidas têm peso zero, a contração de aliases consecutivos do mesmo terminal e o fallback de distância haversine para portos canônicos distintos sem distância positiva na matriz. A leitura da matriz exige ainda a versão de esquema marítimo 3 e metadados completos de geração, evitando que um artefato incompatível seja aceito silenciosamente.
+
+\section{Auditoria do par Santos--Manaus}
+\label{sec:auditoria-santos-manaus}
+
+O par Porto de Santos--Porto de Manaus oferece um caso de auditoria porque reúne ligação direta e múltiplas sequências com escalas intermediárias. A base contém \num{89} observações viagem--OD com trabalho de transporte positivo, distribuídas em \num{22} corredores. Desse total, \num{40} observações usam intensidade específica por IMO e \num{49} usam fallback robusto de tipo; as observações com fallback concentram \num{59.54}\% do trabalho de transporte.
+
+A mediana ponderada pelo trabalho de transporte é \num{9.322050}~g/(t$\cdot$nm). A média aritmética ponderada das mesmas observações, mantida apenas como diagnóstico, é \num{25.243618}~g/(t$\cdot$nm) e apresenta maior influência de intensidades elevadas. O estimador aplicado não é escolhido por proximidade com um corredor particular: ele decorre da regra do primeiro valor cuja massa acumulada atinge 50\% do trabalho de transporte do par.
+
+Para a geometria, existe uma viagem direta observada entre Santos e Manaus. A regra de seleção, portanto, utiliza o caminho Porto de Santos--Porto de Manaus, com \num{6112}~km. Os demais corredores continuam contribuindo para a distribuição de intensidade. Essa separação permite usar toda a atividade observada do par sem montar uma sequência artificial de portos nem impor a passagem por Suape, Pecém ou qualquer outro porto intermediário.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Verificação de estabilidade no rerun Supabase/cache.}
-\label{tab:rerun-cache}
-\begin{tabularx}{\textwidth}{L{0.32\textwidth}L{0.24\textwidth}Y}
+\caption{Auditoria do estimador marítimo para Santos--Manaus.}
+\label{tab:auditoria-santos-manaus}
+\begin{tabularx}{\textwidth}{Y r Y}
 \toprule
-Verificação & Resultado observado & Interpretação \\
+Indicador & Valor & Função na auditoria \\
 \midrule
-Fonte de distância rodoviária & Distâncias em cache & Reduz hipótese de instabilidade por chamada em tempo real ao provedor.\\
-\codecell{route-cache hits} & 63 & As 21 pernas diretas, 21 pre-carriage e 21 on-carriage foram atendidas por cache.\\
-\codecell{route-cache misses} & 0 & Não houve lacuna de cache rodoviário no rerun.\\
-Escritas de distância por provedor & 0 & O rerun não dependeu de novas distâncias de provedor.\\
-Diferença média/mediana rodoviária & 201,0\%/150,5\% $\rightarrow$ 199,8\%/149,3\% & A lacuna permanece.\\
+Observações viagem--OD & \num{89} & Todas as viagens resolvidas em que Santos antecede Manaus.\\
+Corredores observados & \num{22} & Ligações diretas e sequências com escalas intermediárias.\\
+Fonte por IMO / fallback de tipo & \num{40} / \num{49} & Composição da proveniência.\\
+Mediana ponderada & \num{9.322050} g/(t$\cdot$nm) & Intensidade aplicada ao par direcionado.\\
+Corredor selecionado & Santos--Manaus & Geometria direta observada, sem montagem sintética.\\
+Distância selecionada & \num{6112} km & Soma das distâncias do caminho escolhido.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-A estabilidade resumida na Tabela~\ref{tab:rerun-cache} reduz a probabilidade de que a grande lacuna rodoviária do Batch 002 seja explicada principalmente por ruído de provedor, falha de cache ou variação de rota entre execuções. A evidência aponta para uma leitura mais conservadora: a diferença deve ser investigada sobretudo como diferença de método, fronteira, parâmetro, carga, alocação ou base de distância.
+\section{Benchmark externo e sensibilidade de fronteira}
+\label{sec:benchmark-externo}
 
-\section{Reconciliação rodoviária como diagnóstico de premissas}
-\label{sec:reconciliacao-rodoviaria}
+O workbook associado aos estudos do Prof. Dr. Gustavo Costa é utilizado como benchmark externo de direção modal e ordem de grandeza \cite{competitiveness2024,decarb2024}. A matriz contém \num{36} células parseadas; seis pares com origem igual ao destino e nove linhas com valor rodoviário nulo ou não positivo não formam comparações numéricas válidas. O conjunto interpretável contém \num{21} pares origem--destino positivos e suportados.
 
-A reconciliação rodoviária do Batch 002 deve ser lida como diagnóstico de alinhamento com o benchmark externo, não como atualização do modelo de linha de base do \CabotageLens{}. Depois que o rerun reduziu a hipótese de instabilidade de rota, esta etapa testou quanto da lacuna de magnitude no lado rodoviário poderia ser explicado por diferenças de premissas de consumo de combustível e fator de emissão.
+Nos \num{21} pares comparáveis, o workbook e o \CabotageLens{} apontam a mesma direção modal para emissões, mas as diferenças de magnitude permanecem materiais. Por isso, a evidência é classificada como \codecell{same\_direction\_large\_gap}: ela apoia a plausibilidade do sinal, sem demonstrar reprodução calibrada. Distância, carga, seleção de portos, regra de alocação, consumo rodoviário e fronteira ambiental são tratados como explicações possíveis que precisam ser testadas, e não como justificativas automáticas.
 
-O diagnóstico manteve fixas as mesmas distâncias rodoviárias em cache do Batch 002 e aplicou, apenas para comparação, as premissas rodoviárias rastreadas no benchmark: \(FD_c = 0{,}28\) L/km, \(FD_e = 35{,}52\) MJ/L e \(FD_f = 86{,}5\) gCO$_2$eq/MJ. A combinação desses valores gera o fator diagnóstico da Equação~\ref{eq:fator-diagnostico}.
+A comparação externa exige alinhamento explícito de unidade funcional, distância, portos, carga, fator rodoviário, intensidade marítima, componentes portuários e fronteira ambiental. Quando esses elementos não coincidem, a divergência é registrada como diferença metodológica e não usada para calibrar o estimador marítimo. O benchmark fornece, assim, um controle independente de direção e ordem de grandeza, mantendo seus parâmetros separados da linha de base \ttw{} do \CabotageLens{}.
 
-\begin{equation}
-0{,}28 \times 35{,}52 \times 86{,}5 / 1000 = 0{,}8602944~\mathrm{kg~CO_2eq/km}
-\label{eq:fator-diagnostico}
-\end{equation}
-
-\begin{table}[htbp]
-\centering
-\small
-\caption{Reconciliação rodoviária como diagnóstico, não recalibração.}
-\label{tab:reconciliacao}
-\begin{tabularx}{\textwidth}{L{0.34\textwidth}L{0.24\textwidth}Y}
-\toprule
-Item diagnóstico & Valor ou observação & Limite de interpretação \\
-\midrule
-Consumo rodoviário & \(FD_c = 0{,}28\) L/km & Usado apenas no diagnóstico; não substitui preset da ferramenta.\\
-Conteúdo energético & \(FD_e = 35{,}52\) MJ/L & Vinculado ao benchmark, não a nova calibração geral.\\
-Fator de emissão & \(FD_f = 86{,}5\) gCO$_2$eq/MJ & Fator de fronteira do benchmark; não substitui linha de base \ttw{}.\\
-Fator resultante & 0,8602944 kg CO$_2$eq/km & Sensibilidade de alinhamento, não fator operacional do \CabotageLens{}.\\
-Diferença média rodoviária & 199,8\% $\rightarrow$ 43,9\% & Redução substancial, mas não eliminação da lacuna.\\
-Diferença mediana rodoviária & 149,3\% $\rightarrow$ 19,6\% & Premissas rodoviárias explicam parte relevante do desalinhamento.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-O efeito resumido na Tabela~\ref{tab:reconciliacao} é metodologicamente relevante: aplicar o fator diagnóstico às mesmas distâncias rodoviárias em cache reduz substancialmente a diferença média e mediana do lado road-only. O uso seguro dessa camada é \texttt{benchmark\_supports\_road\_factor\_explanation}: ela explica parte do desalinhamento, mas não valida magnitude calibrada, não recalibra o aplicativo e não substitui o modelo rodoviário de linha de base.
-
-\section{Categorias de uso no TF e passagem para os resultados}
+\section{Categorias de uso da evidência}
 \label{sec:categorias-uso}
 
-O fechamento do Capítulo~\ref{ch:validacao} transforma as camadas anteriores em uma regra prática de uso da evidência. Um resultado executado não é automaticamente uma conclusão principal do TF; a categoria atribuída a cada linha define a força da afirmação permitida e o tipo de ressalva exigida antes que o Capítulo~\ref{ch:resultados} apresente números, tabelas ou sínteses.
+A categoria atribuída a um resultado define a força da afirmação permitida. Essa disciplina separa execução computacional, sensibilidade, exemplo de limitação e comparação externa, evitando que disponibilidade numérica seja interpretada como validação universal.
 
 \begingroup
 \small
@@ -201,8 +112,8 @@ O fechamento do Capítulo~\ref{ch:validacao} transforma as camadas anteriores em
 \setlength{\LTright}{0pt}
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
-\begin{longtable}{L{0.27\textwidth}L{0.34\textwidth}L{0.31\textwidth}}
-\caption{Categorias de uso no TF e limites de interpretação.}
+\begin{longtable}{L{0.29\textwidth}L{0.32\textwidth}L{0.31\textwidth}}
+\caption{Categorias de uso e limites de interpretação.}
 \label{tab:categorias-uso}\\
 \toprule
 Categoria & Uso permitido & Uso proibido \\
@@ -212,19 +123,17 @@ Categoria & Uso permitido & Uso proibido \\
 Categoria & Uso permitido & Uso proibido \\
 \midrule
 \endhead
-\codecell{headline\_candidate} & Nenhum uso atual; categoria reservada para evidência futura mais forte. & Promover qualquer caso atual a resultado principal robusto.\\
-\codecell{sensitivity\_discussion} & Discutir comportamento sob premissas documentadas. & Tratar como linha de base, validação robusta ou prova geral de vantagem modal.\\
-\codecell{limitation\_example} & Explicar limitações, como casos same-port. & Usar como desempenho normal de cabotagem.\\
-\codecell{excluded} & Justificar exclusão e limite metodológico. & Executar ou interpretar numericamente como evidência de resultado.\\
-\codecell{reference\_needed} & Registrar lacuna e requisito de evidência futura. & Declarar que a lacuna foi resolvida.\\
-\codecell{methodology\_blocked} & Apontar bloqueio e trabalho futuro. & Converter em conclusão numérica sem decisão rastreada.\\
-\codecell{historical\_diagnostic} & Mostrar evolução do método. & Apresentar como resultado corrigido ou calibrado.\\
-\codecell{benchmark\_supports\_direction} & Sustentar consistência direcional cautelosa. & Alegar validação calibrada ou reprodução exata.\\
-\codecell{benchmark\_supports\_road\_factor\_explanation} & Discutir sensibilidade a premissas rodoviárias. & Substituir o modelo de linha de base pelo fator diagnóstico.\\
-\codecell{benchmark\_boundary\_mismatch} & Preservar cautela entre \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. & Misturar fronteiras ou unidades como equivalentes.\\
-\codecell{not\_comparable} & Usar como limitação ou justificativa de não execução. & Transformar em evidência numérica.\\
+\codecell{headline\_candidate} & Resultado principal somente quando houver evidência de rota, fonte e fronteira suficiente. & Promover automaticamente todo cenário executado.\\
+\codecell{sensitivity\_discussion} & Discutir comportamento sob uma premissa identificada. & Tratar a premissa como linha de base ou calibração.\\
+\codecell{limitation\_example} & Explicar limites, como caso de origem e destino no mesmo porto. & Usar como desempenho normal da cabotagem.\\
+\codecell{excluded} & Registrar que o cenário está fora da fronteira definida. & Produzir conclusão numérica para o cenário excluído.\\
+\codecell{reference\_needed} & Identificar a evidência necessária para uso quantitativo. & Substituir a referência ausente por porto ou fonte diferente sem rotulagem.\\
+\codecell{methodology\_blocked} & Registrar uma decisão metodológica ainda não resolvida. & Converter o caso em resultado sem regra rastreada.\\
+\codecell{benchmark\_supports\_direction} & Sustentar consistência direcional cautelosa. & Alegar reprodução exata ou validade operacional.\\
+\codecell{benchmark\_boundary\_mismatch} & Preservar diferenças entre \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. & Tratar fronteiras ou gases distintos como equivalentes.\\
+\codecell{not\_comparable} & Justificar a ausência de comparação quantitativa. & Inferir desempenho a partir de valores incompatíveis.\\
 \bottomrule
 \end{longtable}
 \endgroup
 
-A Tabela~\ref{tab:categorias-uso} deixa a transição para os resultados deliberadamente conservadora. Nenhuma linha atual é promovida a \texttt{headline\_candidate}; as evidências sustentam análise classificada, apoio direcional e diagnóstico de premissas, mas não uma conclusão robusta de superioridade universal, viabilidade comercial, disponibilidade operacional ou reprodução calibrada do benchmark externo.
+Os resultados são, portanto, interpretados em função do par origem--destino, da fonte de intensidade, do corredor observado, da fronteira ambiental, da carga e dos componentes efetivamente representados. O benchmark fornece apoio externo à direção modal em seu conjunto comparável, enquanto os testes estruturais demonstram que o cálculo marítimo segue as regras declaradas. Nenhuma dessas evidências, isoladamente, demonstra superioridade universal da cabotagem, disponibilidade de serviço ou equivalência com tarifas comerciais.

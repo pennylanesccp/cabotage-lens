@@ -25,6 +25,7 @@
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{csquotes}
+\usepackage{siunitx}
 \usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
 
 \AtEveryBibitem{%
@@ -35,6 +36,8 @@
 
 \geometry{margin=2.5cm}
 \onehalfspacing
+\setlength{\emergencystretch}{2em}
+\sisetup{locale=DE}
 
 \definecolor{clblue}{RGB}{32,68,112}
 \definecolor{clgray}{RGB}{245,247,250}
@@ -104,9 +107,11 @@
 \chapter*{Resumo}
 \markboth{Resumo}{Resumo}
 \addcontentsline{toc}{chapter}{Resumo}
-Este relatório apresenta o \CabotageLens{}, um framework computacional auditável para comparar, em corredores brasileiros, o transporte rodoviário direto e a alternativa rodoviário-cabotagem-rodoviário. A ferramenta organiza, para cada cenário, origem, destino, carga, portos selecionados, pernas rodoviárias, perna marítima, proveniência das distâncias, componentes portuários, emissões operacionais \ttw{} de \cooe{} e um proxy de custo operacional modelado. A contribuição central é oferecer uma comparação porta a porta, orientada por rota e baseada na mesma unidade funcional, evitando a simplificação de contrapor uma viagem rodoviária completa a uma perna marítima isolada.
+Este relatório apresenta o \CabotageLens{}, um framework computacional auditável para comparar, em corredores brasileiros, o transporte rodoviário direto e a alternativa rodoviária--cabotagem--rodoviária. A ferramenta representa a cadeia porta a porta sob a mesma unidade funcional e registra origem, destino, carga, portos, pernas rodoviárias, perna marítima, operações portuárias, proveniência das distâncias, emissões operacionais \ttw{} de \cooe{} e um proxy de custo operacional modelado.
 
-A metodologia separa explicitamente emissões \ttw{}, \wtw{} e LCA; distingue custo modelado de frete comercial; e classifica as evidências de forma conservadora. Na rerodada consolidada de validação, foram avaliadas 24 linhas executadas/modeladas, com emissões médias rodoviárias de 6.258,34 kg \cooe{} e emissões médias multimodais por cabotagem de 467,43 kg \cooe{}, resultando em economia média de 91,97\%. Em todos os 24 cenários executados, a alternativa multimodal permaneceu como a de menor emissão operacional dentro da fronteira avaliada. O resultado sustenta triagem acadêmica e discussão metodológica sobre cenários em que a cabotagem aparece promissora, sem converter a comparação em conclusão comercial, operacional, \wtw{}/LCA ou de superioridade modal universal.
+A estimativa marítima combina as tabelas de Carga e Atracação da ANTAQ com indicadores do EU MRV. São consideradas todas as viagens em que o porto de origem precede o porto de destino, tanto diretas quanto com escalas intermediárias. O consumo de cada viagem resulta da soma dos subtrechos entre origem e destino, usando carga a bordo, distância e intensidade do navio. A intensidade é obtida prioritariamente pelo IMO; sem correspondência, emprega-se uma estatística robusta da classe ou do tipo, com proveniência e regra de outlier registradas. A intensidade representativa do par OD é a mediana ponderada pelo trabalho de transporte de todas as viagens elegíveis, enquanto o corredor selecionado determina apenas caminho e distância.
+
+A matriz contém 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos; 3.290 subtrechos receberam intensidade por IMO e 2.148, por fallback. Para Santos--Manaus, 89 viagens em 22 corredores produziram intensidade de 9,322050 g/(t$\cdot$nm); 59,54\% do trabalho de transporte está associado a fallbacks, e a ligação direta de 6.112 km fornece a geometria do cenário. Em uma comparação externa, os 21 pares positivos e suportados apresentaram concordância direcional e diferença relevante de magnitude. Os resultados sustentam triagem acadêmica por cenário, sem constituir frete comercial, comprovação de serviço, avaliação \wtw{}/LCA ou superioridade modal universal.
 
 \textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; \cooe{}; custo modelado; rastreabilidade; Brasil.
 
@@ -114,9 +119,11 @@ A metodologia separa explicitamente emissões \ttw{}, \wtw{} e LCA; distingue cu
 \markboth{Abstract}{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 \selectlanguage{english}
-This report presents \CabotageLens{}, an auditable computational framework for comparing direct road transport and road-cabotage-road alternatives in Brazilian freight corridors. For each scenario, the tool organizes origin, destination, cargo, selected ports, road legs, maritime leg, distance provenance, port-operation components, operational TTW \cooe{} emissions, and a modeled operational cost proxy. Its central contribution is a route-aware, door-to-door comparison structure based on the same functional unit, avoiding the simplification of comparing a full road trip with an isolated maritime leg.
+This report presents \CabotageLens{}, an auditable computational framework for comparing direct road transport and road-cabotage-road alternatives in Brazilian freight corridors. The tool represents the door-to-door chain under a common functional unit and records origin, destination, cargo, ports, road legs, maritime leg, port operations, distance provenance, operational TTW \cooe{} emissions, and a modeled operational cost proxy.
 
-The methodology explicitly separates TTW emissions from WTW and LCA perspectives, distinguishes modeled cost from commercial freight, and classifies evidence conservatively. In the consolidated validation rerun, 24 executed/modeled rows were evaluated, with mean road emissions of 6,258.34 kg \cooe{} and mean multimodal cabotage emissions of 467.43 kg \cooe{}, resulting in mean savings of 91.97\%. In all 24 executed scenarios, the multimodal alternative remained the lower-emission option within the evaluated boundary. The result supports academic screening and methodological discussion of scenarios in which cabotage appears promising, without converting the comparison into commercial, operational, WTW/LCA, or universal modal-superiority conclusions.
+The maritime estimate combines ANTAQ Cargo and Port Call tables with EU MRV indicators. It includes every voyage in which the origin port precedes the destination port, whether direct or with intermediate calls. Voyage consumption is the sum of all sublegs between origin and destination, using onboard cargo, distance, and vessel intensity. Intensity is resolved first through an IMO match; otherwise, a robust vessel-class or ship-type statistic is used with explicit provenance and outlier treatment. The representative OD intensity is the transport-work-weighted median across all eligible voyages, whereas the selected corridor determines only path and distance.
+
+The matrix contains 177 directional pairs, 12,025 voyage--OD observations, and 5,438 sublegs; 3,290 sublegs received IMO-matched intensity and 2,148 used a fallback. For Santos--Manaus, 89 voyages across 22 corridors produced an intensity of 9.322050 g/(t$\cdot$nm), with 59.54\% of transport work associated with fallbacks, while the direct 6,112 km connection supplies the scenario geometry. In an external comparison, the 21 positive supported pairs showed directional agreement and a material magnitude gap. The results support scenario-specific academic screening, not commercial freight quotations, service confirmation, WTW/LCA assessment, or universal modal superiority.
 
 \textbf{Keywords}: coastal shipping; road freight; multimodal freight; operational emissions; \cooe{}; modeled cost; traceability; Brazil.
 \selectlanguage{brazil}
@@ -136,6 +143,8 @@ The methodology explicitly separates TTW emissions from WTW and LCA perspectives
 \small
 \begin{description}
   \item[ANTAQ] Agência Nacional de Transportes Aquaviários.
+  \item[EU MRV] Sistema europeu de monitoramento, reporte e verificação de emissões e atividade de navios.
+  \item[IMO] Número permanente de identificação internacional da embarcação.
   \item[OD] Par origem-destino usado para definir a remessa ou o corredor analisado.
   \item[TEU] Unidade equivalente a contêiner de 20 pés.
   \item[BRL] Real brasileiro, unidade monetária usada para expressar o proxy de custo operacional modelado.
@@ -156,6 +165,12 @@ The methodology explicitly separates TTW emissions from WTW and LCA perspectives
   \item[GEE/GHG] Gases de efeito estufa.
   \item[Unidade funcional] Base comum usada para comparar alternativas de transporte.
   \item[Carga útil] Massa de carga efetivamente transportada na remessa ou cenário.
+  \item[Viagem--OD] Observação formada quando o porto de origem precede o porto de destino na sequência da mesma viagem.
+  \item[Corredor observado] Sequência de portos percorrida entre a origem e o destino em uma viagem ANTAQ.
+  \item[Subtrecho] Perna navegada entre duas escalas consecutivas, com distância e carga a bordo associadas.
+  \item[Trabalho de transporte] Produto entre massa transportada e distância, expresso neste estudo em t$\cdot$nm.
+  \item[Mediana ponderada] Primeiro valor ordenado cuja soma acumulada dos pesos alcança 50\% do peso total.
+  \item[Média aparada] Média calculada após a retirada simétrica de uma fração das menores e maiores observações.
   \item[Fator de emissão] Coeficiente que relaciona consumo, energia ou atividade a emissões.
   \item[Proxy de custo operacional modelado] Estimativa monetária parcial calculada para os componentes representados.
   \item[Frete comercial] Preço de mercado negociado, cotado ou contratado para transporte.
@@ -163,7 +178,7 @@ The methodology explicitly separates TTW emissions from WTW and LCA perspectives
   \item[Proveniência] Registro da origem e confiabilidade de um dado.
   \item[Benchmark] Referência externa usada para comparação ou plausibilidade.
   \item[Evidência direcional] Evidência de que duas fontes ou execuções apontam o mesmo sentido de resultado.
-  \item[Reclassificação conservadora] Categoria de uso atribuída à evidência para limitar sua interpretação.
+  \item[Classificação conservadora] Categoria de uso atribuída à evidência para limitar sua interpretação.
   \item[Análise de sensibilidade] Execução sob hipótese documentada para avaliar dependência do resultado.
   \item[Reprodutibilidade] Capacidade de rastrear e repetir entradas, parâmetros, resultados e classificações.
 \end{description}

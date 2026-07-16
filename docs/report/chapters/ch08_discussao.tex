@@ -1,84 +1,61 @@
 \chapter{Discussão}
 \label{ch:discussao}
 
-\section{Pergunta interpretativa e fronteiras de leitura}
+\section{Significado dos resultados}
 \label{sec:pergunta-discussao}
 
-O Capítulo~\ref{ch:discussao} responde a uma pergunta diferente daquela tratada no Capítulo~\ref{ch:resultados}: qual é o significado dos resultados sob as fronteiras adotadas? O capítulo anterior registrou valores observados e categorias de uso; a discussão interpreta esses achados como evidência sobre uma forma de comparar alternativas rodoviárias e rodoviário-cabotagem-rodoviário em cadeias porta a porta.
+Os resultados mostram a aplicação de um framework que compara a rota rodoviária direta com uma cadeia rodoviária--cabotagem--rodoviária sob a mesma unidade funcional. O valor analítico do \CabotageLens{} não reside apenas nos totais de custo e emissão, mas na ligação entre esses totais e a sequência de portos, a carga transportada, a distância de cada perna, a intensidade do navio e a proveniência dos dados.
 
-A leitura principal é que o \CabotageLens{} torna a comparação modal mais auditável e menos dependente de médias genéricas. As sensibilidades executadas, o benchmark externo, o rerun Supabase/cache e a reconciliação rodoviária ampliam a interpretação dos resultados: mostram direção, estabilidade computacional e pontos de divergência metodológica. Esses elementos não deslocam a contribuição central do trabalho, que é o framework de comparação sob fronteiras explícitas.
+A base marítima evidencia a escala dessa abordagem: 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos resolvidos. Esses números não representam serviços comerciais garantidos, mas demonstram que a estimativa não depende de um único corredor presumido. A sequência efetivamente observada na ANTAQ define quais viagens podem contribuir para cada par OD.
 
-Essa separação organiza o fechamento do relatório. O Capítulo~\ref{ch:resultados} mostra o que foi observado; o Capítulo~\ref{ch:discussao} discute por que esses achados importam; o Capítulo~\ref{ch:limitacoes} detalha as limitações que impedem leituras mais fortes; e o Capítulo~\ref{ch:conclusoes} conclui sem transformar evidência condicionada em afirmação universal.
-
-\section{Por que a comparação rota a rota e porta a porta importa}
-\label{sec:porta-a-porta-discussao}
-
-A principal implicação metodológica do \CabotageLens{} é que a comparação modal não pode ser reduzida a caminhão contra navio em trechos isolados. A alternativa multimodal combina acesso rodoviário ao porto, perna marítima, operações portuárias e \emph{hoteling} conforme a fronteira e a proveniência disponíveis, e acesso rodoviário final. Assim, os resultados de custo modelado e emissões operacionais \ttw{} de \cooe{} emergem da cadeia porta a porta, não de uma propriedade abstrata da cabotagem.
-
-Essa leitura é coerente com a literatura de \emph{short sea shipping} e mudança modal, que trata a vantagem marítima como dependente de corredor, acesso terrestre, utilização, serviço, frequência, confiabilidade e custo total \cite{shortsea2019,modalshiftreview2020}. O papel da literatura aqui é interpretativo: ela ajuda a explicar por que uma comparação rota a rota é necessária, mas não substitui as categorias de validação do projeto nem valida numericamente qualquer corredor brasileiro específico.
-
-O valor analítico da fronteira porta a porta está em impedir duas simplificações. A primeira seria favorecer artificialmente a cabotagem ao ignorar acessos terrestres e portos. A segunda seria descartar a cabotagem por comparar apenas médias nacionais ou trechos genéricos. O \CabotageLens{} se posiciona entre esses extremos: compara cenários completos sob premissas explícitas e vincula cada interpretação às escolhas de rota, porto, distância, custo e emissão que a produziram.
-
-\section{Corredores, portos e proveniência da distância marítima}
+\section{Corredor geométrico e amostra de intensidade}
 \label{sec:corredores-portos-discussao}
 
-Os resultados precisam ser lidos por corredor porque porto e distância marítima mudam o significado da comparação. Alterar um porto não muda apenas um rótulo; muda as pernas rodoviárias de acesso, a perna marítima, a coerência operacional da cadeia e a relação entre o cenário modelado e o caso que se deseja discutir. Por isso, sensibilidades com Pecém ou Suape podem ser úteis para entender comportamento sob hipótese alternativa, mas não validam silenciosamente Porto de Fortaleza ou Porto do Recife.
+A separação entre geometria e intensidade é central para a interpretação. Um corredor descreve a sequência de portos e as distâncias usadas no cenário. A intensidade representativa, por sua vez, é estimada a partir de todas as viagens elegíveis do mesmo par OD, mesmo quando elas seguem outras sequências de escalas. Dessa forma, o modelo preserva a multiplicidade de operações observadas sem somar distâncias de corredores incompatíveis em uma mesma rota de cenário.
 
-A proveniência da distância marítima cumpre função semelhante. Uma distância com referência rastreada permite uma leitura mais forte do que uma distância de triagem, enquanto \texttt{haversine\_fallback} preserva histórico e diagnóstico, mas não deve ser tratado como evidência robusta de rota navegável. O caso \texttt{same-port} também tem valor interpretativo porque mostra uma fronteira da lógica de seleção: quando origem e destino marítimos coincidem, o registro pode documentar aviso, exclusão ou limitação de rota, mas não desempenho normal da cabotagem.
+No par Santos--Manaus, por exemplo, o corredor direto de 6.112 km fornece a geometria, mas a amostra de intensidade contém 89 viagens distribuídas em 22 corredores. Viagens que passaram por Suape, Pecém, Vila do Conde ou outros portos podem contribuir para a estatística quando Santos precede Manaus na mesma viagem. Isso não significa que todos esses portos integrem o caminho aplicado ao cenário; significa que o desempenho observado das viagens do mesmo par participa da estimativa OD.
 
-Essa disciplina muda a pergunta da discussão. Em vez de buscar um veredito modal geral, o relatório pergunta o que acontece quando uma cadeia específica, com portos específicos e distância de proveniência conhecida, é comparada com a rota rodoviária direta sob a mesma unidade funcional. A resposta continua condicionada ao cenário, mas ganha maior valor técnico justamente porque suas premissas permanecem rastreáveis.
+Essa distinção evita duas simplificações. A primeira seria assumir uma sequência fixa de portos como representação de toda a ligação. A segunda seria calcular uma média entre corredores sem ponderar a atividade efetivamente transportada. A mediana ponderada pelo trabalho de transporte trata cada viagem de acordo com a soma de carga a bordo multiplicada pela distância dos subtrechos entre a origem e o destino.
 
-\section{Benchmark do Prof. Dr. Gustavo Costa: apoio direcional, não calibração}
+\section{Robustez estatística e proveniência MRV}
+\label{sec:robustez-maritima-discussao}
+
+A hierarquia IMO--classe--tipo preserva a melhor informação disponível para cada navio. A correspondência direta pelo IMO mantém a individualidade da embarcação observada na ANTAQ. Quando essa correspondência não existe, o fallback fornece uma estimativa de grupo, identificada como tal, em vez de atribuir ao navio uma precisão inexistente. Na matriz completa, 60,50\% dos subtrechos usam correspondência por IMO e 39,50\% usam fallback por tipo ou classe.
+
+As estatísticas de fallback incorporam uma regra explícita para outliers. Para o tipo de navio, aplica-se média aparada simétrica de 1\% quando a amostra permite o corte e mediana quando não permite. Para a classe, usa-se a média aparada registrada no artefato e recorre-se à mediana quando essa estatística não está disponível. Os valores individuais associados exatamente a um IMO são mantidos sem aparagem, pois constituem a observação atribuída àquele navio. A robustez no nível do par OD decorre da mediana ponderada, que reduz a influência de intensidades extremas sem ocultá-las dos metadados e dos indicadores diagnósticos.
+
+Santos--Manaus torna esse efeito visível. A mediana ponderada é 9,322050 g/(t$\cdot$nm), enquanto a média aritmética ponderada diagnóstica alcança 25,243618 g/(t$\cdot$nm). A diferença indica que a média é sensível à cauda superior da distribuição. Ao mesmo tempo, 59,54\% do trabalho de transporte do par está associado a observações com fallback. Portanto, a estatística é robusta em relação a valores extremos, mas sua representatividade continua dependente da qualidade e da composição da amostra de fallback.
+
+Robustez não equivale a certeza. A mediana ponderada oferece uma regra determinística, reproduzível e defensável para representar o centro da distribuição segundo a atividade observada; ela não transforma o EU MRV em medição direta das condições brasileiras nem elimina diferenças de operação, velocidade, calado, clima, manutenção ou perfil de carga.
+
+\section{Por que a comparação porta a porta importa}
+\label{sec:porta-a-porta-discussao}
+
+A alternativa multimodal combina acesso rodoviário ao porto de embarque, perna marítima, operações portuárias representáveis e acesso rodoviário ao destino. O \emph{hoteling} pode ser modelado separadamente em decomposições específicas; quando o cenário utiliza a intensidade MRV por trabalho de transporte, o indicador anual é tratado como abrangente do consumo reportado do navio e esse componente não é somado novamente. Comparar apenas o navio com o caminhão ignoraria parcelas indispensáveis da cadeia. O modelo evita essa assimetria ao manter a mesma carga e a mesma origem e destino finais nas duas alternativas.
+
+Essa leitura é coerente com a literatura de \emph{short sea shipping} e mudança modal, que relaciona o desempenho da cabotagem ao corredor, aos acessos terrestres, à utilização, ao serviço, à frequência, à confiabilidade e ao custo total \cite{shortsea2019,modalshiftreview2020}. A literatura sustenta a necessidade de uma análise porta a porta, mas não valida numericamente um corredor brasileiro específico.
+
+O indicador marítimo é apenas uma parcela da comparação porta a porta. O resultado total também depende da origem e do destino terrestres, da carga, dos acessos aos portos, das operações portuárias e dos parâmetros rodoviários. Por isso, uma intensidade representativa de um par de portos não determina, isoladamente, a superioridade ambiental ou econômica da alternativa multimodal.
+
+\section{Benchmark externo e diferença de magnitude}
 \label{sec:benchmark-discussao}
 
-O benchmark do Prof. Dr. Gustavo Costa é uma camada importante para o TF porque introduz uma referência externa ao próprio \CabotageLens{}. No relatório final, ele ajuda a explicar ao leitor da banca como o modelo se comporta diante de um comparador familiar ao contexto da pesquisa. Seu papel, porém, permanece subordinado à contribuição principal do trabalho: a construção de um framework auditável, e não a reprodução do workbook.
+O benchmark do Prof. Dr. Gustavo Costa fornece uma referência externa para a direção dos resultados. Nos 21 pares positivos e suportados, tanto o benchmark quanto o \CabotageLens{} indicam menor emissão para a alternativa com cabotagem. Essa concordância é evidência direcional; a diferença de magnitude impede tratar a comparação como calibração.
 
-O significado seguro do Batch 002 é apoio direcional com lacunas de magnitude. Nos pares comparáveis, o workbook e o \CabotageLens{} apontam na mesma direção modal de emissões, enquanto a classificação \texttt{same\_direction\_large\_gap} preserva a diferença de escala. Essa combinação é útil porque mostra plausibilidade externa do sinal, ao mesmo tempo em que explicita fronteiras, premissas e métodos ainda não reconciliados.
+A divergência pode decorrer de diferenças nas distâncias, nos veículos, na carga, na alocação, nos portos, no serviço, nas operações portuárias e na fronteira ambiental. Sem reconciliação dessas variáveis, o benchmark permanece classificado como \codecell{same\_direction\_large\_gap}: apoio qualitativo à direção, não validação quantitativa do estimador.
 
-A Tabela~\ref{tab:benchmark-discussao} resume como cada camada associada ao benchmark deve ser interpretada na discussão.
-
-\begin{table}[htbp]
-\centering
-\small
-\caption{Contribuição interpretativa do benchmark externo.}
-\label{tab:benchmark-discussao}
-\begin{tabularx}{\textwidth}{L{0.28\textwidth}Y Y}
-\toprule
-Camada de evidência & Contribuição para a discussão & Limite de leitura \\
-\midrule
-Benchmark externo & Acrescenta contraste externo e apoio direcional nas linhas comparáveis. & Não representa reprodução calibrada nem verdade de referência.\\
-Rerun Supabase/cache & Reduz a plausibilidade de instabilidade computacional como explicação principal da lacuna. & Não converte estabilidade de cache em validação de rota, serviço ou magnitude.\\
-Reconciliação rodoviária & Mostra que premissas rodoviárias explicam parte relevante da lacuna \emph{road-only}. & Não substitui o baseline do \CabotageLens{} pelo fator diagnóstico.\\
-Lacunas remanescentes & Tornam visíveis diferenças de distância, veículo, carga, alocação, porto, serviço, port-ops/hoteling e fronteira ambiental. & Mantêm a comparação como apoio direcional com lacunas de magnitude.\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-A discussão deve explicar essas lacunas de forma causal, mas sem inventar precisão. No lado rodoviário, a diferença pode estar associada a base de distância, consumo, fator de emissão, veículo, carga e alocação. No lado multimodal, pode envolver distância marítima, seleção de portos, lógica de serviço, port-ops/hoteling, alocação por contêiner e fronteira ambiental. A reconciliação rodoviária torna parte do desvio mais inteligível e orienta investigação futura, mantendo a linha de base do aplicativo inalterada.
-
-\section{Fronteiras econômica, ambiental e portuária na interpretação}
+\section{Fronteiras econômica, ambiental e portuária}
 \label{sec:fronteiras-discussao}
 
-As fronteiras de custo e emissão definem o tipo de significado que os resultados podem ter. Custos modelados permitem comparar componentes representados sob a mesma lógica de cenário, enquanto a literatura de competitividade e super-rede mostra por que decisões reais exigem evidência adicional de frequência, inventário, confiabilidade, margens e estrutura de serviço \cite{competitiveness2024}.
+Os valores monetários são custos operacionais modelados, calculados de acordo com os componentes e as regras de alocação representados. Eles não correspondem a fretes cotados, tarifas contratadas ou demonstração de viabilidade comercial. Decisões logísticas exigem evidência adicional de frequência, prazo, confiabilidade, inventário, margem, seguro, capacidade e estrutura de serviço \cite{competitiveness2024}.
 
-No mesmo sentido, emissões operacionais \ttw{} de \cooe{} devem ser interpretadas dentro da fronteira ambiental declarada. Quando aplicado à cadeia multimodal, o rótulo operacional \ttw{} é modalmente específico: \emph{tank-to-wheel} nas pernas rodoviárias e \emph{tank-to-wake} na perna marítima. Fontes que discutem \wtw{}, LCA, combustíveis alternativos ou CO$_2$-only enquadram limites e trabalhos futuros \cite{decarb2024,maritimelca2024}, sem alterar a leitura dos resultados atuais.
+As emissões são operacionais \ttw{} de \cooe{}: \emph{tank-to-wheel} nas pernas rodoviárias e \emph{tank-to-wake} na perna marítima. Resultados \wtw{}, LCA ou CO$_2$ isolado pertencem a outras fronteiras e não podem ser comparados diretamente sem reconciliação de gases, fatores, energia, alocação e unidade funcional \cite{decarb2024,maritimelca2024}.
 
-As operações portuárias reforçam essa leitura de fronteira. \emph{Hoteling} e componentes portuários importam porque a cadeia multimodal não termina na distância marítima; há consumo associado à permanência e operação do navio no porto \cite{berth2009,shipops2022}. Ao mesmo tempo, incluir esses componentes como aproximações modeladas não transforma o estudo em inventário terminal-específico nem em análise completa de qualidade do ar. A interpretação segura é reconhecer que portos e berços afetam a comparação, mantendo-os como componentes condicionais dentro da fronteira declarada.
+As operações portuárias permanecem aproximações operacionais e exigem fonte identificada. A decisão de não somar \emph{hoteling} à intensidade MRV por trabalho de transporte é uma hipótese de fronteira para reduzir dupla contagem, não um inventário terminal-específico de produtividade, energia auxiliar, permanência em berço ou qualidade do ar \cite{berth2009,shipops2022,berthairquality2010}.
 
-\section{Valor prático do \CabotageLens{} como triagem}
+\section{Valor prático e contribuição metodológica}
 \label{sec:valor-pratico-triagem}
 
-O valor prático do \CabotageLens{} está em estruturar uma triagem técnica. A ferramenta permite comparar cenários, observar como escolhas de porto e distância alteram o resultado, identificar dependência de premissas frágeis e separar resultados executados, sensibilidades, diagnósticos, bloqueios e exemplos de limitação. Isso ajuda a formular perguntas melhores antes de buscar evidência comercial ou operacional externa.
+O \CabotageLens{} funciona como instrumento de triagem técnica. Ele permite comparar corredores, identificar a contribuição de cada perna, verificar a fonte da intensidade marítima, observar a participação de fallbacks e localizar premissas que exigem validação externa. Um cenário favorável pode orientar investigação com operadores, terminais e dados comerciais, sem ser confundido com decisão operacional pronta.
 
-Essa utilidade é mais forte quando o resultado é lido junto com seus metadados. Um cenário com distância marítima de referência comunica algo diferente de um cenário com \texttt{haversine\_fallback}; uma sensibilidade com porto alternativo comunica algo diferente de um baseline validado; um benchmark direcional com lacuna de magnitude comunica algo diferente de uma calibração. A contribuição prática está justamente em preservar essas diferenças, não em esconder a incerteza atrás de um número final.
-
-Assim, o \CabotageLens{} pode apoiar triagem de corredores, comparação técnica entre alternativas, exposição de premissas e identificação de lacunas para validação futura com operadores, terminais ou bases comerciais. A passagem de um cenário favorável para uma decisão logística real exige evidência externa adicional, mas a triagem acadêmica já ganha qualidade quando mostra exatamente quais evidências faltam.
-
-\section{Contribuição metodológica do framework auditável}
-\label{sec:contribuicao-framework-discussao}
-
-A contribuição metodológica do trabalho está na combinação de cálculo, rastreabilidade e controle de inferência. O \CabotageLens{} não entrega apenas um valor de custo ou emissão; ele organiza uma cadeia de evidências que inclui construção de rota, seleção de portos, fonte de distância marítima, fronteira de custo, fronteira de emissão, avisos de qualidade, classificação de validação, sensibilidades e benchmark externo.
-
-Essa estrutura torna a discussão mais forte porque transforma incertezas em objetos explícitos de análise. Um resultado favorável pode ser reconhecido como favorável dentro da fronteira avaliada; uma lacuna de magnitude pode ser discutida como diferença metodológica; uma sensibilidade pode informar comportamento do modelo; e uma referência externa pode apoiar direção sem ocupar o centro da contribuição.
-
-Com isso, o Capítulo~\ref{ch:discussao} encerra em uma posição interpretativa: a evidência atual mostra que o framework permite comparar cenários de forma auditável e entender por que a direção, a magnitude e a força da evidência variam por rota, porto, distância e fronteira. O Capítulo~\ref{ch:limitacoes} transforma essas fronteiras em condições de uso.
+A contribuição metodológica resulta da combinação entre cálculo, proveniência e controle de inferência. Distâncias, sequências de portos, cargas a bordo, intensidades por IMO, estatísticas de fallback, critério de agregação, componentes portuários e avisos permanecem vinculados ao resultado. Essa trilha permite discutir tanto a direção quanto a incerteza do cenário, preservando a diferença entre estimativa modelada, evidência observada e hipótese operacional.

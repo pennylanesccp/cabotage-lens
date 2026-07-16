@@ -4,7 +4,7 @@
 \section{Objetivo geral}
 \label{sec:objetivo-geral}
 
-Desenvolver, implementar e documentar o \CabotageLens{} como um framework computacional auditável para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros, considerando emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado sob fronteiras metodológicas explícitas.
+Desenvolver, implementar e documentar o \CabotageLens{} como um framework computacional auditável para comparar o transporte rodoviário direto com uma cadeia rodoviária--cabotagem--rodoviária em corredores brasileiros, considerando emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado sob fronteiras metodológicas explícitas.
 
 \section{Objetivos específicos}
 \label{sec:objetivos-especificos}
@@ -12,8 +12,12 @@ Desenvolver, implementar e documentar o \CabotageLens{} como um framework comput
 Os objetivos específicos do trabalho são:
 
 \begin{itemize}
-  \item Definir a unidade funcional do estudo e as alternativas comparáveis como cadeias porta a porta, distinguindo a rota rodoviária direta da cadeia rodoviária-cabotagem-rodoviária.
+  \item Definir a unidade funcional do estudo e as alternativas comparáveis como cadeias porta a porta, distinguindo a rota rodoviária direta da cadeia rodoviária--cabotagem--rodoviária.
   \item Construir alternativas orientadas por rota para pares origem-destino selecionados, incluindo acesso rodoviário inicial, perna marítima, operações portuárias e \emph{hoteling} quando aplicáveis, e acesso rodoviário final.
+  \item Reconstruir as viagens de cabotagem observadas nas tabelas de Carga e Atracação da ANTAQ, preservando a ordem das escalas, os embarques e desembarques e a carga a bordo em cada subtrecho.
+  \item Considerar, para cada par portuário direcionado, todas as viagens em que a origem antecede o destino, incluindo ligações diretas, escalas intermediárias e corredores distintos observados na base.
+  \item Associar as viagens aos indicadores de intensidade por trabalho de transporte do EU MRV por meio do número IMO e resolver ausências com estatística robusta de classe ou tipo de navio, registrando a origem de cada valor.
+  \item Estimar a intensidade marítima representativa de cada par origem--destino pela mediana ponderada pelo trabalho de transporte das viagens elegíveis, mantendo a escolha do corredor físico separada da agregação estatística da intensidade.
   \item Preservar a proveniência de distâncias, seleção de portos, construção da perna marítima e insumos de operações portuárias/\emph{hoteling}, incluindo níveis de fonte, \emph{fallbacks}, avisos e dados indisponíveis.
   \item Estimar, para os cenários selecionados, emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado, mantendo unidades, fronteiras e limites de interpretação explícitos.
   \item Expor hipóteses, aproximações, avisos de rota, lacunas de dados e componentes indisponíveis, evitando que ausência de informação seja interpretada como valor nulo.

@@ -1,150 +1,166 @@
 \chapter{Validação, benchmark e evidências complementares}
 \label{app:validacao}
 
-Este apêndice agrupa material de validação que sustenta os Capítulos~\ref{ch:validacao} e~\ref{ch:resultados}. Ele preserva a distinção entre evidência histórica, sensibilidade, benchmark externo, rerun/cache e reconciliação diagnóstica. Nenhuma linha deste apêndice deve ser promovida a conclusão principal sem a classificação correspondente no corpo do relatório.
+Este apêndice reúne os controles usados para auditar o cálculo marítimo e interpretar os benchmarks do \CabotageLens{}. Os números apresentados correspondem aos artefatos rastreados e permanecem vinculados à fonte, à unidade e à regra de agregação descritas no Capítulo~\ref{ch:validacao}.
 
-\section{Mapa de camadas de validação}
+\section{Fluxo de classificação da evidência}
 \label{sec:app-mapa-validacao}
 
-A Figura~\ref{fig:fluxo-classificacao-evidencia} mostra como uma execução passa de resultado bruto para categoria de uso. O ponto central do fluxo é que execução numérica e uso conclusivo não são equivalentes.
+A Figura~\ref{fig:fluxo-classificacao-evidencia} mostra a passagem entre definição do cenário, execução, verificação da proveniência e classificação de uso. A disponibilidade de um resultado numérico não substitui a análise de sua fronteira.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{images/figura_B_1.png}
-\caption{Fluxo de classificação de evidências utilizado para organizar cada cenário avaliado, desde a definição do cenário até a classificação final do resultado.}
+\caption{Fluxo de classificação de evidências utilizado para organizar cada cenário avaliado.}
 \label{fig:fluxo-classificacao-evidencia}
 \end{figure}
 
-A Tabela~\ref{tab:app-camadas-evidencia} resume as camadas que alimentam o fluxo da Figura~\ref{fig:fluxo-classificacao-evidencia}.
-
 \begin{table}[htbp]
 \centering
 \small
-\caption{Camadas de validação e uso permitido.}
+\caption{Perguntas de auditoria associadas às camadas de evidência.}
 \label{tab:app-camadas-evidencia}
-\begin{tabularx}{\textwidth}{L{0.25\textwidth}Y Y}
+\begin{tabularx}{\textwidth}{L{0.26\textwidth}Y Y}
 \toprule
-Camada & Evidência preservada & Uso permitido \\
+Camada & Pergunta de auditoria & Registro esperado \\
 \midrule
-Batch 001 & Cinco casos históricos de validação. & Diagnóstico histórico e motivação das decisões posteriores.\\
-Batch 001B & Decisões metodológicas, exclusões, bloqueios, lacunas e sensibilidades. & Controle de inferência e rastreabilidade.\\
-Sensibilidades executadas & Três hipóteses nomeadas de distância ou porto alternativo. & Discussão condicionada, sem substituir baseline.\\
-Batch 002 & Benchmark do Prof. Dr. Gustavo Costa para 21 pares OD positivos e suportados. & Apoio direcional externo com lacuna de magnitude.\\
-Rerun/cache & Execução com distâncias rodoviárias cacheadas. & Verificação de estabilidade computacional.\\
-Reconciliação rodoviária & Fator diagnóstico derivado de premissas do benchmark. & Explicação parcial da lacuna road-only, sem recalibração.\\
+Dados ANTAQ & A sequência pertence à mesma viagem e a origem antecede o destino? & Identificador da viagem, ordem das escalas, movimentos de carga e cadeia completa de portos.\\
+Intensidade MRV & O valor foi associado pelo IMO ou resolvido por fallback? & Fonte, ano, tipo ou classe, estatística robusta e tamanho da amostra.\\
+Atividade da viagem & A carga a bordo e a distância foram aplicadas a cada subtrecho? & Massa, milhas náuticas, trabalho de transporte e combustível por subtrecho.\\
+Agregação do par & Todas as viagens elegíveis contribuíram uma vez? & Contagens, pesos, mediana ponderada, regra de empate e tratamento de peso zero.\\
+Geometria da rota & O caminho é uma sequência observada e contínua? & Portos, viagem candidata, critério de seleção e fontes de distância.\\
+Resultado multimodal & As pernas usam a mesma unidade funcional e fronteira? & Carga do cenário, componentes rodoviários, marítimos e portuários, custo e emissões.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Nota metodológica da rerodada portops/\emph{hoteling}}
-\label{sec:app-nota-portops-hoteling}
+\section{Controles do artefato marítimo}
+\label{sec:app-controles-artefato}
 
-Nos cenários da rerodada de 30 de junho de 2026, o componente de \emph{hoteling} foi tratado como incorporado à intensidade agregada de transporte marítimo quando havia intensidade positiva de transporte-trabalho, evitando dupla contagem. As operações portuárias foram incluídas explicitamente em todas as linhas executadas/modeladas por valor-padrão documentado de literatura, na ausência de registros observados por porto ou médias estimadas de portos observados no artefato ativo da validação. As diferenças numéricas antigo--novo do Batch 001B não devem ser descritas como efeito puro de portops/\emph{hoteling}, pois as pernas rodoviárias resolvidas por cache/provedor também mudaram entre o arquivo de sensibilidade anterior e esta rerodada.
-
-\section{Sensibilidades executadas}
-\label{sec:app-sensibilidades}
-
-A Tabela~\ref{tab:app-sensibilidades-executadas} repete os valores numéricos principais das sensibilidades executadas para consulta, preservando suas classificações. Estes valores são os mesmos usados no Capítulo~\ref{ch:resultados}.
+O arquivo direcional registra a versão de esquema, a data de geração, a hierarquia de intensidade, a política de outliers, o critério de seleção de corredor e os contadores de cobertura. A Tabela~\ref{tab:app-controles-artefato} consolida os campos que permitem rejeitar um artefato incompleto ou interpretar sua composição.
 
 \begin{table}[htbp]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
-\caption{Sensibilidades executadas e valores rastreados.}
-\label{tab:app-sensibilidades-executadas}
-\begin{tabularx}{\textwidth}{L{0.18\textwidth}Y L{0.18\textwidth}L{0.20\textwidth}L{0.11\textwidth}}
+\caption{Controles de proveniência da matriz marítima direcional.}
+\label{tab:app-controles-artefato}
+\begin{tabularx}{\textwidth}{L{0.29\textwidth}L{0.27\textwidth}Y}
 \toprule
-Caso & Papel e portos & Custo rod./multi. (BRL) & Emissões rod./multi. (kg \cooe{}) & Classe \\
+Controle & Valor registrado & Função \\
 \midrule
-\codecell{SENS-002-REFDIST} & Distância de referência; Santos--Manaus & 16.347,22 / 1.144,38 & 6.937,54 / 1.079,70 & \codecell{sensitive}\\
-\codecell{SENS-003B-ALTPECEM} & Porto alternativo; Manaus--Pecém & 22.986,28 / 621,84 & 9.984,32 / 549,12 & \codecell{sensitive}\\
-\codecell{SENS-005B-ALTSUAPE} & Porto alternativo; Rio Grande--Suape & 15.074,20 / 1.906,34 & 6.755,66 / 1.176,70 & \codecell{sensitive}\\
+Esquema de intensidade & \codecell{maritime\_intensity\_schema\_version = 3} & Identifica a estrutura compatível com agregação por viagem--OD.\\
+Modo de observação & \codecell{observed\_voyage\_corridors} & Restringe os caminhos a sequências completas de uma mesma viagem.\\
+Escopo da intensidade & Todas as viagens elegíveis do mesmo par, em todos os corredores. & Define a população usada no estimador.\\
+Estimador & Mediana ponderada por t$\cdot$nm. & Reduz a influência de intensidades extremas e preserva a atividade observada como peso.\\
+Seleção do caminho & Ligação direta primeiro; depois, menor distância completa. & Separa geometria de rota e agregação estatística.\\
+Reconstrução da carga & Deslocamento mínimo não negativo do prefixo acumulado. & Impede carga a bordo negativa e preserva movimentos observados.\\
+Fallback de distância & Haversine para portos canônicos distintos sem valor positivo na matriz. & Mantém completude com fonte identificada.\\
+Fallback de intensidade & Tipo com média aparada em 1\% por cauda ou mediana quando o corte não é possível; classe com média aparada do artefato ou mediana quando indisponível. & Explicita a estatística e a política de outliers.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Benchmark externo e reconciliação diagnóstica}
-\label{sec:app-benchmark-reconciliacao}
+\begin{table}[htbp]
+\centering
+\small
+\caption{Contadores de cobertura preservados no artefato marítimo.}
+\label{tab:app-contadores-maritimos}
+\begin{tabularx}{\textwidth}{Y r Y}
+\toprule
+Contador & Valor & Observação \\
+\midrule
+Viagens / paradas / chamadas portuárias & \num{1324} / \num{6797} / \num{7103} & Estrutura observacional da ANTAQ.\\
+IMOs ANTAQ / IMOs associados ao MRV & \num{389} / \num{243} & Cobertura de intensidade específica.\\
+Subtrechos brutos / calculados & \num{5473} / \num{5438} & Diferença explicada por aliases consecutivos contraídos.\\
+Distância da matriz / haversine & \num{5023} / \num{415} & Proveniência da distância por subtrecho.\\
+Intensidade IMO / fallback & \num{3290} / \num{2148} & Proveniência da intensidade por subtrecho.\\
+Observações viagem--OD / pares direcionados & \num{12025} / \num{177} & Base da agregação por origem--destino.\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-A Tabela~\ref{tab:app-batch002-resumo} apresenta o resumo quantitativo do Batch 002. O denominador interpretável é o conjunto de 21 pares OD positivos e suportados; a matriz completa inclui células não comparáveis que permanecem fora da leitura numérica.
+\section{Exemplo completo de auditoria: Santos--Manaus}
+\label{sec:app-santos-manaus}
+
+Para Santos--Manaus, a população estatística reúne \num{89} observações viagem--OD distribuídas em \num{22} corredores. Cada observação soma todos os seus subtrechos entre os dois portos e contribui uma única vez para a distribuição do par. A Tabela~\ref{tab:app-santos-manaus} permite conferir a separação entre a intensidade representativa e o caminho utilizado no cenário.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Resumo do Batch 002 do Prof. Dr. Gustavo Costa.}
-\label{tab:app-batch002-resumo}
-\begin{tabularx}{\textwidth}{L{0.38\textwidth}r Y}
+\caption{Proveniência do par Porto de Santos--Porto de Manaus.}
+\label{tab:app-santos-manaus}
+\begin{tabularx}{\textwidth}{L{0.37\textwidth}Y}
+\toprule
+Campo & Valor \\
+\midrule
+Viagens resolvidas com trabalho positivo & \num{89} \\
+Corredores completos observados & \num{22} \\
+Observações com IMO exato & \num{40} \\
+Observações com fallback de tipo & \num{49} \\
+Participação do fallback no trabalho de transporte & \num{59.54}\% \\
+Intensidade representativa & \num{9.322050} g/(t$\cdot$nm) \\
+Método & Mediana inferior ponderada pelo trabalho de transporte \\
+Caminho selecionado & Porto de Santos--Porto de Manaus \\
+Critério do caminho & Ligação direta observada \\
+Distância selecionada & \num{6112} km \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A presença de uma ligação direta determina apenas o caminho. As viagens que passam por Itajaí, Paranaguá, Salvador, Suape, Pecém, Vila do Conde e outros portos permanecem na população estatística quando formam uma cadeia completa em que Santos antecede Manaus. O cálculo utiliza, portanto, a diversidade observada de corredores sem impor uma sequência portuária única.
+
+\section{Fronteira de operações portuárias e \emph{hoteling}}
+\label{sec:app-nota-portops-hoteling}
+
+Quando o consumo marítimo é calculado com a intensidade MRV por trabalho de transporte, o indicador anual é tratado como abrangente do consumo reportado da embarcação para a fronteira considerada. O \emph{hoteling} não é somado separadamente nesse modo, reduzindo o risco de dupla contagem. As operações portuárias permanecem componentes explícitos quando possuem fonte identificada. Valores observados, médias de portos observados, padrões documentados e indisponibilidade são categorias distintas de proveniência; uma ausência não é convertida em zero de atividade.
+
+\section{Benchmark externo}
+\label{sec:app-benchmark}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Resumo do benchmark externo associado aos estudos de Gustavo Costa.}
+\label{tab:app-benchmark-resumo}
+\begin{tabularx}{\textwidth}{L{0.40\textwidth}r Y}
 \toprule
 Item & Valor & Interpretação \\
 \midrule
-Células parseadas & 36 & Inventário total da matriz lida.\\
-Pares OD positivos e suportados & 21 & Denominador efetivo da comparação direcional.\\
-Células puladas & 15 & Seis self-pairs e nove linhas rodoviárias zero ou não positivas.\\
-Acordo direcional & 21/21 & Apoio direcional externo para as linhas comparáveis.\\
-Classificação atual & 21 x & \codecell{same\_direction\_large\_gap}.\\
+Células de matriz parseadas & \num{36} & Inventário total lido pelo roteiro de comparação.\\
+Pares positivos e suportados & \num{21} & Denominador da comparação direcional.\\
+Pares não comparáveis & \num{15} & Seis pares iguais e nove linhas rodoviárias nulas ou não positivas.\\
+Acordo direcional & 21/21 & As duas fontes favorecem a alternativa com cabotagem em emissões.\\
+Classificação & \codecell{same\_direction\_large\_gap} & Apoio ao sinal modal, sem equivalência de magnitude.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-A Tabela~\ref{tab:app-rerun-reconciliacao} mantém juntos os resultados de rerun/cache e reconciliação rodoviária para evitar que o fator diagnóstico seja confundido com novo fator de linha de base.
-
-\begin{table}[htbp]
-\centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.15}
-\caption{Rerun/cache e reconciliação rodoviária do Batch 002.}
-\label{tab:app-rerun-reconciliacao}
-\begin{tabularx}{\textwidth}{L{0.28\textwidth}L{0.30\textwidth}Y}
-\toprule
-Verificação & Resultado & Uso seguro \\
-\midrule
-Rerun de pares positivos & 21/21 pares executados. & Reprodutibilidade computacional, não validação de magnitude.\\
-\codecell{route-cache hits} & 63 & Todas as pernas rodoviárias diretas, iniciais e finais foram atendidas por cache.\\
-\codecell{route-cache misses} & 0 & Instabilidade de provedor/cache fica menos plausível como explicação principal.\\
-Escritas por provedor & 0 & O rerun não dependeu de novas distâncias de provedor.\\
-Diferença rodoviária média/mediana & 201,0\%/150,5\% $\rightarrow$ 199,8\%/149,3\% & Lacuna road-only permanece após rerun.\\
-Diferença multimodal média/mediana & 53,5\%/52,9\% $\rightarrow$ 60,8\%/63,7\% & Lacuna multimodal permanece metodológica e de fronteira.\\
-Fator diagnóstico rodoviário & 0,8602944 kg CO$_2$eq/km & Sensibilidade de alinhamento com benchmark, não fator \ttw{} operacional do aplicativo.\\
-Diferença rodoviária após diagnóstico & 199,8\%/149,3\% $\rightarrow$ 43,9\%/19,6\% & Premissas rodoviárias explicam parte relevante, mas não toda a lacuna.\\
-\bottomrule
-\end{tabularx}
-\end{table}
+A comparação preserva as diferenças de distância, carga, portos, alocação, fatores e fronteira ambiental. Seus parâmetros permanecem separados dos parâmetros operacionais do aplicativo; o benchmark apoia a leitura do sinal modal, mas não calibra a intensidade marítima nem a magnitude dos resultados.
 
 \section{Categorias de uso}
 \label{sec:app-categorias-uso}
 
-A Tabela~\ref{tab:app-categorias-uso} é o resumo operacional das categorias usadas para controlar afirmações no relatório. Ela deve permanecer alinhada com a Tabela~\ref{tab:categorias-uso}.
+A Tabela~\ref{tab:app-categorias-uso} resume as categorias utilizadas para controlar afirmações. Ela complementa a Tabela~\ref{tab:categorias-uso}.
 
-\begingroup
-\small
-\setlength{\LTleft}{0pt}
-\setlength{\LTright}{0pt}
+\begin{table}[htbp]
+\centering
+\footnotesize
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
-\begin{longtable}{L{0.27\textwidth}L{0.34\textwidth}L{0.31\textwidth}}
-\caption{Categorias de uso e usos proibidos.}
-\label{tab:app-categorias-uso}\\
+\caption{Resumo operacional das categorias de evidência.}
+\label{tab:app-categorias-uso}
+\begin{tabularx}{\textwidth}{L{0.35\textwidth}Y}
 \toprule
-Categoria & Uso permitido & Uso proibido \\
+Categoria & Leitura permitida \\
 \midrule
-\endfirsthead
-\toprule
-Categoria & Uso permitido & Uso proibido \\
-\midrule
-\endhead
-\codecell{headline\_candidate} & Nenhum uso atual; categoria reservada para evidência futura mais forte. & Promover qualquer caso atual a resultado principal robusto.\\
-\codecell{sensitivity\_discussion} & Discutir comportamento sob premissas documentadas. & Tratar como linha de base, validação robusta ou prova geral de vantagem modal.\\
-\codecell{limitation\_example} & Explicar limitações, como casos same-port. & Usar como desempenho normal de cabotagem.\\
-\codecell{excluded} & Justificar exclusão e limite metodológico. & Executar ou interpretar numericamente como evidência de resultado.\\
-\codecell{reference\_needed} & Registrar lacuna e requisito de evidência futura. & Declarar que a lacuna foi resolvida.\\
-\codecell{methodology\_blocked} & Apontar bloqueio e trabalho futuro. & Converter em conclusão numérica sem decisão rastreada.\\
-\codecell{historical\_diagnostic} & Mostrar evolução do método. & Apresentar como resultado corrigido ou calibrado.\\
-\codecell{benchmark\_supports\_direction} & Sustentar consistência direcional cautelosa. & Alegar validação calibrada ou reprodução exata.\\
-\codecell{benchmark\_supports\_road\_factor\_explanation} & Discutir sensibilidade a premissas rodoviárias. & Substituir o modelo de linha de base pelo fator diagnóstico.\\
-\codecell{benchmark\_boundary\_mismatch} & Preservar cautela entre \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}. & Misturar fronteiras ou unidades como equivalentes.\\
-\codecell{not\_comparable} & Usar como limitação ou justificativa de não execução. & Transformar em evidência numérica.\\
+\codecell{headline\_candidate} & Resultado principal somente com rota, fonte, unidade e fronteira suficientes.\\
+\codecell{sensitivity\_discussion} & Comportamento condicionado à premissa identificada.\\
+\codecell{limitation\_example} / \codecell{excluded} & Exemplo de limite ou cenário fora da fronteira de uso.\\
+\codecell{reference\_needed} / \codecell{methodology\_blocked} & Lacuna de fonte ou de decisão que impede conclusão quantitativa.\\
+\codecell{benchmark\_supports\_direction} & Consistência direcional sem calibração de magnitude.\\
+\codecell{benchmark\_boundary\_mismatch} / \codecell{not\_comparable} & Diferença de fronteira ou ausência de comparabilidade numérica.\\
 \bottomrule
-\end{longtable}
-\endgroup
+\end{tabularx}
+\end{table}

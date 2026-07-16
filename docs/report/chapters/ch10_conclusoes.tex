@@ -4,62 +4,57 @@
 \section{Conclusão principal}
 \label{sec:conclusao-principal}
 
-Este trabalho desenvolveu e documentou o \CabotageLens{} como um framework computacional auditável, reprodutível e orientado por rota para comparar alternativas de transporte rodoviário direto e rodoviário-cabotagem-rodoviário em corredores brasileiros. A contribuição central é mostrar que a comparação modal pode ser construída com unidade funcional explícita, cadeia porta a porta, proveniência de dados, fronteiras metodológicas declaradas e classificação da força da evidência.
+O \CabotageLens{} é um framework computacional auditável para comparar o transporte rodoviário direto com uma cadeia rodoviária--cabotagem--rodoviária em corredores brasileiros. A comparação conserva a mesma origem, destino e carga nas duas alternativas e representa acessos terrestres, portos, navegação, operações portuárias e componentes operacionais habilitados. Cada resultado permanece associado à rota, aos parâmetros, à fonte das distâncias e à proveniência da intensidade marítima.
 
-Sob essa formulação, os resultados do \CabotageLens{} são estimativas de cenário sob fronteiras metodológicas definidas. A seleção de portos, a distância marítima, os acessos terrestres, os componentes portuários, os parâmetros de carga, a fronteira econômica, a fronteira ambiental e a classificação de validação condicionam o alcance de cada conclusão e tornam explícito o caminho entre premissa e resultado.
+A contribuição principal é metodológica e computacional. O framework combina dados observados da ANTAQ, indicadores do EU MRV, reconstrução da carga a bordo e agregação robusta por trabalho de transporte. Essa estrutura permite estimar o consumo ao longo dos subtrechos de uma viagem sem presumir que o navio realizou apenas uma ligação isolada entre os portos apresentados.
 
-Assim, o resultado mais importante do TF é metodológico e computacional: o \CabotageLens{} torna visíveis as hipóteses que normalmente ficam implícitas em uma comparação entre rodovia e cabotagem. A ferramenta organiza uma base rastreável para discutir quando uma alternativa multimodal aparece promissora, quando a evidência é sensível ou diagnóstica, e quais lacunas precisam ser fechadas antes de afirmações comerciais ou operacionais.
-
-\section{Contribuição metodológica e computacional do \CabotageLens{}}
+\section{Contribuição do modelo marítimo}
 \label{sec:contribuicao-conclusao}
 
-A contribuição do \CabotageLens{} está na integração entre construção explícita de rotas, cálculo de custo modelado, estimativa de emissões operacionais \ttw{} de \cooe{}, preservação de proveniência e classificação de evidência. O framework separa a alternativa rodoviária direta da cadeia rodoviária-cabotagem-rodoviária, registra portos selecionados ou forçados, mantém a origem das distâncias e associa cada resultado ao cenário e aos parâmetros que o produziram.
+O modelo identifica todas as viagens em que o porto de origem precede o porto de destino, incluindo ligações diretas e corredores com escalas intermediárias. Em cada viagem, a carga a bordo e a distância dos subtrechos determinam o trabalho de transporte. A intensidade do navio é obtida prioritariamente por correspondência de IMO no EU MRV; quando essa correspondência não existe, utiliza-se uma estatística robusta da classe ou do tipo, com fonte e regra de outlier registradas.
 
-Essa integração é importante porque a comparação modal depende de escolhas técnicas que alteram a interpretação. Distâncias marítimas com referência externa, matriz rastreada ou \texttt{haversine\_fallback} não têm a mesma força. Portos alternativos, como Pecém ou Suape, podem ser úteis para sensibilidade, mas não validam silenciosamente Porto de Fortaleza ou Porto do Recife. Casos \texttt{same-port}, linhas bloqueadas, registros excluídos e resultados sensíveis têm valor acadêmico quando preservados como controles interpretativos, não como conclusões principais.
+A intensidade representativa do par OD é a mediana ponderada pelo trabalho de transporte de todas as viagens elegíveis. O corredor selecionado determina caminho e distância, mas não restringe a amostra estatística. Essa separação permite representar diferentes corredores observados e evita que a estimativa dependa de uma sequência de portos fixada previamente.
 
-O valor do framework, portanto, não está apenas em gerar números de BRL e \cooe{}. Está em vincular esses números a uma trilha de auditoria: rota, porto, distância, fonte, parâmetro, aviso, categoria de uso e artefato de validação. Essa disciplina permite discutir resultados favoráveis com força técnica, preservando a diferença entre triagem acadêmica, evidência direcional, diagnóstico de premissas e validação comercial ou operacional.
+As estatísticas robustas têm funções complementares. A média aparada ou a mediana limita outliers na formação dos fallbacks por grupo. A mediana ponderada limita a influência de intensidades extremas na representação do par OD. Os valores exatos por IMO e as estatísticas diagnósticas continuam disponíveis para auditoria.
 
-\section{Alcance das evidências e interpretação segura}
+\section{Síntese das evidências}
 \label{sec:alcance-evidencias-conclusao}
 
-A evidência consolidada neste TF sustenta uma interpretação específica por corredor e dependente da fronteira adotada. As linhas históricas do Batch 001 permanecem como diagnóstico de evolução metodológica. O Batch 001B organiza decisões, bloqueios, lacunas e sensibilidades. As sensibilidades executadas mostram comportamento do modelo sob hipóteses rastreadas e mantêm a rastreabilidade das condições que afetam a comparação.
+A matriz marítima contém 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos resolvidos. A intensidade foi associada diretamente pelo IMO em 3.290 subtrechos e por fallback de tipo ou classe em 2.148. Essa cobertura torna explícita tanto a contribuição dos dados individualizados quanto a dependência de aproximações de grupo.
 
-O Batch 002 acrescenta uma camada externa importante ao confrontar o \CabotageLens{} com o workbook/paper do Prof. Dr. Gustavo Costa nos pares comparáveis. Esse benchmark é útil para a defesa acadêmica porque testa se o framework aponta a mesma direção modal em uma referência externa familiar ao tema. A leitura é direcional: o benchmark externo oferece plausibilidade qualitativa e expõe lacunas de magnitude, sem deslocar o centro da contribuição.
+No par Santos--Manaus, 89 viagens distribuídas em 22 corredores resultaram em intensidade representativa de 9,322050 g/(t$\cdot$nm). Quarenta observações usam correspondência por IMO e 49 usam fallback. Os fallbacks representam 59,54\% do trabalho de transporte do par. A média aritmética ponderada de 25,243618 g/(t$\cdot$nm), mantida como diagnóstico, evidencia a assimetria da distribuição e fundamenta o uso da mediana ponderada como indicador representativo. A ligação direta de 6.112 km determina o caminho do cenário, sem restringir a amostra aos navios que fizeram essa ligação direta.
 
-A rerodada consolidada de 30 de junho de 2026 reforça essa leitura: nas 24 linhas executadas/modeladas, a conclusão modal não mudou, e todas classificaram a cabotagem/multimodal como alternativa de menor emissão operacional \ttw{} de \cooe{} dentro da fronteira avaliada. Esse resultado indica comportamento multimodal promissor nos cenários avaliados e apoia a utilidade do framework para triagem acadêmica.
+O benchmark externo apresentou concordância direcional nos 21 pares positivos e suportados, acompanhada de diferença relevante de magnitude. Essa evidência permite comparar o sentido do resultado, mas não constitui calibração quantitativa do estimador.
 
-O rerun Supabase/cache reforça a reprodutibilidade computacional ao reduzir a hipótese de instabilidade de provedor ou cache como causa principal das lacunas observadas. A reconciliação de fator rodoviário explica parte relevante da diferença no lado \emph{road-only} e orienta investigação metodológica futura, mantendo inalterados o baseline rodoviário do \CabotageLens{} e a fronteira operacional \ttw{} do trabalho.
-
-As limitações apresentadas no Capítulo~\ref{ch:limitacoes}, portanto, definem o uso correto da conclusão. O TF conclui que o \CabotageLens{} produz comparações rastreáveis, auditáveis e academicamente defensáveis sob fronteiras explícitas, com resultados promissores dentro da fronteira avaliada e uma agenda clara para ampliar validação ambiental, econômica e operacional.
+Esses resultados sustentam a utilidade do \CabotageLens{} para triagem acadêmica e comparação de cenários sob fronteiras explícitas. Eles não constituem prova de superioridade universal da cabotagem, validação de frete comercial, disponibilidade de serviço ou equivalência com inventários \wtw{}/LCA.
 
 \section{Agenda prioritária de trabalhos futuros}
 \label{sec:trabalhos-futuros}
 
-Os trabalhos futuros devem ampliar o \CabotageLens{} sem apagar a disciplina de fronteira que tornou o TF defensável. A Tabela~\ref{tab:agenda-futura} organiza as prioridades por eixo, sempre vinculando a próxima etapa à limitação que ela deve enfrentar.
-
 \begin{table}[htbp]
 \centering
 \small
-\caption{Agenda de expansão do \CabotageLens{}.}
+\caption{Agenda de extensão do \CabotageLens{}.}
 \label{tab:agenda-futura}
 \begin{tabularx}{\textwidth}{L{0.22\textwidth}Y Y}
 \toprule
-Eixo & Próxima etapa & Condição de rastreabilidade \\
+Eixo & Trabalho proposto & Condição de rastreabilidade \\
 \midrule
-Ambiental & Separar expansões \wtw{}, WTT, LCA, CO$_2$-only, \cooe{} ampliado, combustíveis alternativos, emissões locais em porto e qualidade do ar. & Cada nova fronteira deve ter fatores, gases, unidades, energia, alocação e documentação próprios.\\
-Rota e operação & Fechar lacunas de distância marítima, seleção de portos, serviço, frequência, janela operacional, capacidade, terminal, slot, tempo de trânsito e confiabilidade. & Portos alternativos devem continuar como cenários próprios até que exista evidência específica.\\
-Econômico & Distinguir custo modelado, custo operacional alocado e frete comercial. & Viabilidade econômica exigirá tarifas, margens, contratos, demurrage, detention, seguro, inventário, confiabilidade, risco e disponibilidade de serviço.\\
-Validação e benchmark & Reconciliar carga, TEU, fator de carga, alocação, distância, rota, porto, serviço, operações portuárias e fronteira ambiental. & O benchmark externo pode continuar como referência, mantendo o \CabotageLens{} como contribuição principal.\\
-Publicação & Separar relatório final e artigo técnico. & O artigo deve apresentar o benchmark de modo compacto, com foco no framework e em suas fronteiras.\\
+Dados marítimos & Ampliar a correspondência por IMO, revisar classificações de navio e incorporar novos períodos ANTAQ/MRV. & Preservar ano, fonte, cobertura, amostra, estatística e regra de outlier.\\
+Incerteza & Quantificar intervalos, sensibilidade à ponderação e influência da proporção de fallbacks. & Separar variabilidade entre viagens, incerteza da carga e incerteza do proxy MRV.\\
+Rota e operação & Incorporar serviço, frequência, janela, capacidade, terminal, slot, tempo de trânsito, transbordo e confiabilidade. & Tratar cada operador, porto e serviço como evidência específica.\\
+Ambiental & Construir inventários separados para \wtw{}, LCA, combustíveis alternativos e emissões locais em porto. & Documentar gases, energia, fatores, alocação e unidade funcional de cada fronteira.\\
+Econômico & Confrontar o custo modelado com tarifas, margens, contratos, seguro, inventário e confiabilidade. & Manter custo operacional, custo alocado e frete comercial como grandezas distintas.\\
+Validação & Reconciliar distâncias, carga, veículos, portos, alocação e fronteira ambiental com bases independentes. & Distinguir concordância direcional, plausibilidade de magnitude e calibração.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Uma evolução de maior fidelidade poderia incluir super-rede multimodal, operadores, transbordos, frequência, capacidade e confiabilidade. Essa evolução deve ser tratada como etapa futura, não como capacidade implícita do protótipo atual. Do mesmo modo, uma avaliação econômica de mercado exigiria dados comerciais e operacionais que este TF não pretende substituir \cite{competitiveness2024,modalshiftreview2020}.
+Uma representação de maior fidelidade pode incluir uma super-rede multimodal com linhas, operadores, frequências, capacidades e tempos de espera. Esse escopo exige dados operacionais e comerciais que não são inferidos a partir dos registros de viagens da ANTAQ \cite{competitiveness2024,modalshiftreview2020}.
 
 \section{Fechamento}
 \label{sec:fechamento}
 
-O \CabotageLens{} cria uma forma mais rigorosa de formular a comparação entre rodovia e cabotagem no Brasil. Ao tornar explícitas as rotas, portos, distâncias, custos modelados, emissões operacionais, avisos e categorias de evidência, o framework permite comparar cenários com rastreabilidade e discutir resultados sem separar números das premissas que os produziram.
+O \CabotageLens{} transforma a comparação entre rodovia e cabotagem em uma cadeia de cálculo verificável. A origem do dado, a sequência dos portos, a carga a bordo, a distância, a intensidade do navio, o fallback, o critério estatístico e as fronteiras de interpretação permanecem acessíveis ao lado do resultado.
 
-Essa é a principal contribuição do TF: transformar uma comparação modal potencialmente opaca em uma análise auditável, conservadora e extensível. O trabalho mostra que a utilidade acadêmica do \CabotageLens{} está tanto nos resultados que ele calcula quanto na ligação que preserva entre rota, porto, distância, custo, emissão e força da evidência. A partir dessa base, trabalhos futuros podem ampliar fronteiras ambientais, operacionais, econômicas e de validação sem perder a condição essencial de defensibilidade: cada nova afirmação deve permanecer vinculada a fonte, método, unidade, cenário e evidência rastreados.
+Essa rastreabilidade permite reconhecer cenários multimodais promissores sem separar os números das premissas que os produziram. O framework oferece, assim, uma base acadêmica defensável para investigar a cabotagem brasileira e para ampliar a análise ambiental, econômica e operacional de forma controlada.
