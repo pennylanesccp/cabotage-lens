@@ -57,6 +57,16 @@ _BUNKER_EF_KG_CO2E_PER_KG = float(get_ef_kg_per_kg(_MARINE_FUEL_TYPE))
 _NM_TO_KM = 1.852
 _KG_PER_TONNE = 1000.0
 _DEFAULT_TEU_LOAD_FACTOR = 0.80
+_PAIR_WEIGHTED_MEDIAN_METHOD = "transport_work_weighted_median"
+_PAIR_ZERO_WORK_MEDIAN_METHOD = (
+    "unweighted_median_resolved_same_od_voyages_zero_transport_work"
+)
+_PAIR_WEIGHTED_MEDIAN_SOURCE = (
+    "antaq_mrv_same_od_transport_work_weighted_median"
+)
+_PAIR_ZERO_WORK_MEDIAN_SOURCE = (
+    "antaq_mrv_same_od_unweighted_median_zero_transport_work"
+)
 
 
 @dataclass(frozen=True)
@@ -150,8 +160,10 @@ def _build_selected_corridor_sublegs(
     sea_leg_data: Mapping[str, Any],
     *,
     cargo_t: float,
+    pair_intensity_g_per_tnm: float | None = None,
+    pair_intensity_source: str | None = None,
 ) -> tuple[list[Dict[str, Any]], bool]:
-    """Attribute scenario cargo to every subleg of one selected observed voyage."""
+    """Apply the OD representative intensity to the selected path geometry."""
     raw_legs = sea_leg_data.get("selected_corridor_sublegs")
     if not isinstance(raw_legs, list):
         return [], False
@@ -171,13 +183,19 @@ def _build_selected_corridor_sublegs(
         if distance_km is None and distance_nm is not None:
             distance_km = distance_nm * _NM_TO_KM
 
-        fuel_g_per_tnm = _positive_float_or_none(
+        observed_corridor_fuel_g_per_tnm = _positive_float_or_none(
             _first_mapping_value(
                 raw_leg,
                 "fuel_g_per_tnm",
                 "intensity_g_per_tnm",
                 "weighted_fuel_intensity_g_per_tnm",
             )
+        )
+        scenario_fuel_g_per_tnm = (
+            pair_intensity_g_per_tnm
+            if pair_intensity_g_per_tnm is not None
+            and pair_intensity_g_per_tnm > 0.0
+            else observed_corridor_fuel_g_per_tnm
         )
         observed_cargo_t = _nonnegative_float_or_none(
             _first_mapping_value(
@@ -219,19 +237,51 @@ def _build_selected_corridor_sublegs(
                 observed_fuel_kg = observed_fuel_g / _KG_PER_TONNE
         if (
             observed_fuel_kg is None
-            and fuel_g_per_tnm is not None
+            and observed_corridor_fuel_g_per_tnm is not None
             and transport_work_tnm is not None
         ):
-            observed_fuel_kg = fuel_g_per_tnm * transport_work_tnm / _KG_PER_TONNE
+            observed_fuel_kg = (
+                observed_corridor_fuel_g_per_tnm
+                * transport_work_tnm
+                / _KG_PER_TONNE
+            )
 
         scenario_fuel_kg = (
             None
-            if distance_nm is None or fuel_g_per_tnm is None
-            else fuel_g_per_tnm * scenario_cargo_t * distance_nm / _KG_PER_TONNE
+            if distance_nm is None or scenario_fuel_g_per_tnm is None
+            else scenario_fuel_g_per_tnm
+            * scenario_cargo_t
+            * distance_nm
+            / _KG_PER_TONNE
         )
         if scenario_fuel_kg is None:
             all_sublegs_resolved = False
 
+        observed_intensity_source = _first_mapping_value(
+            raw_leg,
+            "intensity_source",
+            "fuel_g_per_tnm_source",
+        )
+        observed_intensity_source_level = _first_mapping_value(
+            raw_leg,
+            "intensity_source_level",
+            "source_level",
+        )
+        raw_observed_source_counts = raw_leg.get("intensity_source_counts")
+        observed_intensity_source_counts = (
+            dict(raw_observed_source_counts)
+            if isinstance(raw_observed_source_counts, Mapping)
+            else {}
+        )
+        uses_pair_intensity = (
+            pair_intensity_g_per_tnm is not None
+            and pair_intensity_g_per_tnm > 0.0
+        )
+        scenario_intensity_source = (
+            pair_intensity_source
+            if uses_pair_intensity and pair_intensity_source
+            else observed_intensity_source
+        )
         enriched = dict(raw_leg)
         enriched.update(
             {
@@ -253,16 +303,28 @@ def _build_selected_corridor_sublegs(
                 "distance_nm": distance_nm,
                 "observed_cargo_t": observed_cargo_t,
                 "transport_work_tnm": transport_work_tnm,
-                "fuel_g_per_tnm": fuel_g_per_tnm,
-                "intensity_source": _first_mapping_value(
-                    raw_leg,
-                    "intensity_source",
-                    "fuel_g_per_tnm_source",
+                "fuel_g_per_tnm": observed_corridor_fuel_g_per_tnm,
+                "scenario_fuel_g_per_tnm": scenario_fuel_g_per_tnm,
+                "applied_pair_intensity_g_per_tnm": (
+                    pair_intensity_g_per_tnm
+                    if uses_pair_intensity
+                    else None
                 ),
-                "intensity_source_level": _first_mapping_value(
-                    raw_leg,
-                    "intensity_source_level",
-                    "source_level",
+                "observed_corridor_fuel_g_per_tnm": (
+                    observed_corridor_fuel_g_per_tnm
+                ),
+                "intensity_source": observed_intensity_source,
+                "observed_corridor_intensity_source": observed_intensity_source,
+                "observed_corridor_intensity_source_level": (
+                    observed_intensity_source_level
+                ),
+                "observed_corridor_intensity_source_counts": (
+                    observed_intensity_source_counts
+                ),
+                "intensity_source_level": observed_intensity_source_level,
+                "scenario_intensity_source": scenario_intensity_source,
+                "scenario_intensity_source_level": (
+                    "od_pair" if uses_pair_intensity else observed_intensity_source_level
                 ),
                 "observed_fuel_kg": observed_fuel_kg,
                 "scenario_cargo_t": scenario_cargo_t,
@@ -273,7 +335,7 @@ def _build_selected_corridor_sublegs(
                     else scenario_fuel_kg * _BUNKER_EF_KG_CO2E_PER_KG
                 ),
                 "scenario_fuel_formula": (
-                    "fuel_g_per_tnm * scenario_cargo_t * distance_nm / 1000"
+                    "scenario_fuel_g_per_tnm * scenario_cargo_t * distance_nm / 1000"
                 ),
             }
         )
@@ -867,10 +929,30 @@ def evaluate_path(
         cargo_share = 0.0
         allocation_debug["cargo_allocation_suppressed_reason"] = "nonpositive_cargo_mass"
 
+    pair_intensity_g_per_tnm = _positive_float_or_none(
+        sea_leg_data.get("pair_intensity_g_per_tnm")
+    )
+    pair_intensity_method = str(
+        sea_leg_data.get("pair_intensity_method") or ""
+    ).strip() or None
+    pair_intensity_source = str(
+        sea_leg_data.get("pair_intensity_source") or ""
+    ).strip() or None
+    if pair_intensity_g_per_tnm is not None and pair_intensity_source is None:
+        pair_intensity_source = (
+            _PAIR_ZERO_WORK_MEDIAN_SOURCE
+            if pair_intensity_method == _PAIR_ZERO_WORK_MEDIAN_METHOD
+            else _PAIR_WEIGHTED_MEDIAN_SOURCE
+        )
+    sea_leg_fuel_g_per_tnm = _positive_float_or_none(
+        sea_leg_data.get("fuel_g_per_tnm")
+    )
     selected_corridor_sublegs, selected_corridor_sublegs_complete = (
         _build_selected_corridor_sublegs(
             sea_leg_data,
             cargo_t=cargo_t,
+            pair_intensity_g_per_tnm=pair_intensity_g_per_tnm,
+            pair_intensity_source=pair_intensity_source,
         )
     )
     route_observation_mode = str(
@@ -881,6 +963,22 @@ def evaluate_path(
         dict(raw_intensity_source_counts)
         if isinstance(raw_intensity_source_counts, Mapping)
         else {}
+    )
+    raw_pair_intensity_source_counts = sea_leg_data.get(
+        "pair_intensity_source_counts"
+    )
+    pair_intensity_source_counts = (
+        dict(raw_pair_intensity_source_counts)
+        if isinstance(raw_pair_intensity_source_counts, Mapping)
+        else {}
+    )
+    raw_pair_effective_source_counts = sea_leg_data.get(
+        "pair_intensity_effective_source_counts"
+    )
+    pair_intensity_effective_source_counts = (
+        dict(raw_pair_effective_source_counts)
+        if isinstance(raw_pair_effective_source_counts, Mapping)
+        else dict(pair_intensity_source_counts)
     )
     raw_distance_source_counts = sea_leg_data.get("distance_source_counts")
     distance_source_counts = (
@@ -918,7 +1016,6 @@ def evaluate_path(
                 "estimated by coordinate haversine fallback"
             )
 
-    sea_leg_fuel_g_per_tnm = _positive_float_or_none(sea_leg_data.get("fuel_g_per_tnm"))
     vessel_fuel_g_per_tnm = _positive_float_or_none(vessel_eff.fuel_g_per_tnm)
     corridor_distance_weighted_intensity = None
     if selected_corridor_sublegs_complete:
@@ -929,20 +1026,30 @@ def evaluate_path(
         )
         if corridor_distance_nm > 0.0:
             corridor_distance_weighted_intensity = sum(
-                float(item["fuel_g_per_tnm"]) * float(item["distance_nm"])
+                float(item["scenario_fuel_g_per_tnm"])
+                * float(item["distance_nm"])
                 for item in selected_corridor_sublegs
             ) / corridor_distance_nm
 
     fuel_g_per_tnm = (
-        corridor_distance_weighted_intensity
-        if corridor_distance_weighted_intensity is not None
+        pair_intensity_g_per_tnm
+        if pair_intensity_g_per_tnm is not None
         else (
-            sea_leg_fuel_g_per_tnm
-            if sea_leg_fuel_g_per_tnm is not None
-            else vessel_fuel_g_per_tnm
+            corridor_distance_weighted_intensity
+            if corridor_distance_weighted_intensity is not None
+            else (
+                sea_leg_fuel_g_per_tnm
+                if sea_leg_fuel_g_per_tnm is not None
+                else vessel_fuel_g_per_tnm
+            )
         )
     )
-    if selected_corridor_sublegs_complete:
+    if pair_intensity_g_per_tnm is not None:
+        sea_fuel_g_per_tnm_source = (
+            pair_intensity_source
+            or _PAIR_WEIGHTED_MEDIAN_SOURCE
+        )
+    elif selected_corridor_sublegs_complete:
         sea_fuel_g_per_tnm_source = (
             str(sea_leg_data.get("fuel_g_per_tnm_source") or "").strip()
             or "observed_voyage_corridor_sublegs"
@@ -974,7 +1081,18 @@ def evaluate_path(
             for item in selected_corridor_sublegs
             if item.get("scenario_fuel_kg") is not None
         )
-        sailing_fuel_mode = "observed_voyage_corridor_sublegs"
+        if pair_intensity_g_per_tnm is None:
+            sailing_fuel_mode = "observed_voyage_corridor_sublegs"
+        elif pair_intensity_method == _PAIR_ZERO_WORK_MEDIAN_METHOD:
+            sailing_fuel_mode = (
+                "same_od_unweighted_median_zero_transport_work_on_selected_corridor"
+            )
+        elif pair_intensity_method == _PAIR_WEIGHTED_MEDIAN_METHOD:
+            sailing_fuel_mode = (
+                "same_od_transport_work_weighted_median_on_selected_corridor"
+            )
+        else:
+            sailing_fuel_mode = "same_od_representative_intensity_on_selected_corridor"
     elif isinstance(fuel_g_per_tnm, (int, float)) and fuel_g_per_tnm > 0:
         # Preferred MRV metric: g fuel/(t*nm) allocated directly to cargo and distance.
         sea_fuel_sailing_kg = (float(fuel_g_per_tnm) * cargo_t * sea_dist_nm) / _KG_PER_TONNE
@@ -1190,6 +1308,49 @@ def evaluate_path(
         "fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
         "fuel_g_per_tnm": (None if fuel_g_per_tnm is None else float(fuel_g_per_tnm)),
         "fuel_g_per_tnm_source": sea_fuel_g_per_tnm_source,
+        "pair_intensity_g_per_tnm": pair_intensity_g_per_tnm,
+        "pair_intensity_method": pair_intensity_method,
+        "pair_intensity_scope": sea_leg_data.get("pair_intensity_scope"),
+        "pair_intensity_weight": sea_leg_data.get("pair_intensity_weight"),
+        "pair_intensity_source": pair_intensity_source,
+        "pair_intensity_candidate_voyage_count": int(
+            sea_leg_data.get("pair_intensity_candidate_voyage_count") or 0
+        ),
+        "pair_intensity_resolved_voyage_count": int(
+            sea_leg_data.get("pair_intensity_resolved_voyage_count") or 0
+        ),
+        "pair_intensity_positive_weight_voyage_count": int(
+            sea_leg_data.get("pair_intensity_positive_weight_voyage_count") or 0
+        ),
+        "pair_intensity_zero_weight_voyage_count": int(
+            sea_leg_data.get("pair_intensity_zero_weight_voyage_count") or 0
+        ),
+        "pair_intensity_unresolved_voyage_count": int(
+            sea_leg_data.get("pair_intensity_unresolved_voyage_count") or 0
+        ),
+        "pair_intensity_effective_voyage_count": int(
+            sea_leg_data.get("pair_intensity_effective_voyage_count")
+            or sea_leg_data.get("pair_intensity_positive_weight_voyage_count")
+            or sea_leg_data.get("pair_intensity_resolved_voyage_count")
+            or 0
+        ),
+        "pair_intensity_transport_work_tnm": _nonnegative_float_or_none(
+            sea_leg_data.get("pair_intensity_transport_work_tnm")
+        ),
+        "pair_intensity_source_counts": pair_intensity_source_counts,
+        "pair_intensity_effective_source_counts": (
+            pair_intensity_effective_source_counts
+        ),
+        "selected_corridor_fuel_g_per_tnm_weighted_mean": (
+            _positive_float_or_none(
+                sea_leg_data.get(
+                    "selected_corridor_fuel_g_per_tnm_weighted_mean"
+                )
+            )
+        ),
+        "selected_corridor_intensity_weighting": sea_leg_data.get(
+            "selected_corridor_intensity_weighting"
+        ),
         "route_fuel_g_per_tnm": (None if sea_leg_fuel_g_per_tnm is None else float(sea_leg_fuel_g_per_tnm)),
         "vessel_class_fuel_g_per_tnm": (None if vessel_fuel_g_per_tnm is None else float(vessel_fuel_g_per_tnm)),
         "route_match_rate_segments": _positive_float_or_none(sea_leg_data.get("match_rate_segments")),
@@ -1374,6 +1535,54 @@ def evaluate_path(
             "sea_fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
             "sea_fuel_g_per_tnm": (None if fuel_g_per_tnm is None else float(fuel_g_per_tnm)),
             "sea_fuel_g_per_tnm_source": sea_fuel_g_per_tnm_source,
+            "sea_pair_intensity_g_per_tnm": pair_intensity_g_per_tnm,
+            "sea_pair_intensity_method": pair_intensity_method,
+            "sea_pair_intensity_scope": sea_leg_data.get(
+                "pair_intensity_scope"
+            ),
+            "sea_pair_intensity_weight": sea_leg_data.get(
+                "pair_intensity_weight"
+            ),
+            "sea_pair_intensity_source": pair_intensity_source,
+            "sea_pair_intensity_candidate_voyage_count": int(
+                sea_leg_data.get("pair_intensity_candidate_voyage_count") or 0
+            ),
+            "sea_pair_intensity_resolved_voyage_count": int(
+                sea_leg_data.get("pair_intensity_resolved_voyage_count") or 0
+            ),
+            "sea_pair_intensity_positive_weight_voyage_count": int(
+                sea_leg_data.get("pair_intensity_positive_weight_voyage_count")
+                or 0
+            ),
+            "sea_pair_intensity_zero_weight_voyage_count": int(
+                sea_leg_data.get("pair_intensity_zero_weight_voyage_count") or 0
+            ),
+            "sea_pair_intensity_unresolved_voyage_count": int(
+                sea_leg_data.get("pair_intensity_unresolved_voyage_count") or 0
+            ),
+            "sea_pair_intensity_effective_voyage_count": int(
+                sea_leg_data.get("pair_intensity_effective_voyage_count")
+                or sea_leg_data.get("pair_intensity_positive_weight_voyage_count")
+                or sea_leg_data.get("pair_intensity_resolved_voyage_count")
+                or 0
+            ),
+            "sea_pair_intensity_transport_work_tnm": _nonnegative_float_or_none(
+                sea_leg_data.get("pair_intensity_transport_work_tnm")
+            ),
+            "sea_pair_intensity_source_counts": pair_intensity_source_counts,
+            "sea_pair_intensity_effective_source_counts": (
+                pair_intensity_effective_source_counts
+            ),
+            "sea_selected_corridor_fuel_g_per_tnm_weighted_mean": (
+                _positive_float_or_none(
+                    sea_leg_data.get(
+                        "selected_corridor_fuel_g_per_tnm_weighted_mean"
+                    )
+                )
+            ),
+            "sea_selected_corridor_intensity_weighting": sea_leg_data.get(
+                "selected_corridor_intensity_weighting"
+            ),
             "sea_route_fuel_g_per_tnm": (
                 None if sea_leg_fuel_g_per_tnm is None else float(sea_leg_fuel_g_per_tnm)
             ),

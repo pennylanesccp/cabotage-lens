@@ -357,7 +357,7 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             3.114,
         )
 
-    def test_selected_corridor_sums_scenario_fuel_across_sublegs(self) -> None:
+    def test_pair_intensity_applies_to_selected_corridor_subleg_distances(self) -> None:
         context = evaluator.PreparedEvaluationContext(
             truck_spec={
                 "axles": 5,
@@ -382,8 +382,28 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             "distance_km": 277.8,
             "source": "observed_voyage_corridor",
             "route_observation_mode": "observed_voyage_corridors",
-            "fuel_g_per_tnm": 9.333333333333334,
-            "fuel_g_per_tnm_source": "observed_voyage_corridor_sublegs",
+            "fuel_g_per_tnm": 9.0,
+            "fuel_g_per_tnm_source": "antaq_mrv_same_od_transport_work_weighted_median",
+            "pair_intensity_g_per_tnm": 9.0,
+            "pair_intensity_method": "transport_work_weighted_median",
+            "pair_intensity_scope": (
+                "all_eligible_same_od_voyage_observations_across_corridors"
+            ),
+            "pair_intensity_weight": "observed_transport_work_tnm",
+            "pair_intensity_source": (
+                "antaq_mrv_same_od_transport_work_weighted_median"
+            ),
+            "pair_intensity_candidate_voyage_count": 4,
+            "pair_intensity_resolved_voyage_count": 3,
+            "pair_intensity_positive_weight_voyage_count": 3,
+            "pair_intensity_zero_weight_voyage_count": 0,
+            "pair_intensity_unresolved_voyage_count": 1,
+            "pair_intensity_transport_work_tnm": 26000.0,
+            "pair_intensity_source_counts": {
+                "eu_mrv_imo_latest": 2,
+                "eu_mrv_vessel_class_mean": 1,
+            },
+            "selected_corridor_fuel_g_per_tnm_weighted_mean": 9.333333333333334,
             "corridor_count": 3,
             "candidate_voyage_count": 4,
             "selected_corridor_candidate_voyage_count": 2,
@@ -461,10 +481,15 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             )
 
         sea = result["multimodal"]["sea"]
-        self.assertEqual(sea["sailing_fuel_calc_mode"], "observed_voyage_corridor_sublegs")
-        self.assertAlmostEqual(sea["fuel_kg_sailing"], 28.0)
+        self.assertEqual(
+            sea["sailing_fuel_calc_mode"],
+            "same_od_transport_work_weighted_median_on_selected_corridor",
+        )
+        self.assertAlmostEqual(sea["fuel_kg_sailing"], 27.0)
         self.assertNotEqual(sea["fuel_kg_sailing"], sea["observed_fuel_kg"])
-        self.assertAlmostEqual(sea["fuel_g_per_tnm"], 9.333333333333334)
+        self.assertAlmostEqual(sea["fuel_g_per_tnm"], 9.0)
+        self.assertAlmostEqual(sea["pair_intensity_g_per_tnm"], 9.0)
+        self.assertEqual(sea["pair_intensity_candidate_voyage_count"], 4)
         self.assertEqual(sea["selected_corridor_id"], "voyage-42")
         self.assertEqual(sea["candidate_voyage_count"], 4)
         self.assertEqual(sea["selected_corridor_candidate_voyage_count"], 2)
@@ -479,11 +504,46 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         self.assertEqual(sea["selected_corridor_sublegs"][0]["scenario_cargo_t"], 20.0)
         self.assertAlmostEqual(
             sea["selected_corridor_sublegs"][0]["scenario_fuel_kg"],
-            16.0,
+            18.0,
         )
         self.assertAlmostEqual(
             sea["selected_corridor_sublegs"][1]["scenario_fuel_kg"],
+            9.0,
+        )
+        self.assertEqual(
+            sea["selected_corridor_sublegs"][0][
+                "observed_corridor_fuel_g_per_tnm"
+            ],
+            8.0,
+        )
+        self.assertEqual(
+            sea["selected_corridor_sublegs"][1][
+                "observed_corridor_fuel_g_per_tnm"
+            ],
             12.0,
+        )
+        self.assertEqual(
+            sea["selected_corridor_sublegs"][0][
+                "applied_pair_intensity_g_per_tnm"
+            ],
+            9.0,
+        )
+        first_subleg = sea["selected_corridor_sublegs"][0]
+        self.assertEqual(first_subleg["fuel_g_per_tnm"], 8.0)
+        self.assertEqual(first_subleg["intensity_source"], "eu_mrv_imo_latest")
+        self.assertEqual(first_subleg["intensity_source_level"], "imo")
+        self.assertEqual(
+            first_subleg["scenario_intensity_source"],
+            "antaq_mrv_same_od_transport_work_weighted_median",
+        )
+        self.assertEqual(first_subleg["scenario_intensity_source_level"], "od_pair")
+        self.assertEqual(
+            first_subleg["observed_corridor_intensity_source_level"],
+            "imo",
+        )
+        self.assertEqual(
+            result["inputs"]["sea_pair_intensity_method"],
+            "transport_work_weighted_median",
         )
         self.assertEqual(
             result["inputs"]["sea_route_selected_corridor_id"],
@@ -504,6 +564,82 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         self.assertTrue(
             any("haversine fallback" in item for item in result["calculation_warnings"])
         )
+
+    def test_zero_work_pair_median_has_explicit_source_and_mode(self) -> None:
+        context = evaluator.PreparedEvaluationContext(
+            truck_spec={
+                "axles": 5,
+                "payload_t": 27.0,
+                "ref_weight_t": 20.0,
+                "empty_efficiency_gain": 0.18,
+            },
+            diesel_lookup=DieselPriceLookup(
+                source_csv="diesel.csv",
+                default_price_r_per_l=6.0,
+                uf_to_price={"SP": 6.12, "RJ": 6.15},
+                row_count=2,
+            ),
+            diesel_price_override=None,
+            bunker_price_ton=2572.34,
+            vessel_eff=self._fake_vessel(),
+            hoteling_sel=None,
+            port_ops_selection=None,
+        )
+        path_data = self._path_data()
+        path_data["sea_leg"] = {
+            "distance_km": 185.2,
+            "source": "observed_voyage_corridor",
+            "route_observation_mode": "observed_voyage_corridors",
+            "pair_intensity_g_per_tnm": 8.0,
+            "pair_intensity_method": (
+                "unweighted_median_resolved_same_od_voyages_zero_transport_work"
+            ),
+            "pair_intensity_source": (
+                "antaq_mrv_same_od_unweighted_median_zero_transport_work"
+            ),
+            "pair_intensity_candidate_voyage_count": 2,
+            "pair_intensity_resolved_voyage_count": 2,
+            "pair_intensity_positive_weight_voyage_count": 0,
+            "pair_intensity_zero_weight_voyage_count": 2,
+            "pair_intensity_effective_voyage_count": 2,
+            "pair_intensity_transport_work_tnm": 0.0,
+            "selected_corridor_sublegs": [
+                {
+                    "origin_port": "Port A",
+                    "destination_port": "Port B",
+                    "distance_km": 185.2,
+                    "distance_nm": 100.0,
+                    "fuel_g_per_tnm": 4.0,
+                    "intensity_source": "eu_mrv_imo_latest",
+                    "intensity_source_level": "imo",
+                }
+            ],
+        }
+
+        with patch.object(
+            evaluator,
+            "estimate_leg_liters",
+            side_effect=self._estimate_leg_liters,
+        ):
+            result = evaluator.evaluate_path(
+                path_data,
+                cargo_t=20.0,
+                include_hoteling=False,
+                include_port_ops=False,
+                prepared_context=context,
+            )
+
+        sea = result["multimodal"]["sea"]
+        self.assertEqual(
+            sea["sailing_fuel_calc_mode"],
+            "same_od_unweighted_median_zero_transport_work_on_selected_corridor",
+        )
+        self.assertEqual(
+            sea["fuel_g_per_tnm_source"],
+            "antaq_mrv_same_od_unweighted_median_zero_transport_work",
+        )
+        self.assertAlmostEqual(sea["fuel_kg_sailing"], 16.0)
+        self.assertEqual(sea["pair_intensity_effective_voyage_count"], 2)
 
 
 if __name__ == "__main__":

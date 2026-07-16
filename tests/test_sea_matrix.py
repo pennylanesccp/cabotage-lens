@@ -27,6 +27,9 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             },
             "voyage_fuel_g_per_tnm_directional_meta": {
                 "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
+                "maritime_intensity_schema_version": 3,
+                "pair_intensity_method": "transport_work_weighted_median",
+                "generated_at": "2026-07-16T12:00:00+00:00",
             },
             "voyage_fuel_g_per_tnm_directional": {
                 "Port A": {
@@ -60,7 +63,33 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         },
                         "distance_km": 555.6,
                         "distance_nm": 300.0,
-                        "fuel_g_per_tnm_weighted_mean": 10.0,
+                        "fuel_g_per_tnm_weighted_mean": 9.0,
+                        "fuel_g_per_tnm_source": (
+                            "antaq_mrv_same_od_transport_work_weighted_median"
+                        ),
+                        "pair_intensity_g_per_tnm": 9.0,
+                        "pair_intensity_method": "transport_work_weighted_median",
+                        "pair_intensity_scope": (
+                            "all_eligible_same_od_voyage_observations_across_corridors"
+                        ),
+                        "pair_intensity_weight": "observed_transport_work_tnm",
+                        "pair_intensity_source": (
+                            "antaq_mrv_same_od_transport_work_weighted_median"
+                        ),
+                        "pair_intensity_candidate_voyage_count": 4,
+                        "pair_intensity_resolved_voyage_count": 3,
+                        "pair_intensity_positive_weight_voyage_count": 3,
+                        "pair_intensity_zero_weight_voyage_count": 0,
+                        "pair_intensity_unresolved_voyage_count": 1,
+                        "pair_intensity_transport_work_tnm": 75000.0,
+                        "pair_intensity_source_counts": {
+                            "eu_mrv_imo_latest": 2,
+                            "eu_mrv_vessel_class_mean": 1,
+                        },
+                        "selected_corridor_fuel_g_per_tnm_weighted_mean": 10.0,
+                        "selected_corridor_intensity_weighting": (
+                            "observed_transport_work_tnm"
+                        ),
                         "corridor_port_path": ["Port A", "Port Y", "Port B"],
                         "corridor_leg_count": 2,
                         "observed_transport_work_tnm": 38000.0,
@@ -105,12 +134,32 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                     "Port X": {
                         "distance_km": 92.6,
                         "fuel_g_per_tnm_weighted_mean": 8.0,
+                        "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
+                        "pair_intensity_g_per_tnm": 8.0,
+                        "pair_intensity_method": "transport_work_weighted_median",
+                        "pair_intensity_scope": (
+                            "all_eligible_same_od_voyage_observations_across_corridors"
+                        ),
+                        "pair_intensity_source": (
+                            "antaq_mrv_same_od_transport_work_weighted_median"
+                        ),
+                        "pair_intensity_candidate_voyage_count": 1,
                     },
                 },
                 "Port X": {
                     "Port B": {
                         "distance_km": 92.6,
                         "fuel_g_per_tnm_weighted_mean": 8.0,
+                        "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
+                        "pair_intensity_g_per_tnm": 8.0,
+                        "pair_intensity_method": "transport_work_weighted_median",
+                        "pair_intensity_scope": (
+                            "all_eligible_same_od_voyage_observations_across_corridors"
+                        ),
+                        "pair_intensity_source": (
+                            "antaq_mrv_same_od_transport_work_weighted_median"
+                        ),
+                        "pair_intensity_candidate_voyage_count": 1,
                     }
                 },
             },
@@ -195,6 +244,132 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         assert stats is not None
         self.assertEqual(stats["selected_corridor_id"], "voyage-via-y")
 
+    def test_observed_remote_without_pair_intensity_yields_to_tracked_schema(self) -> None:
+        local_payload = self._observed_corridor_payload()
+        remote_payload = json.loads(json.dumps(local_payload))
+        remote_payload["voyage_fuel_g_per_tnm_directional_meta"].pop(
+            "pair_intensity_method"
+        )
+        remote_stats = remote_payload["voyage_fuel_g_per_tnm_directional"][
+            "Port A"
+        ]["Port B"]
+        for key in list(remote_stats):
+            if key.startswith("pair_intensity_"):
+                remote_stats.pop(key)
+        remote_stats["fuel_g_per_tnm_weighted_mean"] = 10.0
+        remote_stats["fuel_g_per_tnm_source"] = "observed_voyage_corridor_sublegs"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            local_path = root / "sea_matrix.json"
+            remote_path = root / "cache" / "sea_matrix.json"
+            remote_path.parent.mkdir()
+            local_path.write_text(json.dumps(local_payload), encoding="utf-8")
+            remote_path.write_text(json.dumps(remote_payload), encoding="utf-8")
+
+            with patch(
+                "modules.cabotage.sea_matrix.resolve_data_asset_path",
+                return_value=remote_path,
+            ):
+                sea_matrix = SeaMatrix.from_json_path(local_path)
+
+        stats = sea_matrix.best_directional_stats("Port A", "Port B")
+        self.assertIsNotNone(stats)
+        assert stats is not None
+        self.assertEqual(stats["pair_intensity_g_per_tnm"], 9.0)
+        self.assertEqual(
+            stats["pair_intensity_method"],
+            "transport_work_weighted_median",
+        )
+
+    def test_partially_upgraded_remote_yields_to_complete_tracked_schema(self) -> None:
+        local_payload = self._observed_corridor_payload()
+        second_stats = json.loads(
+            json.dumps(
+                local_payload["voyage_fuel_g_per_tnm_directional"]["Port A"][
+                    "Port B"
+                ]
+            )
+        )
+        second_stats["corridor_port_path"] = ["Port A", "Port C"]
+        second_stats["corridor_leg_count"] = 1
+        second_stats["distance_km"] = 400.0
+        local_payload["matrix"]["Port A"]["Port C"] = 400.0
+        local_payload["matrix"]["Port C"] = {"Port A": 400.0}
+        local_payload["voyage_fuel_g_per_tnm_directional"]["Port A"][
+            "Port C"
+        ] = second_stats
+
+        remote_payload = json.loads(json.dumps(local_payload))
+        remote_second = remote_payload["voyage_fuel_g_per_tnm_directional"][
+            "Port A"
+        ]["Port C"]
+        remote_second.pop("route_observation_mode")
+        for key in list(remote_second):
+            if key.startswith("pair_intensity_"):
+                remote_second.pop(key)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            local_path = root / "sea_matrix.json"
+            remote_path = root / "cache" / "sea_matrix.json"
+            remote_path.parent.mkdir()
+            local_path.write_text(json.dumps(local_payload), encoding="utf-8")
+            remote_path.write_text(json.dumps(remote_payload), encoding="utf-8")
+
+            with patch(
+                "modules.cabotage.sea_matrix.resolve_data_asset_path",
+                return_value=remote_path,
+            ):
+                sea_matrix = SeaMatrix.from_json_path(local_path)
+
+        stats = sea_matrix.best_directional_stats("Port A", "Port C")
+        self.assertIsNotNone(stats)
+        assert stats is not None
+        self.assertEqual(stats["pair_intensity_g_per_tnm"], 9.0)
+
+    def test_older_complete_remote_yields_to_newer_tracked_schema(self) -> None:
+        local_payload = self._observed_corridor_payload()
+        remote_payload = json.loads(json.dumps(local_payload))
+        remote_payload["voyage_fuel_g_per_tnm_directional_meta"][
+            "generated_at"
+        ] = "2026-07-15T12:00:00+00:00"
+        remote_payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"][
+            "pair_intensity_g_per_tnm"
+        ] = 99.0
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            local_path = root / "sea_matrix.json"
+            remote_path = root / "cache" / "sea_matrix.json"
+            remote_path.parent.mkdir()
+            local_path.write_text(json.dumps(local_payload), encoding="utf-8")
+            remote_path.write_text(json.dumps(remote_payload), encoding="utf-8")
+
+            with patch(
+                "modules.cabotage.sea_matrix.resolve_data_asset_path",
+                return_value=remote_path,
+            ):
+                sea_matrix = SeaMatrix.from_json_path(local_path)
+
+        self.assertEqual(
+            sea_matrix.directional_fuel_g_per_tnm("Port A", "Port B"),
+            9.0,
+        )
+
+    def test_directional_fuel_prefers_explicit_pair_intensity(self) -> None:
+        payload = self._observed_corridor_payload()
+        payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"][
+            "fuel_g_per_tnm_weighted_mean"
+        ] = 10.0
+
+        sea_matrix = SeaMatrix.from_json_dict(payload)
+
+        self.assertEqual(
+            sea_matrix.directional_fuel_g_per_tnm("Port A", "Port B"),
+            9.0,
+        )
+
     def test_observed_mode_uses_selected_complete_voyage_corridor(self) -> None:
         sea_matrix = SeaMatrix.from_json_dict(self._observed_corridor_payload())
 
@@ -226,6 +401,12 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         payload = self._observed_corridor_payload()
         payload.pop("voyage_fuel_g_per_tnm_directional_meta")
         del payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        for destinations in payload["voyage_fuel_g_per_tnm_directional"].values():
+            for stats in destinations.values():
+                stats.pop("route_observation_mode", None)
+                for key in list(stats):
+                    if key.startswith("pair_intensity_"):
+                        stats.pop(key)
         sea_matrix = SeaMatrix.from_json_dict(payload)
 
         stats = sea_matrix.best_directional_stats("Port A", "Port B")
@@ -257,7 +438,17 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(sea_leg["source"], "observed_voyage_corridor")
         self.assertEqual(
             sea_leg["fuel_g_per_tnm_source"],
-            "observed_voyage_corridor_sublegs",
+            "antaq_mrv_same_od_transport_work_weighted_median",
+        )
+        self.assertEqual(sea_leg["fuel_g_per_tnm"], 9.0)
+        self.assertEqual(sea_leg["pair_intensity_g_per_tnm"], 9.0)
+        self.assertEqual(
+            sea_leg["pair_intensity_method"],
+            "transport_work_weighted_median",
+        )
+        self.assertEqual(
+            sea_leg["selected_corridor_fuel_g_per_tnm_weighted_mean"],
+            10.0,
         )
         self.assertEqual(sea_leg["candidate_voyage_count"], 4)
         self.assertEqual(
@@ -282,6 +473,13 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
     def test_tracked_matrix_supports_santos_manaus_directional_route(self) -> None:
         matrix_path = Path(__file__).resolve().parents[1] / "data" / "sea_matrix.json"
         payload = json.loads(matrix_path.read_text(encoding="utf-8-sig"))
+
+        self.assertEqual(
+            payload["voyage_fuel_g_per_tnm_directional_meta"][
+                "maritime_intensity_schema_version"
+            ],
+            3,
+        )
 
         validation = validate_enriched_sea_matrix_payload(
             payload,
@@ -319,6 +517,34 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         )
         self.assertAlmostEqual(
             stats["fuel_g_per_tnm_weighted_mean"],
+            9.322050,
+            places=6,
+        )
+        self.assertEqual(
+            stats["pair_intensity_method"],
+            "transport_work_weighted_median",
+        )
+        self.assertEqual(
+            stats["pair_intensity_scope"],
+            "all_eligible_same_od_voyage_observations_across_corridors",
+        )
+        self.assertEqual(stats["pair_intensity_candidate_voyage_count"], 89)
+        self.assertEqual(stats["pair_intensity_positive_weight_voyage_count"], 89)
+        self.assertEqual(stats["pair_intensity_effective_voyage_count"], 89)
+        self.assertEqual(
+            stats["pair_intensity_effective_source_counts"],
+            {
+                "eu_mrv_imo_latest": 40,
+                "eu_mrv_ship_type_trimmed_mean_1pct": 49,
+            },
+        )
+        self.assertAlmostEqual(
+            stats["pair_intensity_transport_work_weighted_mean_g_per_tnm"],
+            25.243618,
+            places=6,
+        )
+        self.assertAlmostEqual(
+            stats["selected_corridor_fuel_g_per_tnm_weighted_mean"],
             9.322050,
             places=6,
         )
@@ -368,10 +594,15 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(sea_leg["source"], "observed_voyage_corridor")
         self.assertEqual(
             sea_leg["fuel_g_per_tnm_source"],
-            "observed_voyage_corridor_sublegs",
+            "antaq_mrv_same_od_transport_work_weighted_median",
         )
         self.assertEqual(sea_leg["distance_km"], expected["distance_km"])
         self.assertEqual(sea_leg["fuel_g_per_tnm"], expected["fuel_g_per_tnm_weighted_mean"])
+        self.assertEqual(
+            sea_leg["pair_intensity_method"],
+            "transport_work_weighted_median",
+        )
+        self.assertEqual(sea_leg["pair_intensity_candidate_voyage_count"], 89)
         self.assertEqual(sea_leg["matched_segment_count"], expected["matched_segment_count"])
         self.assertEqual(sea_leg["matched_imo_count"], expected["matched_imo_count"])
         observed_legs = sea_leg["selected_corridor_sublegs"]

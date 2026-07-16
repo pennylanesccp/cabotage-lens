@@ -118,6 +118,22 @@ class SeaResult(TypedDict, total=False):
     candidate_observed_transport_work_tnm: float
     candidate_observed_fuel_kg: float
     selected_corridor_sublegs: list[Dict[str, Any]]
+    pair_intensity_g_per_tnm: float
+    pair_intensity_method: str
+    pair_intensity_scope: str
+    pair_intensity_weight: str
+    pair_intensity_source: str
+    pair_intensity_candidate_voyage_count: int
+    pair_intensity_resolved_voyage_count: int
+    pair_intensity_positive_weight_voyage_count: int
+    pair_intensity_zero_weight_voyage_count: int
+    pair_intensity_unresolved_voyage_count: int
+    pair_intensity_effective_voyage_count: int
+    pair_intensity_transport_work_tnm: float
+    pair_intensity_source_counts: Dict[str, int]
+    pair_intensity_effective_source_counts: Dict[str, int]
+    selected_corridor_fuel_g_per_tnm_weighted_mean: float
+    selected_corridor_intensity_weighting: str
 
 
 class PathGeometry(TypedDict):
@@ -506,11 +522,25 @@ def build_path_geometry_from_resolved(
                     "port-pair distance; base provenance is retained."
                 ),
             )
-        weighted_mean = directional_stats.get("fuel_g_per_tnm_weighted_mean")
+        pair_intensity = directional_stats.get("pair_intensity_g_per_tnm")
+        uses_pair_intensity = (
+            isinstance(pair_intensity, (int, float))
+            and float(pair_intensity) > 0.0
+        )
+        weighted_mean = (
+            pair_intensity
+            if uses_pair_intensity
+            else directional_stats.get("fuel_g_per_tnm_weighted_mean")
+        )
         if isinstance(weighted_mean, (int, float)) and float(weighted_mean) > 0.0:
             sea_leg["fuel_g_per_tnm"] = float(weighted_mean)
             generated_intensity_source = str(
-                directional_stats.get("fuel_g_per_tnm_source") or ""
+                (
+                    directional_stats.get("pair_intensity_source")
+                    if uses_pair_intensity
+                    else directional_stats.get("fuel_g_per_tnm_source")
+                )
+                or ""
             ).strip()
             if generated_intensity_source:
                 sea_leg["fuel_g_per_tnm_source"] = generated_intensity_source
@@ -547,6 +577,11 @@ def build_path_geometry_from_resolved(
             "route_observation_mode",
             "selection_criterion",
             "selected_corridor_id",
+            "pair_intensity_method",
+            "pair_intensity_scope",
+            "pair_intensity_weight",
+            "pair_intensity_source",
+            "selected_corridor_intensity_weighting",
         ):
             value = directional_stats.get(key)
             if value is not None and str(value).strip():
@@ -565,6 +600,12 @@ def build_path_geometry_from_resolved(
             "fallback_voyage_count",
             "unresolved_intensity_voyage_count",
             "haversine_fallback_segment_count",
+            "pair_intensity_candidate_voyage_count",
+            "pair_intensity_resolved_voyage_count",
+            "pair_intensity_positive_weight_voyage_count",
+            "pair_intensity_zero_weight_voyage_count",
+            "pair_intensity_unresolved_voyage_count",
+            "pair_intensity_effective_voyage_count",
         ):
             value = directional_stats.get(key)
             if isinstance(value, (int, float)):
@@ -574,6 +615,24 @@ def build_path_geometry_from_resolved(
             sea_leg["intensity_source_counts"] = {
                 str(key): int(value)
                 for key, value in intensity_source_counts.items()
+                if isinstance(value, (int, float))
+            }
+        pair_intensity_source_counts = directional_stats.get(
+            "pair_intensity_source_counts"
+        )
+        if isinstance(pair_intensity_source_counts, dict):
+            sea_leg["pair_intensity_source_counts"] = {
+                str(key): int(value)
+                for key, value in pair_intensity_source_counts.items()
+                if isinstance(value, (int, float))
+            }
+        pair_intensity_effective_source_counts = directional_stats.get(
+            "pair_intensity_effective_source_counts"
+        )
+        if isinstance(pair_intensity_effective_source_counts, dict):
+            sea_leg["pair_intensity_effective_source_counts"] = {
+                str(key): int(value)
+                for key, value in pair_intensity_effective_source_counts.items()
                 if isinstance(value, (int, float))
             }
         for key in (
@@ -592,6 +651,11 @@ def build_path_geometry_from_resolved(
             "observed_fuel_kg",
             "candidate_observed_transport_work_tnm",
             "candidate_observed_fuel_kg",
+            "pair_intensity_g_per_tnm",
+            "pair_intensity_transport_work_tnm",
+            "pair_intensity_unweighted_median_g_per_tnm",
+            "pair_intensity_transport_work_weighted_mean_g_per_tnm",
+            "selected_corridor_fuel_g_per_tnm_weighted_mean",
         ):
             value = directional_stats.get(key)
             if isinstance(value, (int, float)):

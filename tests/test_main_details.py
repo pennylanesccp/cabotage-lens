@@ -129,6 +129,22 @@ class MainDetailsTests(unittest.TestCase):
                         "eu_mrv_vessel_class_trimmed_mean_1pct": 1,
                         "eu_mrv_ship_type_trimmed_mean_1pct": 1,
                     },
+                    "pair_intensity_g_per_tnm": 9.32205,
+                    "pair_intensity_method": "transport_work_weighted_median",
+                    "pair_intensity_weight": "observed_transport_work_tnm",
+                    "pair_intensity_source": (
+                        "antaq_mrv_same_od_transport_work_weighted_median"
+                    ),
+                    "pair_intensity_candidate_voyage_count": 4,
+                    "pair_intensity_resolved_voyage_count": 4,
+                    "pair_intensity_effective_voyage_count": 3,
+                    "pair_intensity_positive_weight_voyage_count": 3,
+                    "pair_intensity_zero_weight_voyage_count": 1,
+                    "pair_intensity_unresolved_voyage_count": 0,
+                    "pair_intensity_effective_source_counts": {
+                        "eu_mrv_imo_latest": 2,
+                        "eu_mrv_ship_type_trimmed_mean_1pct": 1,
+                    },
                     "selected_corridor_distance_source_counts": {
                         "sea_matrix": 1,
                         "haversine_fallback": 1,
@@ -142,7 +158,7 @@ class MainDetailsTests(unittest.TestCase):
             for row in _assumptions_table(results=results, payload={}).to_dict("records")
         }
 
-        selected = rows["Selected observed corridor"]["Value"]
+        selected = rows["Selected distance corridor"]["Value"]
         self.assertIn("Porto A → Porto C → Porto B", selected)
         self.assertIn("corridor-a-c-b", selected)
         self.assertEqual(
@@ -163,6 +179,22 @@ class MainDetailsTests(unittest.TestCase):
         self.assertIn("EU MRV latest record by IMO: 2", source_counts)
         self.assertIn("EU MRV vessel-class 1% trimmed mean: 1", source_counts)
         self.assertIn("EU MRV ship-type 1% trimmed mean: 1", source_counts)
+        estimator_coverage = rows["OD intensity estimator coverage"]["Value"]
+        self.assertIn("candidate voyages: 4", estimator_coverage)
+        self.assertIn("effective voyages: 3", estimator_coverage)
+        self.assertIn("zero-work voyages: 1", estimator_coverage)
+        estimator_sources = rows["OD intensity estimator sources"]["Value"]
+        self.assertIn("EU MRV latest record by IMO: 2", estimator_sources)
+        self.assertIn("EU MRV ship-type 1% trimmed mean: 1", estimator_sources)
+        self.assertNotIn("vessel-class", estimator_sources)
+        self.assertEqual(
+            rows["OD representative maritime intensity"]["Value"],
+            "9.322050 g/(t·nm)",
+        )
+        self.assertIn(
+            "Transport-work-weighted median",
+            rows["OD intensity aggregation"]["Value"],
+        )
         distance_sources = rows["Selected-corridor distance sources"]["Value"]
         self.assertIn("Sea-matrix distance: 1", distance_sources)
         self.assertIn("Coordinate haversine fallback: 1", distance_sources)
@@ -314,7 +346,12 @@ class MainDetailsTests(unittest.TestCase):
                             "distance_source": "sea_matrix",
                             "observed_cargo_t": 100.0,
                             "fuel_g_per_tnm": 8.0,
-                            "intensity_source": "eu_mrv_imo_latest",
+                            "applied_pair_intensity_g_per_tnm": 9.0,
+                            "observed_corridor_fuel_g_per_tnm": 8.0,
+                            "scenario_intensity_source": (
+                                "antaq_mrv_same_od_transport_work_weighted_median"
+                            ),
+                            "observed_corridor_intensity_source": "eu_mrv_imo_latest",
                             "observed_fuel_kg": 80.0,
                             "scenario_fuel_kg": 11.2,
                         },
@@ -324,6 +361,14 @@ class MainDetailsTests(unittest.TestCase):
                             "distance_nm": 50.0,
                             "observed_cargo_t": 60.0,
                             "fuel_g_per_tnm": 6.0,
+                            "applied_pair_intensity_g_per_tnm": 9.0,
+                            "observed_corridor_fuel_g_per_tnm": 6.0,
+                            "scenario_intensity_source": (
+                                "antaq_mrv_same_od_transport_work_weighted_median"
+                            ),
+                            "observed_corridor_intensity_source": (
+                                "eu_mrv_vessel_class_trimmed_mean_1pct"
+                            ),
                             "intensity_source_counts": {
                                 "eu_mrv_vessel_class_trimmed_mean_1pct": 1,
                             },
@@ -343,13 +388,28 @@ class MainDetailsTests(unittest.TestCase):
         self.assertEqual(rows[0]["Distance"], "100 nm")
         self.assertEqual(rows[0]["Distance source"], "Sea matrix")
         self.assertEqual(rows[0]["ANTAQ cargo aboard"], "100 t")
-        self.assertEqual(rows[0]["Fuel intensity"], "8.00 g/(t·nm)")
-        self.assertEqual(rows[0]["Intensity source"], "EU MRV latest record by IMO")
+        self.assertEqual(rows[0]["Applied OD intensity"], "9.00 g/(t·nm)")
+        self.assertEqual(
+            rows[0]["Selected-corridor observed intensity"],
+            "8.00 g/(t·nm)",
+        )
+        self.assertEqual(
+            rows[0]["Applied intensity basis"],
+            "ANTAQ + EU MRV same-OD transport-work-weighted median",
+        )
+        self.assertEqual(
+            rows[0]["Observed intensity basis"],
+            "EU MRV latest record by IMO",
+        )
         self.assertEqual(rows[0]["Observed fuel"], "80.0 kg")
         self.assertEqual(rows[0]["Scenario-attributed fuel"], "11.2 kg")
         self.assertEqual(
-            rows[1]["Intensity source"],
-            "EU MRV vessel-class 1% trimmed mean: 1",
+            rows[1]["Applied intensity basis"],
+            "ANTAQ + EU MRV same-OD transport-work-weighted median",
+        )
+        self.assertEqual(
+            rows[1]["Observed intensity basis"],
+            "EU MRV vessel-class 1% trimmed mean",
         )
 
     def test_selected_corridor_sublegs_table_preserves_legacy_empty_state(self) -> None:

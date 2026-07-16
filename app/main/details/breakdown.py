@@ -23,6 +23,12 @@ from app.main.utils.formatters import (
 )
 
 _INTENSITY_SOURCE_LABELS = {
+    "antaq_mrv_same_od_transport_work_weighted_median": (
+        "ANTAQ + EU MRV same-OD transport-work-weighted median"
+    ),
+    "antaq_mrv_same_od_unweighted_median_zero_transport_work": (
+        "ANTAQ + EU MRV same-OD unweighted median (all transport work zero)"
+    ),
     "eu_mrv_imo_latest": "EU MRV latest record by IMO",
     "mrv_imo": "EU MRV match by IMO",
     "imo": "IMO-specific intensity",
@@ -205,7 +211,10 @@ def _legs_table(results: Mapping[str, Any]) -> pd.DataFrame:
             "Distance": fmt_distance_km(sea.get("distance_km")),
             "Cost estimate": fmt_currency_brl(maritime.get("sailing_cost_brl")),
             "TTW CO2e": fmt_emissions_kg(maritime.get("sailing_co2e_kg")),
-            "Data source": clean_text(sea.get("fuel_g_per_tnm_source")) or "-",
+            "Data source": _intensity_source_label(
+                sea.get("fuel_g_per_tnm_source")
+            )
+            or "-",
         },
         {
             "Leg": "Port ops",
@@ -335,17 +344,28 @@ def _selected_corridor_sublegs_table(results: Mapping[str, Any]) -> pd.DataFrame
         else:
             distance = _format_optional_measure(distance_km, "km")
 
-        source_counts = _intensity_source_counts_text(
-            raw_subleg.get("intensity_source_counts")
-        )
-        source = source_counts or _intensity_source_label(
+        applied_source = _intensity_source_label(
             _first_available(
                 raw_subleg,
+                "scenario_intensity_source",
+                "pair_intensity_source",
+                "intensity_source",
+                "fuel_g_per_tnm_source",
+            )
+        )
+        observed_source = _intensity_source_label(
+            _first_available(
+                raw_subleg,
+                "observed_corridor_intensity_source",
                 "intensity_source",
                 "fuel_g_per_tnm_source",
                 "intensity_source_level",
             )
         )
+        source_counts = _intensity_source_counts_text(
+            raw_subleg.get("intensity_source_counts")
+        )
+        observed_source = observed_source or source_counts
 
         rows.append(
             {
@@ -370,15 +390,25 @@ def _selected_corridor_sublegs_table(results: Mapping[str, Any]) -> pd.DataFrame
                     ),
                     "t",
                 ),
-                "Fuel intensity": _format_optional_measure(
+                "Applied OD intensity": _format_optional_measure(
                     _first_available(
                         raw_subleg,
+                        "applied_pair_intensity_g_per_tnm",
+                        "scenario_fuel_g_per_tnm",
                         "fuel_g_per_tnm",
                         "weighted_fuel_intensity_g_per_tnm",
                     ),
                     "g/(t·nm)",
                 ),
-                "Intensity source": source or "Unavailable",
+                "Selected-corridor observed intensity": _format_optional_measure(
+                    _first_available(
+                        raw_subleg,
+                        "observed_corridor_fuel_g_per_tnm",
+                    ),
+                    "g/(t·nm)",
+                ),
+                "Applied intensity basis": applied_source or "Unavailable",
+                "Observed intensity basis": observed_source or "Unavailable",
                 "Observed fuel": _format_optional_measure(
                     _first_available(
                         raw_subleg,
@@ -414,10 +444,11 @@ def render_breakdown(results: Mapping[str, Any]) -> None:
     st.dataframe(_legs_table(results), hide_index=True, width="stretch")
     sublegs_table = _selected_corridor_sublegs_table(results)
     if not sublegs_table.empty:
-        st.markdown("**Selected observed maritime sublegs**")
+        st.markdown("**Selected maritime path sublegs**")
         st.caption(
-            "ANTAQ cargo aboard and observed fuel describe the selected historical voyage corridor. "
-            "Scenario-attributed fuel applies the modeled cargo to each selected subleg."
+            "The selected corridor supplies path and distance. ANTAQ cargo aboard, observed "
+            "intensity, and observed fuel remain diagnostics; scenario fuel applies the robust "
+            "same-OD intensity to each selected subleg distance."
         )
         st.dataframe(sublegs_table, hide_index=True, width="stretch")
     port_call_table = _port_call_breakdown_table(results)

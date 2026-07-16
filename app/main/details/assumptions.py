@@ -44,6 +44,12 @@ _CORRIDOR_SELECTION_LABELS = {
 }
 
 _INTENSITY_SOURCE_LABELS = {
+    "antaq_mrv_same_od_transport_work_weighted_median": (
+        "ANTAQ + EU MRV same-OD transport-work-weighted median"
+    ),
+    "antaq_mrv_same_od_unweighted_median_zero_transport_work": (
+        "ANTAQ + EU MRV same-OD unweighted median (all transport work zero)"
+    ),
     "eu_mrv_imo_latest": "EU MRV latest record by IMO",
     "mrv_imo": "EU MRV match by IMO",
     "imo": "IMO-specific intensity",
@@ -65,6 +71,13 @@ _INTENSITY_SOURCE_LABELS = {
     "type_fallback": "Ship-type fallback",
     "unavailable": "Unavailable",
     "unresolved": "Unresolved",
+}
+
+_PAIR_INTENSITY_METHOD_LABELS = {
+    "transport_work_weighted_median": "Transport-work-weighted median",
+    "unweighted_median_resolved_same_od_voyages_zero_transport_work": (
+        "Unweighted median because all resolved voyages had zero transport work"
+    ),
 }
 
 _DISTANCE_SOURCE_LABELS = {
@@ -212,8 +225,8 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
             selected_value = f"{selected_value}; record: {corridor_id}"
         rows.append(
             (
-                "Selected observed corridor",
-                "Observed ANTAQ port sequence selected for the maritime calculation.",
+                "Selected distance corridor",
+                "Observed ANTAQ port sequence used for path and distance; it does not restrict the same-OD intensity sample.",
                 selected_value,
             )
         )
@@ -231,7 +244,7 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
         rows.append(
             (
                 "Corridor selection criterion",
-                "Rule used to choose among the observed direct and multistop voyage corridors.",
+                "Rule used to choose path and distance among observed direct and multistop corridors.",
                 criterion,
             )
         )
@@ -320,7 +333,7 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
         rows.append(
             (
                 "Maritime intensity coverage",
-                "Voyage coverage by exact EU MRV IMO match, type/class mean fallback, or unresolved intensity.",
+                "Same-OD voyage coverage by exact EU MRV IMO match, robust type/class fallback, or unresolved intensity.",
                 "; ".join(intensity_parts),
             )
         )
@@ -338,6 +351,137 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
                 "Maritime intensity sources",
                 "Count of candidate voyages across all evaluated corridors by the intensity source actually used.",
                 source_counts_text,
+            )
+        )
+
+    pair_count_fields = (
+        (
+            "candidate voyages",
+            ("pair_intensity_candidate_voyage_count",),
+            ("sea_pair_intensity_candidate_voyage_count",),
+        ),
+        (
+            "resolved voyages",
+            ("pair_intensity_resolved_voyage_count",),
+            ("sea_pair_intensity_resolved_voyage_count",),
+        ),
+        (
+            "effective voyages",
+            ("pair_intensity_effective_voyage_count",),
+            ("sea_pair_intensity_effective_voyage_count",),
+        ),
+        (
+            "positive-work voyages",
+            ("pair_intensity_positive_weight_voyage_count",),
+            ("sea_pair_intensity_positive_weight_voyage_count",),
+        ),
+        (
+            "zero-work voyages",
+            ("pair_intensity_zero_weight_voyage_count",),
+            ("sea_pair_intensity_zero_weight_voyage_count",),
+        ),
+        (
+            "unresolved voyages",
+            ("pair_intensity_unresolved_voyage_count",),
+            ("sea_pair_intensity_unresolved_voyage_count",),
+        ),
+    )
+    pair_count_parts: list[str] = []
+    for label, sea_keys, input_keys in pair_count_fields:
+        count = _count_or_none(_first_value(sea, sea_keys, inputs, input_keys))
+        if count is not None:
+            pair_count_parts.append(f"{label}: {count}")
+    if pair_count_parts:
+        rows.append(
+            (
+                "OD intensity estimator coverage",
+                "Voyage observations available to and effectively used by the "
+                "same-OD estimator.",
+                "; ".join(pair_count_parts),
+            )
+        )
+
+    pair_source_counts = _first_value(
+        sea,
+        (
+            "pair_intensity_effective_source_counts",
+            "pair_intensity_source_counts",
+        ),
+        inputs,
+        (
+            "sea_pair_intensity_effective_source_counts",
+            "sea_pair_intensity_source_counts",
+        ),
+    )
+    pair_source_counts_text = _intensity_source_counts_text(pair_source_counts)
+    if pair_source_counts_text:
+        rows.append(
+            (
+                "OD intensity estimator sources",
+                "Intensity provenance of the voyage observations effectively "
+                "used by the same-OD estimator.",
+                pair_source_counts_text,
+            )
+        )
+
+    pair_intensity_raw = _first_value(
+        sea,
+        ("pair_intensity_g_per_tnm",),
+        inputs,
+        ("sea_pair_intensity_g_per_tnm",),
+    )
+    try:
+        pair_intensity = float(pair_intensity_raw)
+    except (TypeError, ValueError):
+        pair_intensity = None
+    if pair_intensity is not None and pair_intensity > 0.0:
+        rows.append(
+            (
+                "OD representative maritime intensity",
+                "Intensity applied to the selected path, estimated from all "
+                "resolved same-OD voyage observations.",
+                f"{pair_intensity:.6f} g/(t·nm)",
+            )
+        )
+
+    pair_method = _readable_code(
+        _first_value(
+            sea,
+            ("pair_intensity_method",),
+            inputs,
+            ("sea_pair_intensity_method",),
+        ),
+        _PAIR_INTENSITY_METHOD_LABELS,
+    )
+    if pair_method:
+        pair_weight = _clean_text(
+            _first_value(
+                sea,
+                ("pair_intensity_weight",),
+                inputs,
+                ("sea_pair_intensity_weight",),
+            )
+        )
+        value = pair_method
+        if pair_weight:
+            value = f"{value}; weight: {pair_weight.replace('_', ' ')}"
+        pair_source = _readable_code(
+            _first_value(
+                sea,
+                ("pair_intensity_source",),
+                inputs,
+                ("sea_pair_intensity_source",),
+            ),
+            _INTENSITY_SOURCE_LABELS,
+        )
+        if pair_source:
+            value = f"{value}; source: {pair_source}"
+        rows.append(
+            (
+                "OD intensity aggregation",
+                "Aggregation rule used across all eligible voyage observations "
+                "for the same origin and destination.",
+                value,
             )
         )
 

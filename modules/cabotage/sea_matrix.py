@@ -16,6 +16,7 @@ import heapq
 import math
 import statistics
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -26,6 +27,7 @@ __all__ = ["OBSERVED_VOYAGE_CORRIDORS_MODE", "SeaMatrix"]
 
 _log = get_logger(__name__)
 OBSERVED_VOYAGE_CORRIDORS_MODE = "observed_voyage_corridors"
+MARITIME_INTENSITY_SCHEMA_VERSION = 3
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -78,6 +80,19 @@ def _clean_directional_payload(payload: Any) -> Dict[str, Dict[str, Dict[str, An
 
 def _clean_route_observation_mode(value: Any) -> str:
     return str(value or "").strip().casefold()
+
+
+def _parse_generated_at(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def _first_value(payload: Dict[str, Any], *keys: str) -> Any:
@@ -219,6 +234,7 @@ class SeaMatrix:
     matrix: Dict[str, Dict[str, float]]
     coastline_factor: float = 1.0
     directional_efficiency: Dict[str, Dict[str, Dict[str, Any]]] | None = None
+    directional_meta: Dict[str, Any] | None = None
     route_observation_mode: str = ""
 
     _canon: Dict[str, str] = None  # type: ignore[assignment]
@@ -236,6 +252,7 @@ class SeaMatrix:
         self.matrix = cleaned_matrix
         self.coastline_factor = float(self.coastline_factor)
         self.directional_efficiency = _clean_directional_payload(self.directional_efficiency)
+        self.directional_meta = dict(self.directional_meta or {})
         self.route_observation_mode = _clean_route_observation_mode(self.route_observation_mode)
 
         self._canon = {}
@@ -327,6 +344,11 @@ class SeaMatrix:
             matrix=cleaned_matrix,
             coastline_factor=coastline_factor,
             directional_efficiency=_clean_directional_payload(directional),
+            directional_meta=(
+                dict(directional_meta)
+                if isinstance(directional_meta, dict)
+                else {}
+            ),
             route_observation_mode=route_observation_mode,
         )
 
@@ -347,21 +369,34 @@ class SeaMatrix:
             )
             return cls._from_resolved_json_path(local_path)
 
-        if (
-            resolved.resolve() != local_path
-            and local_path.is_file()
-            and sea_matrix.route_observation_mode
-            != OBSERVED_VOYAGE_CORRIDORS_MODE
-        ):
+        if resolved.resolve() != local_path and local_path.is_file():
             local_matrix = cls._from_resolved_json_path(local_path)
+            local_contract = local_matrix._has_same_od_pair_intensity_contract()
+            resolved_contract = sea_matrix._has_same_od_pair_intensity_contract()
+            local_generated_at = local_matrix._pair_intensity_generated_at()
+            resolved_generated_at = sea_matrix._pair_intensity_generated_at()
+            local_contract_is_newer = bool(
+                local_contract
+                and resolved_contract
+                and local_generated_at is not None
+                and resolved_generated_at is not None
+                and local_generated_at > resolved_generated_at
+            )
             if (
                 local_matrix.route_observation_mode
                 == OBSERVED_VOYAGE_CORRIDORS_MODE
+                and (
+                    sea_matrix.route_observation_mode
+                    != OBSERVED_VOYAGE_CORRIDORS_MODE
+                    or (local_contract and not resolved_contract)
+                    or local_contract_is_newer
+                )
             ):
                 _log.warning(
                     (
-                        "Resolved sea matrix asset=%s uses a legacy route schema; "
-                        "using tracked observed-voyage corridor asset=%s"
+                        "Resolved sea matrix asset=%s uses an older or incomplete "
+                        "maritime intensity contract; using tracked same-OD "
+                        "pair-intensity asset=%s"
                     ),
                     resolved,
                     local_path,
@@ -391,6 +426,45 @@ class SeaMatrix:
 
     def labels(self) -> Tuple[str, ...]:
         return tuple(sorted(self._canon.values()))
+
+    def _has_same_od_pair_intensity_contract(self) -> bool:
+        if self.route_observation_mode != OBSERVED_VOYAGE_CORRIDORS_MODE:
+            return False
+        try:
+            schema_version = int(
+                self.directional_meta.get("maritime_intensity_schema_version")
+                or 0
+            )
+        except (TypeError, ValueError):
+            return False
+        if schema_version < MARITIME_INTENSITY_SCHEMA_VERSION:
+            return False
+        if _parse_generated_at(self.directional_meta.get("generated_at")) is None:
+            return False
+        directional_stats = [
+            stats
+            for destinations in self.directional_efficiency.values()
+            for stats in destinations.values()
+            if isinstance(stats, dict)
+        ]
+        required_fields = (
+            "pair_intensity_g_per_tnm",
+            "pair_intensity_method",
+            "pair_intensity_scope",
+            "pair_intensity_source",
+            "pair_intensity_candidate_voyage_count",
+        )
+        return bool(directional_stats) and all(
+            _clean_route_observation_mode(stats.get("route_observation_mode"))
+            == OBSERVED_VOYAGE_CORRIDORS_MODE
+            and all(field in stats for field in required_fields)
+            for stats in directional_stats
+        )
+
+    def _pair_intensity_generated_at(self) -> datetime | None:
+        if not self._has_same_od_pair_intensity_contract():
+            return None
+        return _parse_generated_at(self.directional_meta.get("generated_at"))
 
     def _resolve_label(self, label: Optional[str]) -> Optional[str]:
         if label is None:
@@ -646,7 +720,9 @@ class SeaMatrix:
         stats = self.best_directional_stats(a_label, b_label)
         if not stats:
             return None
-        value = stats.get("fuel_g_per_tnm_weighted_mean")
+        value = stats.get("pair_intensity_g_per_tnm")
+        if _positive_float(value) is None:
+            value = stats.get("fuel_g_per_tnm_weighted_mean")
         try:
             parsed = float(value)
         except (TypeError, ValueError):

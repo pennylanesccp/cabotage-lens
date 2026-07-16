@@ -97,17 +97,32 @@ The preferred runtime metric for cargo allocation is:
 
 - `fuel_g_per_tnm` (`g/(t*nm)`) from MRV transport-work intensity
 
-For a selected observed voyage corridor, runtime sailing fuel uses the sum of
-its sublegs:
+For a selected observed voyage corridor, runtime sailing fuel uses the
+same-OD transport-work-weighted median and the sum of the selected path's
+subleg distances:
 
-- `fuel_kg_sailing = sum(subleg_fuel_g_per_tnm * cargo_t * subleg_distance_nm) / 1000`
+- `fuel_kg_sailing = sum(pair_intensity_g_per_tnm * cargo_t * subleg_distance_nm) / 1000`
 
-The offline corridor calculation separately reconstructs the observed voyage
-fuel by summing transport work over the actual sublegs for each ordered
+The offline corridor calculation separately derives voyage fuel for observed
+activity by summing transport work over the actual sublegs for each ordered
 origin/destination pair represented in a voyage:
 
 - `observed_transport_work_tnm = sum(cargo_onboard_t * subleg_distance_nm)`
 - `observed_fuel_kg = sum(intensity_g_per_tnm * cargo_onboard_t * subleg_distance_nm) / 1000`
+
+For each ordered origin/destination pair, every resolved voyage observation
+from every complete observed corridor contributes directly to the pair
+estimator. It is not a median of corridor aggregates. With voyage intensity
+`I_v` and full same-OD transport work `W_v`, the applied value is the lower
+weighted median:
+
+- `pair_intensity = min(x: sum(W_v for I_v <= x) >= 0.5 * sum(W_v))`
+
+Only positive `W_v` values influence this weighted statistic. If all resolved
+same-OD voyages have zero transport work, the system uses an explicitly labeled
+ordinary median so the scenario does not turn a `0/0` diagnostic into missing
+intensity. The rule uses no route-target value or manually chosen closeness
+band.
 
 Only complete corridors observed within one ANTAQ voyage are eligible. A
 corridor is never synthesized by joining port-pair legs from different voyages.
@@ -115,9 +130,10 @@ Each voyage contributes once per ordered origin/destination pair. If repeated
 calls create multiple eligible slices inside the same voyage, direct is
 preferred and otherwise the shortest complete slice is retained, matching the
 model's corridor criterion.
-All observed alternatives are evaluated; the current rule prefers a direct
-observed corridor and otherwise selects the complete corridor with the shortest
-distance.
+All observed alternatives are evaluated; the current rule prefers a usable
+direct observed corridor and otherwise selects the complete corridor with the shortest
+distance. That selection controls path and distance only. It does not restrict
+the voyage population used by the same-OD pair intensity.
 
 Terminal aliases in the ANTAQ tables are resolved to canonical port complexes.
 Adjacent calls that resolve to the same canonical port are collapsed after
@@ -130,22 +146,40 @@ shortest-distance selection.
 
 The normalized stop sequence is limited to ANTAQ calls represented in the
 containerized-cargo pipeline; physical calls with no observed container
-movement may be absent. If all observed transport work for a resolved subleg or
-corridor is zero, observed fuel stays zero and the resolved vessel intensities
-are retained as an explicitly labeled arithmetic mean. This avoids losing a
-usable scenario intensity through a `0/0` division while preserving the zero
-observed activity.
+movement may be absent. If all derived transport work for a resolved subleg or
+corridor is zero, the diagnostic fuel attributed to the observed activity stays
+zero and corridor diagnostics retain their explicitly labeled arithmetic
+behavior. At pair level, zero-work observations
+are excluded whenever positive work exists; the all-zero case uses the labeled
+ordinary-median fallback above.
 
 For routes backed by directional ANTAQ+MRV observations, the single-evaluation
 pipeline JSON exposes the selected sublegs under
 `results.multimodal.sea.selected_corridor_sublegs` and keeps the compatible
-`observed_port_pair_legs` view. Each item reports observed cargo aboard,
-distance, weighted fuel intensity, intensity provenance, observed fuel, and the
-fuel attributed to the scenario cargo.
+`observed_port_pair_legs` view. Each selected subleg separates the historical
+corridor intensity (`observed_corridor_fuel_g_per_tnm`) from the pair value
+actually applied to scenario cargo (`scenario_fuel_g_per_tnm`). Pair-level
+fields record the estimator, scope, transport-work total, effective voyage
+count, source counts, and the selected corridor's original intensity.
+
+The explicit `pair_intensity_*` fields are canonical for scenario intensity.
+The legacy `fuel_g_per_tnm_weighted_mean` field keeps its original selected-
+corridor weighted-mean meaning, and evaluated sublegs keep their historical
+`fuel_g_per_tnm`; scenario values use the separate `scenario_fuel_g_per_tnm`
+field. The directional metadata declares `maritime_intensity_schema_version=3`
+and a generation timestamp so a complete newer tracked contract can replace an
+older or partially upgraded cache.
+
+The usual pair source is
+`antaq_mrv_same_od_transport_work_weighted_median`. In the all-zero-work case,
+the source changes explicitly to
+`antaq_mrv_same_od_unweighted_median_zero_transport_work`; the validator and
+runtime accept zero transport work only for that labeled method.
 
 `attributed_cargo_t` is the scenario input (14 t for a 14 t evaluation), not a
 hard-coded constant. It must not be confused with the reconstructed ANTAQ cargo
-aboard used to calculate the observed voyage transport work and fuel.
+aboard used to derive transport work and fuel attributed to the observed voyage
+activity.
 
 Voyage intensity resolution is auditable and ordered as follows:
 
@@ -160,11 +194,12 @@ Voyage intensity resolution is auditable and ordered as follows:
 Exact IMO matches and class/type fallbacks remain separate in coverage and
 source-count indicators. Exact IMO values are preserved without clipping. The
 outlier rule applies only to fallback aggregation: sort the positive latest-IMO
-values and exclude `floor(0.01 * n)` observations from each tail. Provenance
-stores the raw and retained sample sizes, excluded count, retained bounds, raw
-mean, raw median, and statistic actually used. This prevents extreme MRV tail
-values from dominating a fallback without rewriting an observed ship-level
-record.
+values and exclude `floor(0.01 * n)` observations from each tail. Ship-type
+fallback provenance stores the raw and retained sample sizes, excluded count,
+retained bounds, raw mean, raw median, and statistic actually used. Class
+fallback provenance retains the statistic and sample metadata available in its
+tracked artifact. This prevents extreme MRV tail values from dominating a
+ship-type fallback without rewriting an exact ship-level record.
 
 In the current `Container ship` fallback sample, the rule starts from 243
 latest positive IMO values, removes two observations from each tail, and keeps
@@ -174,7 +209,23 @@ untrimmed arithmetic mean of `21.661852 g/(t*nm)` and the raw median of
 artifact and is applied independently of any target route result; it was not
 calibrated to reproduce the former Santos--Suape--Manaus calculation.
 
-Fallback (only when `fuel_g_per_tnm` is missing) scales vessel-level fuel by cargo share based on class median `size_proxy_t`.
+For Santos--Manaus, the current artifact contains 89 positive-work voyage--OD
+observations across 22 corridors. Their transport-work-weighted median is
+`9.322050 g/(t*nm)`: 40 observations use an exact IMO match and 49 use the
+ship-type fallback. The same value is present on the single direct observation,
+but the pair result is controlled by the 49 identical fallback observations
+that carry 59.54% of transport work and therefore cross the weighted 50th
+percentile. The computational scope covers all 89 same-OD observations, but
+this does not make them 89 independent measured fuel intensities. The value
+remains 17.6% above the former
+`7.926784 g/(t*nm)` calculation; that older value is a comparison reference,
+not a calibration target. The unrobust transport-work-weighted arithmetic mean
+of all 89 observations would be `25.243618 g/(t*nm)` because of high exact-IMO
+values, which is why it is retained only as a diagnostic.
+
+A separate runtime contingency, used only when no transport-work intensity is
+available, scales vessel-level fuel by cargo share based on class median
+`size_proxy_t`. It is distinct from the class/type MRV fallback above.
 
 ## Filtering
 

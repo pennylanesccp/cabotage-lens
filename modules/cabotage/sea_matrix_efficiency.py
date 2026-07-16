@@ -26,13 +26,24 @@ DEFAULT_CLASS_EFFICIENCY_JSON_PATH = Path(
     "data/processed/cabotage_data/container_ship_efficiency_classes.json"
 )
 DEFAULT_SHIP_TYPE = "Container ship"
-PARSER_VERSION = "sea_matrix_efficiency_v2"
+PARSER_VERSION = "sea_matrix_efficiency_v3"
+MARITIME_INTENSITY_SCHEMA_VERSION = 3
 _KM_PER_NAUTICAL_MILE = 1.852
 DEPLOYMENT_REQUIRED_ROUTE = ("Porto de Santos", "Porto de Manaus")
 ROUTE_OBSERVATION_MODE = "observed_voyage_corridors"
 CORRIDOR_SELECTION_CRITERION = "direct_first_then_shortest_distance_km"
 FALLBACK_TRIM_FRACTION_EACH_TAIL = 0.01
 FALLBACK_OUTLIER_RULE = "symmetric_trim_1pct_each_tail_floor_count"
+PAIR_INTENSITY_METHOD = "transport_work_weighted_median"
+PAIR_INTENSITY_SCOPE = "all_eligible_same_od_voyage_observations_across_corridors"
+PAIR_INTENSITY_WEIGHT = "observed_transport_work_tnm"
+PAIR_INTENSITY_SOURCE = "antaq_mrv_same_od_transport_work_weighted_median"
+PAIR_INTENSITY_ZERO_WORK_SOURCE = (
+    "antaq_mrv_same_od_unweighted_median_zero_transport_work"
+)
+PAIR_INTENSITY_UNAVAILABLE_SOURCE = (
+    "antaq_mrv_same_od_representative_intensity_unavailable"
+)
 
 
 @dataclass(frozen=True)
@@ -175,14 +186,28 @@ def enrich_sea_matrix_with_efficiency(
     payload["voyage_intensity_provenance"] = voyage_intensity_provenance
     payload["voyage_fuel_g_per_tnm_directional_meta"] = {
         "parser_version": PARSER_VERSION,
+        "maritime_intensity_schema_version": MARITIME_INTENSITY_SCHEMA_VERSION,
         "generated_at": datetime.now(UTC).isoformat(),
         "source": (
             "ANTAQ observed same-voyage corridors + EU MRV latest IMO intensity with "
-            "robust vessel-class and ship-type fallbacks"
+            "robust vessel-class and ship-type fallbacks; same-OD transport-work-"
+            "weighted median applied to selected-corridor geometry"
         ),
         "route_observation_mode": ROUTE_OBSERVATION_MODE,
         "corridor_selection_criterion": CORRIDOR_SELECTION_CRITERION,
         "weighting": "tonne_nm",
+        "pair_intensity_method": PAIR_INTENSITY_METHOD,
+        "pair_intensity_scope": PAIR_INTENSITY_SCOPE,
+        "pair_intensity_weight": PAIR_INTENSITY_WEIGHT,
+        "pair_intensity_source": PAIR_INTENSITY_SOURCE,
+        "pair_intensity_zero_weight_source": PAIR_INTENSITY_ZERO_WORK_SOURCE,
+        "pair_intensity_tie_rule": (
+            "lower_inverse_cdf_first_intensity_reaching_50pct_cumulative_weight"
+        ),
+        "pair_intensity_zero_weight_rule": (
+            "exclude_zero_weight_when_positive_transport_work_exists; otherwise use "
+            "unweighted_median_of_resolved_same_od_voyages"
+        ),
         "segment_cargo_rule": (
             "minimum nonnegative onboard reconstruction: initial onboard equals max(0, "
             "-minimum cumulative net cargo), then each stop net is applied to the following leg"
@@ -317,22 +342,33 @@ def validate_enriched_sea_matrix_payload(
         stats.get("route_observation_mode") or meta_route_mode
     )
     if route_observation_mode == ROUTE_OBSERVATION_MODE:
-        required_positive_fields = (
+        required_positive_fields = [
             "segment_count",
             "resolved_segment_count",
             "resolved_voyage_count",
             "intensity_resolution_rate",
-        )
+            "pair_intensity_g_per_tnm",
+        ]
+        if (
+            str(stats.get("pair_intensity_method") or "").strip()
+            == PAIR_INTENSITY_METHOD
+        ):
+            required_positive_fields.extend(
+                (
+                    "pair_intensity_positive_weight_voyage_count",
+                    "pair_intensity_transport_work_tnm",
+                )
+            )
         coverage_label = "resolved-intensity"
     else:
-        required_positive_fields = (
+        required_positive_fields = [
             "segment_count",
             "matched_segment_count",
             "unique_imo_count",
             "matched_imo_count",
             "match_rate_segments",
             "match_rate_tonne_nm",
-        )
+        ]
         coverage_label = "segment/IMO"
     missing_coverage = [
         field
@@ -351,6 +387,23 @@ def validate_enriched_sea_matrix_payload(
         "route_observation_mode": route_observation_mode,
         "distance_km": stats.get("distance_km"),
         "fuel_g_per_tnm_weighted_mean": stats.get("fuel_g_per_tnm_weighted_mean"),
+        "pair_intensity_g_per_tnm": stats.get("pair_intensity_g_per_tnm"),
+        "pair_intensity_method": stats.get("pair_intensity_method"),
+        "pair_intensity_scope": stats.get("pair_intensity_scope"),
+        "pair_intensity_weight": stats.get("pair_intensity_weight"),
+        "pair_intensity_source": stats.get("pair_intensity_source"),
+        "pair_intensity_candidate_voyage_count": stats.get(
+            "pair_intensity_candidate_voyage_count"
+        ),
+        "pair_intensity_positive_weight_voyage_count": stats.get(
+            "pair_intensity_positive_weight_voyage_count"
+        ),
+        "pair_intensity_transport_work_tnm": stats.get(
+            "pair_intensity_transport_work_tnm"
+        ),
+        "selected_corridor_fuel_g_per_tnm_weighted_mean": stats.get(
+            "selected_corridor_fuel_g_per_tnm_weighted_mean"
+        ),
         "segment_count": stats.get("segment_count"),
         "resolved_segment_count": stats.get("resolved_segment_count"),
         "resolved_voyage_count": stats.get("resolved_voyage_count"),
@@ -1108,10 +1161,15 @@ def _aggregate_subroute_stats(
     subroutes: list[VoyageSubroute],
 ) -> dict[str, dict[str, dict[str, Any]]]:
     grouped: dict[tuple[str, str, tuple[str, ...]], list[VoyageSubroute]] = {}
+    pair_subroutes: dict[tuple[str, str], list[VoyageSubroute]] = {}
     for subroute in subroutes:
-        key = (
+        pair_key = (
             subroute.corridor_port_path[0],
             subroute.corridor_port_path[-1],
+        )
+        pair_subroutes.setdefault(pair_key, []).append(subroute)
+        key = (
+            *pair_key,
             subroute.corridor_port_path,
         )
         grouped.setdefault(key, []).append(subroute)
@@ -1159,6 +1217,12 @@ def _aggregate_subroute_stats(
             for key, value in selected.items()
             if key not in {"corridor_sublegs", "candidate_voyage_ids"}
         }
+        stats["selected_corridor_fuel_g_per_tnm_weighted_mean"] = selected.get(
+            "fuel_g_per_tnm_weighted_mean"
+        )
+        stats["selected_corridor_intensity_weighting"] = selected.get(
+            "intensity_weighting"
+        )
         stats["route_observation_mode"] = ROUTE_OBSERVATION_MODE
         stats["selection_criterion"] = CORRIDOR_SELECTION_CRITERION
         stats["selected_corridor_id"] = selected["corridor_id"]
@@ -1231,8 +1295,125 @@ def _aggregate_subroute_stats(
             sum(float(item.get("observed_fuel_kg") or 0.0) for item in ordered_options),
             6,
         )
+        pair_intensity = _pair_representative_intensity(
+            pair_subroutes[(origin, destination)]
+        )
+        stats.update(pair_intensity)
+        representative = _float_or_none(
+            pair_intensity.get("pair_intensity_g_per_tnm")
+        )
+        if representative is not None and representative > 0.0:
+            # Keep the legacy weighted-mean fields scoped to the selected
+            # corridor. New consumers must use the explicit pair fields.
+            stats["fuel_g_per_tnm_weighted_mean"] = selected.get(
+                "fuel_g_per_tnm_weighted_mean"
+            )
+            stats["intensity_weighting"] = selected.get(
+                "intensity_weighting"
+            )
+            stats["fuel_g_per_tnm_source"] = selected.get(
+                "fuel_g_per_tnm_source"
+            ) or "selected_observed_voyage_corridor"
         out.setdefault(origin, {})[destination] = stats
     return out
+
+
+def _pair_representative_intensity(
+    subroutes: list[VoyageSubroute],
+) -> dict[str, Any]:
+    """Return one robust intensity for every eligible voyage of an OD pair."""
+    resolved: list[tuple[float, float, VoyageSubroute]] = []
+    for subroute in subroutes:
+        intensity = _float_or_none(
+            subroute.intensity_provenance.get("intensity_g_per_tnm")
+        )
+        if intensity is None or intensity <= 0.0:
+            continue
+        resolved.append((float(intensity), subroute.transport_work_tnm, subroute))
+
+    positive_weight = [item for item in resolved if item[1] > 0.0]
+    zero_weight = [item for item in resolved if item[1] <= 0.0]
+    effective_source_counts: Counter[str] = Counter()
+    representative: float | None = None
+    method = PAIR_INTENSITY_METHOD
+    source = PAIR_INTENSITY_SOURCE
+    total_weight = sum(item[1] for item in positive_weight)
+
+    if positive_weight:
+        ordered = sorted(
+            positive_weight,
+            key=lambda item: (
+                item[0],
+                item[2].voyage_id,
+                item[2].origin_sequence,
+                item[2].destination_sequence,
+                item[2].corridor_port_path,
+            ),
+        )
+        threshold = total_weight / 2.0
+        cumulative = 0.0
+        for intensity, weight, subroute in ordered:
+            cumulative += weight
+            effective_source_counts.update(
+                [
+                    str(
+                        subroute.intensity_provenance.get("intensity_source")
+                        or "unavailable"
+                    )
+                ]
+            )
+            if representative is None and cumulative >= threshold:
+                # Deterministic lower inverse-CDF convention: the first
+                # observed intensity whose cumulative weight reaches 50%.
+                representative = intensity
+        weighted_mean = sum(
+            intensity * weight for intensity, weight, _ in positive_weight
+        ) / total_weight
+    elif resolved:
+        representative = statistics.median(item[0] for item in resolved)
+        weighted_mean = None
+        method = "unweighted_median_resolved_same_od_voyages_zero_transport_work"
+        source = PAIR_INTENSITY_ZERO_WORK_SOURCE
+        effective_source_counts.update(
+            str(item[2].intensity_provenance.get("intensity_source") or "unavailable")
+            for item in resolved
+        )
+    else:
+        weighted_mean = None
+        method = "unavailable_no_resolved_same_od_voyage_intensity"
+        source = PAIR_INTENSITY_UNAVAILABLE_SOURCE
+
+    values = [item[0] for item in resolved]
+    return {
+        "pair_intensity_g_per_tnm": (
+            round(representative, 6) if representative is not None else None
+        ),
+        "pair_intensity_method": method,
+        "pair_intensity_scope": PAIR_INTENSITY_SCOPE,
+        "pair_intensity_weight": PAIR_INTENSITY_WEIGHT,
+        "pair_intensity_source": source,
+        "pair_intensity_candidate_voyage_count": len(subroutes),
+        "pair_intensity_resolved_voyage_count": len(resolved),
+        "pair_intensity_positive_weight_voyage_count": len(positive_weight),
+        "pair_intensity_zero_weight_voyage_count": len(zero_weight),
+        "pair_intensity_unresolved_voyage_count": len(subroutes) - len(resolved),
+        "pair_intensity_transport_work_tnm": round(total_weight, 3),
+        "pair_intensity_source_counts": dict(
+            sorted(effective_source_counts.items())
+        ),
+        "pair_intensity_effective_voyage_count": (
+            len(positive_weight) if positive_weight else len(resolved)
+        ),
+        "pair_intensity_effective_source_counts": dict(
+            sorted(effective_source_counts.items())
+        ),
+        "pair_intensity_unweighted_median_g_per_tnm": (
+            round(statistics.median(values), 6) if values else None
+        ),
+        "pair_intensity_transport_work_weighted_mean_g_per_tnm": (
+            round(weighted_mean, 6) if weighted_mean is not None else None
+        ),
+    }
 
 
 def _aggregate_corridor_option(
