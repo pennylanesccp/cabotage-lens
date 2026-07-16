@@ -189,7 +189,11 @@ def _canonical_corridor_subleg(payload: Dict[str, Any]) -> Dict[str, Any]:
             levels = {
                 "eu_mrv_imo_latest": "imo",
                 "eu_mrv_vessel_class_mean": "vessel_class",
+                "eu_mrv_vessel_class_trimmed_mean_1pct": "vessel_class",
+                "eu_mrv_vessel_class_median": "vessel_class",
                 "eu_mrv_ship_type_mean": "ship_type",
+                "eu_mrv_ship_type_trimmed_mean_1pct": "ship_type",
+                "eu_mrv_ship_type_median": "ship_type",
                 "eu_mrv_ship_type_mean_default_container_ship": "ship_type",
             }
             resolved_levels = {

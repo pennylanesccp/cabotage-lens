@@ -9,6 +9,7 @@ from modules.cabotage.sea_matrix_efficiency import (
     CORRIDOR_SELECTION_CRITERION,
     ROUTE_OBSERVATION_MODE,
     _build_port_lookup,
+    _robust_fallback_statistic,
     _resolve_matrix_port_name,
     enrich_sea_matrix_with_efficiency,
     validate_enriched_sea_matrix_payload,
@@ -142,7 +143,12 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                 ships=[self._ship("1111111", [self._record(2024, 10.0)])],
                 class_payload={
                     "container_feeder": {
-                        "fuel_g_per_tnm": {"mean": 6.0, "count": 10},
+                        "fuel_g_per_tnm": {
+                            "mean": 6.5,
+                            "median": 6.1,
+                            "trimmed_mean_1pct": 6.0,
+                            "count": 10,
+                        },
                     }
                 },
             )
@@ -154,7 +160,35 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertAlmostEqual(stats["fuel_g_per_tnm_weighted_mean"], 8.666667)
         self.assertEqual(
             stats["intensity_source_counts"],
-            {"eu_mrv_imo_latest": 1, "eu_mrv_vessel_class_mean": 1},
+            {
+                "eu_mrv_imo_latest": 1,
+                "eu_mrv_vessel_class_trimmed_mean_1pct": 1,
+            },
+        )
+
+    def test_robust_fallback_trims_one_percent_per_tail(self) -> None:
+        values = [10.0] * 196 + [0.1, 0.2, 1000.0, 2000.0]
+
+        robust = _robust_fallback_statistic(values)
+
+        self.assertEqual(robust["intensity_g_per_tnm"], 10.0)
+        self.assertEqual(robust["trim_count_each_tail"], 2)
+        self.assertEqual(robust["excluded_sample_size"], 4)
+        self.assertEqual(robust["retained_sample_size"], 196)
+        self.assertEqual(
+            robust["outlier_rule"],
+            "symmetric_trim_1pct_each_tail_floor_count",
+        )
+        self.assertGreater(robust["raw_arithmetic_mean_g_per_tnm"], 20.0)
+
+    def test_robust_fallback_uses_median_for_small_samples(self) -> None:
+        robust = _robust_fallback_statistic([4.0, 10.0, 12.0])
+
+        self.assertEqual(robust["intensity_g_per_tnm"], 10.0)
+        self.assertEqual(robust["trim_count_each_tail"], 0)
+        self.assertEqual(
+            robust["statistic"],
+            "median_of_latest_positive_per_imo_small_sample",
         )
 
     def test_negative_prefix_reconstructs_initial_cargo_and_keeps_zero_leg(self) -> None:
@@ -506,7 +540,12 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                 ships=ships,
                 class_payload={
                     "container_feeder": {
-                        "fuel_g_per_tnm": {"mean": 6.5, "count": 20},
+                        "fuel_g_per_tnm": {
+                            "mean": 6.5,
+                            "median": 6.3,
+                            "trimmed_mean_1pct": 6.2,
+                            "count": 20,
+                        },
                         "sample_size": 20,
                     }
                 },
@@ -515,22 +554,30 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         provenance = payload["voyage_intensity_provenance"]
         self.assertEqual(provenance["v-imo"]["intensity_g_per_tnm"], 4.0)
         self.assertEqual(provenance["v-imo"]["intensity_source_level"], "imo")
-        self.assertEqual(provenance["v-class"]["intensity_g_per_tnm"], 6.5)
+        self.assertEqual(provenance["v-class"]["intensity_g_per_tnm"], 6.2)
         self.assertEqual(
             provenance["v-class"]["intensity_source"],
-            "eu_mrv_vessel_class_mean",
+            "eu_mrv_vessel_class_trimmed_mean_1pct",
+        )
+        self.assertEqual(
+            provenance["v-class"]["outlier_rule"],
+            "class_artifact_excludes_below_p1_and_above_p99",
         )
         self.assertEqual(provenance["v-class"]["source_file"], "classes.json")
 
-        expected_type_mean = (4.0 + 10.0 + 12.0) / 3.0
-        self.assertAlmostEqual(
-            provenance["v-type"]["intensity_g_per_tnm"], expected_type_mean
+        expected_type_median = 10.0
+        self.assertEqual(
+            provenance["v-type"]["intensity_g_per_tnm"], expected_type_median
         )
         self.assertEqual(provenance["v-type"]["sample_size"], 3)
+        self.assertEqual(
+            provenance["v-type"]["intensity_source"],
+            "eu_mrv_ship_type_median",
+        )
         self.assertFalse(provenance["v-type"]["used_default_ship_type"])
-        self.assertAlmostEqual(
+        self.assertEqual(
             provenance["v-default-type"]["intensity_g_per_tnm"],
-            expected_type_mean,
+            expected_type_median,
         )
         self.assertTrue(provenance["v-default-type"]["used_default_ship_type"])
 
@@ -544,7 +591,8 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertEqual(class_stats["class_fallback_voyage_count"], 1)
         self.assertEqual(type_stats["type_fallback_voyage_count"], 1)
         self.assertEqual(
-            type_stats["intensity_source_counts"], {"eu_mrv_ship_type_mean": 1}
+            type_stats["intensity_source_counts"],
+            {"eu_mrv_ship_type_median": 1},
         )
         validation = validate_enriched_sea_matrix_payload(
             payload,
@@ -646,7 +694,12 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                 class_payload
                 or {
                     "container_feeder": {
-                        "fuel_g_per_tnm": {"mean": 6.0, "count": 10},
+                        "fuel_g_per_tnm": {
+                            "mean": 6.5,
+                            "median": 6.1,
+                            "trimmed_mean_1pct": 6.0,
+                            "count": 10,
+                        },
                         "sample_size": 10,
                     }
                 }

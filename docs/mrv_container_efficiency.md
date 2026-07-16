@@ -150,13 +150,29 @@ aboard used to calculate the observed voyage transport work and fuel.
 Voyage intensity resolution is auditable and ordered as follows:
 
 1. latest positive EU MRV transport-work intensity matched by IMO;
-2. arithmetic mean for an explicitly available vessel class;
-3. arithmetic mean for an available ship type, using `Container ship` as the
-   documented default for the containerized ANTAQ scope;
+2. tracked 1% trimmed mean for an explicitly available vessel class, with the
+   class median used only when the trimmed statistic is unavailable;
+3. symmetric 1% trimmed mean of latest positive IMO values for an available
+   ship type, using `Container ship` as the documented default for the
+   containerized ANTAQ scope; samples too small to trim use the median;
 4. explicit unresolved status when none of those sources is usable.
 
 Exact IMO matches and class/type fallbacks remain separate in coverage and
-source-count indicators.
+source-count indicators. Exact IMO values are preserved without clipping. The
+outlier rule applies only to fallback aggregation: sort the positive latest-IMO
+values and exclude `floor(0.01 * n)` observations from each tail. Provenance
+stores the raw and retained sample sizes, excluded count, retained bounds, raw
+mean, raw median, and statistic actually used. This prevents extreme MRV tail
+values from dominating a fallback without rewriting an observed ship-level
+record.
+
+In the current `Container ship` fallback sample, the rule starts from 243
+latest positive IMO values, removes two observations from each tail, and keeps
+239 values. The resulting fallback is `9.322050 g/(t*nm)`, compared with the
+untrimmed arithmetic mean of `21.661852 g/(t*nm)` and the raw median of
+`4.620000 g/(t*nm)`. The 1% rule was already present in the tracked class
+artifact and is applied independently of any target route result; it was not
+calibrated to reproduce the former Santos--Suape--Manaus calculation.
 
 Fallback (only when `fuel_g_per_tnm` is missing) scales vessel-level fuel by cargo share based on class median `size_proxy_t`.
 

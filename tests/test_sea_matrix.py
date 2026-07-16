@@ -317,6 +317,27 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                 for option in stats["corridor_options"]
             )
         )
+        self.assertAlmostEqual(
+            stats["fuel_g_per_tnm_weighted_mean"],
+            9.322050,
+            places=6,
+        )
+        self.assertEqual(
+            stats["selected_corridor_sublegs"][0]["intensity_source_counts"],
+            {"eu_mrv_ship_type_trimmed_mean_1pct": 1},
+        )
+        selected_voyage_id = stats["selected_corridor_candidate_voyage_ids"][0]
+        provenance = payload["voyage_intensity_provenance"][selected_voyage_id]
+        self.assertEqual(
+            provenance["outlier_rule"],
+            "symmetric_trim_1pct_each_tail_floor_count",
+        )
+        self.assertEqual(provenance["trim_count_each_tail"], 2)
+        self.assertEqual(provenance["excluded_sample_size"], 4)
+        self.assertGreater(
+            provenance["raw_arithmetic_mean_g_per_tnm"],
+            provenance["intensity_g_per_tnm"],
+        )
 
     def test_santos_manaus_geometry_uses_directional_distance_and_coverage(self) -> None:
         matrix_path = Path(__file__).resolve().parents[1] / "data" / "sea_matrix.json"

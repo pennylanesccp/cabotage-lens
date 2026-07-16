@@ -27,10 +27,18 @@ _INTENSITY_SOURCE_LABELS = {
     "mrv_imo": "EU MRV match by IMO",
     "imo": "IMO-specific intensity",
     "eu_mrv_vessel_class_mean": "EU MRV vessel-class mean",
+    "eu_mrv_vessel_class_trimmed_mean_1pct": (
+        "EU MRV vessel-class 1% trimmed mean"
+    ),
+    "eu_mrv_vessel_class_median": "EU MRV vessel-class median",
     "mrv_vessel_class_mean": "EU MRV vessel-class mean",
     "vessel_class": "Vessel-class fallback",
     "class_fallback": "Vessel-class fallback",
     "eu_mrv_ship_type_mean": "EU MRV ship-type mean",
+    "eu_mrv_ship_type_trimmed_mean_1pct": (
+        "EU MRV ship-type 1% trimmed mean"
+    ),
+    "eu_mrv_ship_type_median": "EU MRV ship-type median",
     "mrv_ship_type_mean": "EU MRV ship-type mean",
     "ship_type": "Ship-type fallback",
     "type_fallback": "Ship-type fallback",

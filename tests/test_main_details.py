@@ -126,8 +126,8 @@ class MainDetailsTests(unittest.TestCase):
                     "unresolved_intensity_voyage_count": 0,
                     "intensity_source_counts": {
                         "eu_mrv_imo_latest": 2,
-                        "eu_mrv_vessel_class_mean": 1,
-                        "eu_mrv_ship_type_mean": 1,
+                        "eu_mrv_vessel_class_trimmed_mean_1pct": 1,
+                        "eu_mrv_ship_type_trimmed_mean_1pct": 1,
                     },
                     "selected_corridor_distance_source_counts": {
                         "sea_matrix": 1,
@@ -161,8 +161,8 @@ class MainDetailsTests(unittest.TestCase):
         self.assertIn("unresolved intensity: 0", intensity_coverage)
         source_counts = rows["Maritime intensity sources"]["Value"]
         self.assertIn("EU MRV latest record by IMO: 2", source_counts)
-        self.assertIn("EU MRV vessel-class mean: 1", source_counts)
-        self.assertIn("EU MRV ship-type mean: 1", source_counts)
+        self.assertIn("EU MRV vessel-class 1% trimmed mean: 1", source_counts)
+        self.assertIn("EU MRV ship-type 1% trimmed mean: 1", source_counts)
         distance_sources = rows["Selected-corridor distance sources"]["Value"]
         self.assertIn("Sea-matrix distance: 1", distance_sources)
         self.assertIn("Coordinate haversine fallback: 1", distance_sources)
@@ -325,7 +325,7 @@ class MainDetailsTests(unittest.TestCase):
                             "observed_cargo_t": 60.0,
                             "fuel_g_per_tnm": 6.0,
                             "intensity_source_counts": {
-                                "eu_mrv_vessel_class_mean": 1,
+                                "eu_mrv_vessel_class_trimmed_mean_1pct": 1,
                             },
                             "observed_fuel_kg": 18.0,
                             "scenario_fuel_kg": 4.2,
@@ -349,7 +349,7 @@ class MainDetailsTests(unittest.TestCase):
         self.assertEqual(rows[0]["Scenario-attributed fuel"], "11.2 kg")
         self.assertEqual(
             rows[1]["Intensity source"],
-            "EU MRV vessel-class mean: 1",
+            "EU MRV vessel-class 1% trimmed mean: 1",
         )
 
     def test_selected_corridor_sublegs_table_preserves_legacy_empty_state(self) -> None:

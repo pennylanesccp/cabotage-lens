@@ -31,6 +31,8 @@ _KM_PER_NAUTICAL_MILE = 1.852
 DEPLOYMENT_REQUIRED_ROUTE = ("Porto de Santos", "Porto de Manaus")
 ROUTE_OBSERVATION_MODE = "observed_voyage_corridors"
 CORRIDOR_SELECTION_CRITERION = "direct_first_then_shortest_distance_km"
+FALLBACK_TRIM_FRACTION_EACH_TAIL = 0.01
+FALLBACK_OUTLIER_RULE = "symmetric_trim_1pct_each_tail_floor_count"
 
 
 @dataclass(frozen=True)
@@ -127,7 +129,7 @@ def enrich_sea_matrix_with_efficiency(
     voyages = _load_csv_rows(voyages_resolved)
     stops = _load_csv_rows(stops_resolved)
     mrv_catalog = _load_mrv_intensity_catalog(mrv_resolved)
-    class_means = _load_class_efficiency_means(
+    class_fallbacks = _load_class_efficiency_fallbacks(
         class_efficiency_resolved,
         source_label=_metadata_input_path(class_efficiency_json_path),
     )
@@ -140,7 +142,7 @@ def enrich_sea_matrix_with_efficiency(
         voyage_id: _resolve_voyage_intensity(
             voyage,
             mrv_catalog=mrv_catalog,
-            class_means=class_means,
+            class_means=class_fallbacks,
             default_ship_type=default_ship_type,
         )
         for voyage_id, voyage in voyage_rows.items()
@@ -176,7 +178,7 @@ def enrich_sea_matrix_with_efficiency(
         "generated_at": datetime.now(UTC).isoformat(),
         "source": (
             "ANTAQ observed same-voyage corridors + EU MRV latest IMO intensity with "
-            "vessel-class and ship-type mean fallbacks"
+            "robust vessel-class and ship-type fallbacks"
         ),
         "route_observation_mode": ROUTE_OBSERVATION_MODE,
         "corridor_selection_criterion": CORRIDOR_SELECTION_CRITERION,
@@ -192,11 +194,19 @@ def enrich_sea_matrix_with_efficiency(
         ),
         "intensity_resolution_hierarchy": [
             "eu_mrv_imo_latest",
-            "eu_mrv_vessel_class_mean",
-            "eu_mrv_ship_type_mean",
-            "eu_mrv_ship_type_mean_default_container_ship",
+            "eu_mrv_vessel_class_trimmed_mean_1pct_or_median",
+            "eu_mrv_ship_type_trimmed_mean_1pct_or_median",
+            "eu_mrv_ship_type_robust_default_container_ship",
             "unavailable",
         ],
+        "fallback_outlier_policy": {
+            "exact_imo_values": "preserved_without_trimming",
+            "ship_type": FALLBACK_OUTLIER_RULE,
+            "vessel_class": (
+                "use artifact trimmed_mean_1pct; median when trimmed mean is unavailable"
+            ),
+            "trim_fraction_each_tail": FALLBACK_TRIM_FRACTION_EACH_TAIL,
+        },
         "default_ship_type": str(default_ship_type or DEFAULT_SHIP_TYPE),
         "possible_pairs_only": bool(possible_pairs_only),
         "matched_pairs_only": bool(matched_pairs_only),
@@ -382,6 +392,50 @@ def _metadata_input_path(path: Path | str) -> str:
         return candidate.name
 
 
+def _robust_fallback_statistic(values: list[float]) -> dict[str, Any]:
+    """Return an auditable robust fallback statistic for positive MRV values."""
+    ordered = sorted(float(value) for value in values if float(value) > 0.0)
+    if not ordered:
+        raise ValueError("Robust MRV fallback requires at least one positive value.")
+
+    raw_sample_size = len(ordered)
+    trim_count_each_tail = int(
+        math.floor(raw_sample_size * FALLBACK_TRIM_FRACTION_EACH_TAIL)
+    )
+    can_trim = (
+        trim_count_each_tail > 0
+        and (2 * trim_count_each_tail) < raw_sample_size
+    )
+    if can_trim:
+        retained = ordered[
+            trim_count_each_tail : raw_sample_size - trim_count_each_tail
+        ]
+        value = statistics.fmean(retained)
+        statistic = "symmetric_trimmed_mean_1pct_of_latest_positive_per_imo"
+        outlier_rule = FALLBACK_OUTLIER_RULE
+    else:
+        retained = ordered
+        value = statistics.median(retained)
+        statistic = "median_of_latest_positive_per_imo_small_sample"
+        outlier_rule = "median_when_1pct_trim_removes_no_observation"
+        trim_count_each_tail = 0
+
+    return {
+        "intensity_g_per_tnm": float(value),
+        "statistic": statistic,
+        "outlier_rule": outlier_rule,
+        "trim_fraction_each_tail": FALLBACK_TRIM_FRACTION_EACH_TAIL,
+        "trim_count_each_tail": trim_count_each_tail,
+        "raw_sample_size": raw_sample_size,
+        "retained_sample_size": len(retained),
+        "excluded_sample_size": raw_sample_size - len(retained),
+        "lower_retained_bound_g_per_tnm": float(retained[0]),
+        "upper_retained_bound_g_per_tnm": float(retained[-1]),
+        "raw_arithmetic_mean_g_per_tnm": float(statistics.fmean(ordered)),
+        "raw_median_g_per_tnm": float(statistics.median(ordered)),
+    }
+
+
 def _load_mrv_intensity_catalog(path: Path | str) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     ships = payload.get("ships") if isinstance(payload, dict) else None
@@ -458,9 +512,10 @@ def _load_mrv_intensity_catalog(path: Path | str) -> dict[str, Any]:
         type_labels.setdefault(key, ship_type)
         type_members.setdefault(key, []).append({"imo": imo, **item})
 
-    ship_type_means: dict[str, dict[str, Any]] = {}
+    ship_type_fallbacks: dict[str, dict[str, Any]] = {}
     for key, members in type_members.items():
         values = [float(member["intensity_g_per_tnm"]) for member in members]
+        robust = _robust_fallback_statistic(values)
         source_files = sorted(
             {
                 str(member["source_file"])
@@ -478,12 +533,16 @@ def _load_mrv_intensity_catalog(path: Path | str) -> dict[str, Any]:
         basis_counts = Counter(
             str(member.get("metric_basis") or "unspecified") for member in members
         )
-        ship_type_means[key] = {
-            "intensity_g_per_tnm": sum(values) / len(values),
-            "intensity_source": "eu_mrv_ship_type_mean",
+        source_suffix = (
+            "trimmed_mean_1pct"
+            if robust["trim_count_each_tail"] > 0
+            else "median"
+        )
+        ship_type_fallbacks[key] = {
+            **robust,
+            "intensity_source": f"eu_mrv_ship_type_{source_suffix}",
             "intensity_source_level": "ship_type",
             "source_key": type_labels[key],
-            "statistic": "arithmetic_mean_of_latest_positive_per_imo",
             "sample_size": len(values),
             "reporting_period": None,
             "source_file": source_files[0] if len(source_files) == 1 else None,
@@ -501,11 +560,11 @@ def _load_mrv_intensity_catalog(path: Path | str) -> dict[str, Any]:
     return {
         "by_imo": by_imo,
         "ship_metadata": ship_metadata,
-        "ship_type_means": ship_type_means,
+        "ship_type_fallbacks": ship_type_fallbacks,
         "summary": {
             "ship_records": len(ships),
             "latest_positive_imo_count": len(by_imo),
-            "ship_type_mean_count": len(ship_type_means),
+            "ship_type_fallback_count": len(ship_type_fallbacks),
             "ship_type_latest_imo_counts": {
                 type_labels[key]: len(members)
                 for key, members in sorted(type_members.items())
@@ -523,7 +582,7 @@ def _load_latest_imo_efficiency(path: Path | str) -> dict[str, float]:
     }
 
 
-def _load_class_efficiency_means(
+def _load_class_efficiency_fallbacks(
     path: Path | str,
     *,
     source_label: str | None = None,
@@ -539,22 +598,40 @@ def _load_class_efficiency_means(
         stats = entry.get("fuel_g_per_tnm")
         if not isinstance(stats, dict):
             continue
-        mean = _float_or_none(stats.get("mean"))
-        if mean is None or mean <= 0:
+        trimmed_mean = _float_or_none(stats.get("trimmed_mean_1pct"))
+        median = _float_or_none(stats.get("median") or stats.get("p50"))
+        if trimmed_mean is not None and trimmed_mean > 0:
+            robust_value = trimmed_mean
+            source_suffix = "trimmed_mean_1pct"
+            statistic = "symmetric_trimmed_mean_1pct_from_class_artifact"
+            outlier_rule = "class_artifact_excludes_below_p1_and_above_p99"
+        elif median is not None and median > 0:
+            robust_value = median
+            source_suffix = "median"
+            statistic = "median_from_class_artifact"
+            outlier_rule = "median_robust_no_tail_weighting"
+        else:
             continue
         sample_size = _int_or_zero(stats.get("count") or entry.get("sample_size"))
         class_label = str(class_name).strip()
         out[_norm(class_label)] = {
-            "intensity_g_per_tnm": float(mean),
-            "intensity_source": "eu_mrv_vessel_class_mean",
+            "intensity_g_per_tnm": float(robust_value),
+            "intensity_source": f"eu_mrv_vessel_class_{source_suffix}",
             "intensity_source_level": "vessel_class",
             "source_key": class_label,
-            "statistic": "arithmetic_mean",
+            "statistic": statistic,
+            "outlier_rule": outlier_rule,
+            "trim_fraction_each_tail": (
+                FALLBACK_TRIM_FRACTION_EACH_TAIL
+                if source_suffix == "trimmed_mean_1pct"
+                else 0.0
+            ),
             "sample_size": sample_size,
+            "raw_sample_size": sample_size,
             "reporting_period": None,
             "source_file": source_label or _metadata_input_path(path),
             "source_sheet": None,
-            "metric_basis": "class_mean_artifact",
+            "metric_basis": "class_robust_statistic_artifact",
             "ship_type": None,
             "vessel_class": class_label,
             "is_fallback": True,
@@ -599,10 +676,10 @@ def _resolve_voyage_intensity(
         type_candidates.append((normalized_default, True))
 
     for candidate, used_default in type_candidates:
-        type_mean = mrv_catalog["ship_type_means"].get(_norm(candidate))
-        if not isinstance(type_mean, dict):
+        type_fallback = mrv_catalog["ship_type_fallbacks"].get(_norm(candidate))
+        if not isinstance(type_fallback, dict):
             continue
-        resolved = dict(type_mean)
+        resolved = dict(type_fallback)
         resolved["source_key"] = candidate
         resolved["ship_type"] = candidate
         resolved["vessel_class"] = vessel_class
