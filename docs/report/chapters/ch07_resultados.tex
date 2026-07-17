@@ -4,13 +4,25 @@
 \section{Cobertura da base marítima}
 \label{sec:inventario-resultados}
 
-A matriz marítima contém 177 pares direcionais de portos. Um par é direcional porque a ordem importa: Santos--Manaus e Manaus--Santos são relações diferentes. Para formar cada par, o sistema lê as tabelas de Carga e Atracação da ANTAQ. A ordem das atracações mostra a sequência de portos visitados. Os embarques e desembarques permitem reconstruir a carga a bordo entre duas escalas consecutivas.
+A matriz marítima contém 177 ligações com sentido definido entre dois portos. Em cada ligação, um porto é o ponto de partida e o outro é o ponto de chegada. Santos--Manaus e Manaus--Santos são ligações diferentes.
 
-Uma observação viagem--OD é criada quando, dentro da mesma viagem, o porto de origem aparece antes do porto de destino. Esse critério inclui uma viagem direta, como Santos--Manaus, e também uma viagem com escalas, como Santos--Suape--Pecém--Manaus. Cada viagem contribui uma única vez para o mesmo par OD.
+Para construir essas ligações, o sistema lê as tabelas de Carga e Atracação da ANTAQ. Ele organiza por data as escalas de cada viagem. Assim, identifica a ordem em que o navio visitou os portos. Os embarques e desembarques permitem reconstruir a carga a bordo entre duas escalas consecutivas.
 
-O processamento produziu 12.025 observações viagem--OD e 5.438 subtrechos navegados. Um subtrecho é uma perna entre duas escalas consecutivas. Por exemplo, Santos--Suape, Suape--Pecém e Pecém--Manaus são três subtrechos de um mesmo corredor. Em cada um deles, o sistema registra distância, carga a bordo e fonte da intensidade.
+Na base histórica, a tabela de Atracação forneceu 7.103 chamadas portuárias. Uma chamada é uma ocorrência de entrada de navio em porto. O sistema ordenou essas chamadas por navio e por data. Chamadas consecutivas do mesmo navio no mesmo porto foram reunidas em uma parada. O resultado contém 6.797 paradas distribuídas em 1.324 viagens reconstruídas.
 
-Dos 5.438 subtrechos, 3.290 receberam intensidade por correspondência direta do número IMO com o EU MRV. Os outros 2.148 receberam um fallback por tipo ou classe de navio. Fallback significa uma estimativa de grupo utilizada porque não foi encontrada uma intensidade específica para aquele IMO. Ele não é uma medição do navio.
+Duas paradas consecutivas formam um subtrecho. Antes da padronização final dos portos, as 1.324 viagens continham 5.473 subtrechos candidatos, pois uma viagem com (n) paradas possui (n-1) subtrechos. Depois de reunir 35 transições que apontavam para o mesmo porto padronizado, restaram 5.438 subtrechos calculados.
+
+Para analisar uma ligação, o sistema escolhe os dois portos, examina uma viagem de cada vez e lê suas paradas da mais antiga para a mais recente. O recorte começa quando o navio está no porto de partida e termina quando chega depois ao porto de destino, durante a mesma viagem. O navio pode ir diretamente ou parar em outros portos.
+
+Na viagem real \codecell{voyage\_9612791\_00011}, o recorte Santos--Manaus começa na primeira parada e termina na quarta. Ele contém três subtrechos: Santos--Suape, Suape--Pecém e Pecém--Manaus. O nome técnico desse recorte é \emph{recorte histórico viagem--OD}, em que OD significa origem--destino. Cada viagem contribui uma única vez para a mesma ligação.
+
+Uma viagem pode gerar vários recortes. Dentro de \codecell{voyage\_9612791\_00011}, o prefixo Santos--Suape--Pecém--Manaus gera seis combinações com sentido definido: Santos--Suape, Santos--Pecém, Santos--Manaus, Suape--Pecém, Suape--Manaus e Pecém--Manaus. A viagem completa ainda retorna de Manaus a Santos e pode fornecer outras ligações. Por isso, 1.324 viagens geraram 12.025 recortes históricos viagem--OD. A sequência completa de portos de cada recorte recebe o nome de \emph{corredor}. Em cada subtrecho, o sistema registra a distância, a carga histórica a bordo e a fonte do indicador de consumo.
+
+O sistema faz quatro verificações antes de usar um recorte na estatística. Primeiro, a parte aproveitada da viagem deve seguir a direção pedida. No cálculo Santos--Manaus, ela começa na escala de Santos e termina na escala de Manaus; uma sequência Manaus--Suape--Santos não serve. Segundo, nenhum dos trechos navegados entre esses portos pode estar ausente. Terceiro, deve existir uma intensidade obtida pelo IMO ou estimada e identificada como fallback. Quarto, o trabalho de transporte deve ser maior que zero para o recorte receber peso na mediana; esse trabalho é a soma da carga a bordo multiplicada pela distância de cada trecho. Um recorte com resultado igual a zero permanece registrado, mas não altera a mediana quando existem resultados positivos. Se todos forem iguais a zero, o sistema usa a mediana simples e registra a exceção.
+
+O indicador marítimo informa quantos gramas de combustível são consumidos para transportar uma tonelada por uma milha náutica. Sua unidade é g/(t$\cdot$nm), e o método o chama de \emph{intensidade}. Dos 5.438 subtrechos, 3.290 receberam uma intensidade específica porque o número IMO do navio foi encontrado no EU MRV.
+
+Nos outros 2.148 subtrechos, o IMO não forneceu um valor específico. O sistema estimou a intensidade com embarcações semelhantes. Primeiro, procura o grupo mais específico disponível, chamado de classe. Se esse grupo não fornecer um valor, usa uma categoria mais ampla, chamada de tipo, como ``navio porta-contêineres''. Essa estimativa de grupo recebe o nome de \emph{fallback}. Na execução analisada, todos os 2.148 subtrechos substitutos foram resolvidos pelo tipo; nenhum recebeu fallback de classe. A regra de classe permanece implementada para bases que tragam esse metadado.
 
 \begin{table}[htbp]
 \centering
@@ -21,34 +33,42 @@ Dos 5.438 subtrechos, 3.290 receberam intensidade por correspondência direta do
 \toprule
 Indicador & Valor & Como ler o indicador \\
 \midrule
-Pares direcionais de portos & 177 & Ligações OD para as quais existe intensidade marítima resolvida.\\
-Observações viagem--OD & 12.025 & Viagens em que a origem aparece antes do destino.\\
+Ligações entre portos com sentido definido & 177 & Relações para as quais existe um valor de intensidade marítima disponível.\\
+Recortes históricos viagem--OD & 12.025 & Partes de uma viagem entre uma parada inicial e outra parada posterior.\\
 Subtrechos navegados & 5.438 & Pernas consecutivas usadas para reconstruir carga, distância e consumo.\\
 Subtrechos com intensidade por IMO & 3.290 & 60,50\% dos subtrechos; associação direta do navio ao EU MRV.\\
-Subtrechos com fallback por tipo ou classe & 2.148 & 39,50\% dos subtrechos; estimativa robusta de grupo com fonte registrada.\\
+Subtrechos com fallback por tipo & 2.148 & 39,50\% dos subtrechos; estimativa robusta de grupo com fonte registrada.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-O fallback por tipo usa uma média aparada de 1\% em cada cauda quando a amostra permite retirar observações. Em uma amostra pequena, na qual 1\% não retiraria nenhum valor, usa-se a mediana. O fallback por classe usa a estatística robusta disponível no artefato de classes: média aparada de 1\% ou, se ela não estiver disponível, mediana. Os valores obtidos diretamente pelo IMO não são aparados. Em todos os casos, o resultado registra qual regra foi usada.
+Para calcular o fallback por tipo, o sistema retira 1\% dos menores valores e 1\% dos maiores quando a amostra permite. Depois, calcula a média do restante. Essa regra recebe o nome de média aparada. Em uma amostra pequena, na qual 1\% não retiraria nenhum valor, usa-se a mediana.
 
-\section{Intensidade representativa do par origem--destino}
+O fallback por classe usa a média aparada disponível no arquivo de classes. Se ela não estiver disponível, usa a mediana. Os valores obtidos diretamente pelo IMO não são retirados nem alterados. Em todos os casos, o resultado registra qual regra foi usada.
+
+\section{Como obter um único indicador entre dois portos}
 \label{sec:intensidade-od-resultados}
 
-O sistema calcula primeiro uma intensidade para cada observação viagem--OD. Depois, reúne todas as observações do mesmo par, mesmo que tenham seguido corredores diferentes. A intensidade representativa é a mediana ponderada pelo trabalho de transporte.
+Esta etapa usa as viagens históricas da ANTAQ. Ela não usa ainda a massa informada pelo usuário. No cálculo Santos--Manaus, o sistema obtém uma intensidade para a parte de cada viagem que começa na escala de Santos e termina na escala de Manaus. Entram a ligação direta e as viagens que pararam em outros portos; Manaus--Suape--Santos não entra. Depois, reúne todos os recortes aprovados para obter um único valor para a ligação. Esse valor recebe o nome de \emph{intensidade representativa}.
 
-O trabalho de transporte de uma viagem é calculado em três passos. Primeiro, identifica-se a carga a bordo em cada subtrecho. Segundo, multiplica-se essa carga pela distância do subtrecho, em milhas náuticas. Terceiro, somam-se os produtos de todos os subtrechos entre a origem e o destino. O resultado é expresso em t$\cdot$nm.
+Para saber quanto peso cada recorte histórico deve ter no cálculo, o sistema mede a atividade realizada. Primeiro, identifica a carga a bordo em cada subtrecho. Depois, multiplica essa carga pela distância navegada, em milhas náuticas. Por fim, soma os produtos de todos os subtrechos entre os dois portos. O resultado é expresso em t$\cdot$nm e recebe o nome de \emph{trabalho de transporte}.
 
-A ponderação dá mais importância às viagens que efetivamente realizaram mais trabalho de transporte. Após ordenar as intensidades, o sistema escolhe o primeiro valor em que o peso acumulado alcança 50\% do total. Observações com peso zero não alteram o resultado quando existem pesos positivos. Se todas tiverem peso zero, usa-se uma mediana não ponderada e essa condição fica registrada.
+O peso de cada recorte é a soma da carga a bordo multiplicada pela distância de cada trecho. Um recorte com maior soma recebe mais peso. O sistema ordena as intensidades da menor para a maior e acumula esses pesos. Escolhe a primeira intensidade em que a soma alcança 50\% do total. Essa regra recebe o nome de \emph{mediana ponderada pelo trabalho de transporte}.
 
-É importante separar duas perguntas. A primeira é: ``quais viagens ajudam a estimar a intensidade do par?'' A resposta é: todas as viagens elegíveis do mesmo OD. A segunda é: ``qual sequência de portos fornece a distância do cenário?'' A resposta é: o caminho selecionado pela regra geométrica. A regra escolhe primeiro uma ligação direta observada. Se não houver ligação direta, escolhe a menor cadeia completa observada. Trechos de viagens diferentes nunca são unidos para criar uma rota artificial.
+Um recorte com trabalho igual a zero não altera o resultado quando existem pesos positivos. Se todos os recortes tiverem trabalho igual a zero, o sistema usa a mediana simples e registra essa exceção.
 
-\section{Estudo do par Santos--Manaus}
+É importante separar duas perguntas. A primeira é: ``quais viagens históricas ajudam a calcular o indicador de consumo entre os dois portos?'' Para responder, o sistema examina uma viagem de cada vez. Ele cria o recorte entre a parada no porto de partida e uma parada posterior no porto de chegada. Não é necessário que a viagem tenha sido direta. O recorte também entra se houver uma ou várias paradas intermediárias.
+
+A segunda pergunta é: ``qual corredor fornece a distância aplicada à carga informada pelo usuário?'' O sistema considera somente corredores inteiros observados dentro de uma única viagem, com distância conhecida em todos os subtrechos e um valor de consumo disponível. Se existir um recorte direto, usa esse corredor. Caso contrário, escolhe o corredor completo mais curto entre os que possuem escalas. O corredor escolhido recebe o nome técnico de \emph{caminho}. O sistema nunca une subtrechos de viagens diferentes para criar uma rota artificial.
+
+\section{Estudo da ligação Santos--Manaus}
 \label{sec:santos-manaus-resultados}
 
-Santos--Manaus é um exemplo concreto dessa separação. A base contém 89 observações com trabalho de transporte positivo, distribuídas em 22 corredores. Entre eles estão a ligação direta Santos--Manaus; Santos--Suape--Pecém--Manaus; Santos--Rio de Janeiro--Suape--Pecém--Manaus; e Santos--Navegantes--Rio de Janeiro--Salvador--Suape--Pecém--Manaus.
+Santos--Manaus é um exemplo concreto dessa separação. A base histórica contém 89 recortes nos quais o navio saiu de Santos e chegou depois a Manaus na mesma viagem, sem faltar nenhum subtrecho intermediário e com os dados necessários para calcular a intensidade e o peso estatístico. Eles estão distribuídos em 22 corredores. Entre eles estão o recorte direto Santos--Manaus; Santos--Suape--Pecém--Manaus em \codecell{voyage\_9612791\_00011}; Santos--Rio de Janeiro--Suape--Pecém--Manaus em \codecell{voyage\_9784661\_00001}; e Santos--Navegantes--Pecém--Manaus em \codecell{voyage\_9852365\_00011}. O último não passa por Suape.
 
-Todos esses corredores alimentam a distribuição usada para calcular a intensidade. Entretanto, apenas o caminho selecionado fornece a geometria do cenário. Como existe uma ligação direta observada, o sistema escolhe Santos--Manaus, com 6.112~km ou 3.300,216~nm. Isso não exclui as viagens com escalas da estatística.
+O corredor Santos--Suape--Pecém--Manaus aparece, por exemplo, em \codecell{voyage\_9612791\_00011}. Nessa viagem, as cargas a bordo foram 12.858,754~t, 16.718,333~t e 12.325,900~t nos três subtrechos. A intensidade veio diretamente do IMO 9612791 no EU MRV de 2023. A soma dos trabalhos de transporte foi \(39.294.668{,}494~\mathrm{t\,nm}\), associada a \(291.959{,}387\)~kg de combustível para a atividade histórica total do navio no recorte Santos--Manaus.
+
+Todos esses corredores históricos alimentam a distribuição usada para calcular a intensidade. Entretanto, apenas o caminho selecionado fornece a distância aplicada à remessa do usuário. Como existe um recorte direto observado, o sistema escolhe Santos--Manaus. A matriz marítima atribui 6.112~km ou 3.300,216~nm ao subtrecho; essa distância é modelada, não uma trajetória medida do navio. Isso não exclui da estatística os recortes históricos com escalas.
 
 \begin{table}[htbp]
 \centering
@@ -59,12 +79,12 @@ Todos esses corredores alimentam a distribuição usada para calcular a intensid
 \toprule
 Indicador & Valor & Como ler o indicador \\
 \midrule
-Observações de viagem & 89 & Viagens elegíveis em que Santos aparece antes de Manaus.\\
+Recortes históricos usados no indicador & 89 & Partes de viagens que começam em Santos e terminam mais tarde em Manaus.\\
 Corredores observados & 22 & Sequências completas e distintas de portos.\\
-Corredor geométrico selecionado & Santos--Manaus direto & Caminho usado para obter a distância do cenário.\\
+Caminho selecionado & Santos--Manaus direto & Sequência usada para obter a distância da remessa do usuário.\\
 Distância selecionada & 6.112 km / 3.300,216 nm & Distância marítima aplicada à remessa.\\
-Observações com intensidade por IMO & 40 & Intensidade associada diretamente ao navio no EU MRV.\\
-Observações com fallback por tipo ou classe & 49 & Estimativa de grupo usada quando não houve correspondência por IMO.\\
+Recortes com intensidade por IMO & 40 & Intensidade associada diretamente ao navio no EU MRV.\\
+Recortes com fallback por tipo ou classe & 49 & Estimativa de grupo usada quando não houve correspondência por IMO.\\
 Trabalho de transporte associado a fallback & 59,54\% & Participação dos fallbacks no peso estatístico total do par.\\
 Mediana ponderada pelo trabalho de transporte & 9,322050 g/(t$\cdot$nm) & Intensidade representativa aplicada ao caminho selecionado.\\
 Média aritmética ponderada diagnóstica & 25,243618 g/(t$\cdot$nm) & Indicador auxiliar; não é usado no cálculo do cenário.\\
@@ -72,11 +92,13 @@ Média aritmética ponderada diagnóstica & 25,243618 g/(t$\cdot$nm) & Indicador
 \end{tabularx}
 \end{table}
 
-A diferença entre 9,322050 e 25,243618 mostra que a distribuição tem intensidades elevadas capazes de puxar a média para cima. A mediana ponderada reduz essa influência sem apagar as observações. A média continua registrada como diagnóstico. A participação de 59,54\% do trabalho de transporte em fallback também permanece visível, pois limita a confiança que pode ser atribuída ao valor representativo.
+A diferença entre 9,322050 e 25,243618 mostra que a distribuição tem intensidades elevadas capazes de puxar a média para cima. A mediana ponderada reduz essa influência sem apagar os recortes históricos. A média continua registrada como diagnóstico. A participação de 59,54\% do trabalho de transporte em fallback também permanece visível, pois limita a confiança que pode ser atribuída ao valor representativo.
+
+O ponto de 50\% foi alcançado na viagem \codecell{voyage\_9697002\_00002}. Antes desse recorte, o peso acumulado era 49,168\% do total; depois de acrescentar seus \(34.357.307{,}013~\mathrm{t\,nm}\), passou a 50,257\%. Essa observação usou a intensidade \(9{,}322050~\mathrm{g/(t\,nm)}\), que se tornou o valor representativo. A fonte registrada foi a média aparada em 1\% do tipo-padrão documentado \emph{container ship}, usado porque não havia correspondência individual aplicável pelo IMO nem classe ou tipo específico informado.
 
 \subsection*{Exemplo de execução para uma carga de 14 t}
 
-Considere uma remessa hipotética de 14~t entre os dois portos. A massa de 14~t é apenas um exemplo de uso. A intensidade de 9,322050~g/(t$\cdot$nm) e a distância de 3.300,216~nm são valores do artefato marítimo atual. O consumo de navegação é:
+As cargas reconstruídas nos 89 recortes históricos serviram para calcular os pesos estatísticos. Elas não são a carga desta execução. No teste de execução do modelo, foi usada uma entrada controlada de 14~t. A intensidade de 9,322050~g/(t$\cdot$nm) vem do conjunto histórico. A distância de 3.300,216~nm vem da matriz marítima para o caminho direto observado em \codecell{voyage\_9612789\_00004}. O consumo de navegação da entrada de teste é:
 
 \begin{equation}
 F_{mar} = \frac{9{,}322050 \times 14 \times 3.300{,}216}{1000}
@@ -85,10 +107,10 @@ F_{mar} = \frac{9{,}322050 \times 14 \times 3.300{,}216}{1000}
 
 A multiplicação produz gramas de combustível; a divisão por 1.000 converte o resultado para quilogramas. Esse valor corresponde somente à navegação. Ele não é a emissão total em \cooe{}, o custo total da viagem ou o resultado porta a porta. Para obter esses totais, a execução ainda considera acessos rodoviários, operações portuárias e os fatores de emissão e custo definidos para o cenário.
 
-\section{Comparação com o benchmark externo}
+\section{Comparação com uma referência externa}
 \label{sec:resultados-benchmark}
 
-O benchmark externo contém 36 células. Quinze não permitem comparação numérica: seis representam um porto comparado com ele mesmo e nove possuem valor rodoviário nulo ou não positivo. Restam 21 pares OD positivos e suportados.
+O sistema compara seus resultados com uma planilha produzida fora do projeto. Essa referência externa recebe o nome de \emph{benchmark}. A planilha contém 36 células. Quinze não permitem comparação numérica: seis representam um porto comparado com ele mesmo e nove possuem valor rodoviário nulo ou não positivo. Restam 21 ligações origem--destino com valores positivos e utilizáveis.
 
 Nos 21 pares, o benchmark e o \CabotageLens{} apontam a mesma direção: a alternativa com cabotagem apresenta menor emissão. Porém, os valores não têm a mesma magnitude. Por isso, o benchmark serve como verificação direcional, e não como calibração do modelo.
 
@@ -97,7 +119,7 @@ Nos 21 pares, o benchmark e o \CabotageLens{} apontam a mesma direção: a alter
 \small
 \caption{Síntese da comparação com o benchmark externo.}
 \label{tab:resultados-benchmark}
-\begin{tabularx}{\textwidth}{L{0.43\textwidth}r Y}
+\begin{tabularx}{\textwidth}{L{0.34\textwidth}L{0.25\textwidth}Y}
 \toprule
 Métrica & Valor & Como ler o indicador \\
 \midrule
@@ -105,7 +127,7 @@ Células da matriz & 36 & Total de posições lidas na matriz 6~x~6.\\
 Pares OD positivos e suportados & 21 & Casos que permitem comparação direcional.\\
 Células não comparáveis & 15 & Seis pares iguais e nove valores rodoviários nulos ou não positivos.\\
 Alinhamento direcional & 21/21 & As duas fontes indicam menor emissão para a alternativa com cabotagem.\\
-Classificação & \codecell{same\_direction\_large\_gap} & Mesma direção, mas diferença relevante de magnitude.\\
+Classificação & \makecell[l]{\texttt{same\_direction\_}\\\texttt{large\_gap}} & Mesma direção, mas diferença relevante de magnitude.\\
 Validação calibrada de magnitude & 0 & Nenhum caso demonstra reprodução exata do valor externo.\\
 \bottomrule
 \end{tabularx}
@@ -114,6 +136,6 @@ Validação calibrada de magnitude & 0 & Nenhum caso demonstra reprodução exat
 \section{Síntese dos resultados}
 \label{sec:sintese-resultados}
 
-Os resultados devem ser lidos em três níveis. A matriz informa quantas viagens, subtrechos e fontes sustentam o cálculo. O caso Santos--Manaus mostra como todos os corredores do mesmo OD formam a intensidade, enquanto um único caminho observado fornece a geometria. O benchmark verifica apenas se a direção geral é coerente com uma referência externa.
+Os resultados devem ser lidos em três níveis. A matriz informa quantas viagens, subtrechos e fontes sustentam o cálculo. O caso Santos--Manaus mostra que todas as sequências de viagem ajudam a calcular a intensidade. Em contraste, uma única sequência observada fornece os portos e a distância aplicados à carga. O benchmark verifica apenas se a direção geral é coerente com uma referência externa.
 
-Esses números dependem da carga, dos portos, das distâncias, da cobertura MRV e das fronteiras escolhidas. As emissões são operacionais \ttw{} de \cooe{}. Os valores monetários são custos modelados. Portanto, os resultados não são inventários \wtw{}/LCA, cotações de frete ou prova de disponibilidade comercial. O Capítulo~\ref{ch:discussao} explica como usar essa evidência sem extrapolar seu alcance.
+Esses números dependem da carga, dos portos, das distâncias e da cobertura MRV. Também dependem do que o cálculo inclui e exclui. Esse limite recebe o nome de \emph{fronteira}. As emissões incluem apenas a operação \ttw{} de \cooe{}. Os valores monetários incluem somente os custos modelados. Portanto, os resultados não são inventários \wtw{}/LCA, cotações de frete ou prova de disponibilidade comercial. O Capítulo~\ref{ch:discussao} explica como usar essa evidência sem extrapolar seu alcance.

@@ -100,11 +100,24 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=("DEBUG", "INFO", "WARNING", "ERROR"),
         help="Root log level. Default: INFO.",
     )
+    parser.add_argument(
+        "--audit-voyage-id",
+        action="append",
+        default=[],
+        help=(
+            "Emit DEBUG records with the intermediate cargo, distance, transport-work, "
+            "intensity, and fuel values for this voyage_id. Repeat the argument to audit "
+            "more than one voyage. Requires --log-level DEBUG."
+        ),
+    )
     return parser
 
 
 def main() -> int:
-    args = _build_parser().parse_args()
+    parser = _build_parser()
+    args = parser.parse_args()
+    if args.audit_voyage_id and args.log_level != "DEBUG":
+        parser.error("--audit-voyage-id requires --log-level DEBUG")
     init_logging(level=args.log_level, archive_to_storage=False, force_clean=True)
 
     payload, summary = enrich_sea_matrix_with_efficiency(
@@ -116,6 +129,7 @@ def main() -> int:
         default_ship_type=args.default_ship_type,
         possible_pairs_only=not bool(args.keep_all_matrix_pairs),
         matched_pairs_only=not bool(args.keep_unmatched_pairs),
+        audit_voyage_ids=args.audit_voyage_id,
     )
     output_path = write_enriched_sea_matrix(payload, output_path=args.output_json)
 

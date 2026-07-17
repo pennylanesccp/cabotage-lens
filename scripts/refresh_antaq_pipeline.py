@@ -152,11 +152,23 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=("DEBUG", "INFO", "WARNING", "ERROR"),
         help="Root log level. Default: INFO.",
     )
+    parser.add_argument(
+        "--audit-voyage-id",
+        action="append",
+        default=[],
+        help=(
+            "Emit DEBUG records with intermediate maritime calculations for this "
+            "voyage_id. Repeat for multiple voyages. Requires --log-level DEBUG."
+        ),
+    )
     return parser
 
 
 def main() -> int:
-    args = _build_parser().parse_args()
+    parser = _build_parser()
+    args = parser.parse_args()
+    if args.audit_voyage_id and args.log_level != "DEBUG":
+        parser.error("--audit-voyage-id requires --log-level DEBUG")
     init_logging(level=args.log_level, archive_to_storage=False, force_clean=True)
 
     try:
@@ -181,6 +193,7 @@ def main() -> int:
             keep_all_matrix_pairs=bool(args.keep_all_matrix_pairs),
             keep_unmatched_pairs=bool(args.keep_unmatched_pairs),
             timeout_s=float(args.timeout_s),
+            audit_voyage_ids=args.audit_voyage_id,
         )
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

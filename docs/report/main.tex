@@ -71,7 +71,7 @@
   }
   \end{center}
 }
-\newcommand{\reporttitle}{CabotageLens: framework computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil}
+\newcommand{\reporttitle}{CabotageLens: sistema computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil}
 \newcommand{\reportauthor}{Felipe de Sá Proença}
 \newcommand{\reportadvisor}{Prof. Dr. Marcos Mendes de Oliveira Pinto}
 \newcommand{\reportinstitution}{Escola Politécnica da Universidade de São Paulo}
@@ -107,11 +107,17 @@
 \chapter*{Resumo}
 \markboth{Resumo}{Resumo}
 \addcontentsline{toc}{chapter}{Resumo}
-Este relatório explica o funcionamento do \CabotageLens{}, uma ferramenta computacional criada para comparar duas formas de transportar a mesma carga entre a mesma origem e o mesmo destino. A primeira alternativa usa somente rodovia. A segunda combina acesso rodoviário ao porto, navegação por cabotagem e acesso rodoviário ao destino final. O sistema calcula cada parte da viagem separadamente e informa de onde vieram as distâncias, os fatores de consumo e os demais parâmetros.
+Este relatório explica o funcionamento do \CabotageLens{}, uma ferramenta computacional criada para comparar duas formas de transportar a mesma carga entre o local onde ela começa a viagem e seu destino final. A primeira alternativa usa somente rodovia. A segunda combina acesso rodoviário ao porto, navegação por cabotagem e acesso rodoviário ao destino final. O sistema calcula cada parte da viagem separadamente e informa de onde vieram as distâncias, os fatores de consumo e os demais parâmetros.
 
-O cálculo marítimo combina as tabelas de Carga e Atracação da ANTAQ com os indicadores do EU MRV. Para cada par de portos, entram todas as viagens em que a origem aparece antes do destino. Isso inclui viagens diretas e viagens com escalas intermediárias. Em cada viagem, o sistema reconstrói a carga que estava a bordo e soma o consumo de todos os subtrechos. A intensidade do navio é procurada primeiro pelo número IMO. Quando não existe correspondência no EU MRV, o sistema usa uma estatística robusta da classe ou do tipo do navio e registra esse fallback como uma aproximação. A intensidade final do par é uma mediana ponderada pelo trabalho de transporte. A escolha do corredor é feita separadamente e fornece apenas a sequência de portos e a distância usada no cenário.
+Para calcular a navegação entre dois portos, o sistema usa os registros da Agência Nacional de Transportes Aquaviários (ANTAQ), órgão federal que regula e acompanha o transporte aquaviário brasileiro. Esses registros informam os portos visitados, as datas, as cargas movimentadas e o navio. O sistema examina uma viagem de cada vez e lê suas escalas na ordem em que aconteceram. Um registro real de 2025, identificado como \codecell{voyage\_9612791\_00011}, mostra o navio de número IMO 9612791 passando por Santos, Suape, Pecém e Manaus, nessa ordem. Para calcular Santos--Manaus, o sistema usa os três subtrechos consecutivos desse recorte: Santos--Suape, Suape--Pecém e Pecém--Manaus. Uma viagem que passe primeiro por Manaus e somente depois por Santos não representa o mesmo sentido e, por isso, não entra nesse cálculo. A parte da viagem compreendida entre os portos analisados recebe o nome de recorte. Um recorte é direto quando não existe outra escala entre os dois portos escolhidos, mesmo que a viagem completa tenha escalas antes ou depois. Também entram recortes com uma ou mais paradas intermediárias. Em cada recorte, o sistema reconstrói quanta carga estava a bordo e calcula o consumo de todos os subtrechos.
 
-A matriz resultante contém 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos. Desses subtrechos, 3.290 usam intensidade obtida por IMO e 2.148 usam fallback. O par Santos--Manaus mostra como interpretar o resultado: 89 viagens, distribuídas em 22 corredores, formam a amostra estatística; a intensidade representativa é 9,322050 g/(t$\cdot$nm); e a ligação direta de 6.112 km fornece a geometria. Em uma remessa hipotética de 14 t, essa intensidade e a distância de 3.300,216 milhas náuticas correspondem a 430,71 kg de combustível apenas para a navegação. A comparação externa é usada somente como verificação direcional. Os resultados não representam frete comercial, garantia de serviço, avaliação \wtw{}/LCA ou superioridade universal da cabotagem.
+Para calcular esse consumo, o sistema consulta primeiro o sistema de Monitoramento, Reporte e Verificação da União Europeia (EU MRV, do inglês \textit{European Union Monitoring, Reporting and Verification}), que reúne indicadores anuais de consumo, atividade e emissões dos navios. A busca usa o número da Organização Marítima Internacional (IMO, do inglês \textit{International Maritime Organization}). Conhecido como número IMO, esse identificador acompanha permanentemente cada embarcação e permite reconhecer o mesmo navio em bases diferentes. O indicador informa quantos gramas de combustível o navio utiliza para transportar uma tonelada por uma milha náutica. Se o navio não for encontrado, o sistema usa uma estimativa calculada com embarcações semelhantes e deixa claro que o valor é aproximado. Depois de obter um valor para cada recorte aceito, o sistema reúne esses valores. Cada recorte recebe um peso igual à soma da carga a bordo multiplicada pela distância de seus trechos. O valor em que o peso acumulado alcança metade do total torna-se o indicador usado entre os dois portos. Em uma nova execução, o sistema aplica esse indicador uma única vez à carga informada pelo usuário e à distância de uma rota completa. A carga histórica serve apenas para calcular os pesos; ela não é somada à carga do usuário.
+
+O arquivo marítimo preparado pelo sistema, chamado de matriz marítima, permite calcular 177 ligações portuárias com sentido definido, como Santos--Manaus, que é diferente de Manaus--Santos. A base contém 12.025 recortes de viagens, embora tenha 1.324 viagens, porque uma viagem com várias escalas pode servir para mais de uma combinação de partida e chegada. Dentro da viagem real \codecell{voyage\_9612791\_00011}, o prefixo Santos--Suape--Pecém--Manaus gera seis combinações no mesmo sentido: Santos--Suape, Santos--Pecém, Santos--Manaus, Suape--Pecém, Suape--Manaus e Pecém--Manaus. A viagem completa ainda retorna de Manaus a Santos e pode fornecer outras ligações. A base também contém 5.438 subtrechos entre escalas consecutivas. Em 3.290 deles, a intensidade vem de uma correspondência direta com o IMO do navio. Nos outros 2.148, a execução atual usa uma estimativa por tipo; nenhum subtrecho usa fallback de classe.
+
+Santos--Manaus oferece um exemplo concreto. A base contém 89 recortes históricos provenientes de 89 viagens distintas nas quais o navio passou por Santos e depois chegou a Manaus. Esses recortes seguiram 22 sequências diferentes de portos. Todos ajudam a calcular o indicador de 9,322050 gramas de combustível por tonelada transportada e por milha náutica [g/(t$\cdot$nm), em que g significa grama, t significa tonelada e nm significa milha náutica]. Para definir a distância do cenário, o sistema usa a ligação direta observada na viagem \codecell{voyage\_9612789\_00004}. A matriz marítima atribui 6.112 quilômetros (km), equivalentes a 3.300,216 milhas náuticas, a esse subtrecho; trata-se de uma distância modelada, não de uma trajetória medida por posições do navio. Nessa passagem real, o navio saiu de Santos com 11.584,165~t a bordo. O teste de execução com uma entrada controlada de 14~t produz 430,71 quilogramas (kg) de combustível para a navegação. As 14~t são uma entrada de verificação do modelo, não a carga histórica do navio. Esse número não inclui automaticamente os acessos rodoviários nem todos os serviços portuários. A comparação externa serve apenas para verificar se outra fonte aponta a mesma tendência. Ela não transforma o resultado em preço de frete, garantia de serviço, avaliação completa do ciclo de vida ou prova de que a cabotagem é sempre superior.
+
+Os resultados ambientais são expressos em dióxido de carbono equivalente (\cooe{}), medida que converte o efeito de diferentes gases de efeito estufa para uma referência comum baseada no dióxido de carbono.
 
 \textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; emissões operacionais; \cooe{}; custo modelado; rastreabilidade; Brasil.
 
@@ -121,19 +127,18 @@ A matriz resultante contém 177 pares direcionais, 12.025 observações viagem--
 \selectlanguage{english}
 This report explains \CabotageLens{}, a computational tool that compares two ways of moving the same cargo between the same origin and destination. The first alternative uses road transport only. The second combines road access to the departure port, coastal shipping, and road access from the arrival port to the final destination. Each leg is calculated separately, and the system records the source of distances, fuel-intensity values, and other parameters.
 
-The maritime calculation combines ANTAQ Cargo and Port Call tables with EU MRV indicators. For each port pair, it includes every voyage in which the origin appears before the destination, including direct and multi-stop voyages. The system reconstructs onboard cargo and sums the consumption of all sublegs. Vessel intensity is searched first by IMO number. If no EU MRV match exists, a robust vessel-class or ship-type statistic is used and explicitly recorded as a fallback. The final OD intensity is a transport-work-weighted median. Corridor selection is separate and supplies only the port sequence and distance used in the scenario.
+To calculate navigation between two ports, the system uses records from Brazil's National Waterway Transportation Agency (ANTAQ, from the Portuguese name \textit{Agência Nacional de Transportes Aquaviários}), the federal agency responsible for regulating and monitoring Brazilian waterway transportation. These records describe port calls, dates, cargo movements, and vessels. The system examines one voyage at a time and reads its calls in the order in which they occurred. One observed 2025 record, \codecell{voyage\_9612791\_00011}, shows IMO 9612791 calling at Santos, Suape, Pecém, and Manaus in that order. The Santos-to-Manaus excerpt therefore contains the three consecutive legs Santos--Suape, Suape--Pecém, and Pecém--Manaus. A voyage that calls at Manaus before Santos does not represent the requested direction. Excerpts may be direct or multi-stop; a direct excerpt can belong to a voyage with calls before or after it. For each excerpt, the system reconstructs the onboard cargo and calculates the fuel used over all its legs.
 
-The matrix contains 177 directional pairs, 12,025 voyage--OD observations, and 5,438 sublegs. Of these sublegs, 3,290 use IMO-matched intensity and 2,148 use a fallback. Santos--Manaus provides a concrete reading example: 89 voyages across 22 corridors form the statistical sample, the representative intensity is 9.322050 g/(t$\cdot$nm), and the direct 6,112 km connection supplies the geometry. For a hypothetical 14 t shipment, that intensity and the 3,300.216 nautical-mile distance correspond to 430.71 kg of navigation fuel only. The external comparison is used as directional evidence. Results are not commercial freight quotations, service guarantees, WTW/LCA assessments, or proof of universal modal superiority.
+The system first looks in the European Union Monitoring, Reporting and Verification system (EU MRV), which publishes annual vessel consumption, activity, and emissions indicators. The search uses the permanent ship number assigned under the International Maritime Organization (IMO), allowing the same vessel to be identified across datasets. The indicator states how many grams of fuel are used to move one tonne of cargo over one nautical mile. If the vessel is not found, the system uses an estimate based on similar vessels and labels it as approximate. Historical voyage excerpts form one representative indicator; their cargo is not treated as the user's cargo. A new scenario applies that indicator once to the user-supplied cargo and to the distance of one complete selected route.
+
+The processed maritime file, called the maritime matrix, covers 177 directed port connections, such as Santos--Manaus, which is different from Manaus--Santos. Its 12,025 voyage excerpts come from 1,324 voyages because one multi-stop voyage can supply several departure-and-arrival combinations. Within observed voyage \codecell{voyage\_9612791\_00011}, the Santos--Suape--Pecém--Manaus prefix supplies six combinations in the same direction; the complete voyage then returns to Santos and can supply other connections. The data also contain 5,438 legs between consecutive reconstructed stops. Fuel intensity comes directly from the vessel's IMO for 3,290 legs; the other 2,148 use a type-based estimate. No leg in this execution uses a class fallback.
+
+Santos--Manaus provides a concrete example. The dataset contains 89 historical voyage excerpts from 89 distinct voyages in which the vessel called at Santos and later reached Manaus. These excerpts followed 22 different port sequences and all contribute to the 9.322050 grams of fuel per tonne transported and nautical mile [g/(t$\cdot$nm), where g means gram, t means tonne, and nm means nautical mile] indicator. The observed direct leg in \codecell{voyage\_9612789\_00004} supplies the scenario distance. The maritime matrix assigns 6,112 kilometres (km), or 3,300.216 nautical miles, to that leg; this is a modeled distance, not a vessel track measured from positions. The reconstructed onboard mass on that leg was 11,584.165~t. A controlled execution with a 14-tonne (t) model input gives 430.71 kilograms (kg) of navigation fuel. The 14~t input is used to verify the model and is not the vessel's historical cargo. This figure does not automatically include the road access legs or every port service. The external comparison only checks whether another source points in the same direction; it is not a commercial freight quotation, a service guarantee, a full life-cycle assessment, or proof that coastal shipping is always superior.
+
+Environmental results are expressed as carbon dioxide equivalent (\cooe{}), a common measure that converts the effect of different greenhouse gases to a reference based on carbon dioxide.
 
 \textbf{Keywords}: coastal shipping; road freight; multimodal freight; operational emissions; \cooe{}; modeled cost; traceability; Brazil.
 \selectlanguage{brazil}
-
-\markboth{Sumário}{Sumário}
-\tableofcontents
-\markboth{Lista de Figuras}{Lista de Figuras}
-\listoffigures
-\markboth{Lista de Tabelas}{Lista de Tabelas}
-\listoftables
 
 \cleardoublepage
 \chapter*{Dicionário de termos, siglas e abreviações}
@@ -142,49 +147,70 @@ The matrix contains 177 directional pairs, 12,025 voyage--OD observations, and 5
 \addcontentsline{toc}{chapter}{Dicionário de termos, siglas e abreviações}
 \small
 \begin{description}
-  \item[ANTAQ] Agência Nacional de Transportes Aquaviários.
-  \item[EU MRV] Sistema europeu de monitoramento, reporte e verificação de emissões e atividade de navios.
-  \item[IMO] Número permanente de identificação internacional da embarcação.
-  \item[OD] Par origem-destino usado para definir a remessa ou o corredor analisado.
-  \item[TEU] Unidade equivalente a contêiner de 20 pés.
-  \item[BRL] Real brasileiro, unidade monetária usada para expressar o proxy de custo operacional modelado.
-  \item[BR do Mar] Programa brasileiro associado ao transporte marítimo costeiro.
-  \item[SSS] \textit{Short sea shipping}, transporte marítimo de curta distância ou costeiro.
+  \item[ANTAQ] Agência Nacional de Transportes Aquaviários, órgão federal que regula e acompanha o transporte aquaviário brasileiro e publica os registros usados para reconstruir as viagens.
+  \item[EU MRV] \textit{European Union Monitoring, Reporting and Verification}, sistema de Monitoramento, Reporte e Verificação da União Europeia que publica indicadores anuais de consumo, atividade e emissões dos navios.
+  \item[IMO] \textit{International Maritime Organization}, Organização Marítima Internacional. O número IMO é o identificador permanente usado para reconhecer a mesma embarcação em bases diferentes.
+  \item[OD] Sigla de origem--destino. Ela também indica o sentido da análise. Por isso, uma navegação de Santos para Manaus é diferente de uma navegação de Manaus para Santos.
+  \item[TEU] \textit{Twenty-foot equivalent unit}, unidade equivalente a um contêiner de 20 pés usada para expressar a quantidade de contêineres em uma medida padronizada.
+  \item[BRL] Código monetário internacional do real brasileiro, usado para expressar a estimativa de custo operacional.
+  \item[BR do Mar] Programa de Estímulo ao Transporte por Cabotagem, iniciativa federal voltada ao transporte marítimo entre portos brasileiros.
+  \item[SSS] \textit{Short sea shipping}, expressão usada para o transporte marítimo de curta distância ou costeiro.
+  \item[TF] Trabalho de Formatura, projeto acadêmico ao qual este relatório está vinculado.
+  \item[UF] Unidade federativa, divisão territorial brasileira usada, por exemplo, para associar preços estaduais de diesel.
+  \item[API] \textit{Application programming interface}, interface que permite ao programa solicitar rotas, distâncias ou localizações a um serviço externo.
+  \item[GPS] \textit{Global Positioning System}, sistema de posicionamento por satélite usado para registrar ou obter coordenadas geográficas.
+  \item[CSV] \textit{Comma-separated values}, formato de texto que organiza valores tabulares separados por delimitadores.
+  \item[JSON] \textit{JavaScript Object Notation}, formato de texto usado para armazenar dados estruturados.
+  \item[VLSFO] \textit{Very low sulphur fuel oil}, combustível marítimo com teor muito baixo de enxofre cuja cotação é usada como referência para o preço do bunker.
   \item[Transporte rodoviário direto] Alternativa formada por uma perna rodoviária entre origem e destino.
   \item[Alternativa multimodal] Cadeia com acesso rodoviário inicial, perna marítima, portos e acesso rodoviário final.
   \item[Pre-carriage] Trecho rodoviário inicial entre a origem da carga e o porto de embarque.
   \item[On-carriage] Trecho rodoviário final entre o porto de desembarque e o destino da carga.
   \item[Operações portuárias] Atividades realizadas em porto ou terminal para atendimento da carga e da embarcação.
   \item[Hoteling/hotelling] Permanência do navio atracado ou em porto, com consumo de energia para sistemas de bordo.
-  \item[\ttw{}] Fronteira operacional \textit{tank-to-wheel}/\textit{tank-to-wake}.
-  \item[\wtw{}] Perspectiva \textit{well-to-wheel}/\textit{well-to-wake}.
-  \item[LCA/ACV] Avaliação de ciclo de vida.
-  \item[CO$_2$] Dióxido de carbono.
-  \item[\cooe{}] Dióxido de carbono equivalente.
-  \item[CO$_2$eq] Notação para dióxido de carbono equivalente em fontes ou benchmarks externos.
-  \item[GEE/GHG] Gases de efeito estufa.
-  \item[Unidade funcional] Base comum usada para comparar alternativas de transporte.
+  \item[\ttw{}] \textit{Tank-to-wheel}/\textit{tank-to-wake}, limite de cálculo que considera as emissões produzidas durante o uso do combustível pelo caminhão ou pelo navio. Não inclui a produção nem o transporte desse combustível.
+  \item[WTT] \textit{Well-to-tank}, parte do ciclo que inclui a produção, o processamento e a distribuição do combustível até ele chegar ao tanque do veículo ou navio.
+  \item[\wtw{}] \textit{Well-to-wheel}/\textit{well-to-wake}, limite mais amplo que reúne a etapa WTT e o uso do combustível pelo veículo ou navio.
+  \item[LCA/ACV] \textit{Life-cycle assessment}/avaliação de ciclo de vida, método que considera os impactos das várias etapas de produção, operação e descarte de um produto ou sistema.
+  \item[CO$_2$] Dióxido de carbono, gás emitido na combustão e usado como referência climática.
+  \item[\cooe{}] Dióxido de carbono equivalente, medida que converte o efeito de diferentes gases de efeito estufa para uma referência comum baseada no dióxido de carbono.
+  \item[CO$_2$eq] Notação alternativa para dióxido de carbono equivalente encontrada em fontes ou comparações externas.
+  \item[GEE/GHG] Gases de efeito estufa; GHG corresponde à expressão em inglês \textit{greenhouse gases}.
+  \item[FE] Fator de emissão, coeficiente que relaciona consumo, energia ou atividade a emissões.
+  \item[Unidade funcional] Condição mantida igual nas alternativas comparadas. Neste estudo, significa transportar a mesma carga entre a mesma origem e o mesmo destino.
   \item[Carga útil] Massa de carga efetivamente transportada na remessa ou cenário.
-  \item[Viagem--OD] Observação formada quando o porto de origem precede o porto de destino na sequência da mesma viagem.
-  \item[Corredor observado] Sequência de portos percorrida entre a origem e o destino em uma viagem ANTAQ.
-  \item[Subtrecho] Perna navegada entre duas escalas consecutivas, com distância e carga a bordo associadas.
+  \item[Chamada portuária] Registro original de uma atracação ou atendimento do navio em um porto. Mais de uma chamada pode representar a mesma parada operacional.
+  \item[Parada] Visita do navio a um porto na sequência da viagem, depois de reunir chamadas consecutivas que representam o mesmo local.
+  \item[Recorte histórico viagem--OD] Parte de uma única viagem entre dois portos escolhidos; OD significa origem--destino. Na viagem real \codecell{voyage\_9612791\_00011}, o recorte Santos--Manaus contém Santos--Suape, Suape--Pecém e Pecém--Manaus.
+  \item[Corredor observado] Lista, na ordem, dos portos pelos quais o navio realmente passou entre a partida e a chegada durante uma única viagem.
+  \item[Subtrecho] Trecho que o navio percorre entre duas escalas consecutivas. Cada subtrecho possui sua própria distância e sua própria carga a bordo.
   \item[Carga a bordo] Massa reconstruída que o navio transporta ao sair de uma escala e durante o subtrecho seguinte.
   \item[Intensidade marítima] Quantidade de combustível associada a uma tonelada de carga transportada por uma milha náutica, expressa em g/(t$\cdot$nm).
-  \item[Trabalho de transporte] Produto entre massa transportada e distância, expresso neste estudo em t$\cdot$nm.
-  \item[Mediana ponderada] Primeiro valor ordenado cuja soma acumulada dos pesos alcança 50\% do peso total.
-  \item[Média aparada] Média calculada após a retirada simétrica de uma fração das menores e maiores observações.
-  \item[Fator de emissão] Coeficiente que relaciona consumo, energia ou atividade a emissões.
-  \item[Proxy de custo operacional modelado] Estimativa monetária parcial calculada para os componentes representados.
+  \item[Trabalho de transporte] Medida da atividade realizada pelo navio. Em cada recorte, é a soma da carga a bordo multiplicada pela distância de cada subtrecho e é expressa em t$\cdot$nm.
+  \item[Mediana ponderada] Valor central obtido após ordenar as intensidades e considerar o trabalho de transporte de cada recorte. Recortes com maior trabalho de transporte têm mais peso.
+  \item[Média aparada] Média calculada depois de retirar a mesma pequena quantidade dos menores e dos maiores valores. A retirada reduz a influência de valores extremos.
+  \item[Estimativa de custo operacional] Valor calculado apenas com os componentes de custo representados pelo modelo. Não corresponde necessariamente ao preço cobrado por uma transportadora.
   \item[Frete comercial] Preço de mercado negociado, cotado ou contratado para transporte.
-  \item[Fallback] Aproximação ou fonte alternativa usada quando não há dado mais forte.
-  \item[Proveniência] Registro da origem e confiabilidade de um dado.
-  \item[Benchmark] Referência externa usada para comparação ou plausibilidade.
-  \item[Evidência direcional] Evidência de que duas fontes ou execuções apontam o mesmo sentido de resultado.
+  \item[Fallback] Estimativa usada quando o dado específico não está disponível. O resultado informa quando essa substituição ocorreu e qual grupo forneceu a estimativa.
+  \item[Proveniência] Registro que mostra de onde veio um valor e se ele foi observado, calculado ou estimado.
+  \item[Benchmark] Resultado de outra fonte usado como referência de comparação. Ele ajuda a verificar a tendência, mas não é automaticamente uma verdade de referência nem uma calibração.
+  \item[Evidência direcional] Situação em que duas fontes indicam a mesma alternativa como a de maior ou menor resultado, mesmo que os valores numéricos sejam diferentes.
   \item[Classificação conservadora] Categoria de uso atribuída à evidência para limitar sua interpretação.
   \item[Análise de sensibilidade] Execução sob hipótese documentada para avaliar dependência do resultado.
   \item[Reprodutibilidade] Capacidade de rastrear e repetir entradas, parâmetros, resultados e classificações.
 \end{description}
 \normalsize
+
+\clearpage
+\markboth{Sumário}{Sumário}
+\tableofcontents
+\clearpage
+\markboth{Lista de Figuras}{Lista de Figuras}
+\listoffigures
+\clearpage
+\markboth{Lista de Tabelas}{Lista de Tabelas}
+\listoftables
+
 \clearpage
 \pagenumbering{arabic}
 

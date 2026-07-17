@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 import math
 import statistics
 import unicodedata
@@ -9,7 +10,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from modules.cabotage.sea_matrix import SeaMatrix
 from modules.infra.data_assets import resolve_data_asset_path
@@ -44,6 +45,7 @@ PAIR_INTENSITY_ZERO_WORK_SOURCE = (
 PAIR_INTENSITY_UNAVAILABLE_SOURCE = (
     "antaq_mrv_same_od_representative_intensity_unavailable"
 )
+_EMPTY_AUDIT_IDS: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -117,6 +119,7 @@ def enrich_sea_matrix_with_efficiency(
     possible_pairs_only: bool = True,
     matched_pairs_only: bool = True,
     prefer_local_voyage_inputs: bool = False,
+    audit_voyage_ids: Iterable[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     sea_matrix_candidate = Path(sea_matrix_path)
     sea_matrix_resolved = (
@@ -149,6 +152,35 @@ def enrich_sea_matrix_with_efficiency(
         for row in voyages
         if str(row.get("voyage_id") or "").strip()
     }
+    raw_audit_voyage_ids = (
+        (audit_voyage_ids,)
+        if isinstance(audit_voyage_ids, str)
+        else (audit_voyage_ids or ())
+    )
+    audit_voyage_id_set = {
+        str(voyage_id).strip()
+        for voyage_id in raw_audit_voyage_ids
+        if str(voyage_id).strip()
+    }
+    audit_logging_enabled = bool(audit_voyage_id_set) and _log.isEnabledFor(
+        logging.DEBUG
+    )
+    effective_audit_voyage_ids = (
+        audit_voyage_id_set if audit_logging_enabled else set()
+    )
+    if audit_logging_enabled:
+        stop_voyage_ids = {
+            str(row.get("voyage_id") or "").strip()
+            for row in stops
+            if str(row.get("voyage_id") or "").strip()
+        }
+        _log.debug(
+            "maritime_audit_requested voyage_ids=%s "
+            "missing_from_voyages_csv=%s missing_from_stops_csv=%s",
+            sorted(audit_voyage_id_set),
+            sorted(audit_voyage_id_set - voyage_rows.keys()),
+            sorted(audit_voyage_id_set - stop_voyage_ids),
+        )
     voyage_intensity_provenance = {
         voyage_id: _resolve_voyage_intensity(
             voyage,
@@ -171,8 +203,12 @@ def enrich_sea_matrix_with_efficiency(
         port_coordinates=port_coordinates,
         matrix=matrix,
         coastline_factor=coastline_factor,
+        audit_voyage_ids=effective_audit_voyage_ids,
     )
-    directional_stats = _aggregate_subroute_stats(subroutes)
+    directional_stats = _aggregate_subroute_stats(
+        subroutes,
+        audit_voyage_ids=effective_audit_voyage_ids,
+    )
     if matched_pairs_only:
         directional_stats = _filter_directional_stats_to_matched(directional_stats)
     possible_pairs_meta = None
@@ -802,6 +838,9 @@ def _collapse_consecutive_canonical_stops(
     collapsed_call_count = 0
     for row in rows:
         item: dict[str, Any] = dict(row)
+        item["_source_sequences"] = [
+            _int_or_zero(row.get("sequence"))
+        ]
         canonical_port = _resolve_matrix_port_name(row, port_lookup)
         item["_resolved_matrix_port_name"] = canonical_port
         if (
@@ -809,10 +848,20 @@ def _collapse_consecutive_canonical_stops(
             and canonical_port is not None
             and collapsed[-1].get("_resolved_matrix_port_name") == canonical_port
         ):
-            for field in ("net_weight_t", "net_teu"):
+            for field in (
+                "loaded_weight_t",
+                "unloaded_weight_t",
+                "net_weight_t",
+                "loaded_teu",
+                "unloaded_teu",
+                "net_teu",
+            ):
                 collapsed[-1][field] = _float_or_zero(collapsed[-1].get(field)) + (
                     _float_or_zero(item.get(field))
                 )
+            collapsed[-1].setdefault("_source_sequences", []).extend(
+                item["_source_sequences"]
+            )
             collapsed_call_count += 1
             continue
         collapsed.append(item)
@@ -883,6 +932,7 @@ def _build_segments(
     port_coordinates: dict[str, tuple[float, float]],
     matrix: dict[str, Any],
     coastline_factor: float,
+    audit_voyage_ids: set[str] | None = None,
 ) -> tuple[list[VoyageSegment], list[VoyageSubroute], dict[str, Any]]:
     grouped: dict[str, list[dict[str, str]]] = {}
     for row in stops:
@@ -914,6 +964,7 @@ def _build_segments(
     voyages_with_reconstructed_initial_cargo = 0
     reconstructed_initial_onboard_weight_t_total = 0.0
     reconstructed_initial_onboard_teu_total = 0.0
+    audit_ids = audit_voyage_ids or _EMPTY_AUDIT_IDS
 
     for voyage_id, voyage_stops in grouped.items():
         raw_rows = sorted(
@@ -948,6 +999,32 @@ def _build_segments(
             raw_rows,
             port_lookup,
         )
+        audit_this_voyage = voyage_id in audit_ids
+        if audit_this_voyage:
+            _log.debug(
+                "maritime_voyage_reconstruction voyage_id=%s imo=%s "
+                "raw_stop_count=%d canonical_stop_count=%d "
+                "initial_onboard_weight_t=%.6f initial_onboard_teu=%.6f "
+                "intensity_g_per_tnm=%s intensity_source=%s "
+                "intensity_source_level=%s canonical_path=%s",
+                voyage_id,
+                imo,
+                len(raw_rows),
+                len(rows),
+                initial_onboard_weight_t,
+                initial_onboard_teu,
+                fuel_g_per_tnm,
+                intensity_source,
+                intensity_source_level,
+                " -> ".join(
+                    str(
+                        row.get("_resolved_matrix_port_name")
+                        or row.get("port_name")
+                        or "unmapped"
+                    )
+                    for row in rows
+                ),
+            )
         collapsed_consecutive_stop_calls += collapsed_calls
         if initial_onboard_weight_t > 0 or initial_onboard_teu > 0:
             voyages_with_reconstructed_initial_cargo += 1
@@ -981,6 +1058,24 @@ def _build_segments(
             to_port = _text_or_none(nxt.get("_resolved_matrix_port_name"))
             if from_port is None or to_port is None:
                 skipped_unmapped_ports += 1
+                if audit_this_voyage:
+                    _log.debug(
+                        "maritime_segment_skipped voyage_id=%s imo=%s "
+                        "canonical_segment_index=%d origin_stop_sequence=%s "
+                        "destination_stop_sequence=%s "
+                        "origin_call_sequences=%s destination_call_sequences=%s "
+                        "reason=unmapped_port "
+                        "raw_origin=%r raw_destination=%r",
+                        voyage_id,
+                        imo,
+                        idx,
+                        current.get("sequence"),
+                        nxt.get("sequence"),
+                        current.get("_source_sequences"),
+                        nxt.get("_source_sequences"),
+                        current.get("port_name"),
+                        nxt.get("port_name"),
+                    )
                 voyage_segment_slots.append(None)
                 continue
 
@@ -993,6 +1088,24 @@ def _build_segments(
             )
             if distance_km is None:
                 skipped_missing_distance += 1
+                if audit_this_voyage:
+                    _log.debug(
+                        "maritime_segment_skipped voyage_id=%s imo=%s "
+                        "canonical_segment_index=%d origin_stop_sequence=%s "
+                        "destination_stop_sequence=%s "
+                        "origin_call_sequences=%s destination_call_sequences=%s "
+                        "reason=missing_distance "
+                        "origin=%r destination=%r",
+                        voyage_id,
+                        imo,
+                        idx,
+                        current.get("sequence"),
+                        nxt.get("sequence"),
+                        current.get("_source_sequences"),
+                        nxt.get("_source_sequences"),
+                        from_port,
+                        to_port,
+                    )
                 voyage_segment_slots.append(None)
                 continue
 
@@ -1041,6 +1154,52 @@ def _build_segments(
             )
             segments.append(segment)
             voyage_segment_slots.append(segment)
+            if audit_this_voyage:
+                _log.debug(
+                    "maritime_segment_reconstruction voyage_id=%s imo=%s "
+                    "canonical_segment_index=%d origin_stop_sequence=%s "
+                    "destination_stop_sequence=%s "
+                    "origin_call_sequences=%s destination_call_sequences=%s "
+                    "origin=%r destination=%r "
+                    "departure_loaded_weight_t=%.6f "
+                    "departure_unloaded_weight_t=%.6f "
+                    "departure_net_weight_t=%.6f "
+                    "initial_onboard_weight_t=%.6f cargo_onboard_weight_t=%.6f "
+                    "cargo_onboard_teu=%.6f distance_km=%.6f distance_nm=%.6f "
+                    "distance_source=%s transport_work_tnm=%.6f "
+                    "intensity_g_per_tnm=%s intensity_source=%s "
+                    "intensity_source_level=%s fuel_consumption_kg=%s "
+                    "cargo_reconstruction_status=%s calculation_status=%s",
+                    voyage_id,
+                    imo,
+                    idx,
+                    current.get("sequence"),
+                    nxt.get("sequence"),
+                    current.get("_source_sequences"),
+                    nxt.get("_source_sequences"),
+                    from_port,
+                    to_port,
+                    _float_or_zero(current.get("loaded_weight_t")),
+                    _float_or_zero(current.get("unloaded_weight_t")),
+                    _float_or_zero(current.get("net_weight_t")),
+                    initial_onboard_weight_t,
+                    cargo_weight_t,
+                    cargo_teu,
+                    distance_km,
+                    distance_nm,
+                    distance_source,
+                    tonne_nm,
+                    fuel_g_per_tnm,
+                    intensity_source,
+                    intensity_source_level,
+                    (
+                        f"{segment.fuel_consumption_g / 1000.0:.6f}"
+                        if segment.fuel_consumption_g is not None
+                        else "unavailable"
+                    ),
+                    cargo_reconstruction_status,
+                    segment.calculation_status,
+                )
 
         for origin_idx in range(max(len(rows) - 1, 0)):
             for destination_idx in range(origin_idx + 1, len(rows)):
@@ -1101,6 +1260,34 @@ def _build_segments(
                 selected_by_od[od_key] = candidate
 
         selected_voyage_subroutes = list(selected_by_od.values())
+        if audit_this_voyage:
+            for subroute in sorted(
+                selected_voyage_subroutes,
+                key=lambda item: (
+                    item.origin_sequence,
+                    item.destination_sequence,
+                    item.corridor_port_path,
+                ),
+            ):
+                _log.debug(
+                    "maritime_voyage_subroute voyage_id=%s imo=%s "
+                    "origin_sequence=%d destination_sequence=%d direct=%s "
+                    "path=%s distance_nm=%.6f transport_work_tnm=%.6f "
+                    "fuel_consumption_kg=%s",
+                    voyage_id,
+                    imo,
+                    subroute.origin_sequence,
+                    subroute.destination_sequence,
+                    subroute.is_direct,
+                    " -> ".join(subroute.corridor_port_path),
+                    subroute.distance_nm,
+                    subroute.transport_work_tnm,
+                    (
+                        f"{subroute.fuel_consumption_g / 1000.0:.6f}"
+                        if subroute.fuel_consumption_g is not None
+                        else "unavailable"
+                    ),
+                )
         deduplicated_subroute_occurrences += (
             len(voyage_subroute_options) - len(selected_voyage_subroutes)
         )
@@ -1159,6 +1346,8 @@ def _build_segments(
 
 def _aggregate_subroute_stats(
     subroutes: list[VoyageSubroute],
+    *,
+    audit_voyage_ids: set[str] | None = None,
 ) -> dict[str, dict[str, dict[str, Any]]]:
     grouped: dict[tuple[str, str, tuple[str, ...]], list[VoyageSubroute]] = {}
     pair_subroutes: dict[tuple[str, str], list[VoyageSubroute]] = {}
@@ -1296,7 +1485,8 @@ def _aggregate_subroute_stats(
             6,
         )
         pair_intensity = _pair_representative_intensity(
-            pair_subroutes[(origin, destination)]
+            pair_subroutes[(origin, destination)],
+            audit_voyage_ids=audit_voyage_ids,
         )
         stats.update(pair_intensity)
         representative = _float_or_none(
@@ -1320,6 +1510,8 @@ def _aggregate_subroute_stats(
 
 def _pair_representative_intensity(
     subroutes: list[VoyageSubroute],
+    *,
+    audit_voyage_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Return one robust intensity for every eligible voyage of an OD pair."""
     resolved: list[tuple[float, float, VoyageSubroute]] = []
@@ -1338,6 +1530,10 @@ def _pair_representative_intensity(
     method = PAIR_INTENSITY_METHOD
     source = PAIR_INTENSITY_SOURCE
     total_weight = sum(item[1] for item in positive_weight)
+    crossing_subroute: VoyageSubroute | None = None
+    crossing_weight = 0.0
+    cumulative_before_crossing = 0.0
+    cumulative_at_crossing = 0.0
 
     if positive_weight:
         ordered = sorted(
@@ -1353,6 +1549,7 @@ def _pair_representative_intensity(
         threshold = total_weight / 2.0
         cumulative = 0.0
         for intensity, weight, subroute in ordered:
+            previous_cumulative = cumulative
             cumulative += weight
             effective_source_counts.update(
                 [
@@ -1366,6 +1563,10 @@ def _pair_representative_intensity(
                 # Deterministic lower inverse-CDF convention: the first
                 # observed intensity whose cumulative weight reaches 50%.
                 representative = intensity
+                crossing_subroute = subroute
+                crossing_weight = weight
+                cumulative_before_crossing = previous_cumulative
+                cumulative_at_crossing = cumulative
         weighted_mean = sum(
             intensity * weight for intensity, weight, _ in positive_weight
         ) / total_weight
@@ -1382,6 +1583,94 @@ def _pair_representative_intensity(
         weighted_mean = None
         method = "unavailable_no_resolved_same_od_voyage_intensity"
         source = PAIR_INTENSITY_UNAVAILABLE_SOURCE
+
+    audit_ids = audit_voyage_ids or _EMPTY_AUDIT_IDS
+    if audit_ids and any(item.voyage_id in audit_ids for item in subroutes):
+        origin = subroutes[0].corridor_port_path[0] if subroutes else "unavailable"
+        destination = subroutes[0].corridor_port_path[-1] if subroutes else "unavailable"
+        _log.debug(
+            "maritime_pair_intensity origin=%r destination=%r "
+            "candidate_voyage_count=%d resolved_voyage_count=%d "
+            "positive_weight_voyage_count=%d total_transport_work_tnm=%.6f "
+            "threshold_tnm=%.6f representative_intensity_g_per_tnm=%s "
+            "crossing_voyage_id=%s crossing_imo=%s crossing_path=%s "
+            "crossing_transport_work_tnm=%.6f cumulative_before_tnm=%.6f "
+            "cumulative_at_tnm=%.6f cumulative_before_percent=%s "
+            "cumulative_at_percent=%s crossing_intensity_source=%s "
+            "crossing_intensity_source_level=%s crossing_is_fallback=%s "
+            "crossing_statistic=%s crossing_outlier_rule=%s "
+            "crossing_raw_sample_size=%s crossing_retained_sample_size=%s "
+            "method=%s source=%s",
+            origin,
+            destination,
+            len(subroutes),
+            len(resolved),
+            len(positive_weight),
+            total_weight,
+            total_weight / 2.0,
+            representative,
+            crossing_subroute.voyage_id if crossing_subroute is not None else "unavailable",
+            crossing_subroute.imo if crossing_subroute is not None else "unavailable",
+            (
+                " -> ".join(crossing_subroute.corridor_port_path)
+                if crossing_subroute is not None
+                else "unavailable"
+            ),
+            crossing_weight,
+            cumulative_before_crossing,
+            cumulative_at_crossing,
+            (
+                f"{100.0 * cumulative_before_crossing / total_weight:.6f}"
+                if total_weight > 0.0
+                else "unavailable"
+            ),
+            (
+                f"{100.0 * cumulative_at_crossing / total_weight:.6f}"
+                if total_weight > 0.0
+                else "unavailable"
+            ),
+            (
+                crossing_subroute.intensity_provenance.get("intensity_source")
+                if crossing_subroute is not None
+                else "unavailable"
+            ),
+            (
+                crossing_subroute.intensity_provenance.get(
+                    "intensity_source_level"
+                )
+                if crossing_subroute is not None
+                else "unavailable"
+            ),
+            (
+                bool(crossing_subroute.intensity_provenance.get("is_fallback"))
+                if crossing_subroute is not None
+                else "unavailable"
+            ),
+            (
+                crossing_subroute.intensity_provenance.get("statistic")
+                if crossing_subroute is not None
+                else "unavailable"
+            ),
+            (
+                crossing_subroute.intensity_provenance.get("outlier_rule")
+                if crossing_subroute is not None
+                else "unavailable"
+            ),
+            (
+                crossing_subroute.intensity_provenance.get("raw_sample_size")
+                if crossing_subroute is not None
+                else "unavailable"
+            ),
+            (
+                crossing_subroute.intensity_provenance.get(
+                    "retained_sample_size"
+                )
+                if crossing_subroute is not None
+                else "unavailable"
+            ),
+            method,
+            source,
+        )
 
     values = [item[0] for item in resolved]
     return {

@@ -8,36 +8,54 @@ O \CabotageLens{} compara duas formas de levar a mesma carga entre a mesma orige
 
 O resultado não deve ser lido apenas como um total de custo ou de emissão. Ele é a última etapa de uma cadeia. Antes dele, o sistema escolhe os portos, calcula as pernas rodoviárias, identifica as viagens ANTAQ, reconstrói a carga a bordo, associa a intensidade MRV e registra a fonte de cada distância.
 
-A base marítima contém 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos resolvidos. Esses números mostram a quantidade de evidência processada. Eles não significam que existam 177 serviços comerciais garantidos. A ANTAQ informa operações registradas no período analisado; frequência futura, espaço disponível e contratação precisam ser confirmados fora do modelo.
+Os dados históricos da ANTAQ foram organizados em etapas. Uma \emph{chamada portuária} é uma ocorrência de atracação registrada na base. Chamadas consecutivas do mesmo navio no mesmo porto são reunidas em uma única \emph{parada}. Duas paradas vizinhas na sequência da viagem formam uma perna de navegação, chamada de \emph{subtrecho}. Dessa forma, 7.103 chamadas foram organizadas em 6.797 paradas pertencentes a 1.324 viagens reconstruídas. Dessas viagens foram calculados 5.438 subtrechos.
 
-\section{Corredor geométrico e amostra de intensidade}
+Uma mesma viagem pode fornecer vários recortes entre dois portos. Dentro da viagem real \codecell{voyage\_9612791\_00011}, o prefixo Santos--Suape--Pecém--Manaus fornece seis recortes: Santos--Suape, Santos--Pecém, Santos--Manaus, Suape--Pecém, Suape--Manaus e Pecém--Manaus. A viagem completa ainda retorna de Manaus a Santos e pode fornecer outras ligações. Os três recortes entre portos consecutivos são diretos; os demais incluem uma ou duas paradas intermediárias. Essa multiplicação explica por que 1.324 viagens geraram 12.025 recortes históricos entre um porto inicial e um porto final. No arquivo processado, cada registro recebe o nome técnico de \emph{recorte histórico viagem--OD}, em que OD significa origem--destino.
+
+Os 12.025 recortes estão distribuídos por 177 ligações com sentido definido entre dois portos. Santos--Manaus, por exemplo, é diferente de Manaus--Santos.
+
+Esses números mostram a quantidade de dados processados. Eles não significam que existam 177 serviços comerciais garantidos. A ANTAQ informa operações registradas no período analisado. Frequência futura, espaço disponível e contratação precisam ser confirmados fora do modelo.
+
+\section{Quais viagens formam o indicador e qual rota fornece a distância}
 \label{sec:corredores-portos-discussao}
 
-Dois conceitos precisam permanecer separados. O primeiro é a \emph{amostra de intensidade}. Ela reúne todas as viagens do mesmo OD nas quais a origem aparece antes do destino. O segundo é o \emph{caminho geométrico}. Ele fornece a sequência de portos e a distância usadas para calcular a remessa.
+Dois conjuntos de informação precisam permanecer separados. O primeiro é histórico e serve para formar o indicador representativo da ligação. No cálculo Santos--Manaus, o sistema aproveita a parte de cada viagem que começa na escala de Santos e termina na escala de Manaus. Entram tanto o recorte direto de \codecell{voyage\_9612789\_00004} quanto Santos--Suape--Pecém--Manaus de \codecell{voyage\_9612791\_00011}; uma passagem em que Manaus apareça antes de Santos não entra. Essa parte aproveitada da viagem pode ser direta ou incluir paradas intermediárias e recebe o nome de recorte.
 
-Em Santos--Manaus, a amostra possui 89 observações em 22 corredores. Ela inclui a ligação direta e corredores como Santos--Suape--Pecém--Manaus; Santos--Rio de Janeiro--Suape--Pecém--Manaus; e Santos--Navegantes--Rio de Janeiro--Salvador--Suape--Pecém--Manaus. Todas essas viagens ajudam a formar a intensidade representativa.
+Quatro verificações são aplicadas a cada recorte histórico. Primeiro, a parte aproveitada da viagem deve seguir a direção pedida. No cálculo Santos--Manaus, ela começa na escala de Santos e termina na escala de Manaus; uma sequência Manaus--Suape--Santos não serve. Segundo, nenhum dos trechos navegados entre esses portos pode estar ausente. Terceiro, deve existir uma intensidade obtida pelo IMO ou estimada e identificada como fallback. Quarto, o trabalho de transporte deve ser maior que zero para o recorte receber peso na mediana; esse trabalho é a soma da carga a bordo multiplicada pela distância de cada trecho. Um recorte com resultado igual a zero permanece registrado, mas não altera a mediana quando existem resultados positivos. O conjunto aprovado por essas regras recebe o nome de \emph{amostra de intensidade}.
 
-Para a geometria, a regra encontra uma ligação direta observada. Por isso, escolhe Santos--Manaus, com 6.112~km ou 3.300,216~nm. Os portos intermediários dos outros corredores não são acrescentados a essa rota. Eles permanecem somente na amostra estatística.
+O segundo conjunto pertence à execução solicitada pelo usuário. Ele contém uma única massa de carga, uma sequência de portos selecionada e a distância desse caminho. A amostra histórica ajuda a calcular o indicador típico de consumo. O caminho selecionado informa a distância sobre a qual esse indicador será aplicado à carga informada pelo usuário.
 
-Essa separação evita dois erros. O primeiro seria assumir que todo navio percorreu apenas Santos--Manaus sem escalas. O segundo seria montar uma rota artificial, por exemplo unindo Santos--Suape de uma viagem com Suape--Manaus de outra. O sistema usa muitas viagens para estimar intensidade, mas usa uma única cadeia observada e completa para a geometria.
+Em Santos--Manaus, a amostra possui 89 recortes históricos. Esses recortes seguem 22 sequências completas de portos. Cada sequência recebe o nome de \emph{corredor}. A amostra inclui o recorte direto. Também inclui Santos--Suape--Pecém--Manaus em \codecell{voyage\_9612791\_00011}; Santos--Rio de Janeiro--Suape--Pecém--Manaus em \codecell{voyage\_9784661\_00001}; e Santos--Navegantes--Pecém--Manaus em \codecell{voyage\_9852365\_00011}. O último não passa por Suape. Todos esses recortes ajudam a calcular um único indicador de consumo para Santos--Manaus. Esse indicador recebe o nome de \emph{intensidade representativa}.
 
-\section{Robustez estatística e proveniência MRV}
+Para escolher a distância aplicada à carga do usuário, a regra encontra um recorte direto observado. Por isso, seleciona Santos--Manaus. A matriz marítima atribui 6.112~km ou 3.300,216~nm ao subtrecho. Os portos intermediários dos outros corredores não são acrescentados a esse caminho. Eles permanecem somente na amostra estatística histórica.
+
+Essa separação evita dois erros. O primeiro seria assumir que todo navio percorreu apenas Santos--Manaus sem escalas. O segundo seria montar uma rota artificial com partes reais de viagens diferentes. Por exemplo, Santos--Suape aparece em \codecell{voyage\_9612791\_00011}, enquanto Suape--Manaus aparece em \codecell{voyage\_9612789\_00004}; o sistema não une esses dois registros para inventar uma única viagem Santos--Suape--Manaus. Ele usa muitos recortes históricos para estimar a intensidade, mas usa uma única cadeia observada e completa para executar o cálculo da remessa do usuário.
+
+\section{Como o sistema escolhe e registra o indicador de consumo}
 \label{sec:robustez-maritima-discussao}
 
-A intensidade é procurada primeiro pelo número IMO. Quando existe correspondência, o sistema usa o valor positivo do período MRV mais recente para aquele navio. Quando não existe, usa uma estatística robusta da classe ou do tipo. Essa segunda situação é chamada de fallback e fica identificada no resultado.
+O indicador marítimo informa quantos gramas de combustível são consumidos para transportar uma tonelada por uma milha náutica. A unidade é g/(t$\cdot$nm), e o método chama esse indicador de \emph{intensidade}. O sistema procura primeiro o número IMO do navio no MRV. Quando encontra uma correspondência, usa o valor positivo do período mais recente para aquele navio.
 
-O fallback não deve ser interpretado como medição da embarcação. Ele é uma estimativa de grupo. A regra reduz a influência de valores extremos: o tipo usa média aparada de 1\% em cada cauda quando há observações suficientes; caso contrário, usa mediana. A classe usa a média aparada disponível no artefato ou mediana quando ela não existe. Um valor associado diretamente a um IMO não é aparado.
+Quando não encontra o IMO, o sistema estima o consumo com embarcações semelhantes. Primeiro, procura o grupo mais específico disponível, chamado de classe. Se esse grupo não fornecer um valor, usa uma categoria mais ampla, chamada de tipo, como ``navio porta-contêineres''. Essa estimativa de grupo recebe o nome de \emph{fallback} e fica identificada no resultado.
 
-No conjunto completo, 60,50\% dos subtrechos usam IMO e 39,50\% usam fallback. Em Santos--Manaus, 40 das 89 observações usam IMO e 49 usam fallback. Mais importante que a contagem, 59,54\% do trabalho de transporte está ligado a fallback. Portanto, a fonte de intensidade precisa acompanhar o resultado.
+O fallback não deve ser interpretado como medição da embarcação. Para o tipo de navio, o sistema ordena os valores e retira uma quantidade inteira correspondente a 1\% de cada extremidade quando a amostra permite; caso contrário, usa a mediana. Para a classe, usa a média registrada no arquivo de eficiência depois da retirada dos valores abaixo do percentil 1 e acima do percentil 99; se ela não existir, usa a mediana. Um valor associado diretamente a um IMO não é retirado nem alterado.
 
-A mediana ponderada de Santos--Manaus é 9,322050~g/(t$\cdot$nm). A média aritmética ponderada diagnóstica é 25,243618~g/(t$\cdot$nm). A diferença ocorre porque intensidades altas deslocam a média. A mediana ponderada representa o ponto em que o peso acumulado alcança 50\% do trabalho de transporte e é menos sensível à cauda superior.
+No conjunto completo, 60,50\% dos subtrechos usam IMO e 39,50\% usam fallback. Em Santos--Manaus, 40 dos 89 recortes históricos usam IMO e 49 usam fallback.
+
+Para calcular o peso estatístico de cada recorte histórico, o sistema multiplica a carga a bordo pela distância de cada subtrecho e soma os resultados. Esse total recebe o nome de \emph{trabalho de transporte}. Em Santos--Manaus, 59,54\% do trabalho de transporte está ligado a fallback. Portanto, a origem do valor precisa acompanhar o resultado. O registro dessa origem recebe o nome de \emph{proveniência}.
+
+Para obter um único valor, o sistema ordena as intensidades da menor para a maior. Depois, acumula o trabalho de transporte nessa ordem. Escolhe a primeira intensidade em que o total acumulado alcança 50\%. Essa regra recebe o nome de \emph{mediana ponderada pelo trabalho de transporte}.
+
+Em Santos--Manaus, a mediana ponderada é 9,322050~g/(t$\cdot$nm). A média aritmética ponderada diagnóstica é 25,243618~g/(t$\cdot$nm). A diferença ocorre porque intensidades altas deslocam a média. A mediana é menos sensível a essa parte alta da distribuição.
 
 Isso não torna o valor certo em qualquer condição. O EU MRV resume operações reportadas em contexto europeu. Velocidade, calado, manutenção, clima, corrente, combustível e perfil de carga podem ser diferentes no Brasil. A regra robusta melhora a estabilidade do estimador, mas não elimina essas diferenças.
 
 \section{Como interpretar a execução de uma carga}
 \label{sec:porta-a-porta-discussao}
 
-O exemplo de 14~t apresentado no Capítulo~\ref{ch:resultados} ajuda a mostrar a função de cada dado. A intensidade de 9,322050~g/(t$\cdot$nm) vem das 89 observações de todos os corredores. A distância de 3.300,216~nm vem somente do caminho direto selecionado. A multiplicação desses valores pela massa resulta em 430,71~kg de combustível de navegação.
+O teste de execução com 14~t apresentado no Capítulo~\ref{ch:resultados} ajuda a mostrar a função de cada dado. Na etapa histórica, as cargas reconstruídas a bordo dos 89 recortes determinam os pesos usados para obter a intensidade de 9,322050~g/(t$\cdot$nm). Essas cargas históricas não são somadas nem confundidas com a entrada controlada de 14~t.
+
+Na execução controlada, as 14~t representam uma única entrada do modelo, e não uma carga observada na ANTAQ. A distância de 3.300,216~nm vem da matriz marítima para o caminho direto da viagem \codecell{voyage\_9612789\_00004}. A multiplicação da intensidade representativa por essa massa e por essa distância resulta em 430,71~kg de combustível de navegação.
 
 Os 430,71~kg não representam a cadeia inteira. Para uma comparação porta a porta, ainda são necessários o percurso rodoviário até Santos, as operações portuárias representadas e o percurso rodoviário a partir de Manaus. Comparar apenas o navio com o caminhão retiraria componentes reais da alternativa multimodal.
 
@@ -45,27 +63,27 @@ Quando a intensidade MRV por trabalho de transporte é utilizada, o consumo anua
 
 A literatura de \emph{short sea shipping} também mostra que o resultado depende do corredor, dos acessos, da utilização, da frequência, da confiabilidade e do custo total \cite{shortsea2019,modalshiftreview2020}. Essa literatura explica por que a comparação deve ser porta a porta. Ela não valida numericamente Santos--Manaus nem outro corredor brasileiro específico.
 
-\section{Benchmark externo e diferença de magnitude}
+\section{Comparação com uma referência externa}
 \label{sec:benchmark-discussao}
 
-O benchmark do Prof. Dr. Gustavo Costa permite verificar se a direção geral é semelhante. Nos 21 pares positivos e suportados, tanto o benchmark quanto o \CabotageLens{} indicam menor emissão para a alternativa com cabotagem.
+O resultado também é comparado com uma planilha produzida fora do projeto. Essa referência externa recebe o nome de \emph{benchmark}. O benchmark do Prof. Dr. Gustavo Costa permite verificar se as duas análises apontam o mesmo modo como menos emissor. Nos 21 casos com valores positivos e utilizáveis, tanto a planilha quanto o \CabotageLens{} indicam menor emissão para a alternativa com cabotagem.
 
 Esse acordo não significa que os valores sejam iguais. A classificação \codecell{same\_direction\_large\_gap} informa que existe concordância de direção e diferença relevante de magnitude. Distâncias, carga, veículo, portos, alocação e fronteira ambiental podem ser diferentes. Antes de alinhar esses elementos, o benchmark não pode ser usado para calibrar a intensidade marítima.
 
-\section{Fronteiras econômica, ambiental e portuária}
+\section{O que os resultados incluem e deixam de fora}
 \label{sec:fronteiras-discussao}
 
-Os valores monetários são custos operacionais modelados. Eles ajudam a comparar os componentes representados pelo sistema. Não são cotações de frete, tarifas contratadas ou prova de viabilidade comercial. Uma decisão real também depende de margem, seguro, prazo, frequência, confiabilidade, inventário, capacidade e condições do serviço \cite{competitiveness2024}.
+Todo cálculo precisa declarar o que inclui e o que deixa de fora. Esse limite recebe o nome de \emph{fronteira}. Na fronteira econômica, os valores monetários incluem somente os custos operacionais representados pelo sistema. Eles ajudam a comparar os componentes modelados. Não são cotações de frete, tarifas contratadas ou prova de viabilidade comercial. Uma decisão real também depende de margem, seguro, prazo, frequência, confiabilidade, inventário, capacidade e condições do serviço \cite{competitiveness2024}.
 
-As emissões são operacionais \ttw{} de \cooe{}. Nas pernas rodoviárias, a fronteira é \emph{tank-to-wheel}; na perna marítima, é \emph{tank-to-wake}. Um estudo \wtw{} inclui a produção e a distribuição dos combustíveis. Uma LCA inclui outras etapas do ciclo de vida. Portanto, números \wtw{}, LCA ou de CO$_2$ isolado não podem ser comparados diretamente com a saída do sistema sem reconciliação \cite{decarb2024,maritimelca2024}.
+Na fronteira ambiental, as emissões incluem somente a operação dos veículos e do navio. O relatório chama esse limite de \ttw{} de \cooe{}. Nas pernas rodoviárias, o termo específico é \emph{tank-to-wheel}. Na perna marítima, é \emph{tank-to-wake}. Um estudo \wtw{} também inclui a produção e a distribuição dos combustíveis. Uma LCA inclui outras etapas do ciclo de vida. Portanto, números \wtw{}, LCA ou de CO$_2$ isolado não podem ser comparados diretamente com a saída do sistema sem reconciliação \cite{decarb2024,maritimelca2024}.
 
 As operações portuárias são aproximações operacionais, não inventários completos de cada terminal. A regra de não adicionar \emph{hoteling} à intensidade MRV reduz dupla contagem, mas não descreve produtividade de berço, energia auxiliar, permanência no terminal ou qualidade do ar local \cite{berth2009,shipops2022,berthairquality2010}.
 
 \section{Valor prático e contribuição metodológica}
 \label{sec:valor-pratico-triagem}
 
-O \CabotageLens{} é uma ferramenta de triagem técnica. Ele ajuda a identificar quais pernas dominam o resultado, quais dados vieram de IMO, quanto do peso depende de fallback e quais premissas precisam de evidência adicional.
+O \CabotageLens{} ajuda a escolher quais casos merecem uma análise mais profunda. Esse uso inicial recebe o nome de \emph{triagem técnica}. A ferramenta mostra quais pernas dominam o resultado, quais dados vieram de IMO, quanto do peso depende de fallback e quais premissas precisam de evidência adicional.
 
 Um resultado favorável indica um corredor que merece investigação. O passo seguinte pode incluir consulta a armadores, terminais e transportadores, confirmação de frequência e capacidade e obtenção de tarifas. O modelo não substitui essas verificações.
 
-Sua principal contribuição é manter cálculo e proveniência juntos. Para Santos--Manaus, por exemplo, o leitor consegue identificar as 89 observações, os 22 corredores, a divisão 40/49 entre IMO e fallback, a participação de 59,54\% do fallback, a intensidade de 9,322050 e o caminho direto de 6.112~km. Essa trilha permite explicar o resultado e também seus limites.
+Sua principal contribuição é manter cálculo e proveniência juntos. Para Santos--Manaus, por exemplo, o leitor consegue identificar os 89 recortes históricos, os 22 corredores, a divisão 40/49 entre IMO e fallback, a participação de 59,54\% do fallback, a intensidade de 9,322050 e o caminho direto de 6.112~km. Essa trilha permite explicar o resultado e também seus limites.

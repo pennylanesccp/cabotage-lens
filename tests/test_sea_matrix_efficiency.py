@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Iterable
 from unittest.mock import patch
 
 from modules.cabotage.sea_matrix_efficiency import (
@@ -13,6 +14,7 @@ from modules.cabotage.sea_matrix_efficiency import (
     PAIR_INTENSITY_ZERO_WORK_SOURCE,
     ROUTE_OBSERVATION_MODE,
     _build_port_lookup,
+    _collapse_consecutive_canonical_stops,
     _robust_fallback_statistic,
     _resolve_matrix_port_name,
     enrich_sea_matrix_with_efficiency,
@@ -132,6 +134,178 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
             [leg["observed_fuel_kg"] for leg in sublegs],
             [100.0, 30.0],
         )
+
+    def test_debug_audit_exposes_real_multistop_reconstruction_values(self) -> None:
+        voyage_id = "voyage_9612791_00011"
+        real_stops = [
+            {
+                **self._stop(voyage_id, 0, "Porto de Santos", 9881.860, 866.0),
+                "loaded_weight_t": 9881.860,
+                "unloaded_weight_t": 0.0,
+            },
+            {
+                **self._stop(voyage_id, 1, "Porto de Suape", 3859.579, 77.0),
+                "loaded_weight_t": 11862.199,
+                "unloaded_weight_t": 8002.620,
+            },
+            {
+                **self._stop(voyage_id, 2, "Porto do Pecém", -4392.433, -354.0),
+                "loaded_weight_t": 3231.914,
+                "unloaded_weight_t": 7624.347,
+            },
+            {
+                **self._stop(voyage_id, 3, "Porto de Manaus", -12325.900, -1018.0),
+                "loaded_weight_t": 7571.660,
+                "unloaded_weight_t": 19897.560,
+            },
+            {
+                **self._stop(voyage_id, 4, "Porto de Santos", 1387.424, -48.0),
+                "loaded_weight_t": 8038.360,
+                "unloaded_weight_t": 6650.936,
+            },
+        ]
+
+        enrichment_inputs = {
+            "ports": [
+                "Porto de Santos",
+                "Porto de Suape",
+                "Porto do Pecém",
+                "Porto de Manaus",
+            ],
+            "matrix": self._symmetric_matrix(
+                {
+                    ("Porto de Santos", "Porto de Suape"): 2332.0,
+                    ("Porto de Suape", "Porto do Pecém"): 940.4575739530403,
+                    ("Porto do Pecém", "Porto de Manaus"): 2195.7202985863305,
+                    ("Porto de Manaus", "Porto de Santos"): 6112.0,
+                }
+            ),
+            "voyages": [{"voyage_id": voyage_id, "imo": "9612791"}],
+            "stops": real_stops,
+            "ships": [self._ship("9612791", [self._record(2023, 7.43)])],
+        }
+
+        with tempfile.TemporaryDirectory() as baseline_tmpdir:
+            baseline_payload, baseline_summary = self._run_enrichment(
+                Path(baseline_tmpdir),
+                **enrichment_inputs,
+            )
+
+        with tempfile.TemporaryDirectory() as tmpdir, self.assertLogs(
+            "modules.cabotage.sea_matrix_efficiency",
+            level="DEBUG",
+        ) as captured:
+            payload, summary = self._run_enrichment(
+                Path(tmpdir),
+                **enrichment_inputs,
+                audit_voyage_ids=voyage_id,
+            )
+
+        for candidate in (payload, baseline_payload):
+            candidate["voyage_fuel_g_per_tnm_directional_meta"].pop(
+                "generated_at",
+                None,
+            )
+        self.assertEqual(payload, baseline_payload)
+        self.assertEqual(summary, baseline_summary)
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Porto de Santos"][
+            "Porto de Manaus"
+        ]
+        self.assertAlmostEqual(stats["observed_transport_work_tnm"], 39294668.494)
+        self.assertAlmostEqual(stats["observed_fuel_kg"], 291959.386907)
+
+        log_text = "\n".join(captured.output)
+        self.assertIn(
+            "maritime_voyage_reconstruction "
+            "voyage_id=voyage_9612791_00011 imo=9612791",
+            log_text,
+        )
+        self.assertIn("initial_onboard_weight_t=2976.894000", log_text)
+        self.assertIn(
+            "maritime_segment_reconstruction "
+            "voyage_id=voyage_9612791_00011 imo=9612791 "
+            "canonical_segment_index=0 origin_stop_sequence=0 "
+            "destination_stop_sequence=1",
+            log_text,
+        )
+        self.assertIn("departure_net_weight_t=9881.860000", log_text)
+        self.assertIn("cargo_onboard_weight_t=12858.754000", log_text)
+        self.assertIn("transport_work_tnm=16191476.419006", log_text)
+        self.assertIn("fuel_consumption_kg=120302.669793", log_text)
+        self.assertIn("distance_source=sea_matrix", log_text)
+        self.assertIn("intensity_source=eu_mrv_imo_latest", log_text)
+        self.assertIn(
+            "canonical_segment_index=1 origin_stop_sequence=1 "
+            "destination_stop_sequence=2",
+            log_text,
+        )
+        self.assertIn("cargo_onboard_weight_t=16718.333000", log_text)
+        self.assertIn("transport_work_tnm=8489677.588401", log_text)
+        self.assertIn("fuel_consumption_kg=63078.304482", log_text)
+        self.assertIn(
+            "canonical_segment_index=2 origin_stop_sequence=2 "
+            "destination_stop_sequence=3",
+            log_text,
+        )
+        self.assertIn("cargo_onboard_weight_t=12325.900000", log_text)
+        self.assertIn("transport_work_tnm=14613514.486148", log_text)
+        self.assertIn("fuel_consumption_kg=108578.412632", log_text)
+        self.assertIn(
+            "maritime_voyage_subroute voyage_id=voyage_9612791_00011 "
+            "imo=9612791 origin_sequence=0 destination_sequence=3 direct=False",
+            log_text,
+        )
+        self.assertIn("transport_work_tnm=39294668.493555", log_text)
+        self.assertIn("fuel_consumption_kg=291959.386907", log_text)
+        self.assertIn(
+            "maritime_pair_intensity origin='Porto de Santos' "
+            "destination='Porto de Manaus'",
+            log_text,
+        )
+        self.assertIn("crossing_intensity_source=eu_mrv_imo_latest", log_text)
+        self.assertIn("crossing_intensity_source_level=imo", log_text)
+        self.assertIn("crossing_is_fallback=False", log_text)
+        self.assertIn("crossing_statistic=latest_positive", log_text)
+
+    def test_collapsed_calls_preserve_loaded_and_unloaded_audit_totals(self) -> None:
+        rows = [
+            {
+                "sequence": "0",
+                "port_name": "Terminal A",
+                "loaded_weight_t": "10",
+                "unloaded_weight_t": "2",
+                "net_weight_t": "8",
+                "loaded_teu": "4",
+                "unloaded_teu": "1",
+                "net_teu": "3",
+            },
+            {
+                "sequence": "1",
+                "port_name": "Terminal B",
+                "loaded_weight_t": "5",
+                "unloaded_weight_t": "4",
+                "net_weight_t": "1",
+                "loaded_teu": "2",
+                "unloaded_teu": "1",
+                "net_teu": "1",
+            },
+        ]
+
+        collapsed, collapsed_count = _collapse_consecutive_canonical_stops(
+            rows,
+            {"terminal a": "Porto A", "terminal b": "Porto A"},
+        )
+
+        self.assertEqual(collapsed_count, 1)
+        self.assertEqual(len(collapsed), 1)
+        self.assertEqual(collapsed[0]["_source_sequences"], [0, 1])
+        self.assertEqual(collapsed[0]["loaded_weight_t"], 15.0)
+        self.assertEqual(collapsed[0]["unloaded_weight_t"], 6.0)
+        self.assertEqual(collapsed[0]["net_weight_t"], 9.0)
+        self.assertEqual(collapsed[0]["loaded_teu"], 6.0)
+        self.assertEqual(collapsed[0]["unloaded_teu"], 2.0)
+        self.assertEqual(collapsed[0]["net_teu"], 4.0)
 
     def test_same_corridor_sums_voyages_with_mixed_intensity_sources(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -530,7 +704,10 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertGreater(summary["deduplicated_subroute_occurrences"], 0)
 
     def test_consecutive_terminal_aliases_are_collapsed_with_all_cargo_moves(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir, self.assertLogs(
+            "modules.cabotage.sea_matrix_efficiency",
+            level="DEBUG",
+        ) as captured:
             payload, _ = self._run_enrichment(
                 Path(tmpdir),
                 ports=["Port A", "Port B"],
@@ -557,6 +734,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                     self._stop("alias-voyage", 2, "Port B", -60.0, -6.0),
                 ],
                 ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+                audit_voyage_ids="alias-voyage",
             )
 
         stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
@@ -571,6 +749,9 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertEqual(summary["raw_candidate_segments"], 2)
         self.assertEqual(summary["candidate_segments"], 1)
         self.assertEqual(summary["collapsed_consecutive_canonical_stop_calls"], 1)
+        log_text = "\n".join(captured.output)
+        self.assertIn("origin_call_sequences=[0, 1]", log_text)
+        self.assertIn("destination_call_sequences=[2]", log_text)
 
     def test_missing_positive_matrix_distance_uses_audited_haversine_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -802,6 +983,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         ships: list[dict[str, object]],
         class_payload: dict[str, object] | None = None,
         port_records: list[dict[str, object]] | None = None,
+        audit_voyage_ids: Iterable[str] | str | None = None,
     ) -> tuple[dict[str, object], dict[str, object]]:
         matrix_path = root / "sea_matrix.json"
         voyages_path = root / "voyages.csv"
@@ -861,6 +1043,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                 possible_pairs_only=False,
                 matched_pairs_only=True,
                 prefer_local_voyage_inputs=True,
+                audit_voyage_ids=audit_voyage_ids,
             )
 
     @staticmethod

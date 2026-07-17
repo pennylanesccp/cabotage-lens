@@ -1,12 +1,14 @@
-\chapter{Parâmetros, fontes e proveniência}
+\chapter{Parâmetros, fontes e origem dos dados}
 \label{app:parametros}
 
-Este apêndice funciona como um guia de consulta. Ele mostra de onde vem cada dado, em qual etapa ele é usado e qual limite acompanha o resultado. Para auditar uma execução, o leitor pode seguir esta ordem: identificar a fonte, conferir a unidade, verificar a regra aplicada e ler a cautela associada.
+Este apêndice funciona como um guia de consulta. Ele mostra de onde vem cada dado, em qual etapa ele é usado e qual limite acompanha o resultado. O registro da origem e do tratamento de cada dado recebe o nome de \emph{proveniência}. O limite do que o cálculo inclui e deixa de fora recebe o nome de \emph{fronteira}.
+
+Para conferir um resultado, o leitor pode seguir esta ordem: identificar a fonte, conferir a unidade, verificar a regra aplicada e ler a cautela associada. O número IMO é a identificação internacional individual do navio. Quando a base europeia EU MRV não contém um valor para esse IMO, o sistema usa uma estimativa calculada com navios semelhantes. Essa substituição fica identificada no resultado como \emph{fallback}; ela não é apresentada como se fosse uma medição do próprio navio.
 
 \section{Inventário resumido de fontes}
 \label{sec:app-inventario-fontes}
 
-A Tabela~\ref{tab:app-fontes-proveniencia} apresenta as fontes principais. A coluna ``Uso metodológico'' informa o que o sistema faz com o dado. A coluna ``Limite de interpretação'' informa o que não pode ser concluído somente a partir dele.
+A Tabela~\ref{tab:app-fontes-proveniencia} apresenta as fontes principais. A coluna ``Como o dado é usado'' informa o que o sistema faz. A coluna ``Limite de interpretação'' informa o que não pode ser concluído somente a partir daquela fonte.
 
 \begingroup
 \footnotesize
@@ -25,16 +27,16 @@ Fonte ou origem & Dado obtido & Como o dado é usado & Limite de interpretação
 Fonte ou origem & Dado obtido & Como o dado é usado & Limite de interpretação \\
 \midrule
 \endhead
-ANTAQ & Viagens, ordem das escalas, embarques, desembarques, massa, TEU e número IMO. & Reconstruir carga a bordo, subtrechos e corredores observados entre pares ordenados de portos. & A base de 2025 não garante serviço futuro, frequência ou slot.\\
-EU MRV & Intensidade por trabalho de transporte, período, IMO, classe e tipo de navio. & Buscar primeiro por IMO e, quando necessário, calcular fallback robusto por classe ou tipo. & É um proxy europeu e pode não representar todas as condições brasileiras.\\
-OpenRouteService & Distâncias rodoviárias, geocodificação e metadados da rota. & Calcular a rota rodoviária direta, o acesso ao porto e o acesso ao destino. & É uma rota modelada por API, não uma trajetória GPS nem um contrato de transporte.\\
-LocationIQ & Resultado alternativo de geocodificação ou roteamento, quando configurado. & Resolver uma localidade ou rota quando a fonte principal não estiver disponível. & O uso precisa ficar identificado; não pode substituir a fonte principal silenciosamente.\\
-Ship \& Bunker / VLSFO Santos & Preço processado do combustível marítimo. & Alimentar o proxy de custo operacional marítimo. & O preço varia com a data; Santos pode ser apenas uma aproximação para outro local.\\
+ANTAQ & Viagens, datas e portos das escalas, embarques, desembarques, massa, capacidade equivalente a contêineres de 20 pés (TEU) e número IMO. & Organizar, dentro de cada viagem, as escalas da mais antiga para a mais recente; reconstruir a carga a bordo; e identificar todos os portos de partida e chegada que podem ser ligados nessa sequência. & A base de 2025 mostra operações registradas no período. Ela não garante que o mesmo serviço, frequência ou espaço para carga estará disponível no futuro.\\
+EU MRV & Consumo reportado em gramas por tonelada-milha, período, IMO, classe e tipo de navio. & Buscar primeiro o navio pelo IMO. Se ele não for encontrado, calcular uma estimativa de grupo por classe ou tipo. & É uma base de monitoramento, relato e verificação de operações europeias e pode não representar todas as condições brasileiras.\\
+OpenRouteService & Distâncias rodoviárias, localização de endereços e informações da rota. & Calcular a rota rodoviária direta, o acesso ao porto e o acesso ao destino. & É uma rota calculada por um serviço digital de roteamento (API), não uma trajetória GPS nem um contrato de transporte.\\
+LocationIQ & Resultado alternativo para localizar um lugar a partir de seu nome ou endereço, ou para calcular uma rota, quando configurado. & Encontrar uma localidade ou rota quando a fonte principal não estiver disponível. & O uso precisa ficar identificado; não pode substituir a fonte principal silenciosamente.\\
+Ship \& Bunker / VLSFO Santos & Preço processado do combustível marítimo. & Calcular o custo operacional marítimo representado pelo modelo. & O preço varia com a data; Santos pode ser apenas uma aproximação para outro local.\\
 CSV de diesel processado & Preço de diesel por UF. & Calcular o custo de combustível rodoviário. & O resultado continua sendo custo modelado, e não frete comercial.\\
-SeaMatrix schema 3 e referências de distância & Intensidade do par, corredores, subtrechos, distâncias e proveniência. & Manter separadas a amostra de intensidade e a geometria do cenário. & \texttt{haversine\_fallback} serve para triagem; não valida uma rota navegável.\\
+Arquivo marítimo SeaMatrix, formato versão 3 & Indicador de consumo entre dois portos, sequências observadas, trechos, distâncias e fontes. & Usar todos os recortes históricos aceitos para calcular o indicador e apenas uma sequência completa de portos para definir a distância do cenário. & A distância aproximada em linha de grande círculo, registrada como \texttt{haversine\_fallback}, serve para uma avaliação inicial; ela não comprova que existe uma rota navegável.\\
 Literatura e notas técnicas de portos & Valores observados, médias, padrões documentados ou indisponibilidade. & Representar componentes portuários quando há fonte suficiente. & Ausência de dado não significa custo, emissão ou tempo igual a zero.\\
-Presets de caminhão e fatores & Consumo rodoviário e fatores implementados. & Calcular emissões operacionais \ttw{} de \cooe{} nas pernas terrestres. & A fonte, a unidade e a fronteira precisam acompanhar o resultado.\\
-Prof. Dr. Gustavo Costa & Pares OD, rotas, fatores ou planilhas do benchmark. & Verificar direção e ordem de grandeza. & Não é verdade de referência nem alvo de reprodução calibrada.\\
+Configurações-padrão de caminhão e fatores & Consumo rodoviário e fatores implementados. & Calcular, nos trechos terrestres, as emissões liberadas durante o uso do combustível. Essa etapa operacional é identificada pela sigla \ttw{} e o resultado é expresso em dióxido de carbono equivalente (\cooe{}). & A fonte, a unidade e o limite do cálculo precisam acompanhar o resultado.\\
+Prof. Dr. Gustavo Costa & Ligações origem--destino, rotas, fatores e planilhas externas. & Verificar se as duas análises apontam o mesmo modo como menos emissor e se os valores ficam na mesma faixa ou são muito diferentes. & É uma comparação externa, chamada de benchmark. Não é uma verdade de referência nem um número usado para ajustar o modelo.\\
 \bottomrule
 \end{longtable}
 \endgroup
@@ -42,9 +44,13 @@ Prof. Dr. Gustavo Costa & Pares OD, rotas, fatores ou planilhas do benchmark. & 
 \section{Parâmetros e regras do estimador marítimo}
 \label{sec:app-parametros-maritimos}
 
-A leitura do estimador pode ser feita passo a passo. Primeiro, o sistema encontra as viagens elegíveis. Depois, reconstrói a carga e calcula o trabalho de transporte. Em seguida, resolve a intensidade de cada viagem. Por fim, agrega todas as viagens do mesmo OD e escolhe, separadamente, o caminho geométrico.
+A preparação do indicador marítimo usa as viagens históricas da ANTAQ. Dentro de cada viagem, o sistema organiza as escalas da data mais antiga para a mais recente. Na viagem real \codecell{voyage\_9612791\_00011}, o prefixo Santos--Suape--Pecém--Manaus fornece seis recortes no mesmo sentido: Santos--Suape, Santos--Pecém, Santos--Manaus, Suape--Pecém, Suape--Manaus e Pecém--Manaus. A viagem completa retorna de Manaus a Santos e pode fornecer outras ligações. São aproveitados tanto recortes diretos quanto recortes com uma ou mais paradas intermediárias.
 
-A Tabela~\ref{tab:app-parametros-maritimos} detalha cada passo. Os nomes em fonte monoespaçada são campos gravados no artefato. Eles permitem conferir no arquivo qual regra foi executada.
+Depois, para cada combinação de porto de partida e porto de chegada, o sistema considera somente os trechos navegados entre essas duas escalas. Em cada trecho, reconstrói a carga que estava a bordo e multiplica essa carga pela distância navegada. A soma desses produtos recebe o nome de \emph{trabalho de transporte}. Em seguida, calcula o consumo por tonelada-milha de cada viagem, chamado de \emph{intensidade}, e reúne os valores das diferentes viagens em um indicador representativo. Separadamente, escolhe uma sequência completa de portos e sua distância para aplicar à carga do cenário. Essa é a rota marítima usada na execução.
+
+Essa preparação histórica termina com a gravação do indicador, da sequência escolhida e de suas fontes em um arquivo processado. Quando o usuário informa uma carga, o aplicativo consulta os valores já preparados para os portos do cenário e aplica a massa informada. Portanto, a massa escolhida pelo usuário não altera quais viagens históricas formaram o indicador.
+
+A Tabela~\ref{tab:app-parametros-maritimos} detalha cada passo. Os nomes em fonte monoespaçada são os nomes técnicos de campos gravados no arquivo processado. O texto em português apresentado antes de cada nome explica o que o campo registra.
 
 \begingroup
 \footnotesize
@@ -63,26 +69,26 @@ Etapa & Regra em linguagem direta & Registro para auditoria & Unidade ou valor \
 Etapa & Regra em linguagem direta & Registro para auditoria & Unidade ou valor \\
 \midrule
 \endhead
-1. Selecionar a viagem & Incluir quando a origem aparece antes do destino. Aceitar ligação direta e qualquer número de escalas. & Contagens de viagens diretas, multiescala e caminhos observados. & Uma observação por viagem e par.\\
-2. Reconstruir a carga inicial & Somar somente o deslocamento necessário para que a carga acumulada nunca seja negativa. & \codecell{minimum\_nonnegative\_prefix\_offset} e estado da reconstrução. & t e TEU.\\
-3. Calcular trabalho de transporte & Em cada subtrecho, multiplicar carga a bordo por distância; depois somar todos os subtrechos do OD. & \codecell{observed\_transport\_work\_tnm}. & \(\mathrm{t\,nm}\).\\
+1. Selecionar a viagem & Verificar se a viagem percorreu a direção pedida. No cálculo Santos--Manaus, o sistema usa o recorte Santos--Suape--Pecém--Manaus da viagem \codecell{voyage\_9612791\_00011}; uma passagem em que Manaus apareça antes de Santos não entra. Manter recortes diretos e recortes com paradas intermediárias. & Quantidades de recortes diretos, recortes com escalas intermediárias e sequências completas observadas. & Um recorte por viagem e ligação.\\
+2. Reconstruir a carga inicial & Somar embarques e subtrair desembarques a cada escala. Se essa conta produzir carga negativa, acrescentar apenas a carga inicial mínima necessária para que todos os valores permaneçam iguais ou maiores que zero. & Ajuste inicial mínimo, gravado como \codecell{minimum\_nonnegative\_prefix\_offset}, e estado da reconstrução. & t e TEU.\\
+3. Medir a atividade da viagem & Em cada subtrecho, multiplicar carga a bordo por distância. Depois, somar todos os subtrechos entre os dois portos. O total é o trabalho de transporte. & \codecell{observed\_transport\_work\_tnm}. & \(\mathrm{t\,nm}\).\\
 4. Procurar intensidade por IMO & Usar o valor positivo do período EU MRV mais recente para o IMO da viagem. & Fonte \codecell{eu\_mrv\_imo\_latest}, período e IMO. & \(\mathrm{g/(t\,nm)}\).\\
-5. Aplicar fallback por classe & Usar média aparada de 1\% em cada cauda; se ela não estiver disponível, usar mediana. & Classe, estatística, amostra e regra de outlier. & \(\mathrm{g/(t\,nm)}\).\\
-6. Aplicar fallback por tipo & Remover \(\lfloor0{,}01n\rfloor\) valores de cada cauda antes da média; se nenhum corte for possível, usar mediana. & Tipo, amostra bruta e retida, limites e valores excluídos. & \(\mathrm{g/(t\,nm)}\).\\
-7. Preservar o IMO exato & Não aparar o valor individual ligado ao IMO. Aparar somente distribuições usadas em fallback. & Nível da fonte e política de outlier. & Regra categórica.\\
-8. Agregar o par & Usar a mediana das intensidades ponderada pelo trabalho de transporte de todas as viagens e corredores do OD. & Método, escopo, peso, fonte e contagens. & \(\mathrm{g/(t\,nm)}\).\\
-9. Resolver a mediana & Escolher a primeira intensidade ordenada cujo peso acumulado alcança 50\%. & Regra da função de distribuição inversa inferior. & Regra determinística.\\
-10. Tratar peso nulo & Ignorar pesos nulos se houver peso positivo; se todos forem nulos, usar mediana não ponderada. & Contagens de peso positivo e nulo e fonte da exceção. & Regra determinística.\\
-11. Selecionar o caminho & Escolher ligação direta observada; se não houver, escolher a menor cadeia completa. O caminho fornece apenas sequência e distância. & \codecell{direct\_first\_then\_shortest\_distance\_km}, corredor e alternativas. & Caminho geométrico.\\
+5. Substituir pelo valor da classe, se necessário & Se não houver resultado para o IMO, reunir navios da mesma classe. Na preparação desse grupo, retirar os valores abaixo do percentil 1 e acima do percentil 99 e calcular a média dos valores restantes. Se essa média tratada não estiver disponível, usar a mediana da classe. O arquivo registra que o valor veio desse grupo, isto é, de um \emph{fallback} por classe. & Classe, estatística escolhida, tamanho da amostra e limites usados para retirar valores extremos. & \(\mathrm{g/(t\,nm)}\).\\
+6. Substituir pelo valor do tipo, se necessário & Se também não houver resultado por classe, ordenar os valores de navios do mesmo tipo. Para um grupo com \(n\) valores, retirar \(\lfloor0{,}01n\rfloor\) valores de cada ponta e calcular a média do restante. Quando o grupo é pequeno demais para retirar ao menos um valor de cada ponta, usar a mediana. O arquivo registra esse \emph{fallback} por tipo. & Tipo, quantidade original, quantidade mantida, limites e valores retirados. & \(\mathrm{g/(t\,nm)}\).\\
+7. Preservar o IMO exato & Não retirar nem alterar o valor individual ligado ao IMO. Tratar valores extremos somente nas estimativas de grupo. & Nível da fonte e política de valores extremos. & Regra categórica.\\
+8. Reunir as viagens & Reunir todos os recortes aprovados na etapa 1. O sistema usa o recorte direto Santos--Manaus da viagem \codecell{voyage\_9612789\_00004} e o recorte Santos--Suape--Pecém--Manaus da viagem \codecell{voyage\_9612791\_00011}. Ambos participam, junto com os demais recortes que percorreram a direção pedida e conservaram todos os subtrechos. & Método, conjunto usado, peso, fonte e quantidades. & \(\mathrm{g/(t\,nm)}\).\\
+9. Obter o valor representativo & Ordenar as intensidades e acumular o trabalho de transporte. Escolher a primeira intensidade em que o peso alcança 50\%. Essa é a mediana ponderada. & Valor e peso acumulado no ponto de 50\%. & As mesmas entradas produzem o mesmo resultado.\\
+10. Tratar peso nulo & Ignorar pesos nulos se houver peso positivo; se todos forem nulos, usar mediana não ponderada. & Contagens de peso positivo e nulo e fonte da exceção. & A exceção aplicada fica registrada.\\
+11. Selecionar o caminho & Considerar somente corredores inteiros observados dentro de uma única viagem, com distância conhecida em todos os subtrechos e um valor de consumo disponível. Se existir um recorte direto, usar esse corredor. Caso contrário, usar o corredor completo mais curto entre os que possuem escalas. Essa escolha define somente os portos e a distância da nova remessa. & \codecell{direct\_first\_then\_shortest\_distance\_km}, corredor e alternativas. & Sequência e distância selecionadas.\\
 12. Calcular a remessa & Multiplicar intensidade do par, massa da remessa e distância selecionada; converter gramas para quilogramas. & Intensidade, massa, distância e modo de cálculo. & kg de combustível.\\
-13. Validar o artefato & Exigir schema marítimo 3, data de geração e campos de intensidade do par. & Versão do parser, schema, entradas e cobertura. & Versão 3.\\
+13. Conferir o arquivo gerado & Exigir a versão 3 da estrutura do arquivo, a data de geração e os campos que descrevem a intensidade entre os dois portos. & Versão da rotina que lê o arquivo, versão de sua estrutura, entradas e cobertura. & Versão 3.\\
 \bottomrule
 \end{longtable}
 \endgroup
 
 \subsection*{Exemplo de leitura: Santos--Manaus com 14 t}
 
-A Tabela~\ref{tab:app-execucao-santos-manaus-14t} separa os dados observados ou derivados do artefato da entrada escolhida apenas para demonstrar a execução. A massa de 14~t é hipotética. Os demais indicadores pertencem ao par Santos--Manaus no artefato atual.
+A Tabela~\ref{tab:app-execucao-santos-manaus-14t} separa duas etapas. Os indicadores foram preparados com os recortes das viagens históricas e gravados no arquivo marítimo. A massa de 14~t é uma entrada controlada do teste de execução. Ela não é carga observada na ANTAQ e não participa da seleção dos 89 recortes nem do cálculo da intensidade representativa.
 
 \begin{table}[htbp]
 \centering
@@ -93,13 +99,13 @@ A Tabela~\ref{tab:app-execucao-santos-manaus-14t} separa os dados observados ou 
 \toprule
 Passo & Valor & Interpretação \\
 \midrule
-Amostra de intensidade & 89 observações em 22 corredores & Todas as viagens elegíveis ajudam a definir a intensidade.\\
-Proveniência & 40 IMO e 49 fallback; 59,54\% do trabalho em fallback & Parte importante do peso vem de estimativa de grupo.\\
-Intensidade aplicada & 9,322050 g/(t$\cdot$nm) & Mediana ponderada de todos os corredores.\\
+Amostra histórica usada no indicador & 89 recortes provenientes de 89 viagens distintas, em 22 sequências de portos & Em cada viagem, o navio fez escala em Santos e, mais tarde na mesma viagem, fez escala em Manaus; todos os trechos navegados entre essas duas escalas ajudam a definir o valor.\\
+Fonte da intensidade de cada recorte & 40 valores por IMO e 49 estimativas de grupo; 59,54\% do trabalho usa estimativa de grupo & Parte importante do peso vem de valores calculados com navios semelhantes, registrados como \emph{fallback}.\\
+Intensidade preparada para Santos--Manaus & 9,322050 g/(t$\cdot$nm) & Mediana ponderada dos 89 recortes, distribuídos por 22 sequências de portos.\\
 Média diagnóstica & 25,243618 g/(t$\cdot$nm) & Valor auxiliar; não entra na execução.\\
-Caminho selecionado & Santos--Manaus direto & Somente este caminho fornece a geometria.\\
-Distância & 6.112 km ou 3.300,216 nm & Distância aplicada ao cálculo da remessa.\\
-Massa do exemplo & 14 t & Entrada hipotética escolhida para demonstrar a fórmula.\\
+Caminho selecionado & Santos--Manaus direto, \codecell{voyage\_9612789\_00004} & Somente esta rota observada fornece a distância da execução.\\
+Distância & 6.112 km ou 3.300,216 nm & Distância da matriz marítima aplicada ao cálculo da remessa; não é uma trajetória AIS.\\
+Massa informada no teste de execução & 14 t & Entrada controlada aplicada somente depois que a intensidade e a distância já foram preparadas.\\
 Consumo de navegação & 430,71 kg & \(9{,}322050\times14\times3.300{,}216/1000\).\\
 \bottomrule
 \end{tabularx}
@@ -130,12 +136,12 @@ A Tabela~\ref{tab:app-proveniencia-distancias} deve ser lida da seguinte maneira
 \toprule
 Proveniência & Uso metodológico & Limite de interpretação \\
 \midrule
-Roteamento rodoviário/cache & Distância terrestre para rota direta, \emph{pre-carriage} e \emph{on-carriage}. & Não é trajetória GPS medida nem rota comercial efetivamente usada.\\
-\codecell{seamatrix} & Distância marítima matricial para o par de portos. & Não comprova escala, frequência, serviço ou contrato.\\
-\codecell{external\_reference} & Referência documentada para o par do cenário. & Vale somente para o par e a unidade informados.\\
-\codecell{manual\_override} & Substituição documentada para um cenário rastreado. & Precisa permanecer explícita como decisão metodológica.\\
-\codecell{haversine\_fallback} & Aproximação geométrica quando falta fonte melhor. & Serve para triagem; não valida rota marítima operacional.\\
-\codecell{unavailable} & Ausência de valor defensável. & Não pode ser transformada em zero silencioso.\\
+Roteamento rodoviário ou resultado já salvo (\emph{cache}) & Distância terrestre da rota direta, do acesso ao porto e do percurso entre o porto de chegada e o destino final. & Não é trajetória GPS medida nem rota comercial efetivamente usada.\\
+Matriz marítima (\codecell{seamatrix}) & Distância marítima registrada na matriz para os dois portos. & Não comprova escala, frequência, serviço ou contrato.\\
+Referência externa (\codecell{external\_reference}) & Distância obtida de uma referência documentada para os portos do cenário. & Vale somente para os portos e a unidade informados.\\
+Substituição manual (\codecell{manual\_override}) & Distância inserida manualmente e documentada para um cenário rastreado. & Precisa permanecer explícita como decisão metodológica.\\
+Aproximação por grande círculo (\codecell{haversine\_fallback}) & Distância geométrica aproximada usada quando falta uma fonte melhor. & Serve para uma avaliação inicial; não valida uma rota marítima operacional.\\
+Dado indisponível (\codecell{unavailable}) & Registro de que não foi encontrado um valor defensável. & Não pode ser transformado em zero sem aviso.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -145,7 +151,7 @@ Roteamento rodoviário/cache & Distância terrestre para rota direta, \emph{pre-
 
 A alternativa multimodal não contém somente navegação. Ela também pode conter atividades portuárias. Cada componente separado precisa indicar se o valor foi observado, estimado, retirado da literatura ou considerado indisponível.
 
-Quando se usa a intensidade EU MRV por trabalho de transporte, o indicador anual é tratado como abrangente do consumo reportado pelo navio. Por isso, o \emph{hoteling} não é somado uma segunda vez. Essa regra evita dupla contagem. Ela não transforma o cálculo em inventário detalhado de um terminal.
+Quando se usa a intensidade EU MRV por trabalho de transporte, o indicador anual é tratado como abrangente do consumo reportado pelo navio. Por isso, o consumo do navio enquanto permanece atracado, chamado de \emph{hoteling}, não é somado uma segunda vez. Essa regra evita contar o mesmo consumo em duas parcelas. Ela não transforma o cálculo em um levantamento detalhado de todas as atividades do terminal.
 
 \begin{table}[htbp]
 \centering
@@ -156,10 +162,10 @@ Quando se usa a intensidade EU MRV por trabalho de transporte, o indicador anual
 \toprule
 Proveniência & Uso permitido & Cautela \\
 \midrule
-\codecell{observed} & Usar como dado observado para porto, chamada ou condição documentada. & Não equivale, sozinho, a inventário completo do terminal.\\
-\codecell{estimated\_port\_average} & Usar como média ponderada sustentada por observações específicas. & Tem menor confiança que uma observação direta do caso.\\
-\codecell{literature\_default} & Usar como padrão documentado quando não há valor observado defensável. & Precisa ser identificado como aproximação.\\
-\codecell{unavailable} & Registrar ausência de dado. & Não converter ausência em zero emissão, custo ou tempo.\\
+Dado observado (\codecell{observed}) & Usar como dado observado para porto, chamada ou condição documentada. & Não equivale, sozinho, a inventário completo do terminal.\\
+Média estimada do porto (\codecell{estimated\_port\_average}) & Usar como média ponderada calculada com medições portuárias específicas. & Tem menor confiança que uma medição da mesma operação no porto avaliado.\\
+Valor-padrão da literatura (\codecell{literature\_default}) & Usar como padrão documentado quando não há valor observado defensável. & Precisa ser identificado como aproximação.\\
+Dado indisponível (\codecell{unavailable}) & Registrar ausência de dado. & Não converter ausência em zero emissão, custo ou tempo.\\
 \bottomrule
 \end{tabularx}
 \end{table}

@@ -1,7 +1,9 @@
 \chapter{Checklist de reprodutibilidade}
 \label{app:checklist-reprodutibilidade}
 
-Este checklist orienta a repetição de uma análise. A reprodução não consiste apenas em obter o mesmo número. Também é necessário usar as mesmas fontes, unidades, regras de seleção e fronteiras. Ao final, outra pessoa deve conseguir explicar de onde veio cada parcela do resultado.
+Este apêndice apresenta uma lista de verificações, também chamada de \emph{checklist}, para repetir uma análise. A reprodução não consiste apenas em obter o mesmo número. Também é necessário usar as mesmas fontes, unidades e regras de seleção. É preciso declarar o que o cálculo inclui e deixa de fora. Esse limite recebe o nome de \emph{fronteira}. Também é preciso registrar de onde veio cada dado. Esse registro recebe o nome de \emph{proveniência}.
+
+Ao final, outra pessoa deve conseguir repetir a conta e explicar cada parcela do resultado.
 
 \section{Checklist técnico}
 \label{sec:app-checklist-tecnico}
@@ -29,18 +31,30 @@ Base bibliográfica & \texttt{docs/references.bib} & Existência das referência
 
 \section{Sequência recomendada de reprodução}
 
-Uma execução pode ser conferida em seis passos:
+É necessário distinguir duas etapas. Na preparação histórica, o sistema lê as viagens da ANTAQ, calcula os indicadores entre portos e grava os resultados em um arquivo processado. Na execução do cenário, o usuário informa os locais e a massa da carga; o aplicativo consulta o indicador e a distância já preparados e aplica a massa informada. Alterar a massa do cenário não muda os recortes históricos usados no indicador.
+
+As duas etapas podem ser conferidas em seis passos:
 
 \begin{enumerate}
-    \item Fixar origem, destino e massa da carga.
+    \item Escolher o ponto de partida, o ponto de chegada e a massa da carga.
     \item Registrar os portos escolhidos e as distâncias rodoviárias.
-    \item Listar as viagens ANTAQ em que a origem marítima aparece antes do destino marítimo.
-    \item Conferir carga a bordo, distância, trabalho de transporte e fonte da intensidade em cada viagem.
-    \item Recalcular a mediana ponderada e, separadamente, conferir o caminho geométrico selecionado.
-    \item Somar as pernas representadas e verificar se a saída continua dentro das fronteiras \ttw{} e de custo modelado.
+    \item Na preparação histórica, reunir as chamadas pelo IMO e colocá-las na ordem em que aconteceram. Encerrar uma viagem quando o navio retornar ao porto inicial ou quando o intervalo entre duas paradas superar 240 horas. Depois, verificar se cada viagem percorreu a direção pedida. No cálculo Santos--Manaus, o sistema usa o recorte Santos--Suape--Pecém--Manaus da viagem \codecell{voyage\_9612791\_00011}; uma passagem em que Manaus apareça antes de Santos não entra. Incluir recortes diretos e recortes com paradas intermediárias.
+    \item Em cada trecho entre duas escalas consecutivas, multiplicar a carga a bordo pela distância. Somar os produtos do recorte. Conferir também a fonte do consumo em gramas por tonelada-milha.
+    \item Ordenar as intensidades dos recortes e acumular o trabalho de transporte. Conferir o primeiro valor em que a soma alcança 50\% do total. Separadamente, conferir a sequência de portos e a distância escolhidas para a carga.
+    \item Somar os trechos representados. Confirmar que a emissão inclui apenas o uso do combustível na operação, identificado pela sigla \ttw{}, e que os valores monetários continuam identificados como custos calculados pelo modelo, não como preços de frete.
 \end{enumerate}
 
-Em Santos--Manaus, essa sequência deve recuperar 89 observações em 22 corredores, sendo 40 por IMO e 49 por fallback. A participação do fallback deve ser 59,54\% do trabalho de transporte. A intensidade aplicada deve ser 9,322050~g/(t$\cdot$nm), e a média diagnóstica, 25,243618~g/(t$\cdot$nm). O caminho deve ser a ligação direta de 6.112~km ou 3.300,216~nm.
+O trabalho de transporte é a soma, em todos os trechos do recorte, da carga a bordo multiplicada pela distância. A regra que ordena as intensidades e para quando esse trabalho acumulado alcança 50\% do total recebe o nome de \emph{mediana ponderada pelo trabalho de transporte}.
+
+Uma viagem pode produzir mais de uma combinação entre portos sem deixar de ser uma única viagem. Em \codecell{voyage\_9612791\_00011}, Santos--Suape--Pecém--Manaus produz seis recortes no sentido navegado: Santos--Suape, Santos--Pecém, Santos--Manaus, Suape--Pecém, Suape--Manaus e Pecém--Manaus. A mesma parte da sequência não cria Manaus--Santos, porque esse movimento não ocorreu nesse sentido. Por esse motivo, as \num{1324} viagens históricas geram \num{12025} \emph{recortes históricos viagem--OD}, em que OD significa origem--destino. O segundo número não representa novas viagens nem novos navios.
+
+Em Santos--Manaus, essa sequência deve encontrar 89 recortes nos quais o navio passou por Santos e, mais tarde na mesma viagem, chegou a Manaus. Cada recorte é a parte da viagem compreendida entre esses dois portos e recebe o nome técnico de \emph{recorte histórico viagem--OD}, em que OD significa origem--destino. Os 89 recortes seguem 22 sequências diferentes de portos, chamadas de \emph{corredores}.
+
+Em 40 recortes, o número internacional que identifica individualmente o navio (IMO) permite encontrar um valor específico. Nos outros 49, o sistema usa uma estimativa calculada com navios semelhantes. Essa estimativa de grupo recebe o nome de \emph{fallback}. Ela representa 59,54\% do trabalho de transporte, calculado pela soma da carga a bordo multiplicada pela distância de cada trecho.
+
+O consumo aplicado deve ser 9,322050~g/(t$\cdot$nm). Esse indicador recebe o nome de \emph{intensidade}. A média diagnóstica deve ser 25,243618~g/(t$\cdot$nm). O caminho usado na execução deve ser o recorte direto Santos--Manaus, ao qual a matriz marítima atribui 6.112~km ou 3.300,216~nm.
+
+Para conferir o ponto de corte, o trabalho total deve ser \(3.153.328.821{,}755~\mathrm{t\,nm}\). O acumulado deve estar em 49,168\% antes de \codecell{voyage\_9697002\_00002} e em 50,257\% depois de acrescentar os \(34.357.307{,}013~\mathrm{t\,nm}\) desse recorte. Para conferir a reconstrução, \codecell{voyage\_9612791\_00011} deve apresentar carga inicial de \(2.976{,}894\)~t e cargas a bordo de \(12.858{,}754\), \(16.718{,}333\) e \(12.325{,}900\)~t entre Santos e Manaus.
 
 Se a massa de teste for 14~t, a verificação manual da parcela de navegação deve produzir:
 
@@ -49,7 +63,9 @@ Se a massa de teste for 14~t, a verificação manual da parcela de navegação d
 = 430{,}71~\text{kg de combustível}.
 \end{equation}
 
-Somente a massa de 14~t é uma entrada ilustrativa. Os indicadores do par e o caminho são dados da execução atual. O valor de 430,71~kg não inclui toda a cadeia porta a porta.
+Somente a massa de 14~t é uma entrada controlada do teste de execução, e não uma carga observada na ANTAQ. A intensidade, o caminho e a distância foram preparados anteriormente com os dados históricos. O valor de 430,71~kg não inclui toda a cadeia porta a porta.
+
+Para extrair os valores intermediários diretamente do pipeline, executar a etapa de enriquecimento com \codecell{--audit-voyage-id voyage\_9612791\_00011} e \codecell{--log-level DEBUG}. O log deve mostrar o saldo de massa na escala de partida, a carga inicial, a carga a bordo, a distância e sua fonte, o trabalho de transporte, a intensidade e o combustível de cada subtrecho. O mesmo procedimento pode ser repetido para \codecell{voyage\_9612789\_00004} e \codecell{voyage\_9343974\_00002}.
 
 \section{Checklist metodológico}
 \label{sec:app-checklist-metodologico}
@@ -63,7 +79,7 @@ A Tabela~\ref{tab:app-checklist-metodologico} deve ser usada como uma lista de c
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.10}
 \begin{longtable}{L{0.29\textwidth}L{0.65\textwidth}}
-\caption{Checklist de consistência metodológica do framework.}
+\caption{Checklist de consistência dos cálculos e das fontes do sistema.}
 \label{tab:app-checklist-metodologico}\\
 \toprule
 Dimensão de controle & Pergunta de verificação \\
@@ -74,24 +90,26 @@ Dimensão de controle & Pergunta de verificação \\
 \midrule
 \endhead
 Comparação porta a porta & A origem, o destino e a massa são iguais na rodovia direta e na cadeia multimodal? \\
-Fronteira ambiental & O resultado está identificado como emissão operacional \ttw{} de \cooe{}, sem ser confundido com \wtw{} ou LCA? \\
+Fronteira ambiental & O resultado está identificado como emissão liberada durante o uso do combustível (\ttw{}) em dióxido de carbono equivalente (\cooe{}), sem incluir toda a cadeia do combustível (\wtw{}) ou o ciclo de vida completo (LCA)? \\
 Fronteira econômica & O valor está identificado como custo operacional modelado, e não como frete ou tarifa? \\
-Sequência das viagens ANTAQ & Todas as escalas pertencem à mesma viagem, com a origem antes do destino? \\
-Cobertura de corredores & Ligações diretas e multiescala foram consideradas, com uma contribuição por viagem e par? \\
+Sequência das viagens ANTAQ & A parte aproveitada pertence inteira à mesma viagem e percorre a direção pedida? No cálculo Santos--Manaus, o sistema usa o recorte Santos--Suape--Pecém--Manaus da viagem \codecell{voyage\_9612791\_00011}; uma passagem em que Manaus apareça antes de Santos não entra. \\
+Cobertura das sequências & Foram incluídos recortes diretos e recortes com paradas intermediárias? Cada viagem contribuiu uma única vez para os dois portos? \\
 Carga a bordo & Embarques e desembarques foram acumulados e a carga permaneceu não negativa? \\
-Trabalho de transporte & Foram somados carga a bordo vezes distância de todos os subtrechos do OD? \\
-Intensidade marítima & O sistema procurou primeiro o IMO no EU MRV e registrou qualquer fallback por classe ou tipo? \\
-Outliers do fallback & O tipo usou média aparada de 1\% ou mediana; a classe usou média aparada ou mediana; e o IMO exato foi preservado? \\
-Agregação do par & A intensidade é a mediana inferior ponderada pelo trabalho de transporte de todas as viagens e corredores elegíveis? \\
+Atividade da viagem & A carga a bordo foi multiplicada pela distância de cada subtrecho? Esses produtos foram somados entre os dois portos? \\
+Consumo por tonelada-milha & O sistema procurou primeiro o IMO no EU MRV? Quando não encontrou o navio, registrou claramente que usou uma estimativa de grupo por classe ou por tipo, chamada de \emph{fallback}? \\
+Valores extremos na estimativa de classe & Foram retirados os valores abaixo do percentil 1 e acima do percentil 99 antes da média? Quando essa média tratada não estava disponível, foi usada a mediana da classe? \\
+Valores extremos na estimativa de tipo & Para um grupo com \(n\) valores, foram retirados \(\lfloor0{,}01n\rfloor\) valores de cada ponta antes da média? Quando o grupo era pequeno demais para esse corte, foi usada a mediana do tipo? \\
+Valor específico do IMO & O valor individual ligado ao IMO foi preservado, mesmo quando era extremo, deixando os cortes restritos às estimativas de classe e tipo? \\
+Valor representativo da ligação & Foram examinados todos os recortes que percorreram a direção pedida, incluindo recortes diretos e recortes com paradas? Foi verificado se nenhum subtrecho estava ausente e se havia um valor de consumo identificado? Somente os recortes com trabalho de transporte positivo receberam peso? As intensidades foram ordenadas e foi selecionado o primeiro valor em que esse peso acumulado alcançou 50\%? \\
 Pesos nulos & Pesos nulos foram excluídos quando havia peso positivo e tratados por mediana não ponderada quando todos eram nulos? \\
-Seleção de caminho & Foi escolhida uma ligação direta observada ou, na sua ausência, a menor cadeia completa, sem combinar viagens? \\
-Proveniência de distâncias & Cada perna informa se veio de matriz, API, referência, fallback ou override? \\
-Componentes portuários & As operações portuárias têm fonte e o \emph{hoteling} não foi duplicado quando se usou intensidade MRV abrangente? \\
+Seleção do caminho do cenário & Foi usado um recorte inteiro observado em uma única viagem, com distância conhecida em todos os subtrechos e intensidade disponível? Foi escolhido um recorte direto ou, quando ele não existia, o recorte completo de menor distância entre os observados? \\
+Fonte das distâncias & Cada trecho informa se a distância veio de matriz, serviço digital de roteamento (API), referência, aproximação ou substituição manual? \\
+Componentes portuários & As operações portuárias têm fonte? O consumo do navio enquanto permanece atracado, chamado de \emph{hoteling}, deixou de ser somado novamente quando o indicador MRV já foi tratado como abrangente desse consumo? \\
 Tratamento de dados ausentes & Dados indisponíveis permaneceram como lacuna, em vez de serem transformados em zero? \\
-Compatibilidade do artefato & A matriz informa schema, data, política de intensidade, regra de caminho e cobertura? \\
+Compatibilidade do arquivo & O arquivo informa a versão de sua estrutura, a data, a regra de intensidade, a regra de caminho e a cobertura? \\
 Classificação de evidência & O resultado foi limitado à sua categoria, sem alegação de superioridade universal? \\
 \bottomrule
 \end{longtable}
 \endgroup
 
-Ao concluir o checklist, o leitor deve conseguir repetir a fórmula e também explicar seus limites. No exemplo de 14~t, isso significa reproduzir os 430,71~kg de navegação e declarar que o número não é emissão \wtw{}, custo comercial ou confirmação de serviço.
+Ao concluir o checklist, o leitor deve conseguir repetir a fórmula e também explicar seus limites. No teste com 14~t, isso significa reproduzir os 430,71~kg de navegação e declarar que o número não é emissão \wtw{}, custo comercial ou confirmação de serviço.

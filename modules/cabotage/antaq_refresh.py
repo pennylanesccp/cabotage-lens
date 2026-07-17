@@ -83,6 +83,7 @@ def refresh_antaq_pipeline(
     keep_unmatched_pairs: bool = False,
     timeout_s: float = 120.0,
     progress_callback: _ProgressCallback | None = None,
+    audit_voyage_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     ordered_years = _normalize_years(years)
     raw_root = Path(raw_dir).resolve()
@@ -201,6 +202,7 @@ def refresh_antaq_pipeline(
         possible_pairs_only=not bool(keep_all_matrix_pairs),
         matched_pairs_only=not bool(keep_unmatched_pairs),
         prefer_local_voyage_inputs=True,
+        audit_voyage_ids=audit_voyage_ids,
     )
     sea_matrix_summary["deployment_validation"] = validate_enriched_sea_matrix_payload(
         enriched_payload,
