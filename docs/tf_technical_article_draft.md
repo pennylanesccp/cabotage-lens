@@ -12,15 +12,25 @@
 
 ## Resumo
 
-Este artigo apresenta o CabotageLens, um sistema computacional para comparar, de forma porta a porta e auditável, o transporte rodoviário direto e a alternativa rodovia–cabotagem–rodovia no Brasil. A comparação utiliza a mesma origem, o mesmo destino e a mesma massa de carga, incluindo os acessos terrestres aos portos. A perna marítima é reconstruída com as tabelas de Carga e Atracação da Agência Nacional de Transportes Aquaviários (ANTAQ): as escalas são ordenadas, a carga a bordo é atualizada após cada porto e o trabalho de transporte é calculado somando, em todos os subtrechos, a carga a bordo multiplicada pela distância. A intensidade de consumo é associada ao navio por seu identificador permanente na base de Monitoramento, Reporte e Verificação da União Europeia (EU MRV); sem correspondência, utiliza-se uma estimativa robusta por classe ou tipo, com registro da fonte. A intensidade representativa da ligação é obtida por uma mediana ponderada pelo trabalho de transporte dos trechos extraídos das viagens, sejam eles diretos ou com escalas, sem impor um único corredor. Na aplicação Santos–Manaus, 89 viagens distribuídas em 22 sequências de portos produziram uma intensidade representativa de consumo de 9,32 g/(t\(\cdot\)nm). Como o ponto da mediana correspondeu a uma estimativa por tipo de embarcação, esse resultado representa a ligação, não uma medição individual de um navio. Os resultados ambientais se limitam às emissões operacionais do uso do combustível, expressas em dióxido de carbono equivalente; os valores econômicos são custos modelados, não cotações de frete. A contribuição do trabalho é uma comparação reproduzível, específica por rota e com proveniência explícita, sem pressupor superioridade universal da cabotagem.
+A escolha entre transporte rodoviário direto e transporte com cabotagem não depende apenas da distância percorrida. No Brasil, uma rota com cabotagem pode reduzir parte das emissões no trecho principal, mas também inclui deslocamentos rodoviários até os portos, operações portuárias, espera, movimentação de carga e o percurso real realizado pelo navio. Quando esses elementos são ignorados, a comparação entre os modais fica incompleta e pode levar a conclusões pouco confiáveis.
+
+Este trabalho apresenta o CabotageLens, uma ferramenta desenvolvida para comparar, de forma mais assertiva, duas alternativas para a mesma origem, destino e carga: uma viagem totalmente rodoviária e uma cadeia logística formada por rodovia, cabotagem e rodovia. A ferramenta utiliza dados públicos de instituições públicas e privadas, combinando informações de rotas terrestres, movimentação portuária, viagens marítimas, consumo energético, emissões e custos modelados.
+
+A principal contribuição do sistema é tratar a operação logística como uma cadeia completa, e não como trechos isolados. Na perna marítima, o sistema reconstrói o percurso observado dos navios, considera cargas transportadas ao longo dos subtrechos e evita assumir previamente um corredor fixo. Na comparação ambiental, inclui pontos de emissão que normalmente ficam fora de análises simplificadas, como acessos terrestres aos portos e emissões associadas às etapas portuárias quando há dados disponíveis.
+
+Com isso, o CabotageLens fornece uma base mais transparente para avaliar custo e emissões de carbono entre alternativas rodoviárias e multimodais, permitindo que a decisão seja sustentada por dados rastreáveis, premissas explícitas e uma representação mais próxima da operação real.
 
 **Palavras-chave**: cabotagem; transporte rodoviário; transporte multimodal; ANTAQ; EU MRV; emissões operacionais; logística; Brasil.
 
 ## 1. Introdução
 
-O transporte brasileiro de cargas depende fortemente das rodovias. O caminhão consegue chegar diretamente a muitas origens e destinos. Em trajetos longos, porém, o resultado também depende do consumo de diesel, da infraestrutura terrestre e do custo de percorrer grandes distâncias. Quando a origem e o destino podem ser ligados por portos, a cabotagem pode ser uma alternativa técnica relevante [icct2022].
+O transporte de cargas no Brasil é fortemente concentrado nas rodovias. Em 2015, o modal rodoviário respondeu por 65% da atividade de transporte de cargas, medida em toneladas-quilômetro úteis (TKU). No mesmo recorte, a ferrovia correspondeu por 15% e a cabotagem por 11%. A distribuição ajuda a explicar por que o caminhão é a referência mais imediata para transportar cargas no país, inclusive em trajetos longos.
 
-Cabotagem é o transporte marítimo entre portos do mesmo país. A existência dessa opção não significa que ela será sempre melhor que a rodovia. A comparação precisa responder a uma pergunta concreta: como transportar a mesma carga, do mesmo ponto de partida ao mesmo destino, por cada alternativa?
+![Distribuição da atividade de transporte de cargas no Brasil em 2015.](images/grafico%20da%20atividade%20modal%20do%20transporte%20no%20Brasil%20em%202015.jpeg)
+
+*Figura 1 — Distribuição da atividade de transporte de cargas no Brasil em 2015, medida em TKU. Fonte: [Sindicato dos Bancários de São Paulo, Osasco e Região (2018)](https://spbancarios.com.br/05/2018/brasil-e-dependente-do-transporte-rodoviario-de-cargas), com dados de 2015 do Plano Nacional de Logística, conforme informado pela publicação.*
+
+Essa concentração não significa que a rodovia seja a melhor alternativa em todas as situações. O caminhão oferece uma ligação direta entre muitas origens e destinos, mas viagens longas também aumentam a exposição ao consumo de diesel, às condições da infraestrutura terrestre e ao custo de percorrer grandes distâncias. Quando a carga pode entrar e sair por portos, a cabotagem — o transporte marítimo entre portos do mesmo país — passa a ser uma alternativa possível [icct2022]. A pergunta, porém, não é se um caminhão ou um navio é melhor isoladamente. É qual alternativa consegue levar a mesma carga, do mesmo ponto de partida ao mesmo destino, com menor custo modelado e menores emissões operacionais.
 
 Essa pergunta exige uma comparação porta a porta. Na alternativa rodoviária, a carga segue diretamente por estrada. Na alternativa multimodal, ela percorre um acesso rodoviário até o porto, uma perna marítima e outro acesso rodoviário até o destino final. Portos, distâncias, carga transportada e interfaces operacionais podem mudar o resultado [shortsea2019; modalshiftreview2020].
 
@@ -28,7 +38,7 @@ O CabotageLens organiza essa comparação. O usuário informa a origem da carga,
 
 Dois limites são importantes. Primeiro, as emissões calculadas são operacionais TTW. Na rodovia, *tank-to-wheel* (tanque à roda) considera a queima do combustível no motor e as emissões liberadas pelo escapamento. Na navegação, *tank-to-wake* (tanque à esteira) considera a combustão e as emissões geradas a bordo. Essa fronteira começa com o combustível já disponível no veículo ou no navio e, por isso, não inclui sua produção, seu processamento, seu transporte nem sua distribuição. Uma avaliação WTW — *well-to-wheel* (do poço à roda), na rodovia, e *well-to-wake* (do poço à esteira), na navegação — acompanha toda a cadeia do combustível, desde sua origem até o uso no veículo ou no navio. Ainda assim, ela não equivale necessariamente a uma avaliação completa de ciclo de vida, que também pode incluir os veículos, os navios e a infraestrutura. Segundo, o custo calculado é um custo operacional modelado. Ele não representa frete comercial, tarifa contratada ou garantia de viabilidade logística [competitiveness2024; decarb2024; maritimelca2024].
 
-A contribuição central deste artigo está no cálculo marítimo. O sistema não obriga o navio a seguir uma sequência previamente escolhida, como Santos–Suape–Manaus. Para calcular Santos–Manaus, ele examina uma viagem de cada vez e lê suas escalas da mais antiga para a mais recente. Na viagem observada `voyage_9612791_00011`, o recorte Santos–Manaus foi Santos–Suape–Pecém–Manaus e contribuiu com três subtrechos consecutivos. Uma viagem Manaus–Suape–Santos pertence ao sentido contrário e não é usada nesse cálculo. Assim, entram tanto os recortes diretos quanto os recortes que chegaram a Manaus depois de passar por outros portos.
+Dentro dessa comparação porta a porta, a principal contribuição metodológica do artigo está na forma como o transporte marítimo é reconstruído. O sistema não obriga o navio a seguir uma sequência previamente escolhida, como Santos–Suape–Manaus. Para calcular Santos–Manaus, ele examina uma viagem de cada vez e lê suas escalas da mais antiga para a mais recente. Na viagem observada `voyage_9612791_00011`, o recorte Santos–Manaus foi Santos–Suape–Pecém–Manaus e contribuiu com três subtrechos consecutivos. Uma viagem Manaus–Suape–Santos pertence ao sentido contrário e não é usada nesse cálculo. Assim, entram tanto os recortes diretos quanto os recortes que chegaram a Manaus depois de passar por outros portos.
 
 ## 2. Revisão da literatura e fundamentação metodológica
 
@@ -36,11 +46,11 @@ A literatura mostra que a cabotagem pode ser relevante em viagens longas, mas o 
 
 Estudos de *short sea shipping*, ou navegação marítima de curta distância, também mostram que não existe uma vantagem ambiental automática. O resultado depende do tipo de navio, de sua utilização, das distâncias e da carga à qual o consumo é atribuído [shortsea2019]. Por isso, a unidade analisada deve ser a remessa completa, e não um navio e um caminhão considerados isoladamente [modalshiftreview2020].
 
-O EU MRV é uma base europeia de monitoramento, reporte e verificação de emissões marítimas. Ela publica indicadores anuais por embarcação. O número IMO funciona como uma identificação internacional do navio. No CabotageLens, ele permite ligar um navio encontrado na ANTAQ à sua intensidade de combustível no EU MRV [eumrv2025].
+Para representar essas diferenças com dados observados, o cálculo marítimo começa pela atividade registrada no Brasil. A ANTAQ fornece os movimentos de embarque e desembarque na tabela de Carga e informa, na tabela de Atracação, onde e quando cada navio esteve. A combinação dessas informações permite ordenar as escalas e estimar a carga que permaneceu a bordo em cada trecho [antaq2025].
 
-A intensidade marítima usada no modelo é expressa em g/(t\(\cdot\)nm). Essa unidade significa gramas de combustível para transportar uma tonelada por uma milha náutica. O cálculo primeiro multiplica a carga do navio pela distância atribuída ao subtrecho. No recorte direto da viagem `voyage_9612789_00004`, as 11.584,165 t a bordo e as 3.300,216 nm da matriz marítima produziram 38.230.246,479 t\(\cdot\)nm de trabalho de transporte. A intensidade de 9,322050 g/(t\(\cdot\)nm) aplicada a essa atividade resultou em 356.384,277 kg de combustível. Os valores de carga e distância apresentados no texto estão arredondados; o cálculo armazenado conserva maior precisão.
+Depois de reconstruir a atividade do navio, o modelo precisa associar a ela uma intensidade de consumo. Para isso, utiliza a base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV), que publica indicadores anuais por embarcação. O número de identificação da Organização Marítima Internacional (IMO) permite ligar o navio encontrado na ANTAQ ao indicador correspondente no EU MRV [eumrv2025].
 
-A ANTAQ fornece a atividade brasileira utilizada no cálculo. A tabela de Carga informa movimentos de embarque e desembarque. A tabela de Atracação informa onde e quando o navio esteve e qual era seu IMO. A combinação dessas informações permite ordenar as escalas e estimar a carga a bordo em cada trecho [antaq2025].
+Com a atividade da ANTAQ e a intensidade do EU MRV, o sistema calcula o trabalho de transporte e o consumo de combustível. A intensidade marítima é expressa em g/(t\(\cdot\)nm), ou gramas de combustível para transportar uma tonelada por uma milha náutica. No recorte direto da viagem `voyage_9612789_00004`, por exemplo, as 11.584,165 t a bordo e as 3.300,216 nm da matriz marítima produziram 38.230.246,479 t\(\cdot\)nm de trabalho de transporte. A intensidade de 9,322050 g/(t\(\cdot\)nm) aplicada a essa atividade resultou em 356.384,277 kg de combustível. Os valores exibidos estão arredondados, enquanto o cálculo armazenado conserva maior precisão.
 
 A fronteira ambiental adotada é a de emissões operacionais TTW de CO\(_2\)e. Uma avaliação do ciclo de vida (LCA, do inglês *life-cycle assessment*) considera outras etapas, como a produção do combustível, a fabricação, a operação e o fim de vida dos equipamentos. Fatores WTW, resultados de LCA e fatores baseados exclusivamente em dióxido de carbono (CO\(_2\)), que contabilizam somente esse gás, não são intercambiáveis com a saída do sistema [decarb2024; maritimelca2024]. Operações portuárias e períodos de navio atracado também precisam de tratamento separado, pois dependem do terminal e da operação observada [berth2009; berthairquality2010; shipops2022].
 
@@ -56,6 +66,8 @@ A fronteira ambiental adotada é a de emissões operacionais TTW de CO\(_2\)e. U
 
 ## 3. Metodologia
 
+A metodologia acompanha a sequência necessária para transformar uma remessa em duas alternativas comparáveis. Primeiro, define o serviço que ambas devem prestar. Depois, reconstrói as viagens marítimas, atribui uma intensidade de consumo aos navios, calcula o indicador representativo da ligação e, por fim, reúne os resultados de todos os trechos da rota porta a porta.
+
 ### 3.1 Unidade funcional e alternativas
 
 As duas alternativas precisam prestar o mesmo serviço. Neste trabalho, o serviço consiste em transportar a mesma carga, do mesmo ponto de partida até o mesmo destino. Esse serviço comum recebe o nome técnico de unidade funcional. A configuração de referência utiliza uma unidade equivalente a um contêiner de 20 pés (1 TEU, do inglês *twenty-foot equivalent unit*) e 14 t. O TEU permite expressar a carga conteinerizada em uma base comum de contêineres de 20 pés. O usuário pode informar outra massa.
@@ -69,6 +81,8 @@ As duas alternativas precisam prestar o mesmo serviço. Neste trabalho, o servi�
 A massa informada pelo usuário é a carga que ele deseja transportar. Ela não é a carga total do navio. O sistema reconstrói a carga histórica do navio com os registros da ANTAQ. Essa carga histórica reconstruída determina quanto cada recorte influencia a estimativa marítima.
 
 ### 3.2 Reconstrução das viagens e da carga a bordo
+
+Depois de definir a carga, a origem e o destino que serão comparados, o cálculo marítimo começa pela reconstrução da atividade observada dos navios.
 
 **O que entra:** três tabelas da ANTAQ. A tabela de Carga informa o que o navio embarcou e desembarcou. A tabela de Atracação identifica o navio e o porto. A tabela de Tempos informa quando cada escala aconteceu.
 
@@ -117,6 +131,8 @@ Uma mesma viagem fornece apenas um recorte para a ligação escolhida. Se o navi
 Antes que um recorte influencie o indicador final, o sistema verifica quatro condições. Primeiro, a parte aproveitada deve começar no porto escolhido como saída e terminar no porto escolhido como chegada, dentro da mesma viagem. No cálculo Santos–Manaus, ela começa quando o navio sai de Santos e termina quando chega a Manaus; uma sequência Manaus–Suape–Santos não serve. Segundo, nenhum trecho navegado entre essas duas escalas pode estar ausente. Terceiro, deve existir uma intensidade do próprio navio ou uma estimativa identificada. Quarto, a soma da carga a bordo multiplicada pela distância de cada trecho precisa ser positiva para receber peso. Se o peso for zero, o recorte só participa da regra especial usada quando nenhum recorte da ligação possui peso positivo.
 
 ### 3.3 Intensidade marítima por IMO e fallback robusto
+
+Com as viagens e as cargas a bordo reconstruídas, o passo seguinte é determinar qual intensidade de consumo será aplicada a cada navio.
 
 **O que entra:** o IMO associado à viagem na tabela de Atracação da ANTAQ e os indicadores positivos de combustível publicados no EU MRV.
 
@@ -204,6 +220,8 @@ O sistema procura a distância de cada trecho na matriz marítima. Se uma distâ
 
 ### 3.6 Agregação de emissões, custos e operações portuárias
 
+Depois de definir a intensidade e a sequência de portos, o sistema calcula os resultados de cada trecho e os reúne para representar a viagem completa.
+
 **O que entra:** o consumo de cada trecho, o preço do combustível, o fator que converte combustível em emissões e os dados disponíveis das operações portuárias.
 
 **O que o sistema faz:** calcula separadamente cada parte da viagem. Por exemplo, mantém distintos o primeiro acesso rodoviário, a navegação e o acesso rodoviário final. Depois, soma somente as partes que foram representadas no cenário:
@@ -222,7 +240,7 @@ O indicador anual do MRV considera o combustível reportado pelo navio dentro de
 
 ## 4. Implementação computacional
 
-O CabotageLens funciona em uma página web construída com Streamlit. O usuário informa a origem da carga, o destino final e a massa. Os cálculos ficam em módulos separados da tela. Essa separação permite testar as contas sem depender da interface.
+As regras descritas na metodologia foram implementadas no CabotageLens, que funciona em uma página web construída com Streamlit. O usuário informa a origem da carga, o destino final e a massa. Os cálculos ficam em módulos separados da tela. Essa separação permite testar as contas sem depender da interface.
 
 Uma execução segue estas etapas:
 
@@ -245,6 +263,8 @@ Para conferir uma viagem real sem gerar registros para toda a base, o pipeline a
 Quando o usuário executa um cenário, a aplicação lê essa tabela já preparada. O Supabase, serviço usado para armazenar os dados da aplicação, utiliza o banco de dados PostgreSQL, também chamado de Postgres, para guardar lugares, rotas e resultados que podem ser reutilizados. Essa cópia reutilizável recebe o nome de cache. O cache evita solicitar novamente a mesma rota a um provedor. Mesmo assim, o resultado continua sendo uma rota calculada. Ele não é uma trajetória registrada pelo Sistema de Posicionamento Global (GPS), isto é, não reproduz as posições reais percorridas durante uma viagem, e não garante a existência de um serviço comercial [cabotagelensrepo; cabotagelensapp].
 
 ## 5. Evidência empírica e resultados
+
+Esta seção verifica como o método se comporta com os dados disponíveis. Primeiro, apresenta a cobertura do cruzamento entre ANTAQ e EU MRV. Em seguida, acompanha uma execução demonstrativa do cálculo marítimo entre Santos e Manaus e, por último, compara a direção dos resultados com uma referência externa.
 
 ### 5.1 Cobertura da base ANTAQ–EU MRV
 
@@ -301,7 +321,7 @@ Esse número não é o total da alternativa multimodal. Ele não inclui o acesso
 
 ### 5.3 Benchmark externo
 
-A planilha associada aos estudos de Gustavo Costa fornece uma comparação externa [workbookdados]. Ela contém 21 ligações entre seis cidades. Em todas, a carga de referência é um contêiner de 14 t.
+Depois da análise detalhada de Santos–Manaus, a planilha associada aos estudos de Gustavo Costa fornece uma comparação externa [workbookdados]. Ela contém 21 ligações entre seis cidades. Em todas, a carga de referência é um contêiner de 14 t.
 
 Na planilha, as emissões semanais agregadas são 7.614,97 toneladas de dióxido de carbono equivalente (tCO\(_2\)e) para o cenário rodoviário e 4.159,79 tCO\(_2\)e para o cenário com cabotagem. A diferença é aproximadamente 45,4%.
 
@@ -309,7 +329,7 @@ Esses valores mostram o sentido e a ordem de grandeza do resultado dentro das re
 
 ## 6. Discussão e limitações
 
-O cálculo marítimo usa três tipos de informação. A ANTAQ mostra por quais portos o navio passou, o que ele embarcou ou desembarcou e qual é seu IMO. O EU MRV fornece a intensidade do próprio navio quando contém o mesmo IMO. Quando o IMO não aparece, o sistema estima o valor com embarcações semelhantes: procura primeiro o grupo mais específico, chamado de classe, e depois uma categoria mais ampla, chamada de tipo. A saída informa qual dessas fontes foi usada.
+Os resultados mostram que o cálculo marítimo depende da combinação de três tipos de informação. A ANTAQ mostra por quais portos o navio passou, o que ele embarcou ou desembarcou e qual é seu IMO. O EU MRV fornece a intensidade do próprio navio quando contém o mesmo IMO. Quando o IMO não aparece, o sistema estima o valor com embarcações semelhantes: procura primeiro o grupo mais específico, chamado de classe, e depois uma categoria mais ampla, chamada de tipo. A saída informa qual dessas fontes foi usada.
 
 O sistema acompanha cada trecho entre duas escalas. Portanto, uma parada intermediária não desaparece da conta. A carga pode mudar nessa parada, e o trecho seguinte usa o novo valor.
 
@@ -335,7 +355,7 @@ Por essas razões, um resultado favorável à cabotagem em determinado cenário 
 
 ## 7. Conclusão e trabalhos futuros
 
-O CabotageLens compara duas maneiras de levar a mesma carga ao mesmo destino. Na primeira, o caminhão percorre toda a rota. Na segunda, caminhões fazem os acessos terrestres e um navio percorre o trecho entre os portos.
+Em síntese, o CabotageLens compara duas maneiras de levar a mesma carga ao mesmo destino. Na primeira, o caminhão percorre toda a rota. Na segunda, caminhões fazem os acessos terrestres e um navio percorre o trecho entre os portos.
 
 No cálculo marítimo, o sistema lê as escalas da ANTAQ na ordem em que aconteceram. Depois de cada escala, calcula quanto o navio leva para o próximo porto. Em seguida, procura o IMO no EU MRV. Se encontrar, usa a intensidade do próprio navio. Se não encontrar, usa um valor substituto de classe ou tipo e registra essa decisão.
 
