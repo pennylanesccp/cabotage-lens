@@ -178,17 +178,7 @@ Os dados vêm da Agência Nacional de Transportes Aquaviários (ANTAQ). O arquiv
 
 *Arquivo: `2025Atracacao.txt`. Fonte: [Agência Nacional de Transportes Aquaviários (ANTAQ), Painel Estatístico Aquaviário](https://estatistica.antaq.gov.br/ea/sense/download.html).*
 
-Na viagem `voyage_9612791_00011`, o navio de IMO 9612791 atracou em Santos em 30 de setembro de 2025 e embarcou 9.881,860 t. Em seguida, passou por Suape e Pecém. Em 13 de outubro, atracou no terminal Super Terminais Comércio e Indústria, em Manaus, onde desembarcou 19.897,560 t e embarcou 7.571,660 t. Esse exemplo mostra que os dados não descrevem somente uma ligação Santos–Manaus: eles registram o que aconteceu em cada escala, e é essa sequência que o sistema precisa reconstituir.
-
-Além dos dois arquivos apresentados, a tabela de Tempos da ANTAQ registra os horários das escalas e ajuda a confirmar sua ordem. A reconstrução segue quatro passos.
-
-1. Primeiro, o sistema reúne as escalas que possuem o mesmo IMO e as ordena por data e hora. Assim, deixa de tratar Santos, Suape, Pecém e Manaus como registros isolados e passa a enxergá-los como uma sequência percorrida pelo mesmo navio.
-
-2. Em seguida, o sistema soma os embarques e desembarques de uma mesma escala. Quando há registros consecutivos que representam o mesmo complexo portuário, eles são reunidos para que uma diferença de nome não crie uma parada inexistente. Uma viagem termina quando o navio retorna ao porto que iniciou aquela sequência ou quando passam mais de 240 horas, equivalentes a 10 dias, entre duas paradas. A parada seguinte inicia outra viagem.
-
-3. Para cada escala, o sistema começa pela carga que já estava a bordo, soma o que foi embarcado e subtrai o que foi desembarcado. O saldo resultante é a carga que parte para o próximo porto. Quando o período analisado começa no meio de uma viagem, o primeiro registro pode mostrar um desembarque sem mostrar o embarque anterior. Nessa situação, o sistema acrescenta somente a menor carga inicial necessária para que nenhum saldo fique negativo.
-
-4. Por fim, o sistema cria um subtrecho entre cada par de paradas consecutivas. O resultado é uma lista na ordem da navegação: porto de saída, porto de chegada, carga a bordo, distância percorrida e fonte da distância. Essa lista é a base para calcular o trabalho de transporte e o consumo marítimo.
+A integração desses dados permite afirmar que na viagem `voyage_9612791_00011`, o navio de IMO 9612791 atracou em Santos em 30 de setembro de 2025 e embarcou 9.881,860 t. Em seguida, passou por Suape e Pecém. Em 13 de outubro, atracou no terminal Super Terminais Comércio e Indústria, em Manaus, onde desembarcou 19.897,560 t e embarcou 7.571,660 t. Esse exemplo mostra que os dados não descrevem somente uma ligação Santos–Manaus: eles registram o que aconteceu em cada escala, e é essa sequência que o sistema reconstrói.
 
 ##### Viagem observada: reconstrução por subtrechos
 
