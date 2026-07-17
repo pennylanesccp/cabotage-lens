@@ -1,65 +1,83 @@
 \chapter{Revisão bibliográfica}
 \label{ch:revisao}
 
-Este capítulo apresenta uma revisão seletiva da literatura necessária para situar o problema, justificar as escolhas de fronteira e preparar a metodologia do \CabotageLens{}. A sequência argumentativa parte do contexto brasileiro de cabotagem, passa pela literatura de mudança modal e comparação porta a porta, distingue fronteiras ambientais e econômicas, e encerra com a lacuna metodológica que o framework procura atender. As fontes são usadas como suporte conceitual e crítico; os resultados numéricos do TF permanecem vinculados aos artefatos rastreados do projeto.
+Este capítulo apresenta os conceitos necessários para compreender o \CabotageLens{}. A revisão segue uma pergunta simples: o que precisa ser considerado para comparar, de forma justa, uma rota rodoviária direta com uma cadeia que utiliza cabotagem?
+
+A resposta é construída em etapas. Primeiro, apresenta-se o contexto brasileiro. Depois, discutem-se mudança modal e comparação porta a porta. Em seguida, são explicadas as fontes ANTAQ e EU MRV, as fronteiras ambientais, as operações portuárias e a fronteira econômica. A literatura fornece o fundamento conceitual. Os resultados numéricos permanecem vinculados aos artefatos rastreados do projeto.
 
 \section{Cabotagem brasileira, matriz de transporte e BR do Mar}
 \label{sec:cabotagem-br}
 
-O caso brasileiro torna a cabotagem uma questão relevante para análise de transporte e emissões. O país combina longas distâncias de deslocamento interno, forte dependência do transporte rodoviário, extensa geografia costeira e interesse público em ampliar o uso da navegação marítima de cabotagem. Nesse contexto, a agenda associada ao BR do Mar aparece na literatura como parte de uma discussão mais ampla sobre diversificação da matriz de transporte e descarbonização de corredores de carga \cite{icct2022}.
+Cabotagem é o transporte marítimo entre portos de um mesmo país. No Brasil, ela é relevante porque o território possui longas distâncias internas, extensa costa e forte dependência do transporte rodoviário. A agenda associada ao BR do Mar faz parte da discussão sobre diversificação da matriz de transporte e descarbonização dos corredores de carga \cite{icct2022}.
 
-Para este TF, esse enquadramento importa menos como afirmação agregada de vantagem modal e mais como motivação para perguntas rota a rota. Médias nacionais, diretrizes setoriais e argumentos de política pública ajudam a explicar por que a cabotagem merece ser estudada no Brasil, mas não determinam o resultado de um par origem-destino específico. A comparação depende da posição da origem e do destino, dos portos usados, dos acessos terrestres, da distância marítima, da unidade funcional e da fronteira ambiental e econômica adotada. Assim, o capítulo parte da cabotagem como alternativa plausível em determinados corredores, não como conclusão previamente estabelecida.
+Esse contexto explica por que a cabotagem merece ser estudada. Ele não determina, por si só, que ela será melhor em toda rota. Por exemplo, uma origem distante de qualquer porto pode exigir um acesso rodoviário longo. Esse acesso pode reduzir parte do benefício esperado da navegação.
+
+Portanto, o problema deve ser analisado rota a rota. As entradas relevantes são a origem, o destino, a carga e os portos. O processamento precisa incluir as distâncias terrestres e marítimas. A saída só é interpretável quando a unidade funcional e as fronteiras ambiental e econômica permanecem iguais nas alternativas comparadas.
 
 \section{Mudança modal e short sea shipping}
 \label{sec:sss-modal-shift}
 
-A literatura de mudança modal reforça essa leitura condicional. Revisões sobre \emph{short sea shipping} mostram que a transferência de cargas da rodovia para o transporte marítimo costeiro depende de custo, tempo, confiabilidade, integração terrestre, qualidade de serviço, características portuárias e barreiras institucionais \cite{modalshiftreview2020}. Estudos comparativos de emissões também indicam que a atratividade ambiental do transporte marítimo de curta distância varia com o corredor, a utilização da embarcação, o tipo de navio, a distância percorrida, os acessos terrestres e as hipóteses de cálculo \cite{shortsea2019}.
+Mudança modal é a transferência de uma carga de um modo de transporte para outro. No contexto deste trabalho, significa substituir parte de um percurso rodoviário por navegação costeira, sem deixar de considerar os acessos terrestres.
 
-Essa literatura se conecta diretamente ao desenho do \CabotageLens{}. A pergunta metodológica não é se ``navio'' é sempre melhor que ``caminhão'', mas em quais cenários uma cadeia rodoviária--cabotagem--rodoviária, com seus acessos e operações associadas, apresenta melhor desempenho que a alternativa rodoviária direta sob a mesma unidade funcional. Por isso, o framework organiza cada simulação como uma comparação condicionada por rota, e não como uma inferência geral sobre a superioridade da cabotagem em todos os corredores brasileiros.
+Revisões sobre \emph{short sea shipping}, ou navegação marítima de curta distância, mostram que essa transferência depende de custo, tempo, confiabilidade, integração terrestre, qualidade de serviço, características portuárias e barreiras institucionais \cite{modalshiftreview2020}. Estudos de emissões também indicam que o resultado varia com o corredor, a utilização e o tipo do navio, a distância, os acessos terrestres e as premissas de cálculo \cite{shortsea2019}.
+
+A consequência para o \CabotageLens{} é direta. A pergunta não é ``o navio emite menos que o caminhão?''. A pergunta é: ``para esta remessa, nesta origem e neste destino, a cadeia completa com cabotagem apresenta melhor resultado que a rota rodoviária direta?''. A resposta vale para o cenário calculado e não para todos os corredores brasileiros.
 
 \section{Comparações porta a porta e modelos de rede multimodal}
 \label{sec:porta-a-porta}
 
-Comparações entre modos tornam-se pouco informativas quando contrastam uma viagem rodoviária completa com apenas a perna marítima da alternativa multimodal. A literatura de competitividade da cabotagem conteinerizada e de redes multimodais mostra que decisões logísticas reais envolvem conexão entre pernas, terminais, frequência, tempo de espera, disponibilidade de serviço, capacidade, custo de inventário e componentes comerciais \cite{competitiveness2024}. A perna marítima, portanto, só tem sentido analítico quando interpretada junto dos acessos terrestres e das operações necessárias para formar uma cadeia porta a porta.
+Uma comparação porta a porta acompanha a carga desde a origem real até o destino real. Na alternativa multimodal, isso inclui o caminho até o porto de origem, a passagem pelos portos, a navegação e o caminho do porto de destino até o ponto final.
 
-O \CabotageLens{} adota essa lógica de cadeia completa, mas com escopo deliberadamente mais estreito que um modelo comercial de super-rede. O protótipo não escolhe operadores, não representa escalas e frequências de serviço, não confirma disponibilidade de slot e não calcula tarifa de mercado. Sua contribuição é construir cenários auditáveis em que a alternativa rodoviária direta e a alternativa multimodal sejam comparadas com a mesma unidade funcional, a mesma fronteira de cálculo e uma descrição explícita das pernas que compõem o percurso.
+Um exemplo conceitual mostra a diferença. Se a rota rodoviária for comparada apenas com a distância navegada, os acessos aos portos desaparecem do cálculo. A alternativa marítima parecerá menor porque uma parte necessária do serviço foi omitida. A comparação correta soma todas as pernas que entregam a mesma remessa.
+
+A literatura sobre competitividade da cabotagem conteinerizada e redes multimodais acrescenta outros elementos: frequência, tempo de espera, disponibilidade de serviço, capacidade, custo de inventário e componentes comerciais \cite{competitiveness2024}. O \CabotageLens{} não é um modelo comercial de super-rede. Ele não escolhe operadores, não confirma slots e não calcula tarifas de mercado. Seu papel é construir cenários auditáveis com a mesma unidade funcional e a mesma fronteira de cálculo.
 
 \section{Dados operacionais da ANTAQ e indicadores do EU MRV}
 \label{sec:antaq-mrv-literatura}
 
-Os registros públicos da ANTAQ permitem observar a atividade portuária brasileira por meio de tabelas complementares de carga e atracação. A primeira registra movimentos de embarque e desembarque, massa, quantidade e portos associados à carga; a segunda identifica as escalas, sua ordenação temporal e o número IMO da embarcação \cite{antaq2025}. A combinação dessas fontes permite reconstruir viagens e distinguir uma ligação direta de um percurso que contém escalas intermediárias, sem presumir antecipadamente um corredor fixo.
+A ANTAQ disponibiliza duas tabelas complementares para este estudo. A tabela de Carga registra embarques, desembarques, massa, quantidade e portos relacionados à carga. A tabela de Atracação registra onde e quando o navio atracou e informa seu número IMO \cite{antaq2025}.
 
-O EU MRV acrescenta uma segunda camada observacional. Seus arquivos anuais publicam indicadores de consumo e emissões de navios que operam no espaço regulado europeu, identificados por IMO, incluindo medidas normalizadas por trabalho de transporte \cite{eumrv2025}. O número IMO funciona, assim, como chave de associação entre a embarcação observada na cabotagem brasileira e um indicador empírico de intensidade. Essa associação não transforma o MRV em medição específica da viagem brasileira: o valor representa o desempenho anual reportado do navio e é aplicado como parâmetro de intensidade à atividade reconstruída na ANTAQ.
+O número IMO é um identificador permanente do navio. Ele permite ligar as escalas observadas na ANTAQ aos indicadores anuais publicados pelo EU MRV. O MRV reúne informações de consumo e emissões de navios que operam no espaço regulado europeu, incluindo indicadores normalizados por trabalho de transporte \cite{eumrv2025}.
 
-A cobertura por IMO não é completa e os indicadores publicados podem conter distribuições assimétricas e valores extremos. Por isso, a ausência de associação exige uma regra de contingência explícita, e não a escolha discricionária de um valor conveniente. No método adotado, o fallback por tipo usa aparagem simétrica das caudas quando a amostra permite o corte e mediana quando não permite; o fallback por classe usa a média aparada registrada no artefato e recorre à mediana quando essa estatística não está disponível. A proveniência distingue o valor específico por IMO do valor estatístico de fallback, permitindo interpretar os resultados conforme a qualidade da evidência disponível.
+O processamento combina essas fontes em três etapas. Primeiro, ordena as escalas de cada viagem. Depois, reconstrói a carga a bordo entre as escalas. Por fim, busca no MRV a intensidade correspondente ao IMO. O valor MRV não é uma medição da viagem brasileira. Ele representa o desempenho anual reportado daquele navio e funciona como parâmetro para a atividade reconstruída na ANTAQ.
+
+Nem todo IMO observado na ANTAQ possui correspondência no MRV. Nesses casos, o método utiliza um \emph{fallback}, isto é, uma regra alternativa previamente definida. O fallback por tipo usa aparagem simétrica das caudas quando a amostra permite e usa a mediana quando ela é pequena. O fallback por classe usa a média aparada registrada no artefato e recorre à mediana quando essa estatística não está disponível.
+
+Essa regra reduz a influência de valores extremos sem escolher um número por conveniência. A saída identifica se a intensidade veio do IMO, da classe ou do tipo. Assim, dois resultados numericamente iguais podem ter níveis de evidência diferentes.
 
 \section{Emissões operacionais, \ttw{}, \wtw{}, LCA, CO$_2$ e \cooe{}}
 \label{sec:fronteiras-emissoes-literatura}
 
-A literatura ambiental de transporte marítimo e rodoviário utiliza fronteiras de emissão diferentes, e essa diferença muda a interpretação dos resultados. Estudos \ttw{} concentram-se nas emissões operacionais associadas ao consumo de combustível durante o uso do veículo ou da embarcação. Abordagens \wtw{} incorporam etapas a montante da cadeia do combustível. Estudos de LCA ampliam ainda mais a fronteira, podendo incluir produção de combustíveis, ativos, infraestrutura e outros processos do ciclo de vida \cite{decarb2024,maritimelca2024}.
+Uma fronteira ambiental define quais etapas entram no inventário de emissões. A sigla \ttw{} representa as emissões operacionais do uso do combustível: \emph{tank-to-wheel} na rodovia e \emph{tank-to-wake} na navegação. A abordagem \wtw{} também inclui as etapas anteriores ao uso do combustível. Estudos de LCA podem ampliar ainda mais a análise, incluindo produção de combustíveis, veículos, navios, infraestrutura e outros processos do ciclo de vida \cite{decarb2024,maritimelca2024}.
 
-A consequência metodológica é simples: valores de \ttw{}, \wtw{} e LCA não devem ser combinados como se descrevessem o mesmo objeto. O mesmo cuidado vale para CO$_2$, \cooe{} e CO$_2$eq. A notação só é comparável quando gases incluídos, potencial de aquecimento global, fator de emissão, unidade funcional e escopo ambiental são compatíveis. No \CabotageLens{}, a linha de base é operacional \ttw{} em \cooe{}; referências \wtw{}, LCA ou CO$_2$-only são usadas para contextualizar limites, contrastar abordagens e indicar extensões futuras, não para recalibrar automaticamente os resultados atuais.
+Essas fronteiras respondem a perguntas diferentes. Um valor \ttw{} não deve ser somado ou comparado diretamente com um valor \wtw{} sem alinhamento. O mesmo cuidado vale para CO$_2$, \cooe{} e CO$_2$eq: é necessário verificar quais gases, fatores e potenciais de aquecimento foram incluídos.
+
+No \CabotageLens{}, a entrada ambiental é o consumo de combustível por perna e os fatores implementados. O processamento calcula emissões operacionais. A saída principal é \ttw{} em \cooe{}. Valores \wtw{}, LCA ou CO$_2$-only aparecem apenas como contexto, contraste ou possibilidade de trabalho futuro.
 
 \section{Operações portuárias e hoteling}
 \label{sec:portos-hoteling-literatura}
 
-Uma cadeia multimodal inclui mais do que distância rodoviária e milhas navegadas. A permanência do navio em porto, o consumo auxiliar em berço e as atividades de carga, descarga e terminal podem contribuir para emissões e custos da alternativa por cabotagem \cite{berth2009,shipops2022,berthairquality2010}. Por isso, a literatura sobre operações portuárias e \emph{hoteling} sustenta a decisão de tratar o porto como parte da cadeia analisada, e não como elemento externo à comparação modal.
+A cadeia multimodal não termina quando o navio chega ao porto. A permanência em berço pode exigir energia para sistemas auxiliares. Além disso, carga, descarga e atividades de terminal podem gerar consumo, custo e emissões \cite{berth2009,shipops2022,berthairquality2010}.
 
-Ao mesmo tempo, esses componentes exigem proveniência e compatibilidade de fronteira. Um dado observado para um porto ou tipo de operação não tem o mesmo estatuto que uma média, um valor documental genérico ou uma marcação de indisponibilidade. A inclusão de operações portuárias no TF deve, portanto, preservar a origem do dado, a unidade, o tipo de atividade representada e a forma como o componente entra no cenário. Quando essa compatibilidade não existe, a literatura funciona como justificativa conceitual e como agenda de melhoria, não como fonte direta de fatores adicionais.
+O termo \emph{hoteling} descreve o período em que o navio permanece no porto com sistemas de bordo em funcionamento. Operação portuária, por sua vez, abrange os componentes associados à movimentação e ao terminal representados no modelo. Os dois conceitos precisam ser distinguidos para evitar dupla contagem.
+
+A inclusão desses componentes depende da proveniência. Um dado observado em um porto oferece evidência diferente de uma média entre portos ou de um valor genérico da literatura. Por isso, o sistema registra a fonte e a unidade. Quando não existe informação compatível, o componente permanece indisponível; ele não é convertido automaticamente em zero.
 
 \section{Fronteira econômica e custo modelado}
 \label{sec:custo-modelado-literatura}
 
-A literatura de competitividade e mudança modal também mostra que decisões logísticas envolvem mais do que consumo de combustível e distância percorrida. Preço contratado, tarifas, margens, confiabilidade, tempo, risco, inventário, frequência e disponibilidade de serviço influenciam a escolha modal e a viabilidade comercial de uma cadeia de transporte \cite{competitiveness2024,modalshiftreview2020}. Esses elementos são essenciais para uma análise de mercado, mas extrapolam a fronteira econômica implementada neste TF.
+O custo de uma operação logística real inclui preço contratado, tarifas, margens, seguro, confiabilidade, tempo, risco, inventário, frequência e disponibilidade de serviço \cite{competitiveness2024,modalshiftreview2020}. O \CabotageLens{} não representa todos esses elementos.
 
-O resultado monetário do \CabotageLens{} deve ser lido como proxy de custo operacional modelado. Ele é útil para triagem técnica porque compara componentes representados sob uma lógica comum de cenário, mas não corresponde a cotação, tarifa praticada, contrato, decisão de compra ou validação de frete comercial. Assim, um menor custo modelado indica uma possibilidade relevante dentro da fronteira do modelo, não uma conclusão sobre preço de mercado ou competitividade comercial plena.
+A saída monetária é um proxy de custo operacional modelado. Em termos simples, o programa combina os componentes de consumo e preço implementados no cenário. Essa saída é útil para uma comparação técnica sob regras comuns. Ela não é uma cotação, uma tarifa praticada ou um contrato de transporte.
+
+Por exemplo, um cenário pode apresentar menor custo modelado e ainda enfrentar baixa frequência de serviço ou um preço comercial diferente. Portanto, o resultado econômico indica uma possibilidade dentro da fronteira do modelo. Ele não comprova competitividade comercial completa.
 
 \section{Síntese da lacuna metodológica}
 \label{sec:lacuna-metodologica}
 
-A literatura revisada sustenta três pontos centrais para a metodologia. Primeiro, a cabotagem brasileira é relevante em um sistema com longas distâncias, predominância rodoviária e interesse público em diversificação modal. Segundo, a literatura de \emph{short sea shipping}, mudança modal e redes multimodais mostra que os resultados dependem de corredor, serviço, utilização, acessos, portos e premissas. Terceiro, a literatura ambiental e econômica exige separar cuidadosamente fronteiras de emissão, componentes portuários e interpretação de custo.
+A literatura sustenta três decisões deste trabalho. Primeiro, a cabotagem é relevante no contexto brasileiro, mas precisa ser avaliada por corredor. Segundo, a comparação deve ser porta a porta, porque acessos terrestres, portos e condições de serviço influenciam o resultado. Terceiro, emissões, custos e fontes de dados devem manter fronteiras e proveniência explícitas.
 
-A lacuna endereçada pelo \CabotageLens{} está justamente nessa articulação. Entre estudos agregados de contexto, comparações modais simplificadas e modelos comerciais de super-rede, há espaço para um framework acadêmico auditável que exponha, em nível de cenário, como uma alternativa rodoviária direta e uma alternativa rodoviária--cabotagem--rodoviária são construídas e comparadas. A contribuição do TF é oferecer essa estrutura para o caso brasileiro, com rotas, portos, distâncias, operações portuárias, emissões operacionais \ttw{} de \cooe{} e custo operacional modelado tratados sob fronteiras explícitas. Os capítulos seguintes detalham como essa disciplina é implementada, validada e interpretada.
+O \CabotageLens{} ocupa o espaço entre afirmações nacionais agregadas, comparações modais simplificadas e modelos comerciais de rede mais amplos. Sua entrada é um cenário específico. Seu processamento constrói as alternativas e preserva cada etapa. Sua saída permite verificar rotas, portos, distâncias, operações portuárias, emissões operacionais \ttw{} de \cooe{} e custo operacional modelado.
 
 \begin{table}[htbp]
 \centering
@@ -79,4 +97,4 @@ Portos e hoteling & Indica que permanência em porto, consumo auxiliar e operaç
 \end{tabularx}
 \end{table}
 
-A Tabela~\ref{tab:uso-literatura} resume a função de cada família de literatura no capítulo. Em conjunto, elas sustentam a necessidade de uma comparação brasileira porta a porta, orientada por rota e transparente quanto a fronteiras, sem substituir os resultados calculados e classificados pelos artefatos do \CabotageLens{}.
+A Tabela~\ref{tab:uso-literatura} resume a função das fontes. Elas explicam por que a comparação deve ser brasileira, porta a porta, orientada por rota e transparente quanto às fronteiras. Os resultados, entretanto, são produzidos e classificados pelos artefatos do \CabotageLens{}.

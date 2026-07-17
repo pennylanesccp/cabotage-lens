@@ -1,12 +1,12 @@
 \chapter{Checklist de reprodutibilidade}
 \label{app:checklist-reprodutibilidade}
 
-Este apêndice consolida o checklist técnico e metodológico adotado para garantir a rastreabilidade, auditoria e reprodutibilidade de todas as análises de rota, custos modelados, emissões operacionais e classificações de evidência produzidas pelo CabotageLens.
+Este checklist orienta a repetição de uma análise. A reprodução não consiste apenas em obter o mesmo número. Também é necessário usar as mesmas fontes, unidades, regras de seleção e fronteiras. Ao final, outra pessoa deve conseguir explicar de onde veio cada parcela do resultado.
 
 \section{Checklist técnico}
 \label{sec:app-checklist-tecnico}
 
-A Tabela~\ref{tab:app-checklist-tecnico} detalha a estrutura de arquivos e componentes LaTeX que organizam o presente relatório final.
+O primeiro passo é localizar os arquivos que definem o documento e a metodologia. A Tabela~\ref{tab:app-checklist-tecnico} indica onde cada parte fica registrada. Antes de executar uma análise, deve-se confirmar que o código, os dados processados e o relatório correspondem ao mesmo conjunto de regras.
 
 \begin{table}[htbp]
 \centering
@@ -15,22 +15,46 @@ A Tabela~\ref{tab:app-checklist-tecnico} detalha a estrutura de arquivos e compo
 \label{tab:app-checklist-tecnico}
 \begin{tabularx}{\textwidth}{L{0.25\textwidth}L{0.32\textwidth}Y}
 \toprule
-Item & Registro no relatório & Função de reprodutibilidade \\
+Item & Onde conferir & O que deve ser verificado \\
 \midrule
-Documento principal & \texttt{docs/report/main.tex} & Centraliza a estrutura do relatório, importando os capítulos, apêndices e a base bibliográfica. \\
-Capítulos modulares & \texttt{docs/report/chapters/} & Organiza os capítulos do relatório de forma independente, facilitando a manutenção e a rastreabilidade do texto. \\
-Apêndices de suporte & \texttt{docs/report/appendices/} & Detalha parâmetros, tabelas de validação e checklists auxiliares para auditoria acadêmica. \\
-Figuras e diagramas & \texttt{docs/report/images/} & Armazena as imagens de fluxogramas e diagramas conceituais que apoiam as explicações teóricas. \\
-Tabelas e matrizes & Ambientes \texttt{tabular}, \texttt{tabularx} e \texttt{longtable} & Estruturam dados quantitativos e classificações de evidência em formato legível e padronizado. \\
-Base bibliográfica & \texttt{docs/references.bib} & Consolida os metadados das referências bibliográficas citadas ao longo de todo o documento. \\
+Documento principal & \texttt{docs/report/main.tex} & Ordem dos capítulos, apêndices e base bibliográfica. \\
+Capítulos modulares & \texttt{docs/report/chapters/} & Texto da metodologia, implementação, resultados e limites. \\
+Apêndices de suporte & \texttt{docs/report/appendices/} & Parâmetros, auditorias e checklists usados para explicar a execução. \\
+Figuras e diagramas & \texttt{docs/report/images/} & Correspondência entre a imagem, a legenda e a regra descrita no texto. \\
+Tabelas e matrizes & Ambientes \texttt{tabular}, \texttt{tabularx} e \texttt{longtable} & Unidade, fonte e significado de cada indicador quantitativo. \\
+Base bibliográfica & \texttt{docs/references.bib} & Existência das referências citadas e compatibilidade com a afirmação. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\section{Sequência recomendada de reprodução}
+
+Uma execução pode ser conferida em seis passos:
+
+\begin{enumerate}
+    \item Fixar origem, destino e massa da carga.
+    \item Registrar os portos escolhidos e as distâncias rodoviárias.
+    \item Listar as viagens ANTAQ em que a origem marítima aparece antes do destino marítimo.
+    \item Conferir carga a bordo, distância, trabalho de transporte e fonte da intensidade em cada viagem.
+    \item Recalcular a mediana ponderada e, separadamente, conferir o caminho geométrico selecionado.
+    \item Somar as pernas representadas e verificar se a saída continua dentro das fronteiras \ttw{} e de custo modelado.
+\end{enumerate}
+
+Em Santos--Manaus, essa sequência deve recuperar 89 observações em 22 corredores, sendo 40 por IMO e 49 por fallback. A participação do fallback deve ser 59,54\% do trabalho de transporte. A intensidade aplicada deve ser 9,322050~g/(t$\cdot$nm), e a média diagnóstica, 25,243618~g/(t$\cdot$nm). O caminho deve ser a ligação direta de 6.112~km ou 3.300,216~nm.
+
+Se a massa de teste for 14~t, a verificação manual da parcela de navegação deve produzir:
+
+\begin{equation}
+9{,}322050\times14\times3.300{,}216/1000
+= 430{,}71~\text{kg de combustível}.
+\end{equation}
+
+Somente a massa de 14~t é uma entrada ilustrativa. Os indicadores do par e o caminho são dados da execução atual. O valor de 430,71~kg não inclui toda a cadeia porta a porta.
+
 \section{Checklist metodológico}
 \label{sec:app-checklist-metodologico}
 
-A Tabela~\ref{tab:app-checklist-metodologico} sintetiza os controles de modelagem, fronteiras e premissas científicas que regem as comparações modais apresentadas.
+A Tabela~\ref{tab:app-checklist-metodologico} deve ser usada como uma lista de confirmação. Cada linha responde ``sim'' ou ``não'' para uma condição necessária. Se uma condição não for atendida, o resultado precisa ser corrigido, classificado como limitação ou excluído da comparação quantitativa.
 
 \begingroup
 \footnotesize
@@ -42,30 +66,32 @@ A Tabela~\ref{tab:app-checklist-metodologico} sintetiza os controles de modelage
 \caption{Checklist de consistência metodológica do framework.}
 \label{tab:app-checklist-metodologico}\\
 \toprule
-Dimensão de controle & Como é preservado no framework \\
+Dimensão de controle & Pergunta de verificação \\
 \midrule
 \endfirsthead
 \toprule
-Dimensão de controle & Como é preservado no framework \\
+Dimensão de controle & Pergunta de verificação \\
 \midrule
 \endhead
-Comparação porta a porta & A unidade funcional mantém a origem, o destino e a massa de carga constantes entre a rodovia direta e a cadeia multimodal. \\
-Fronteira ambiental & As emissões operacionais são limitadas estritamente ao escopo tank-to-wheel (\ttw{}) de \cooe{}, diferenciadas de \wtw{} ou LCA. \\
-Fronteira econômica & O custo é tratado como proxy de custo operacional modelado parcial, sem assumir a natureza de frete comercial ou tarifa. \\
-Sequência das viagens ANTAQ & Cada corredor é formado por escalas ordenadas da mesma viagem; a origem deve anteceder o destino e os subtrechos precisam formar uma cadeia completa. \\
-Cobertura de corredores & Ligações diretas e viagens com escalas intermediárias são elegíveis; cada viagem contribui uma vez para cada par ordenado observado. \\
-Carga a bordo & Embarques e desembarques são acumulados por escala com deslocamento inicial mínimo que mantém a carga não negativa em todos os subtrechos. \\
-Trabalho de transporte & A atividade de cada viagem--OD é a soma de massa a bordo multiplicada pela distância em milhas náuticas de cada subtrecho. \\
-Intensidade marítima & A hierarquia prioriza o IMO no EU MRV e utiliza classe ou tipo de navio somente como fallback, com a fonte registrada. \\
-Outliers do fallback & O tipo usa média aparada de 1\% por cauda ou mediana quando o corte não é possível; a classe usa a média aparada do artefato ou mediana quando indisponível; valores exatos por IMO não são aparados. \\
-Agregação do par & A intensidade aplicada é a mediana inferior ponderada pelo trabalho de transporte de todas as viagens elegíveis do mesmo par e de todos os corredores. \\
-Pesos nulos & Observações de peso zero são excluídas se existir trabalho positivo; se todas tiverem peso zero, usa-se mediana não ponderada com fonte explícita. \\
-Seleção de caminho & O caminho usa ligação direta observada quando disponível e, caso contrário, a menor cadeia completa; trechos de viagens distintas nunca são combinados. \\
-Proveniência de distâncias & Cada perna terrestre ou marítima registra explicitamente sua origem (matriz, API, referência externa, fallback ou override). \\
-Componentes portuários & Operações portuárias entram com proveniência declarada; o \emph{hoteling} não é somado separadamente quando a intensidade MRV por trabalho de transporte é tratada como abrangente. \\
-Tratamento de dados ausentes & Dados indisponíveis são mantidos como lacunas na proveniência, em vez de assumidos como zero. \\
-Compatibilidade do artefato & A matriz marítima registra versão de esquema, data de geração, política de intensidade, regra de corredor e contadores de cobertura. \\
-Classificação de evidência & Resultados são categorizados por limites de uso (ex.: sensibilidade, benchmark direcional), restringindo alegações de superioridade universal. \\
+Comparação porta a porta & A origem, o destino e a massa são iguais na rodovia direta e na cadeia multimodal? \\
+Fronteira ambiental & O resultado está identificado como emissão operacional \ttw{} de \cooe{}, sem ser confundido com \wtw{} ou LCA? \\
+Fronteira econômica & O valor está identificado como custo operacional modelado, e não como frete ou tarifa? \\
+Sequência das viagens ANTAQ & Todas as escalas pertencem à mesma viagem, com a origem antes do destino? \\
+Cobertura de corredores & Ligações diretas e multiescala foram consideradas, com uma contribuição por viagem e par? \\
+Carga a bordo & Embarques e desembarques foram acumulados e a carga permaneceu não negativa? \\
+Trabalho de transporte & Foram somados carga a bordo vezes distância de todos os subtrechos do OD? \\
+Intensidade marítima & O sistema procurou primeiro o IMO no EU MRV e registrou qualquer fallback por classe ou tipo? \\
+Outliers do fallback & O tipo usou média aparada de 1\% ou mediana; a classe usou média aparada ou mediana; e o IMO exato foi preservado? \\
+Agregação do par & A intensidade é a mediana inferior ponderada pelo trabalho de transporte de todas as viagens e corredores elegíveis? \\
+Pesos nulos & Pesos nulos foram excluídos quando havia peso positivo e tratados por mediana não ponderada quando todos eram nulos? \\
+Seleção de caminho & Foi escolhida uma ligação direta observada ou, na sua ausência, a menor cadeia completa, sem combinar viagens? \\
+Proveniência de distâncias & Cada perna informa se veio de matriz, API, referência, fallback ou override? \\
+Componentes portuários & As operações portuárias têm fonte e o \emph{hoteling} não foi duplicado quando se usou intensidade MRV abrangente? \\
+Tratamento de dados ausentes & Dados indisponíveis permaneceram como lacuna, em vez de serem transformados em zero? \\
+Compatibilidade do artefato & A matriz informa schema, data, política de intensidade, regra de caminho e cobertura? \\
+Classificação de evidência & O resultado foi limitado à sua categoria, sem alegação de superioridade universal? \\
 \bottomrule
 \end{longtable}
 \endgroup
+
+Ao concluir o checklist, o leitor deve conseguir repetir a fórmula e também explicar seus limites. No exemplo de 14~t, isso significa reproduzir os 430,71~kg de navegação e declarar que o número não é emissão \wtw{}, custo comercial ou confirmação de serviço.

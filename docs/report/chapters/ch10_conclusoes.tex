@@ -4,29 +4,33 @@
 \section{Conclusão principal}
 \label{sec:conclusao-principal}
 
-O \CabotageLens{} é um framework computacional auditável para comparar o transporte rodoviário direto com uma cadeia rodoviária--cabotagem--rodoviária em corredores brasileiros. A comparação conserva a mesma origem, destino e carga nas duas alternativas e representa acessos terrestres, portos, navegação, operações portuárias e componentes operacionais habilitados. Cada resultado permanece associado à rota, aos parâmetros, à fonte das distâncias e à proveniência da intensidade marítima.
+O \CabotageLens{} permite comparar uma viagem rodoviária direta com uma cadeia rodoviária--cabotagem--rodoviária. As duas alternativas mantêm a mesma origem, o mesmo destino e a mesma carga. O resultado mostra as pernas percorridas, as distâncias, os consumos, os custos modelados, as emissões operacionais e a fonte dos principais dados.
 
-A contribuição principal é metodológica e computacional. O framework combina dados observados da ANTAQ, indicadores do EU MRV, reconstrução da carga a bordo e agregação robusta por trabalho de transporte. Essa estrutura permite estimar o consumo ao longo dos subtrechos de uma viagem sem presumir que o navio realizou apenas uma ligação isolada entre os portos apresentados.
+A principal contribuição é tornar o cálculo marítimo explicável. O sistema não supõe que o navio navegou somente entre os dois portos apresentados. Ele lê a sequência completa de escalas da ANTAQ, reconstrói a carga a bordo e calcula cada subtrecho entre a origem e o destino.
 
 \section{Contribuição do modelo marítimo}
 \label{sec:contribuicao-conclusao}
 
-O modelo identifica todas as viagens em que o porto de origem precede o porto de destino, incluindo ligações diretas e corredores com escalas intermediárias. Em cada viagem, a carga a bordo e a distância dos subtrechos determinam o trabalho de transporte. A intensidade do navio é obtida prioritariamente por correspondência de IMO no EU MRV; quando essa correspondência não existe, utiliza-se uma estatística robusta da classe ou do tipo, com fonte e regra de outlier registradas.
+Uma viagem é elegível quando o porto de origem aparece antes do porto de destino. Isso inclui ligações diretas e viagens com qualquer número de escalas intermediárias. Para uma viagem Santos--Suape--Pecém--Manaus, por exemplo, o consumo observado da viagem é formado pelos três subtrechos: Santos--Suape, Suape--Pecém e Pecém--Manaus. Cada subtrecho usa sua distância e sua carga a bordo.
 
-A intensidade representativa do par OD é a mediana ponderada pelo trabalho de transporte de todas as viagens elegíveis. O corredor selecionado determina caminho e distância, mas não restringe a amostra estatística. Essa separação permite representar diferentes corredores observados e evita que a estimativa dependa de uma sequência de portos fixada previamente.
+A intensidade é procurada primeiro pelo IMO no EU MRV. Quando não existe correspondência, o sistema usa uma estatística robusta da classe ou do tipo e registra esse fallback. O fallback resolve a ausência de um valor específico, mas continua sendo uma estimativa de grupo, e não uma medição do navio.
 
-As estatísticas robustas têm funções complementares. A média aparada ou a mediana limita outliers na formação dos fallbacks por grupo. A mediana ponderada limita a influência de intensidades extremas na representação do par OD. Os valores exatos por IMO e as estatísticas diagnósticas continuam disponíveis para auditoria.
+Todas as viagens elegíveis do mesmo OD participam da intensidade representativa. A regra usa a mediana ponderada pelo trabalho de transporte. O caminho do cenário é escolhido separadamente: ligação direta observada primeiro; na ausência dela, menor cadeia completa observada. Assim, diferentes corredores podem alimentar a intensidade sem serem unidos em uma rota artificial.
 
 \section{Síntese das evidências}
 \label{sec:alcance-evidencias-conclusao}
 
-A matriz marítima contém 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos resolvidos. A intensidade foi associada diretamente pelo IMO em 3.290 subtrechos e por fallback de tipo ou classe em 2.148. Essa cobertura torna explícita tanto a contribuição dos dados individualizados quanto a dependência de aproximações de grupo.
+A matriz marítima contém 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos. Entre os subtrechos, 3.290 usam intensidade por IMO e 2.148 usam fallback por tipo ou classe. Esses números informam simultaneamente a cobertura e a dependência de estimativas de grupo.
 
-No par Santos--Manaus, 89 viagens distribuídas em 22 corredores resultaram em intensidade representativa de 9,322050 g/(t$\cdot$nm). Quarenta observações usam correspondência por IMO e 49 usam fallback. Os fallbacks representam 59,54\% do trabalho de transporte do par. A média aritmética ponderada de 25,243618 g/(t$\cdot$nm), mantida como diagnóstico, evidencia a assimetria da distribuição e fundamenta o uso da mediana ponderada como indicador representativo. A ligação direta de 6.112 km determina o caminho do cenário, sem restringir a amostra aos navios que fizeram essa ligação direta.
+Santos--Manaus apresenta 89 observações em 22 corredores. Entre elas, 40 usam IMO e 49 usam fallback. Os fallbacks correspondem a 59,54\% do trabalho de transporte. A intensidade representativa é 9,322050~g/(t$\cdot$nm), enquanto a média aritmética ponderada diagnóstica é 25,243618~g/(t$\cdot$nm). A diferença mostra por que a mediana ponderada é menos sensível às intensidades altas.
 
-O benchmark externo apresentou concordância direcional nos 21 pares positivos e suportados, acompanhada de diferença relevante de magnitude. Essa evidência permite comparar o sentido do resultado, mas não constitui calibração quantitativa do estimador.
+O caminho selecionado é a ligação direta Santos--Manaus, com 6.112~km ou 3.300,216~nm. Os outros corredores, inclusive os que passam por Suape e Pecém ou por Rio de Janeiro e Salvador, permanecem na amostra de intensidade. Eles não alteram a geometria escolhida.
 
-Esses resultados sustentam a utilidade do \CabotageLens{} para triagem acadêmica e comparação de cenários sob fronteiras explícitas. Eles não constituem prova de superioridade universal da cabotagem, validação de frete comercial, disponibilidade de serviço ou equivalência com inventários \wtw{}/LCA.
+Para uma carga ilustrativa de 14~t, a navegação consome 430,71~kg de combustível segundo a intensidade e a distância selecionadas. Esse valor é apenas a parcela marítima do exemplo. Ele não representa a emissão porta a porta, o custo total ou uma cotação de frete.
+
+O benchmark externo aponta a mesma direção modal em 21 pares positivos e suportados, mas com diferença relevante de magnitude. Portanto, ele oferece apoio direcional. Não oferece calibração quantitativa.
+
+Em conjunto, os resultados mostram que o framework é útil para triagem acadêmica e comparação auditável. As emissões permanecem no escopo operacional \ttw{} de \cooe{}. Os custos permanecem valores modelados. Os resultados não demonstram superioridade universal da cabotagem, disponibilidade de serviço ou equivalência com inventários \wtw{}/LCA.
 
 \section{Agenda prioritária de trabalhos futuros}
 \label{sec:trabalhos-futuros}
@@ -38,23 +42,23 @@ Esses resultados sustentam a utilidade do \CabotageLens{} para triagem acadêmic
 \label{tab:agenda-futura}
 \begin{tabularx}{\textwidth}{L{0.22\textwidth}Y Y}
 \toprule
-Eixo & Trabalho proposto & Condição de rastreabilidade \\
+Eixo & Próximo passo & O que deve continuar registrado \\
 \midrule
-Dados marítimos & Ampliar a correspondência por IMO, revisar classificações de navio e incorporar novos períodos ANTAQ/MRV. & Preservar ano, fonte, cobertura, amostra, estatística e regra de outlier.\\
-Incerteza & Quantificar intervalos, sensibilidade à ponderação e influência da proporção de fallbacks. & Separar variabilidade entre viagens, incerteza da carga e incerteza do proxy MRV.\\
-Rota e operação & Incorporar serviço, frequência, janela, capacidade, terminal, slot, tempo de trânsito, transbordo e confiabilidade. & Tratar cada operador, porto e serviço como evidência específica.\\
-Ambiental & Construir inventários separados para \wtw{}, LCA, combustíveis alternativos e emissões locais em porto. & Documentar gases, energia, fatores, alocação e unidade funcional de cada fronteira.\\
-Econômico & Confrontar o custo modelado com tarifas, margens, contratos, seguro, inventário e confiabilidade. & Manter custo operacional, custo alocado e frete comercial como grandezas distintas.\\
-Validação & Reconciliar distâncias, carga, veículos, portos, alocação e fronteira ambiental com bases independentes. & Distinguir concordância direcional, plausibilidade de magnitude e calibração.\\
+Dados marítimos & Ampliar a correspondência por IMO, revisar classes e incluir outros períodos ANTAQ/MRV. & Ano, fonte, cobertura, amostra, estatística e regra de outlier.\\
+Incerteza & Calcular intervalos e testar a influência dos pesos e dos fallbacks. & Variabilidade entre viagens, incerteza da carga e incerteza do proxy MRV.\\
+Rota e operação & Incluir serviço, frequência, janela, capacidade, terminal, tempo de trânsito, transbordo e confiabilidade. & Evidência específica de cada operador, porto e serviço.\\
+Ambiental & Criar inventários separados para \wtw{}, LCA, combustíveis alternativos e emissões locais no porto. & Gases, energia, fatores, alocação e unidade funcional.\\
+Econômico & Comparar o custo modelado com tarifas, margens, contratos, seguro e inventário. & Separação entre custo operacional, custo alocado e frete comercial.\\
+Validação & Alinhar distâncias, carga, veículos, portos, alocação e fronteira com bases independentes. & Diferença entre direção, plausibilidade de magnitude e calibração.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Uma representação de maior fidelidade pode incluir uma super-rede multimodal com linhas, operadores, frequências, capacidades e tempos de espera. Esse escopo exige dados operacionais e comerciais que não são inferidos a partir dos registros de viagens da ANTAQ \cite{competitiveness2024,modalshiftreview2020}.
+Uma representação mais completa pode usar uma rede multimodal com linhas, operadores, frequências, capacidades e tempos de espera. Essa expansão depende de dados comerciais e operacionais que não podem ser inferidos apenas das viagens ANTAQ \cite{competitiveness2024,modalshiftreview2020}.
 
 \section{Fechamento}
 \label{sec:fechamento}
 
-O \CabotageLens{} transforma a comparação entre rodovia e cabotagem em uma cadeia de cálculo verificável. A origem do dado, a sequência dos portos, a carga a bordo, a distância, a intensidade do navio, o fallback, o critério estatístico e as fronteiras de interpretação permanecem acessíveis ao lado do resultado.
+O \CabotageLens{} transforma a comparação modal em uma sequência verificável. O leitor consegue acompanhar a origem do dado, a ordem dos portos, a carga a bordo, a distância, a intensidade, o fallback e o critério estatístico.
 
-Essa rastreabilidade permite reconhecer cenários multimodais promissores sem separar os números das premissas que os produziram. O framework oferece, assim, uma base acadêmica defensável para investigar a cabotagem brasileira e para ampliar a análise ambiental, econômica e operacional de forma controlada.
+Essa rastreabilidade é o que permite usar o resultado com responsabilidade. O sistema indica onde a cabotagem merece investigação e mostra quais premissas ainda precisam ser confirmadas antes de qualquer decisão operacional ou comercial.

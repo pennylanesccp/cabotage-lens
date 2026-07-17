@@ -9,6 +9,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{amsmath}
 \usepackage{microtype}
 \usepackage[hidelinks]{hyperref}
 \usepackage{csquotes}
@@ -27,7 +28,7 @@
 \newcommand{\ttw}{TTW}
 \newcommand{\wtw}{WTW}
 
-\title{CabotageLens: framework computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil}
+\title{CabotageLens: sistema computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil}
 \author{Felipe de Sá Proença}
 \date{\today}
 
@@ -36,7 +37,7 @@
 \maketitle
 
 \begin{abstract}
-Comparações entre transporte rodoviário e cabotagem exigem uma unidade funcional comum, a representação completa dos acessos terrestres e uma fronteira ambiental consistente. Este artigo apresenta o CabotageLens, um framework computacional auditável para comparar uma rota rodoviária direta com uma cadeia rodoviária--cabotagem--rodoviária em corredores brasileiros. O modelo marítimo combina registros de carga, atracação e sequência portuária da ANTAQ com intensidades de combustível do EU MRV associadas pelo número IMO. Para cada par portuário direcional, são utilizadas todas as viagens nas quais a origem ocorre antes do destino, incluindo ligações diretas, viagens com escalas intermediárias e diferentes corredores observados. A carga a bordo é reconstruída em cada subtrecho e define, com a distância navegada, o trabalho de transporte da viagem. A intensidade de cada navio é obtida prioritariamente pelo IMO; quando essa correspondência não está disponível, aplica-se uma estatística robusta de classe ou tipo de navio, com aparagem simétrica de 1\% das caudas e proveniência explícita. A intensidade representativa do par é a mediana das intensidades das viagens ponderada pelo trabalho de transporte, enquanto a escolha do corredor determina apenas a sequência portuária e a distância aplicadas ao cenário. A base contém 1.324 viagens observadas, 389 IMOs e 177 pares direcionais. No par Santos--Manaus, 89 observações viagem--origem--destino distribuídas em 22 corredores resultam em intensidade de 9,322050~g/(t$\cdot$nm). O framework preserva a separação entre evidência observada, fallback estatístico e parâmetros de cenário, e limita sua interpretação a emissões operacionais \ttw{} de \cooe{} e a um proxy de custo operacional modelado.
+Comparar rodovia e cabotagem exige analisar a viagem completa da carga. Não é suficiente comparar apenas um caminhão com um navio. É preciso incluir os acessos rodoviários aos portos, o percurso marítimo e as operações representadas em cada terminal. Este artigo apresenta o CabotageLens, uma estrutura computacional auditável para comparar duas alternativas para a mesma remessa: uma rota rodoviária direta e uma cadeia rodoviária--cabotagem--rodoviária. O cálculo marítimo utiliza registros de carga e atracação da ANTAQ e intensidades de consumo do sistema europeu de monitoramento, reporte e verificação (EU MRV). Para cada par de portos, o sistema procura todas as viagens em que o porto de origem aparece antes do porto de destino. Entram tanto viagens diretas quanto viagens com escalas intermediárias e diferentes sequências de portos. Em cada viagem, a carga a bordo é reconstruída trecho a trecho. Essa carga é combinada com a distância navegada para calcular o trabalho de transporte. A intensidade do navio é procurada primeiro pelo número IMO, seu identificador internacional, no EU MRV. Quando não há correspondência, o sistema usa um fallback, isto é, um valor substituto calculado por uma estatística robusta da classe ou do tipo de navio. A intensidade representativa do par é a mediana ponderada pelo trabalho de transporte de todas as viagens elegíveis. O corredor escolhido fornece a sequência de portos e a distância aplicadas ao cenário, mas não limita a amostra usada para estimar a intensidade. A base contém 1.324 viagens observadas, 389 IMOs e 177 pares direcionais. No par Santos--Manaus, 89 observações distribuídas em 22 corredores resultam em 9,322050~g/(t$\cdot$nm). Para uma carga hipotética de 14~t e a distância marítima selecionada de 3.300,216~nm, o consumo calculado somente para a navegação é 430,71~kg de combustível. O resultado não inclui os acessos rodoviários nem as operações portuárias. A interpretação ambiental é limitada às emissões operacionais \ttw{} de \cooe{}, ou seja, às emissões produzidas pelo uso do combustível no veículo ou no navio. O valor monetário é um proxy, isto é, uma estimativa simplificada do custo operacional modelado, e não uma cotação de frete.
 
 \textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte multimodal; ANTAQ; EU MRV; emissões operacionais; logística; Brasil.
 \end{abstract}
@@ -44,39 +45,47 @@ Comparações entre transporte rodoviário e cabotagem exigem uma unidade funcio
 \section{Introdução}
 \label{sec:introducao}
 
-O transporte de cargas no Brasil permanece fortemente dependente do modo rodoviário. Essa configuração oferece capilaridade territorial e flexibilidade operacional, mas concentra fluxos de longa distância em um modo sensível ao consumo de diesel, à infraestrutura terrestre e à volatilidade de custos. Para corredores conectáveis à costa, a cabotagem constitui uma alternativa técnica relevante, especialmente em um país com extensa faixa litorânea e grandes centros produtores e consumidores próximos a complexos portuários \cite{icct2022}.
+O transporte brasileiro de cargas depende fortemente das rodovias. O caminhão oferece capilaridade e consegue chegar diretamente a muitas origens e destinos. Em trajetos longos, porém, o resultado também depende do consumo de diesel, da infraestrutura terrestre e do custo de percorrer grandes distâncias. Em corredores próximos à costa, a cabotagem pode ser uma alternativa técnica relevante \cite{icct2022}.
 
-A relevância da cabotagem não implica superioridade automática sobre o transporte rodoviário. A pergunta técnica não é se um navio é melhor que um caminhão em abstrato, mas como duas cadeias capazes de transportar a mesma remessa entre a mesma origem e o mesmo destino se comparam. O resultado depende dos portos utilizados, das distâncias terrestres e marítimas, da utilização da embarcação, da carga alocada ao transporte, das interfaces portuárias e da fronteira ambiental e econômica adotada \cite{shortsea2019,modalshiftreview2020}. Comparar uma perna marítima isolada com uma viagem rodoviária completa produziria uma assimetria metodológica.
+Cabotagem é o transporte marítimo entre portos do mesmo país. Sua presença em um corredor não significa que ela será sempre melhor que a rodovia. A comparação precisa responder a uma pergunta concreta: como transportar a mesma carga, da mesma origem ao mesmo destino, por cada alternativa?
 
-O CabotageLens foi concebido para realizar essa comparação de forma porta a porta. A alternativa rodoviária direta e a alternativa rodoviária--cabotagem--rodoviária são avaliadas para a mesma carga, com decomposição por perna, fontes registradas e avisos de qualidade. O framework também separa emissões operacionais \ttw{}, emissões de ciclo de vida e resultados monetários. O custo calculado representa um proxy operacional modelado, e não frete comercial, tarifa contratada ou demonstração de viabilidade logística \cite{competitiveness2024,decarb2024,maritimelca2024}.
+Essa pergunta exige uma comparação porta a porta. Na alternativa rodoviária, a carga segue diretamente por estrada. Na alternativa multimodal, ela percorre um acesso rodoviário até o porto, uma perna marítima e outro acesso rodoviário até o destino final. Portos, distâncias, carga transportada e interfaces operacionais podem mudar o resultado \cite{shortsea2019,modalshiftreview2020}.
 
-A contribuição específica deste artigo é apresentar uma formulação marítima baseada em atividade observada. Registros da ANTAQ permitem reconstruir viagens, paradas e cargas a bordo, enquanto o EU MRV fornece indicadores anuais de combustível por trabalho de transporte associados aos navios por IMO. Essa combinação torna possível representar ligações portuárias direcionais sem fixar antecipadamente um corredor e sem atribuir a toda a frota um único navio médio.
+O CabotageLens organiza essa comparação. O que entra no sistema são a origem, o destino, a massa da remessa e os parâmetros do cenário. O sistema constrói as duas alternativas, calcula cada perna e registra as fontes utilizadas. O que sai são distâncias, consumo, emissões operacionais e custo modelado, acompanhados por sua decomposição e proveniência. Proveniência é o registro de onde cada dado veio e de qual regra foi usada para calculá-lo.
+
+Dois limites são importantes. Primeiro, as emissões calculadas são operacionais \ttw{}, isto é, associadas ao uso do combustível no veículo ou no navio. Elas não equivalem a uma avaliação \wtw{} (\textit{well-to-wheel/wake}), que também considera a produção e a distribuição do combustível, nem a uma avaliação completa de ciclo de vida. Segundo, o custo calculado é um custo operacional modelado. Ele não representa frete comercial, tarifa contratada ou garantia de viabilidade logística \cite{competitiveness2024,decarb2024,maritimelca2024}.
+
+A contribuição central deste artigo está no cálculo marítimo. Em vez de fixar previamente uma sequência, como Santos--Suape--Manaus, o sistema lê as viagens observadas na ANTAQ. Para um par de portos, são consideradas todas as viagens nas quais a origem aparece antes do destino. Isso permite usar viagens diretas, viagens com escalas e diferentes corredores realmente presentes na base.
 
 \section{Revisão da literatura e fundamentação metodológica}
 \label{sec:contexto}
 
-A literatura sobre cabotagem brasileira e sobre o programa BR do Mar sustenta a relevância do modo para corredores longos, mas não substitui a avaliação de relações origem--destino específicas \cite{icct2022}. Estudos de competitividade em rede mostram que frequência, tempo, estoque, terminais, confiabilidade, risco e disponibilidade de serviço participam da decisão modal real \cite{competitiveness2024}. O CabotageLens concentra-se na comparação técnica de rotas, combustível, emissões operacionais e proxy de custo, sem representar integralmente essas variáveis comerciais.
+A literatura mostra que a cabotagem pode ser relevante em corredores longos, mas o resultado varia entre pares de origem e destino \cite{icct2022}. Distância, acesso aos portos, frequência, tempo, confiabilidade, estoque e disponibilidade de serviço influenciam a decisão real \cite{competitiveness2024}. O CabotageLens representa rotas, combustível, emissões operacionais e custo modelado. Ele não representa por completo todas as condições comerciais.
 
-Na literatura de \textit{short sea shipping}, a direção e a magnitude do desempenho ambiental dependem da distância, dos acessos terrestres, do tipo de navio, da utilização, dos fatores de emissão e da forma de alocação à carga \cite{shortsea2019}. Revisões de mudança modal reforçam que uma vantagem energética potencial não implica adoção automática do modo marítimo \cite{modalshiftreview2020}. A unidade funcional deve, portanto, abranger a remessa completa, e não veículos isolados.
+Estudos de \textit{short sea shipping}, ou navegação marítima de curta distância, também mostram que não existe uma vantagem ambiental automática. O resultado depende do tipo de navio, de sua utilização, das distâncias e da carga à qual o consumo é atribuído \cite{shortsea2019}. Por isso, a unidade analisada deve ser a remessa completa, e não um navio e um caminhão considerados isoladamente \cite{modalshiftreview2020}.
 
-O EU MRV oferece dados reportados por navio e indicadores normalizados por distância e por trabalho de transporte. Esses indicadores permitem relacionar combustível ao serviço prestado e são mais adequados à alocação de uma carga do que o consumo anual absoluto da embarcação \cite{eumrv2025}. No CabotageLens, o indicador empregado é expresso em g/(t$\cdot$nm), preservando a associação por IMO e o ano de referência. A base da ANTAQ fornece a contrapartida operacional brasileira: identificação do navio, sequência de atracações e movimentos de carga em cabotagem conteinerizada \cite{antaq2025}.
+O EU MRV é uma base europeia de monitoramento, reporte e verificação de emissões marítimas. Ela publica indicadores anuais por embarcação. O número IMO funciona como uma identificação internacional do navio. No CabotageLens, ele permite ligar um navio encontrado na ANTAQ à sua intensidade de combustível no EU MRV \cite{eumrv2025}.
 
-A fronteira ambiental adotada é a de emissões operacionais \ttw{} de \cooe{}. Fontes \wtw{}, LCA ou exclusivamente de CO$_2$ são úteis para discutir limites e trabalhos futuros, mas não são tratadas como fatores diretamente intercambiáveis com a saída operacional do modelo \cite{decarb2024,maritimelca2024}. Operações portuárias e consumo de navios atracados também requerem atenção, pois dependem de terminal, produtividade, classe do navio e tempo de permanência \cite{berth2009,berthairquality2010,shipops2022}.
+A intensidade marítima usada no modelo é expressa em g/(t$\cdot$nm). Essa unidade significa gramas de combustível consumidos para transportar uma tonelada por uma milha náutica. Por exemplo, uma intensidade de 10~g/(t$\cdot$nm) indica que um trabalho de transporte de 1.000~t$\cdot$nm corresponde a 10.000~g, ou 10~kg, de combustível.
+
+A ANTAQ fornece a atividade brasileira utilizada no cálculo. A tabela de Carga informa movimentos de embarque e desembarque. A tabela de Atracação informa onde e quando o navio esteve e qual era seu IMO. A combinação dessas informações permite ordenar as escalas e estimar a carga a bordo em cada trecho \cite{antaq2025}.
+
+A fronteira ambiental adotada é a de emissões operacionais \ttw{} de \cooe{}. Fatores \wtw{}, resultados de avaliação de ciclo de vida (LCA) e fatores exclusivamente de CO$_2$ não são intercambiáveis com essa saída \cite{decarb2024,maritimelca2024}. Operações portuárias e períodos de navio atracado também precisam de tratamento separado, pois dependem do terminal e da operação observada \cite{berth2009,berthairquality2010,shipops2022}.
 
 \begin{table}[htbp]
 \centering
 \small
-\caption{Fronteiras metodológicas do CabotageLens.}
+\caption{O que está dentro e fora da comparação.}
 \label{tab:fronteiras}
 \begin{tabular}{p{0.23\textwidth}p{0.34\textwidth}p{0.35\textwidth}}
 \toprule
 Dimensão & Incluído & Fora da fronteira \tabularnewline
 \midrule
-Alternativas & Rodovia direta e cadeia rodoviária--cabotagem--rodoviária porta a porta & Comparação entre navio isolado e caminhão para a viagem completa \tabularnewline
+Alternativas & Rodovia direta e cadeia rodoviária--cabotagem--rodoviária porta a porta & Comparação de um navio isolado com uma viagem rodoviária completa \tabularnewline
 Emissões & Emissões operacionais \ttw{} de \cooe{} por remessa & \wtw{}, LCA, fabricação de ativos e inventário completo de poluentes locais \tabularnewline
-Custo & Proxy de custo operacional modelado & Frete comercial, negociação, seguro, estoque, demurrage, detention e booking \tabularnewline
-Dados marítimos & Viagens ANTAQ, intensidades EU MRV e fallbacks identificados & Interpretação de fallback como medição individual do navio \tabularnewline
-Serviço & Corredores observados na janela de dados & Garantia de frequência, slot, escala futura ou disponibilidade comercial \tabularnewline
+Custo & Estimativa do custo operacional modelado & Frete comercial, negociação, seguro, estoque, multas por permanência e reserva de espaço no navio \tabularnewline
+Dados marítimos & Viagens ANTAQ, intensidades EU MRV e fallbacks identificados & Interpretação do fallback como medição individual do navio \tabularnewline
+Serviço & Corredores observados na janela de dados & Garantia de frequência, espaço no navio ou disponibilidade comercial futura \tabularnewline
 \bottomrule
 \end{tabular}
 \end{table}
@@ -87,39 +96,102 @@ Serviço & Corredores observados na janela de dados & Garantia de frequência, s
 \subsection{Unidade funcional e alternativas}
 \label{subsec:unidade-funcional}
 
-A unidade funcional é o transporte de uma quantidade especificada de carga conteinerizada entre uma origem e um destino no Brasil. A configuração de referência utiliza 1~TEU e 14~t por remessa. A massa permanece um dado de cenário e pode ser alterada pelo usuário; ela não deve ser confundida com a carga reconstruída a bordo dos navios da ANTAQ.
+A unidade funcional é a tarefa usada como base da comparação. Neste trabalho, ela é transportar uma quantidade definida de carga conteinerizada entre uma origem e um destino no Brasil. A configuração de referência utiliza 1~TEU e 14~t. TEU é a unidade equivalente a um contêiner de 20 pés. A massa pode ser alterada pelo usuário.
 
-A alternativa rodoviária direta contém uma rota terrestre origem--destino. A alternativa multimodal contém o acesso rodoviário ao porto de origem, as interfaces portuárias representáveis, a perna marítima, as interfaces no porto de destino e o acesso rodoviário final. Todos os componentes são agregados para a mesma remessa \cite{shortsea2019,competitiveness2024}.
+\textbf{O que entra:} origem, destino e massa da remessa.
+
+\textbf{O que o sistema faz:} constrói uma rota rodoviária direta e uma cadeia multimodal. A cadeia multimodal inclui o acesso rodoviário ao primeiro porto, a navegação, as interfaces portuárias representáveis e o acesso rodoviário final.
+
+\textbf{O que sai:} resultados comparáveis para a mesma remessa e para os mesmos pontos inicial e final \cite{shortsea2019,competitiveness2024}.
+
+A massa da remessa não deve ser confundida com a carga reconstruída a bordo dos navios. A primeira é definida pelo usuário para calcular seu cenário. A segunda é obtida dos registros da ANTAQ e serve para representar a importância relativa das viagens observadas.
 
 \subsection{Reconstrução das viagens e da carga a bordo}
 \label{subsec:reconstrucao-antaq}
 
-O processamento da ANTAQ combina as tabelas de Carga, Atracação e Tempos de Atracação. Os registros de carga informam movimentos embarcados e desembarcados, massa, quantidade e portos associados; os registros de atracação fornecem porto, tempo, embarcação e IMO. Chamadas consecutivas pertencentes ao mesmo complexo portuário canônico são colapsadas após a soma dos movimentos de carga, de modo que a normalização dos nomes não descarte atividade observada.
+\textbf{O que entra:} registros de Carga, Atracação e Tempos de Atracação da ANTAQ.
 
-Para cada IMO, as escalas são ordenadas e segmentadas em viagens. Em cada parada, a variação líquida de carga atualiza o inventário a bordo. Quando a primeira escala observada implicaria saldo negativo, reconstrói-se a carga inicial mínima necessária para manter a série não negativa. A carga associada ao trecho que sai da parada $s$, denotada por $m_{v,s}$, é o saldo acumulado após os movimentos dessa parada. Esse procedimento produz uma sequência de subtrechos contíguos, cada qual com porto inicial, porto final, carga a bordo e fonte de distância.
+\textbf{O que o sistema faz:} reúne os registros do mesmo navio, ordena suas escalas e divide a sequência em viagens. Em cada escala, soma embarques e subtrai desembarques. O saldo após a escala é a carga atribuída ao trecho seguinte. Quando a janela de dados começa com um desembarque, o sistema calcula a menor carga inicial capaz de impedir um saldo negativo. Assim, uma observação parcial não produz carga a bordo fisicamente impossível.
 
-Para um par ordenado de portos $(o,d)$, a viagem $v$ é elegível quando $o$ aparece antes de $d$ em sua sequência. O recorte inclui viagens diretas e viagens com qualquer número de escalas intermediárias. Todas as sequências completas observadas entre os dois portos são avaliadas, inclusive as que percorrem corredores diferentes. Um corredor nunca é sintetizado pela junção de subtrechos pertencentes a viagens distintas. Cada viagem contribui uma vez para o mesmo par ordenado; se chamadas repetidas gerarem mais de um recorte possível dentro da viagem, utiliza-se primeiro o recorte direto e, na sua ausência, o recorte completo de menor distância.
+Chamadas consecutivas dentro do mesmo complexo portuário são reunidas depois que seus movimentos de carga são somados. Essa etapa evita que diferenças de nomenclatura criem escalas artificiais ou apaguem movimentos observados.
+
+\textbf{O que sai:} uma sequência de trechos contíguos. Cada trecho contém porto inicial, porto final, carga a bordo, distância e fonte da distância.
+
+\paragraph{Exemplo didático 1: reconstrução por subtrechos.}
+Este é um exemplo hipotético, criado apenas para explicar a conta. Um navio sai do porto A com 100~t, navega 100~nm até o porto B, desembarca 40~t e embarca 20~t. Portanto, ele sai de B com 80~t e navega mais 200~nm até o porto C.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Exemplo hipotético de carga e trabalho de transporte por subtrecho.}
+\label{tab:exemplo-subtrechos}
+\begin{tabular}{lrrr}
+\toprule
+Subtrecho & Carga a bordo & Distância & Trabalho \tabularnewline
+\midrule
+A--B & 100~t & 100~nm & 10.000~t$\cdot$nm \tabularnewline
+B--C & 80~t & 200~nm & 16.000~t$\cdot$nm \tabularnewline
+\midrule
+Total & --- & 300~nm & 26.000~t$\cdot$nm \tabularnewline
+\bottomrule
+\end{tabular}
+\end{table}
+
+O trabalho de transporte não é calculado com uma carga média única. Ele é somado trecho a trecho:
+
+\begin{equation}
+W=(100\times100)+(80\times200)=26.000~\mathrm{t{\cdot}nm}.
+\label{eq:exemplo-trabalho}
+\end{equation}
+
+Se esse navio tiver intensidade hipotética de 10~g/(t$\cdot$nm), o combustível associado à atividade entre A e C será:
+
+\begin{equation}
+F=\frac{10\times26.000}{1000}=260~\mathrm{kg}.
+\label{eq:exemplo-combustivel}
+\end{equation}
+
+O exemplo mostra por que uma escala intermediária não pode ser ignorada. A carga muda em B, e essa mudança altera o consumo atribuído ao segundo trecho.
+
+Para um par ordenado de portos $(o,d)$, uma viagem é elegível quando $o$ aparece antes de $d$. A viagem pode ser direta ou ter qualquer número de escalas intermediárias. Todas as sequências completas observadas são avaliadas. O sistema não cria um corredor juntando trechos de viagens diferentes.
+
+Cada viagem contribui uma vez para o mesmo par. Se a repetição de um porto gerar mais de um recorte possível dentro da viagem, o sistema procura primeiro um recorte direto. Se não houver, utiliza o recorte completo de menor distância.
 
 \subsection{Intensidade marítima por IMO e fallback robusto}
 \label{subsec:intensidade-mrv}
 
-A intensidade $I_v$ atribuída à viagem segue uma hierarquia de fontes. A primeira opção é o último indicador positivo de combustível por trabalho de transporte encontrado para o IMO no EU MRV. Essa correspondência preserva a identidade da embarcação e não sofre aparagem ou substituição, mesmo quando o valor se encontra nas caudas da distribuição.
+\textbf{O que entra:} o número IMO do navio observado na ANTAQ e os indicadores positivos de combustível do EU MRV.
 
-Na ausência de correspondência positiva por IMO, utiliza-se uma estatística de fallback. Uma classe de navio explicitamente disponível tem prioridade sobre o tipo. Para a classe, emprega-se a média aparada em 1\% por cauda registrada no artefato de eficiência; a mediana da classe é usada somente quando essa estatística não está disponível. Para o tipo, os últimos indicadores positivos de cada IMO são ordenados, removem-se $\lfloor 0{,}01n\rfloor$ observações de cada cauda e calcula-se a média dos valores retidos. Se a amostra for pequena demais para excluir ao menos uma observação em cada cauda, utiliza-se a mediana. No recorte conteinerizado sem metadado de tipo, \textit{container ship} é o tipo documentado.
+\textbf{O que o sistema faz:} procura primeiro o indicador mais recente associado exatamente ao IMO. Esse é o dado específico da embarcação. Se não houver correspondência, aplica um fallback, isto é, um valor substituto calculado a partir de navios semelhantes.
 
-A regra de outliers incide, portanto, sobre a construção do fallback coletivo, não sobre observações exatas associadas ao IMO. Para cada intensidade, o sistema registra a fonte, o nível da associação, o estimador, a regra de aparagem, o tamanho bruto e retido da amostra, a quantidade excluída e os limites retidos. Essa proveniência diferencia explicitamente uma observação específica do navio de uma imputação estatística de classe ou tipo.
+A ordem de busca é:
+
+\begin{enumerate}
+  \item indicador positivo mais recente do mesmo IMO;
+  \item estatística robusta da classe do navio, quando a classe está disponível;
+  \item estatística robusta do tipo do navio;
+  \item tipo documentado \textit{container ship} quando o recorte conteinerizado não possui metadado mais específico.
+\end{enumerate}
+
+Uma estatística robusta procura representar o grupo sem ser excessivamente controlada por poucos valores extremos. Para a classe, o sistema usa a média aparada em 1\% por cauda registrada no artefato de eficiência. Se ela não estiver disponível, usa a mediana da classe.
+
+Para o tipo, os valores mais recentes de cada IMO são ordenados. Em uma amostra com $n$ navios, removem-se $\lfloor0{,}01n\rfloor$ valores de cada extremidade e calcula-se a média dos valores restantes. Se a amostra for pequena demais para retirar pelo menos um valor de cada lado, usa-se a mediana.
+
+Essa regra de outliers vale apenas para construir o fallback coletivo. Um valor encontrado exatamente pelo IMO não é apagado ou substituído por estar distante dos demais. O sistema preserva esse valor como observação específica do navio.
+
+\textbf{O que sai:} uma intensidade para cada viagem e um registro de proveniência. Esse registro informa se a fonte foi IMO, classe ou tipo; qual estatística foi usada; quantos valores entraram na amostra; e quantos foram retirados das caudas. Portanto, um fallback não é apresentado como se fosse medição do navio.
 
 \subsection{Trabalho de transporte e intensidade representativa do par}
 \label{subsec:intensidade-par}
 
-Seja $\mathcal{S}_{v,o,d}$ o conjunto de subtrechos contíguos da viagem $v$ entre a origem portuária $o$ e o destino portuário $d$. Para cada subtrecho $s$, $d_{v,s}$ é a distância em milhas náuticas e $m_{v,s}$ é a carga reconstruída a bordo em toneladas. O trabalho de transporte observado da viagem é
+Considere os subtrechos da viagem $v$ entre a origem $o$ e o destino $d$. Em cada subtrecho $s$, $m_{v,s}$ é a carga a bordo em toneladas e $d_{v,s}$ é a distância em milhas náuticas. O trabalho de transporte é:
 
 \begin{equation}
 W_{v,o,d}=\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\,d_{v,s}.
 \label{eq:trabalho-transporte}
 \end{equation}
 
-O combustível atribuído à atividade conteinerizada observada entre esses portos é
+O combustível atribuído à atividade observada é:
 
 \begin{equation}
 F_{v,o,d}^{\mathrm{obs}}=\frac{I_v}{1000}
@@ -127,9 +199,15 @@ F_{v,o,d}^{\mathrm{obs}}=\frac{I_v}{1000}
 \label{eq:combustivel-observado}
 \end{equation}
 
-em que $I_v$ é expresso em g/(t$\cdot$nm) e $F_{v,o,d}^{\mathrm{obs}}$ em kg. A soma abrange todos os subtrechos existentes entre origem e destino; assim, uma viagem com escalas intermediárias não é reduzida a uma ligação direta hipotética.
+em que $I_v$ está em g/(t$\cdot$nm) e o combustível está em kg.
 
-A intensidade aplicada a um cenário não é escolhida com base em um único corredor. Todas as observações viagem--origem--destino resolvidas para o mesmo par participam diretamente do estimador. Ordenando as intensidades $I_v$ e usando $W_{v,o,d}$ como peso, define-se a mediana ponderada inferior:
+\textbf{O que entra:} a intensidade de cada viagem e seu trabalho de transporte entre os portos.
+
+\textbf{O que o sistema faz:} reúne todas as viagens elegíveis do mesmo par, mesmo quando elas seguem corredores diferentes. Em seguida, calcula a mediana ponderada pelo trabalho de transporte. Ponderada significa que uma viagem que transportou mais carga por uma distância maior tem mais influência que uma viagem com pouco trabalho.
+
+\textbf{O que sai:} uma única intensidade representativa do par direcional.
+
+Formalmente, as intensidades são ordenadas e seus pesos são acumulados. A mediana ponderada inferior é o primeiro valor cuja soma acumulada alcança pelo menos metade do trabalho total:
 
 \begin{equation}
 I_{o,d}^{\mathrm{rep}}=
@@ -138,14 +216,41 @@ I_{o,d}^{\mathrm{rep}}=
 \label{eq:mediana-ponderada}
 \end{equation}
 
-Esse estimador representa todas as viagens elegíveis do par, sem calcular primeiro uma média por corredor. Observações com trabalho de transporte nulo não influenciam a mediana quando existe peso positivo. Se todas as observações resolvidas tiverem trabalho nulo, utiliza-se uma mediana simples com fonte e método específicos. A mediana ponderada reduz a influência de caudas elevadas sem selecionar um valor em função de um resultado desejado.
+\paragraph{Exemplo didático 2: mediana ponderada.}
+Considere três viagens hipotéticas do mesmo par:
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Exemplo hipotético de mediana ponderada pelo trabalho de transporte.}
+\label{tab:exemplo-mediana}
+\begin{tabular}{lrrr}
+\toprule
+Viagem & Intensidade & Peso & Peso acumulado \tabularnewline
+\midrule
+1 & 6~g/(t$\cdot$nm) & 1.000~t$\cdot$nm & 1.000~t$\cdot$nm \tabularnewline
+2 & 9~g/(t$\cdot$nm) & 5.000~t$\cdot$nm & 6.000~t$\cdot$nm \tabularnewline
+3 & 20~g/(t$\cdot$nm) & 2.000~t$\cdot$nm & 8.000~t$\cdot$nm \tabularnewline
+\bottomrule
+\end{tabular}
+\end{table}
+
+O peso total é 8.000~t$\cdot$nm, e a metade é 4.000~t$\cdot$nm. Ao ordenar as intensidades, o peso acumulado passa de 1.000 para 6.000 na intensidade de 9~g/(t$\cdot$nm). Logo, a mediana ponderada é 9~g/(t$\cdot$nm). A viagem com intensidade 20 continua na amostra, mas não controla o resultado sozinha.
+
+Observações com trabalho nulo não influenciam a mediana quando existe pelo menos um peso positivo. Se todas tiverem trabalho nulo, o sistema usa uma mediana simples e registra essa condição.
 
 \subsection{Separação entre intensidade e corredor}
 \label{subsec:corredor}
 
-Os corredores observados cumprem duas funções distintas. A população completa de viagens determina $I_{o,d}^{\mathrm{rep}}$; a regra de seleção de corredor determina somente a sequência portuária e a distância do cenário. Entre alternativas completas e utilizáveis, dá-se preferência a um corredor direto observado. Se não houver ligação direta utilizável, escolhe-se o corredor completo de menor distância. Subtrechos de viagens diferentes não são combinados.
+Intensidade e corredor respondem a perguntas diferentes.
 
-Para uma carga de cenário $M$ e um corredor selecionado $\mathcal{S}^{*}_{o,d}$, o consumo marítimo de navegação é
+\textbf{A intensidade} responde: qual valor representa o desempenho das viagens observadas entre estes dois portos? Para respondê-la, o sistema usa todas as viagens elegíveis do par.
+
+\textbf{O corredor} responde: qual sequência de portos e qual distância serão aplicadas ao cenário do usuário? Para respondê-la, o sistema prefere uma ligação direta observada. Se ela não existir, escolhe o corredor completo de menor distância.
+
+Por exemplo, suponha que existam viagens A--B, A--X--B e A--Y--Z--B. As três podem participar da intensidade do par A--B. Se A--B estiver disponível como corredor direto, sua distância será aplicada ao cenário. Isso não elimina as outras viagens do cálculo da intensidade.
+
+Para uma carga de cenário $M$ e o caminho selecionado, o consumo marítimo de navegação é:
 
 \begin{equation}
 F_{o,d}^{\mathrm{cen}}=\frac{I_{o,d}^{\mathrm{rep}}\,M}{1000}
@@ -153,43 +258,62 @@ F_{o,d}^{\mathrm{cen}}=\frac{I_{o,d}^{\mathrm{rep}}\,M}{1000}
 \label{eq:combustivel-cenario}
 \end{equation}
 
-As intensidades observadas no corredor selecionado são mantidas como diagnóstico, mas não substituem o valor representativo do par. A distância de cada subtrecho utiliza a matriz marítima quando há valor positivo; na falta desse dado, o sistema pode registrar um fallback por haversine. Esse fallback é uma aproximação de triagem e não uma rota navegável confirmada.
+A distância de cada subtrecho vem preferencialmente da matriz marítima. Quando esse valor não existe, o sistema pode usar a distância de haversine e registrar o fallback. Haversine é a distância de grande círculo entre duas coordenadas. Ela serve como aproximação, mas não confirma uma rota navegável.
 
 \subsection{Agregação de emissões, custos e operações portuárias}
 \label{subsec:agregacao}
 
-Para cada alternativa $a$, as emissões operacionais e o proxy de custo são somas dos componentes incluídos:
+\textbf{O que entra:} consumo, distâncias, preços de energia, fatores de emissão e componentes portuários disponíveis.
+
+\textbf{O que o sistema faz:} calcula cada perna separadamente e soma apenas os componentes incluídos no cenário:
 
 \begin{equation}
 E_a=\sum_{\ell\in L_a}E_{\ell},
 \qquad
-C_a=\sum_{\ell\in L_a}C_{\ell},
+C_a=\sum_{\ell\in L_a}C_{\ell}.
 \label{eq:totais}
 \end{equation}
 
-em que $L_a$ é o conjunto de pernas e operações representadas. O consumo marítimo calculado pela Equação~\ref{eq:combustivel-cenario} é convertido em custo energético e emissões operacionais mediante os preços e fatores registrados no cenário. O custo não inclui margens comerciais, contratos, seguro, estoques, frequência ou tarifas finais de mercado.
+\textbf{O que sai:} totais de emissões operacionais e custo modelado, acompanhados por uma decomposição por perna.
 
-Operações portuárias são representadas separadamente quando existe uma fonte utilizável, identificada como observação, média portuária, padrão de literatura ou indisponibilidade. Dado ausente não é convertido silenciosamente em zero. Quando a intensidade por trabalho de transporte do MRV é aplicada à navegação, o consumo anual reportado é tratado como abrangente para essa fronteira, e o hoteling do navio não é adicionado novamente, evitando dupla contagem. Componentes explícitos de terminal permanecem separados \cite{berth2009,shipops2022}.
+O combustível marítimo é convertido em emissões e custo por meio dos fatores e preços registrados. O resultado econômico não inclui margem comercial, seguro, estoque, contrato, frequência ou tarifa final de mercado.
+
+Operações portuárias são incluídas separadamente quando existe uma fonte utilizável. A proveniência pode indicar observação, média portuária, padrão de literatura ou indisponibilidade. Dado ausente não é transformado silenciosamente em zero.
+
+Quando a intensidade por trabalho de transporte do MRV é usada para a navegação, o consumo anual reportado é tratado como abrangente para essa fronteira. Por isso, o consumo de hoteling do navio, isto é, seu consumo enquanto está atracado, não é somado novamente. Essa regra evita dupla contagem. Componentes explícitos do terminal permanecem separados \cite{berth2009,shipops2022}.
 
 \section{Implementação computacional}
 \label{sec:implementacao}
 
-O CabotageLens é implementado como aplicação Streamlit com lógica de domínio organizada em módulos reutilizáveis. A interface recebe origem, destino, carga e parâmetros de cenário. O backend resolve coordenadas, consulta rotas terrestres ou seus caches, seleciona portos, lê a matriz marítima enriquecida, calcula cada perna e apresenta totais, decomposição e proveniência.
+O CabotageLens é uma aplicação Streamlit. A interface recebe origem, destino, carga e parâmetros do cenário. A lógica de cálculo fica em módulos separados da interface, o que facilita a auditoria e os testes.
 
-O processamento marítimo é executado fora da interação do usuário. Os dados ANTAQ são normalizados em tabelas de viagens, paradas e chamadas; os workbooks anuais do EU MRV são reduzidos a um lookup por IMO e a estatísticas robustas por classe e tipo; por fim, a matriz marítima recebe os pares direcionais, alternativas de corredor, subtrechos e indicadores de cobertura. O artefato resultante preserva campos específicos para a intensidade representativa do par, para a intensidade observada do corredor selecionado e para as contagens de fonte.
+Uma execução segue estas etapas:
 
-No tempo de execução, a seleção da geometria e a avaliação econômica e ambiental utilizam esse artefato. A persistência em Supabase/Postgres armazena lugares, rotas e resultados reutilizáveis. A existência de cache reduz chamadas redundantes a provedores, mas não transforma uma rota modelada em trajetória GPS ou serviço contratado. O código-fonte e os artefatos rastreados estão disponíveis no repositório do projeto \cite{cabotagelensrepo}, e a aplicação é disponibilizada em interface web \cite{cabotagelensapp}.
+\begin{enumerate}
+  \item o usuário informa origem, destino e carga;
+  \item o sistema resolve as coordenadas e calcula ou recupera as rotas rodoviárias;
+  \item os portos candidatos são selecionados;
+  \item a matriz marítima fornece intensidade, corredor, distância e proveniência;
+  \item cada perna tem consumo, emissões e custo modelado calculados;
+  \item a interface apresenta os totais e a decomposição.
+\end{enumerate}
+
+O processamento pesado dos dados marítimos ocorre antes da interação do usuário. Primeiro, as tabelas ANTAQ são transformadas em viagens, paradas e chamadas. Depois, os dados anuais do EU MRV são reduzidos a valores por IMO e a estatísticas robustas por classe e tipo. Por fim, o sistema gera uma matriz com pares direcionais, corredores, subtrechos, intensidade e indicadores de cobertura.
+
+No momento da consulta, a aplicação lê esse artefato. A persistência em Supabase/Postgres permite reutilizar lugares, rotas e resultados. Um resultado em cache evita chamadas repetidas, mas continua sendo uma rota modelada. Ele não representa uma trajetória GPS nem garante um serviço comercial \cite{cabotagelensrepo,cabotagelensapp}.
 
 \section{Evidência empírica e resultados}
 \label{sec:resultados}
 
 \subsection{Cobertura da base ANTAQ--EU MRV}
 
-A base processada contém 1.324 viagens, 6.797 paradas, 7.103 ocorrências de chamadas portuárias e 389 IMOs únicos no recorte de cabotagem conteinerizada de 2025. O cruzamento com indicadores positivos do EU MRV associa 243 IMOs e 788 viagens de forma exata. Isso corresponde a 62,5\% dos IMOs, 59,5\% das viagens, 52,9\% da massa carregada e 50,6\% dos TEU observados. As viagens restantes recebem fallback identificado quando há classe ou tipo utilizável.
+A base processada contém 1.324 viagens, 6.797 paradas, 7.103 chamadas portuárias e 389 IMOs únicos no recorte de cabotagem conteinerizada de 2025.
+
+O cruzamento exato com o EU MRV encontra 243 dos 389 IMOs. Esses navios aparecem em 788 das 1.324 viagens. As demais viagens recebem fallback quando existe classe ou tipo utilizável.
 
 \begin{table}[htbp]
 \centering
-\small
+\footnotesize
 \caption{Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.}
 \label{tab:cobertura-mrv}
 \begin{tabular}{lrr}
@@ -204,51 +328,78 @@ Carga em TEU com correspondência exata & 1.454.351,75 de 2.872.715,00~TEU & 50,
 \end{tabular}
 \end{table}
 
-O enriquecimento da matriz marítima produz 177 pares direcionais e preserva 12.025 observações viagem--origem--destino. Entre 5.438 subtrechos canônicos calculados, 5.023 utilizam distância da matriz marítima e 415 registram fallback haversine. A intensidade é resolvida em 3.290 subtrechos por IMO e em 2.148 por fallback. A cobertura numérica de 100\% não deve ser confundida com cobertura observacional por navio: fontes exatas e imputadas permanecem separadas.
+Esses percentuais precisam ser lidos com cuidado. Correspondência exata significa que o IMO da ANTAQ foi encontrado no MRV. Quando isso não ocorre, o sistema ainda pode calcular uma intensidade por fallback, mas registra que ela é uma estimativa do grupo, e não um dado específico do navio.
 
-\subsection{Aplicação ao par Santos--Manaus}
+O enriquecimento produz 177 pares direcionais e 12.025 observações viagem--origem--destino. Entre 5.438 subtrechos calculados, 5.023 usam a matriz marítima e 415 usam haversine. A intensidade é resolvida em 3.290 subtrechos por IMO e em 2.148 por fallback. Portanto, a existência de um valor numérico para todos os subtrechos não significa que todos possuem observação individual no MRV.
 
-O par Santos--Manaus contém 89 observações viagem--origem--destino com trabalho de transporte positivo, distribuídas em 22 sequências portuárias distintas. A população inclui a ligação direta e corredores com escalas intermediárias por diferentes portos; não há requisito de passagem por Suape ou por qualquer outro porto predeterminado. Das 89 observações, 40 utilizam intensidade exata por IMO e 49 utilizam fallback de tipo. Essas 49 observações concentram 59,54\% do trabalho de transporte do par.
+\subsection{Execução demonstrativa: Santos--Manaus}
 
-A mediana ponderada definida pela Equação~\ref{eq:mediana-ponderada} é 9,322050~g/(t$\cdot$nm). O valor coincide com o fallback robusto de \textit{container ship}, pois as observações que usam essa fonte atravessam o percentil ponderado de 50\%. Para esse tipo, a amostra contém 243 valores positivos por IMO; a regra de 1\% remove dois valores de cada cauda e retém 239 observações. A média aritmética sem aparagem é 21,661852~g/(t$\cdot$nm), enquanto a mediana simples da amostra bruta é 4,620000~g/(t$\cdot$nm). Esses valores são diagnósticos da distribuição e não substituem o estimador registrado.
+Esta subseção mostra como os dados e as regras se combinam em uma execução concreta.
 
-A geometria utilizada no cenário Santos--Manaus é o corredor direto observado, porque ele satisfaz o critério de seleção do caminho. Essa escolha não restringe a amostra usada na intensidade: as 89 viagens dos 22 corredores permanecem no cálculo do valor representativo. O resultado ilustra a separação metodológica entre o caminho empregado para somar distâncias e a população utilizada para estimar o desempenho energético do par.
+\textbf{O que entra na estimativa da intensidade:} 89 observações viagem--origem--destino com trabalho positivo. Elas estão distribuídas em 22 corredores observados entre Santos e Manaus. Entre as 89 observações, 40 usam intensidade exata por IMO e 49 usam fallback por tipo. As viagens com fallback representam 59,54\% do trabalho de transporte.
+
+\textbf{O que o sistema faz:} ordena as 89 intensidades e acumula o trabalho de transporte. O valor que alcança metade do trabalho total é 9,322050~g/(t$\cdot$nm). Todos os 22 corredores participam dessa estimativa. Não existe obrigação de passar por Suape ou por qualquer outro porto.
+
+O valor coincide com o fallback robusto de \textit{container ship}, porque as observações com essa fonte atravessam o ponto ponderado de 50\%. Para esse tipo, existem 243 valores positivos por IMO. A regra de 1\% retira dois valores de cada extremidade e mantém 239. A média aritmética sem aparagem, 21,661852~g/(t$\cdot$nm), e a mediana simples, 4,620000~g/(t$\cdot$nm), são diagnósticos da distribuição. Elas não substituem o estimador registrado.
+
+\textbf{O que entra no cálculo da navegação:} a intensidade representativa de 9,322050~g/(t$\cdot$nm), a carga do cenário e a distância do caminho selecionado. O corredor direto observado é escolhido para a geometria. Sua distância é 6.112~km, equivalentes a 3.300,216~nm.
+
+Para mostrar a execução, considere uma carga hipotética de 14~t:
+
+\begin{equation}
+\begin{split}
+F_{\mathrm{Santos,Manaus}}
+&=\frac{9{,}322050\times14\times3.300{,}216}{1000}\\
+&=430{,}71~\text{kg de combustível}.
+\end{split}
+\label{eq:exemplo-santos-manaus}
+\end{equation}
+
+\textbf{O que sai:} 430,71~kg de combustível para a navegação marítima da carga hipotética de 14~t no caminho selecionado.
+
+Esse número não é o total da alternativa multimodal. Ele não inclui o acesso rodoviário da origem até Santos, o acesso rodoviário de Manaus até o destino final, nem as operações portuárias. Esses componentes são calculados e apresentados separadamente quando o cenário completo é executado.
 
 \subsection{Benchmark externo}
 
-O workbook associado aos estudos de Gustavo Costa fornece um conjunto documental de pares e parâmetros operacionais \cite{workbookdados}. Sua normalização identifica 21 pares comparáveis entre seis cidades para a unidade de 1~contêiner e 14~t. No próprio workbook, as emissões semanais agregadas são 7.614,97~tCO$_2$e no cenário rodoviário e 4.159,79~tCO$_2$e no cenário de cabotagem, diferença de aproximadamente 45,4\%. Esses números constituem referência externa de direção e ordem de grandeza; não calibram a intensidade marítima do CabotageLens nem eliminam diferenças de fatores, fronteiras e rotas.
+A planilha associada aos estudos de Gustavo Costa contém pares e parâmetros operacionais que servem como referência documental \cite{workbookdados}. Sua normalização identifica 21 pares comparáveis entre seis cidades para uma unidade de 1 contêiner e 14~t.
+
+Na planilha, as emissões semanais agregadas são 7.614,97~tCO$_2$e para o cenário rodoviário e 4.159,79~tCO$_2$e para o cenário com cabotagem. A diferença é aproximadamente 45,4\%.
+
+Esses valores indicam direção e ordem de grandeza dentro das premissas da própria planilha. Eles não calibram a intensidade marítima do CabotageLens, porque rotas, fatores e fronteiras podem ser diferentes.
 
 \section{Discussão e limitações}
 \label{sec:discussao}
 
-A formulação marítima combina três níveis de evidência. A sequência portuária, os movimentos de carga e o IMO provêm da atividade registrada pela ANTAQ; a intensidade específica provém do EU MRV quando existe correspondência; e a falta de correspondência é preenchida por uma estatística robusta explicitamente identificada. Essa separação permite rastrear o que foi observado, o que foi derivado e o que foi imputado.
+O cálculo marítimo combina três tipos de informação. A ANTAQ fornece a sequência dos portos, os movimentos de carga e o IMO. O EU MRV fornece a intensidade individual quando o IMO é encontrado. Quando essa ligação não existe, uma estatística de classe ou tipo preenche o dado ausente. A saída registra qual dessas fontes foi utilizada.
 
-A reconstrução por subtrecho evita supor que o navio realizou somente a ligação analisada. Uma viagem Santos--Manaus com escalas intermediárias contribui com a carga efetivamente reconstruída e com a distância de cada trecho entre os dois portos. Ao mesmo tempo, o estimador do par aceita viagens de outros corredores quando compartilham a mesma origem e o mesmo destino na ordem correta. O peso por trabalho de transporte evita que uma viagem de baixa atividade tenha a mesma influência que uma viagem que transportou mais carga por maior distância.
+A reconstrução por subtrechos evita tratar uma viagem com escalas como se o navio tivesse navegado apenas entre os dois portos analisados. A mediana ponderada também permite usar outros corredores do mesmo par sem dar o mesmo peso a viagens com trabalhos de transporte muito diferentes.
 
 As principais limitações são:
 
 \begin{itemize}
-  \item \textbf{Cobertura temporal e observabilidade:} o recorte de 2025 não representa automaticamente outros anos. Primeiras e últimas viagens da janela podem ser parciais, e chamadas físicas sem movimentação conteinerizada observável podem não aparecer na sequência normalizada.
-  \item \textbf{Cobertura MRV parcial:} a resolução exata por IMO abrange parte da frota. Um fallback de classe ou tipo é uma imputação coletiva e não uma medição do navio ausente. No caso Santos--Manaus, a predominância do fallback no trabalho de transporte faz essa fonte controlar a mediana.
-  \item \textbf{Tratamento de outliers:} a aparagem de 1\% protege o fallback contra caudas extremas, mas valores exatos por IMO são preservados. A mediana ponderada limita sua influência enquanto eles não concentram metade do trabalho de transporte; essa condição deve ser verificada em cada par.
-  \item \textbf{Distâncias marítimas:} valores da matriz representam caminhos modelados. O fallback haversine é apenas uma aproximação de triagem e pode afetar a seleção do corredor mais curto.
-  \item \textbf{Oferta de serviço:} uma sequência observada demonstra ocorrência na janela de dados, não frequência futura, disponibilidade de slot, regularidade comercial ou adequação do terminal à remessa analisada.
-  \item \textbf{Fronteira ambiental:} os resultados representam emissões operacionais \ttw{} de \cooe{}. Não incluem produção e distribuição de combustíveis, construção de infraestrutura e ativos ou uma avaliação completa de ciclo de vida.
-  \item \textbf{Fronteira econômica:} o valor monetário é um proxy de custo operacional modelado, não frete comercial, cotação de armador, contrato ou análise completa de competitividade.
+  \item \textbf{Período observado:} o recorte de 2025 não representa automaticamente outros anos. Viagens no começo ou no fim da janela podem estar incompletas.
+  \item \textbf{Cobertura do MRV:} nem todos os navios têm correspondência exata. Um fallback representa um grupo de navios e não uma medição da embarcação ausente. Em Santos--Manaus, o fallback concentra 59,54\% do trabalho e, por isso, controla a mediana ponderada.
+  \item \textbf{Valores extremos:} a aparagem de 1\% protege o fallback coletivo. Valores exatos por IMO continuam na base. A mediana ponderada limita sua influência enquanto eles não acumularem metade do trabalho total.
+  \item \textbf{Distâncias marítimas:} a matriz contém caminhos modelados. Haversine é apenas uma aproximação e pode não representar a rota navegável.
+  \item \textbf{Oferta de serviço:} uma viagem observada mostra que a sequência ocorreu na janela analisada. Ela não garante frequência futura, espaço disponível ou serviço comercial regular.
+  \item \textbf{Fronteira ambiental:} os resultados são emissões operacionais \ttw{} de \cooe{}. Não incluem produção do combustível, construção de veículos, navios ou infraestrutura, nem uma LCA completa.
+  \item \textbf{Fronteira econômica:} o valor monetário é um proxy de custo operacional. Não é cotação de frete, contrato de armador ou análise comercial completa.
 \end{itemize}
 
-Essas limitações impedem interpretar um resultado favorável como superioridade universal da cabotagem. A ferramenta oferece triagem comparativa e uma trilha de auditoria para o cenário modelado; decisões logísticas exigem evidência adicional de serviço, tempo, capacidade, terminal e preço comercial \cite{competitiveness2024,modalshiftreview2020}.
+Por essas razões, um resultado favorável à cabotagem em determinado cenário não demonstra superioridade universal. A ferramenta é um instrumento de triagem e comparação auditável. Uma decisão logística ainda precisa considerar serviço, tempo, capacidade, terminais e preços comerciais \cite{competitiveness2024,modalshiftreview2020}.
 
 \section{Conclusão e trabalhos futuros}
 \label{sec:conclusoes}
 
-O CabotageLens estrutura uma comparação porta a porta entre transporte rodoviário direto e cadeia multimodal com cabotagem. Sua formulação marítima utiliza viagens observadas na ANTAQ, carga reconstruída em cada subtrecho e intensidades EU MRV associadas pelo IMO. Quando a associação exata não existe, uma estatística robusta de classe ou tipo é aplicada e identificada como fallback.
+O CabotageLens compara uma rota rodoviária direta com uma cadeia multimodal completa. Para isso, recebe a mesma origem, o mesmo destino e a mesma carga nas duas alternativas.
 
-Para cada par direcional, todas as viagens nas quais a origem precede o destino participam do estimador, incluindo ligações diretas, múltiplas escalas e diferentes corredores. A intensidade representativa é a mediana das intensidades de viagem ponderada pelo trabalho de transporte. O corredor escolhido determina somente o caminho e a distância; dessa forma, a geometria do cenário não elimina evidências provenientes de outras sequências observadas para o mesmo par.
+No cálculo marítimo, o sistema lê viagens observadas na ANTAQ, reconstrói a carga a bordo em cada subtrecho e procura a intensidade do navio pelo IMO no EU MRV. Quando não encontra o IMO, usa um fallback robusto de classe ou tipo e registra essa decisão.
 
-O par Santos--Manaus demonstra a aplicação do método: 89 observações em 22 corredores produzem intensidade de 9,322050~g/(t$\cdot$nm), com proveniência separada entre 40 observações por IMO e 49 por fallback. O resultado é auditável porque a matriz preserva amostra, pesos, fontes, alternativas de corredor e intensidade aplicada.
+Todas as viagens nas quais a origem aparece antes do destino participam da estimativa do par. Isso inclui viagens diretas, viagens com várias escalas e diferentes corredores. A intensidade representativa é a mediana ponderada pelo trabalho de transporte. O corredor selecionado fornece apenas a sequência e a distância usadas no cenário.
 
-Trabalhos futuros devem ampliar a janela temporal da ANTAQ, aumentar a cobertura por IMO, incorporar oferta regular de serviços e refinar as distâncias marítimas. Também são extensões relevantes a representação portuária baseada em atividade observada, a análise de incerteza por fonte, a inclusão de preços comerciais verificáveis e a expansão da fronteira ambiental para uma avaliação \wtw{} ou de ciclo de vida.
+Santos--Manaus mostra essa separação de forma concreta. As 89 observações de 22 corredores produzem a intensidade de 9,322050~g/(t$\cdot$nm). Para a carga hipotética de 14~t e 3.300,216~nm de navegação, o consumo marítimo é 430,71~kg. A conta não inclui acessos rodoviários nem operações portuárias.
+
+Trabalhos futuros devem ampliar a janela da ANTAQ, aumentar a cobertura por IMO e incorporar informações de frequência e disponibilidade de serviço. Também são importantes distâncias marítimas mais detalhadas, operações portuárias baseadas em atividade observada, análise de incerteza, preços comerciais verificáveis e uma futura expansão da fronteira ambiental para \wtw{} ou ciclo de vida.
 
 \clearpage
 

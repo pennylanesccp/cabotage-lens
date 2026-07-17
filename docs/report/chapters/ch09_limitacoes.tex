@@ -4,7 +4,9 @@
 \section{Condições de uso}
 \label{sec:funcao-limitacoes}
 
-Os resultados do \CabotageLens{} são estimativas condicionadas por rota, carga, portos, fontes de distância, cobertura ANTAQ/MRV, regras de alocação e fronteiras ambiental e econômica. As limitações apresentadas neste capítulo definem o alcance das conclusões e indicam quais evidências adicionais seriam necessárias para uma decisão comercial ou operacional.
+Todo resultado do \CabotageLens{} depende dos dados e das escolhas do cenário. Entre elas estão a carga, os portos, as distâncias, a cobertura ANTAQ/MRV e as fronteiras de custo e emissão. Este capítulo explica o que o sistema consegue responder e o que ainda precisa de evidência externa.
+
+Uma forma simples de ler o resultado é fazer três perguntas. A rota foi observada ou aproximada? A intensidade veio do IMO ou de fallback? O número representa navegação, emissão operacional porta a porta ou custo modelado? As respostas impedem que grandezas diferentes sejam confundidas.
 
 \begin{table}[htbp]
 \centering
@@ -13,15 +15,15 @@ Os resultados do \CabotageLens{} são estimativas condicionadas por rota, carga,
 \label{tab:condicoes-uso}
 \begin{tabularx}{\textwidth}{L{0.23\textwidth}Y}
 \toprule
-Fronteira & Condição de interpretação \\
+Fronteira & Como o resultado deve ser interpretado \\
 \midrule
-Dados marítimos & Viagens ANTAQ representam operações registradas; intensidades EU MRV são proxies técnicos com cobertura variável por IMO.\\
-Estatística & A mediana ponderada representa o centro da distribuição segundo o trabalho de transporte; não elimina viés de amostra ou de fallback.\\
-Rota e porto & Corredor observado, porto selecionado, distância marítima e casos \texttt{same-port} condicionam a força do cenário.\\
-Ambiental & Emissões operacionais \ttw{} de \cooe{}, sem inferir \wtw{}, LCA, CO$_2$ isolado ou inventário completo de poluentes.\\
-Econômica & Custos modelados, não fretes comerciais, tarifas, contratos ou recomendação de compra.\\
-Operacional & Rotas modeladas não comprovam serviço, frequência, slot, terminal, agenda ou aceitação de carga.\\
-Validação & Sensibilidades e benchmark sustentam interpretações específicas; concordância direcional não equivale a calibração de magnitude.\\
+Dados marítimos & As viagens ANTAQ são operações registradas; o EU MRV fornece proxies técnicos com cobertura variável por IMO.\\
+Estatística & A mediana ponderada representa o centro segundo o trabalho de transporte; ela não remove viés da amostra ou do fallback.\\
+Rota e porto & O caminho, o porto, a fonte da distância e os casos \texttt{same-port} condicionam o cenário.\\
+Ambiental & O resultado é operacional \ttw{} de \cooe{}; não representa \wtw{}, LCA, CO$_2$ isolado ou todos os poluentes.\\
+Econômica & Os valores são custos modelados; não são fretes, tarifas, contratos ou recomendação de compra.\\
+Operacional & A rota não comprova serviço, frequência, slot, terminal, agenda ou aceitação da carga.\\
+Validação & Concordância direcional com benchmark não significa calibração de magnitude.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -29,61 +31,67 @@ Validação & Sensibilidades e benchmark sustentam interpretações específicas
 \section{Dados ANTAQ, reconstrução da viagem e carga a bordo}
 \label{sec:limitacao-dados-maritimos}
 
-A sequência dos portos é reconstruída a partir das atracações registradas pela ANTAQ. A qualidade do corredor depende da completude dos identificadores de viagem, dos horários, da normalização dos portos e da associação entre atracações e movimentações de carga. Ausências, duplicidades ou inconsistências nesses campos podem alterar a ordem das escalas ou impedir a utilização de uma observação.
+A sequência de portos é reconstruída com as atracações da ANTAQ. Para isso, o identificador da viagem, os horários e os nomes dos portos precisam estar coerentes. Um registro ausente, duplicado ou associado ao porto errado pode mudar a sequência ou impedir o uso da observação.
 
-A carga a bordo é inferida a partir dos embarques e desembarques vinculados às escalas. A reconstrução adota o menor carregamento inicial não negativo capaz de compatibilizar a sequência de movimentações. Essa regra garante consistência aritmética, mas não observa diretamente o manifesto completo do navio, cargas fora do recorte, reposicionamento de contêineres vazios ou correções operacionais não refletidas nas tabelas.
+A carga a bordo não vem de um sensor do navio. Ela é inferida a partir dos embarques e desembarques registrados em cada escala. O sistema aplica o menor carregamento inicial que mantém a carga acumulada não negativa. Essa regra corrige a consistência matemática da sequência, mas não recupera um manifesto completo que não esteja na base.
 
-Uma viagem entra na amostra de um par OD quando a origem precede o destino. Essa regra identifica trajetórias compatíveis com a ligação analisada, mas não comprova que a mesma carga permaneceu a bordo durante todo o percurso nem que o serviço continua comercialmente disponível. Os registros representam operações observadas no período das bases utilizadas.
+Considere uma viagem que desembarca carga na primeira escala disponível, embora o embarque tenha ocorrido antes do início do recorte. Sem um carregamento inicial, a carga calculada ficaria negativa. O deslocamento mínimo acrescenta somente o necessário para evitar esse resultado impossível. Ainda assim, ele permanece uma reconstrução, e não uma observação direta do estoque a bordo.
+
+Uma viagem entra no par OD quando a origem aparece antes do destino. Isso confirma que o navio percorreu uma sequência compatível com a ligação. Não confirma que uma mesma unidade de carga permaneceu a bordo por toda a sequência nem que o serviço continue disponível no presente.
 
 \section{Intensidade MRV, fallbacks e outliers}
 \label{sec:limitacao-intensidade-mrv}
 
-O EU MRV fornece indicadores de navios que reportam no contexto regulatório europeu. A correspondência por IMO melhora a especificidade da estimativa, mas o indicador continua sendo um proxy de desempenho: condições brasileiras de velocidade, calado, mar, corrente, manutenção, combustível e operação podem diferir das condições consolidadas no MRV.
+O EU MRV reúne indicadores reportados no contexto europeu. A correspondência pelo IMO torna a estimativa específica para o navio, mas não transforma o indicador anual em medição da viagem ANTAQ. Condições de velocidade, calado, clima, corrente, manutenção, combustível e operação podem ser diferentes.
 
-Os valores exatos de IMO são preservados sem aparagem. Essa decisão mantém a observação individual auditável, inclusive quando sua intensidade é elevada, mas não garante que todo valor extremo esteja livre de erro de origem ou seja representativo da viagem ANTAQ. A mediana ponderada no nível OD reduz a influência desses extremos sobre o indicador final; os valores individuais e a média aritmética diagnóstica permanecem disponíveis para inspeção.
+Os valores exatos por IMO são mantidos sem aparagem. Isso preserva o dado publicado e permite auditoria. Também significa que um valor extremo continua na amostra. A mediana ponderada reduz sua influência no resultado do par, mas não prova que o valor extremo esteja livre de erro ou represente bem uma operação brasileira.
 
-Os fallbacks por classe ou tipo são estatísticas de grupo. A média aparada de 1\% ou a mediana protege contra caudas extremas, mas não substitui uma medição do navio ausente. Diferenças de porte, idade, motor, perfil operacional e qualidade da classificação permanecem agregadas dentro do grupo. Em Santos--Manaus, 49 das 89 observações usam fallback e representam 59,54\% do trabalho de transporte; por isso, a intensidade de 9,322050 g/(t$\cdot$nm) deve ser lida junto com essa composição de fonte.
+Os fallbacks por classe ou tipo são estimativas de grupo. A média aparada de 1\% ou a mediana reduz a influência das caudas, porém não mede o navio ausente. Navios do mesmo grupo podem ter porte, idade, motor e perfil operacional diferentes.
 
-A ponderação pelo trabalho de transporte atribui maior influência a viagens com maior produto carga--distância. Essa escolha é coerente com a unidade da intensidade, mas faz com que erros na reconstrução da carga ou na distância afetem simultaneamente o peso estatístico e o consumo calculado. A mediana ponderada limita a influência de intensidades extremas; ela não corrige erros sistemáticos compartilhados por grande parcela do trabalho de transporte.
+Santos--Manaus mostra por que essa informação é relevante. Das 89 observações, 49 usam fallback. Elas concentram 59,54\% do trabalho de transporte. A intensidade de 9,322050~g/(t$\cdot$nm) deve ser apresentada junto dessa composição. O número é calculado e rastreável, mas parte importante do seu peso vem de uma estimativa de grupo.
+
+A ponderação também depende de carga e distância. Um erro sistemático nesses dados pode alterar o peso de muitas viagens. A mediana ponderada limita intensidades extremas; ela não corrige uma reconstrução de carga enviesada em grande parte da base.
 
 \section{Fronteira de rota: portos, corredores e distâncias}
 \label{sec:limitacao-rota}
 
-O corredor selecionado representa a geometria do cenário, não uma previsão de itinerário. A prioridade dada à ligação direta observada e, na sua ausência, ao corredor de menor distância é uma regra determinística. Ela não considera frequência, tempo de espera, transbordo, capacidade, confiabilidade, preço comercial ou preferência do embarcador.
+O caminho selecionado é uma geometria de cálculo, não uma previsão de itinerário. A regra escolhe uma ligação direta observada quando ela existe. Caso contrário, escolhe a cadeia completa observada de menor distância. Frequência, tempo de espera, transbordo, capacidade, confiabilidade e preço não entram nessa escolha.
 
-Uma distância proveniente da matriz marítima ou de corredor observado oferece suporte mais forte do que \texttt{haversine\_fallback}. A distância de grande círculo é útil para manter um cenário identificável quando falta uma rota navegável, mas não representa canais, desvios costeiros, restrições hidrográficas ou separação de tráfego.
+Em Santos--Manaus, 22 corredores alimentam a intensidade, mas o caminho direto de 6.112~km fornece a distância. Isso não significa que todas as viagens tenham sido diretas. Também não significa que os corredores com Suape, Pecém, Rio de Janeiro ou Salvador tenham sido unidos ao caminho selecionado.
 
-Portos alternativos não são equivalentes por proximidade regional. Pecém pode compor um cenário para a região de Fortaleza, mas não valida o Porto de Fortaleza; Suape pode compor um cenário para a região de Recife, mas não valida o Porto do Recife. A troca modifica acessos rodoviários, distância marítima, terminal e condições de serviço. Casos \texttt{same-port}, como Santos/Santos, não contêm perna marítima substantiva entre portos distintos e permanecem fora da comparação modal principal.
+Uma distância da matriz marítima oferece suporte mais forte que \texttt{haversine\_fallback}. Haversine mede uma aproximação de grande círculo. Ela não representa canais, desvios costeiros, restrições hidrográficas ou separação de tráfego. Por isso, serve para triagem e precisa permanecer identificada.
+
+Portos próximos não são automaticamente equivalentes. Pecém pode atender uma análise da região de Fortaleza, mas não valida o Porto de Fortaleza. Suape pode atender uma análise da região de Recife, mas não valida o Porto do Recife. A troca altera os acessos rodoviários, a distância marítima e o terminal. Casos \texttt{same-port}, como Santos/Santos, não possuem uma perna marítima substantiva entre portos distintos e ficam fora da comparação modal principal.
 
 \section{Fronteira ambiental}
 \label{sec:limitacao-ambiental}
 
-O \CabotageLens{} reporta emissões operacionais \ttw{} de \cooe{} associadas aos componentes representados. Para as pernas rodoviárias, a fronteira corresponde à combustão no veículo; para a perna marítima, à combustão a bordo e às parcelas operacionais explicitamente incluídas.
+O sistema reporta emissões operacionais \ttw{} de \cooe{} para os componentes representados. Na rodovia, a fronteira é a combustão no veículo. Na navegação, é a combustão a bordo.
 
-Produção e distribuição de combustíveis, fabricação e manutenção de veículos e navios, construção de infraestrutura, fim de vida, combustíveis alternativos e emissões locais completas pertencem a fronteiras WTT, \wtw{} ou LCA. Fontes que reportam CO$_2$ isolado ou \cooe{} sob outro conjunto de gases exigem reconciliação explícita antes de comparação direta \cite{icct2022,decarb2024,maritimelca2024}.
+A produção e a distribuição dos combustíveis pertencem a WTT ou \wtw{}. Fabricação de veículos, construção de infraestrutura, manutenção e fim de vida pertencem a uma LCA mais ampla. Resultados de CO$_2$ isolado também podem usar gases diferentes dos resultados em \cooe{}. Essas grandezas só podem ser comparadas depois de alinhar fronteira, gases, unidade funcional e fatores \cite{icct2022,decarb2024,maritimelca2024}.
 
-Operações portuárias são componentes modelados, não medições completas de terminais específicos. Quando a intensidade MRV por trabalho de transporte é aplicada, o \emph{hoteling} não é somado separadamente, sob a hipótese de que o indicador anual abrange o consumo reportado do navio para essa fronteira. Essa escolha reduz o risco de dupla contagem, mas não estima dispersão atmosférica, exposição humana, produtividade do berço ou qualidade do ar local \cite{berth2009,shipops2022,berthairquality2010}.
+As operações portuárias são componentes modelados, não medições completas de cada terminal. Quando se aplica a intensidade MRV por trabalho de transporte, o \emph{hoteling} não é somado separadamente. A hipótese é que o indicador anual já abrange esse consumo na fronteira adotada. Isso reduz dupla contagem, mas não estima qualidade do ar, dispersão, exposição humana ou produtividade do berço \cite{berth2009,shipops2022,berthairquality2010}.
 
 \section{Fronteira econômica}
 \label{sec:limitacao-economica}
 
-Os valores em BRL constituem um proxy de custo operacional modelado. A alternativa rodoviária representa um veículo dedicado à carga do cenário, enquanto a perna marítima distribui custo e consumo segundo a alocação definida. Essa assimetria operacional faz parte da unidade funcional adotada, mas pode produzir diferenças maiores do que as observadas em cotações comerciais.
+Os valores em BRL são proxies de custo operacional. A rodovia representa um veículo dedicado à carga do cenário. A navegação distribui custo e consumo conforme a regra de alocação do modelo. Essa diferença é útil para a comparação definida, mas não reproduz necessariamente a formação de preços do mercado.
 
-Frete negociado, margem, seguro, demurrage, detention, inventário em trânsito, variação de prazo, risco, taxas locais, tarifas de terminal e disponibilidade de slot não estão integralmente representados. Um resultado favorável em custo indica uma hipótese para investigação, não uma conclusão de viabilidade comercial \cite{competitiveness2024,modalshiftreview2020}.
+Frete negociado, margem, seguro, \emph{demurrage}, \emph{detention}, inventário em trânsito, risco, taxas locais, tarifas de terminal e slot não estão integralmente representados. Portanto, um custo modelado menor indica uma hipótese para investigação. Não demonstra viabilidade comercial \cite{competitiveness2024,modalshiftreview2020}.
 
 \section{Fronteira operacional}
 \label{sec:limitacao-operacional}
 
-O modelo também não resolve uma super-rede multimodal com operadores, transbordos, frequências, capacidades, tempos de espera e serviços concorrentes. Porto e corredor funcionam como elementos do cenário determinístico. A execução real requer confirmação de linha, janela, terminal, documentação, capacidade, aceitação da carga e coordenação entre operadores.
+O sistema não resolve uma rede completa de linhas, operadores, frequências, capacidades e tempos de espera. Porto e corredor são elementos determinísticos do cenário. Antes de uma execução real, é necessário confirmar serviço, janela, terminal, documentação, capacidade, aceitação da carga e coordenação entre operadores.
 
 \section{Validação}
 \label{sec:limitacao-validacao}
 
-O benchmark externo oferece concordância direcional em 21 pares, mas não reprodução de magnitude. A classificação \codecell{same\_direction\_large\_gap} limita seu uso a uma verificação qualitativa da direção modal. Distâncias, carga, alocação, portos e fronteira ambiental precisam ser reconciliados antes de qualquer comparação quantitativa.
+O benchmark externo concorda com a direção do resultado em 21 pares, mas não reproduz a magnitude. A classificação \codecell{same\_direction\_large\_gap} autoriza somente uma leitura qualitativa: as duas fontes apontam o mesmo modo como menos emissor. Ela não autoriza afirmar que os valores foram calibrados.
 
 \section{Fontes e generalização}
 \label{sec:limitacao-fontes-generalizacao}
 
-A literatura contextualiza cabotagem, mudança modal, fronteiras ambientais e barreiras comerciais. Valores de outros estudos não são convertidos automaticamente em coeficientes do \CabotageLens{}. Qualquer incorporação exige compatibilidade de unidade funcional, carga, rota, fronteira, fonte e implementação.
+A literatura fornece contexto para cabotagem, mudança modal e fronteiras ambientais. Um coeficiente de outro estudo só pode entrar no \CabotageLens{} se unidade funcional, carga, rota, fonte e fronteira forem compatíveis.
 
-Por fim, os resultados são específicos aos cenários analisados. Sua generalização para outros corredores, cargas, navios, portos ou períodos depende de cobertura de dados equivalente e de nova verificação das premissas. A ferramenta sustenta triagem acadêmica e comparação auditável; não sustenta, por si só, superioridade universal da cabotagem.
+Os resultados também são específicos ao período e aos cenários analisados. Aplicá-los a outro corredor, carga, navio, porto ou ano exige nova verificação. A ferramenta sustenta triagem acadêmica e comparação auditável. Sozinha, não sustenta superioridade universal da cabotagem.

@@ -1,12 +1,12 @@
 \chapter{Validação, benchmark e evidências complementares}
 \label{app:validacao}
 
-Este apêndice reúne os controles usados para auditar o cálculo marítimo e interpretar os benchmarks do \CabotageLens{}. Os números apresentados correspondem aos artefatos rastreados e permanecem vinculados à fonte, à unidade e à regra de agregação descritas no Capítulo~\ref{ch:validacao}.
+Este apêndice mostra como auditar uma execução. O objetivo é permitir que outra pessoa responda, na mesma ordem, às seguintes perguntas: quais dados entraram, quais regras foram aplicadas, qual caminho foi escolhido e até onde o resultado pode ser interpretado.
 
 \section{Fluxo de classificação da evidência}
 \label{sec:app-mapa-validacao}
 
-A Figura~\ref{fig:fluxo-classificacao-evidencia} mostra a passagem entre definição do cenário, execução, verificação da proveniência e classificação de uso. A disponibilidade de um resultado numérico não substitui a análise de sua fronteira.
+A Figura~\ref{fig:fluxo-classificacao-evidencia} resume o fluxo. Primeiro, define-se o cenário. Depois, executa-se o cálculo. Em seguida, conferem-se as fontes e as unidades. Somente então o resultado recebe uma categoria de uso. A existência de um número não dispensa essas verificações.
 
 \begin{figure}[htbp]
 \centering
@@ -22,14 +22,14 @@ A Figura~\ref{fig:fluxo-classificacao-evidencia} mostra a passagem entre defini�
 \label{tab:app-camadas-evidencia}
 \begin{tabularx}{\textwidth}{L{0.26\textwidth}Y Y}
 \toprule
-Camada & Pergunta de auditoria & Registro esperado \\
+Etapa & Pergunta simples & O que deve ser encontrado \\
 \midrule
-Dados ANTAQ & A sequência pertence à mesma viagem e a origem antecede o destino? & Identificador da viagem, ordem das escalas, movimentos de carga e cadeia completa de portos.\\
-Intensidade MRV & O valor foi associado pelo IMO ou resolvido por fallback? & Fonte, ano, tipo ou classe, estatística robusta e tamanho da amostra.\\
-Atividade da viagem & A carga a bordo e a distância foram aplicadas a cada subtrecho? & Massa, milhas náuticas, trabalho de transporte e combustível por subtrecho.\\
-Agregação do par & Todas as viagens elegíveis contribuíram uma vez? & Contagens, pesos, mediana ponderada, regra de empate e tratamento de peso zero.\\
-Geometria da rota & O caminho é uma sequência observada e contínua? & Portos, viagem candidata, critério de seleção e fontes de distância.\\
-Resultado multimodal & As pernas usam a mesma unidade funcional e fronteira? & Carga do cenário, componentes rodoviários, marítimos e portuários, custo e emissões.\\
+1. Dados ANTAQ & A sequência pertence à mesma viagem e a origem vem antes do destino? & Identificador, ordem das escalas, movimentos de carga e cadeia completa.\\
+2. Intensidade MRV & O valor veio do IMO ou de fallback? & Fonte, período, tipo ou classe, estatística e tamanho da amostra.\\
+3. Atividade da viagem & Carga e distância foram aplicadas em cada subtrecho? & Massa, milhas náuticas, trabalho de transporte e combustível por subtrecho.\\
+4. Agregação do par & Cada viagem elegível contribuiu uma vez? & Contagens, pesos, mediana ponderada e tratamento de peso zero.\\
+5. Geometria da rota & O caminho é completo e pertence à mesma viagem? & Portos, viagem candidata, critério de seleção e fonte da distância.\\
+6. Resultado multimodal & As alternativas usam a mesma carga e a mesma fronteira? & Pernas rodoviárias, marítimas e portuárias, custo e emissões.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -37,7 +37,7 @@ Resultado multimodal & As pernas usam a mesma unidade funcional e fronteira? & C
 \section{Controles do artefato marítimo}
 \label{sec:app-controles-artefato}
 
-O arquivo direcional registra a versão de esquema, a data de geração, a hierarquia de intensidade, a política de outliers, o critério de seleção de corredor e os contadores de cobertura. A Tabela~\ref{tab:app-controles-artefato} consolida os campos que permitem rejeitar um artefato incompleto ou interpretar sua composição.
+O artefato marítimo registra sua estrutura e suas regras. Esses campos evitam que o aplicativo aceite silenciosamente um arquivo incompleto. A leitura pode ser feita assim: o schema informa o formato; o modo de observação informa quais caminhos são aceitos; o estimador informa como as viagens são agregadas; e a seleção de caminho informa de onde vem a distância.
 
 \begin{table}[htbp]
 \centering
@@ -48,19 +48,21 @@ O arquivo direcional registra a versão de esquema, a data de geração, a hiera
 \label{tab:app-controles-artefato}
 \begin{tabularx}{\textwidth}{L{0.29\textwidth}L{0.27\textwidth}Y}
 \toprule
-Controle & Valor registrado & Função \\
+Controle & Valor registrado & Como interpretar \\
 \midrule
-Esquema de intensidade & \codecell{maritime\_intensity\_schema\_version = 3} & Identifica a estrutura compatível com agregação por viagem--OD.\\
-Modo de observação & \codecell{observed\_voyage\_corridors} & Restringe os caminhos a sequências completas de uma mesma viagem.\\
-Escopo da intensidade & Todas as viagens elegíveis do mesmo par, em todos os corredores. & Define a população usada no estimador.\\
-Estimador & Mediana ponderada por t$\cdot$nm. & Reduz a influência de intensidades extremas e preserva a atividade observada como peso.\\
-Seleção do caminho & Ligação direta primeiro; depois, menor distância completa. & Separa geometria de rota e agregação estatística.\\
-Reconstrução da carga & Deslocamento mínimo não negativo do prefixo acumulado. & Impede carga a bordo negativa e preserva movimentos observados.\\
-Fallback de distância & Haversine para portos canônicos distintos sem valor positivo na matriz. & Mantém completude com fonte identificada.\\
-Fallback de intensidade & Tipo com média aparada em 1\% por cauda ou mediana quando o corte não é possível; classe com média aparada do artefato ou mediana quando indisponível. & Explicita a estatística e a política de outliers.\\
+Esquema de intensidade & \codecell{maritime\_intensity\_schema\_version = 3} & Confirma a estrutura usada para observações viagem--OD.\\
+Modo de observação & \codecell{observed\_voyage\_corridors} & Aceita somente sequências completas observadas na mesma viagem.\\
+Escopo da intensidade & Todas as viagens elegíveis do OD, em todos os corredores. & Define quais observações formam a amostra estatística.\\
+Estimador & Mediana ponderada por t$\cdot$nm. & Representa o centro segundo o trabalho de transporte.\\
+Seleção do caminho & Ligação direta primeiro; depois, menor distância completa. & Define somente a geometria e a distância do cenário.\\
+Reconstrução da carga & Deslocamento mínimo não negativo do prefixo acumulado. & Impede carga negativa com o menor ajuste inicial possível.\\
+Fallback de distância & Haversine para portos canônicos distintos sem distância positiva na matriz. & Mantém a execução, mas identifica uma aproximação de triagem.\\
+Fallback de intensidade & Tipo com média aparada de 1\% por cauda ou mediana; classe com média aparada do artefato ou mediana. & Informa a estimativa de grupo e a política de outliers.\\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+A Tabela~\ref{tab:app-contadores-maritimos} apresenta resultados reais do processamento. Por exemplo, \num{5023} subtrechos usam distância da matriz e \num{415} usam haversine. Essa comparação permite avaliar não apenas quantos subtrechos foram calculados, mas também a qualidade da fonte de distância.
 
 \begin{table}[htbp]
 \centering
@@ -69,14 +71,14 @@ Fallback de intensidade & Tipo com média aparada em 1\% por cauda ou mediana qu
 \label{tab:app-contadores-maritimos}
 \begin{tabularx}{\textwidth}{Y r Y}
 \toprule
-Contador & Valor & Observação \\
+Contador & Valor & Como ler o indicador \\
 \midrule
-Viagens / paradas / chamadas portuárias & \num{1324} / \num{6797} / \num{7103} & Estrutura observacional da ANTAQ.\\
-IMOs ANTAQ / IMOs associados ao MRV & \num{389} / \num{243} & Cobertura de intensidade específica.\\
-Subtrechos brutos / calculados & \num{5473} / \num{5438} & Diferença explicada por aliases consecutivos contraídos.\\
-Distância da matriz / haversine & \num{5023} / \num{415} & Proveniência da distância por subtrecho.\\
-Intensidade IMO / fallback & \num{3290} / \num{2148} & Proveniência da intensidade por subtrecho.\\
-Observações viagem--OD / pares direcionados & \num{12025} / \num{177} & Base da agregação por origem--destino.\\
+Viagens / paradas / chamadas portuárias & \num{1324} / \num{6797} / \num{7103} & Estrutura observacional reconstruída a partir da ANTAQ.\\
+IMOs ANTAQ / IMOs associados ao MRV & \num{389} / \num{243} & Cobertura de intensidade específica por navio.\\
+Subtrechos brutos / calculados & \num{5473} / \num{5438} & A diferença corresponde a aliases consecutivos contraídos.\\
+Distância da matriz / haversine & \num{5023} / \num{415} & Fonte da distância em cada subtrecho.\\
+Intensidade IMO / fallback & \num{3290} / \num{2148} & Fonte da intensidade em cada subtrecho.\\
+Observações viagem--OD / pares direcionados & \num{12025} / \num{177} & Base usada na agregação por origem--destino.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -84,7 +86,13 @@ Observações viagem--OD / pares direcionados & \num{12025} / \num{177} & Base d
 \section{Exemplo completo de auditoria: Santos--Manaus}
 \label{sec:app-santos-manaus}
 
-Para Santos--Manaus, a população estatística reúne \num{89} observações viagem--OD distribuídas em \num{22} corredores. Cada observação soma todos os seus subtrechos entre os dois portos e contribui uma única vez para a distribuição do par. A Tabela~\ref{tab:app-santos-manaus} permite conferir a separação entre a intensidade representativa e o caminho utilizado no cenário.
+O primeiro passo é conferir a amostra. Santos--Manaus possui \num{89} observações com trabalho positivo em \num{22} corredores. Há uma ligação direta e corredores com escalas, como Santos--Suape--Pecém--Manaus e Santos--Navegantes--Rio de Janeiro--Salvador--Suape--Pecém--Manaus. Cada observação soma seus próprios subtrechos e entra uma única vez na distribuição do par.
+
+O segundo passo é conferir a fonte da intensidade. Quarenta observações usam IMO exato e 49 usam fallback de tipo. Os fallbacks representam \num{59.54}\% do trabalho de transporte. Logo, eles têm peso estatístico maior que sua simples proporção na contagem.
+
+O terceiro passo é conferir o estimador. A mediana ponderada é \num{9.322050}~g/(t$\cdot$nm). A média aritmética ponderada de \num{25.243618}~g/(t$\cdot$nm) é apenas diagnóstica. O sistema aplica a mediana.
+
+O quarto passo é conferir o caminho. Existe uma ligação direta observada, então o caminho selecionado é Santos--Manaus. Sua distância é \num{6112}~km ou \num{3300.216}~nm. Os outros corredores continuam formando a intensidade, mas não fornecem a geometria desta execução.
 
 \begin{table}[htbp]
 \centering
@@ -93,31 +101,42 @@ Para Santos--Manaus, a população estatística reúne \num{89} observações vi
 \label{tab:app-santos-manaus}
 \begin{tabularx}{\textwidth}{L{0.37\textwidth}Y}
 \toprule
-Campo & Valor \\
+Campo & Valor e leitura \\
 \midrule
-Viagens resolvidas com trabalho positivo & \num{89} \\
-Corredores completos observados & \num{22} \\
-Observações com IMO exato & \num{40} \\
-Observações com fallback de tipo & \num{49} \\
-Participação do fallback no trabalho de transporte & \num{59.54}\% \\
-Intensidade representativa & \num{9.322050} g/(t$\cdot$nm) \\
-Método & Mediana inferior ponderada pelo trabalho de transporte \\
-Caminho selecionado & Porto de Santos--Porto de Manaus \\
-Critério do caminho & Ligação direta observada \\
-Distância selecionada & \num{6112} km \\
+Viagens resolvidas com trabalho positivo & \num{89}; amostra efetiva da intensidade. \\
+Corredores completos observados & \num{22}; ligação direta e sequências multiescala. \\
+Observações com IMO exato & \num{40}; valor específico do navio no EU MRV. \\
+Observações com fallback de tipo & \num{49}; estimativa robusta de grupo. \\
+Participação do fallback no trabalho de transporte & \num{59.54}\%; parcela do peso estatístico. \\
+Intensidade representativa & \num{9.322050} g/(t$\cdot$nm); valor aplicado. \\
+Média aritmética ponderada & \num{25.243618} g/(t$\cdot$nm); diagnóstico não aplicado. \\
+Método & Mediana inferior ponderada pelo trabalho de transporte. \\
+Caminho selecionado & Porto de Santos--Porto de Manaus; ligação direta observada. \\
+Distância selecionada & \num{6112} km / \num{3300.216} nm. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-A presença de uma ligação direta determina apenas o caminho. As viagens que passam por Itajaí, Paranaguá, Salvador, Suape, Pecém, Vila do Conde e outros portos permanecem na população estatística quando formam uma cadeia completa em que Santos antecede Manaus. O cálculo utiliza, portanto, a diversidade observada de corredores sem impor uma sequência portuária única.
+O último passo é aplicar a carga do cenário. Para uma carga hipotética de 14~t, o consumo de navegação é:
+
+\begin{equation}
+\frac{9{,}322050\times14\times3.300{,}216}{1000}
+= 430{,}71~\text{kg de combustível}.
+\end{equation}
+
+A intensidade e a distância são resultados do artefato. A massa de 14~t foi escolhida somente para exemplificar a execução. Os 430,71~kg representam navegação, e não custo total, emissão total em \cooe{} ou resultado porta a porta.
 
 \section{Fronteira de operações portuárias e \emph{hoteling}}
 \label{sec:app-nota-portops-hoteling}
 
-Quando o consumo marítimo é calculado com a intensidade MRV por trabalho de transporte, o indicador anual é tratado como abrangente do consumo reportado da embarcação para a fronteira considerada. O \emph{hoteling} não é somado separadamente nesse modo, reduzindo o risco de dupla contagem. As operações portuárias permanecem componentes explícitos quando possuem fonte identificada. Valores observados, médias de portos observados, padrões documentados e indisponibilidade são categorias distintas de proveniência; uma ausência não é convertida em zero de atividade.
+Quando o cálculo usa intensidade MRV por trabalho de transporte, o indicador anual é tratado como abrangente do consumo reportado da embarcação. O \emph{hoteling} não é somado separadamente, para evitar dupla contagem.
+
+As operações portuárias modeladas separadamente continuam no resultado quando possuem fonte. Um valor observado, uma média de portos e um padrão da literatura possuem níveis de evidência diferentes. Se o dado estiver indisponível, o sistema registra a ausência; não transforma a lacuna em zero.
 
 \section{Benchmark externo}
 \label{sec:app-benchmark}
+
+O benchmark responde a uma pergunta limitada: as duas fontes apontam a mesma direção modal? Ele não responde se os valores possuem a mesma magnitude.
 
 \begin{table}[htbp]
 \centering
@@ -126,23 +145,23 @@ Quando o consumo marítimo é calculado com a intensidade MRV por trabalho de tr
 \label{tab:app-benchmark-resumo}
 \begin{tabularx}{\textwidth}{L{0.40\textwidth}r Y}
 \toprule
-Item & Valor & Interpretação \\
+Item & Valor & Como ler o indicador \\
 \midrule
-Células de matriz parseadas & \num{36} & Inventário total lido pelo roteiro de comparação.\\
-Pares positivos e suportados & \num{21} & Denominador da comparação direcional.\\
-Pares não comparáveis & \num{15} & Seis pares iguais e nove linhas rodoviárias nulas ou não positivas.\\
+Células de matriz parseadas & \num{36} & Total lido pelo roteiro de comparação.\\
+Pares positivos e suportados & \num{21} & Casos que permitem comparação direcional.\\
+Pares não comparáveis & \num{15} & Seis pares iguais e nove valores rodoviários nulos ou não positivos.\\
 Acordo direcional & 21/21 & As duas fontes favorecem a alternativa com cabotagem em emissões.\\
-Classificação & \codecell{same\_direction\_large\_gap} & Apoio ao sinal modal, sem equivalência de magnitude.\\
+Classificação & \codecell{same\_direction\_large\_gap} & Mesma direção, sem equivalência de magnitude.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-A comparação preserva as diferenças de distância, carga, portos, alocação, fatores e fronteira ambiental. Seus parâmetros permanecem separados dos parâmetros operacionais do aplicativo; o benchmark apoia a leitura do sinal modal, mas não calibra a intensidade marítima nem a magnitude dos resultados.
+Diferenças de distância, carga, portos, alocação e fronteira ambiental permanecem registradas. O benchmark não substitui os parâmetros operacionais do aplicativo e não calibra a intensidade marítima.
 
 \section{Categorias de uso}
 \label{sec:app-categorias-uso}
 
-A Tabela~\ref{tab:app-categorias-uso} resume as categorias utilizadas para controlar afirmações. Ela complementa a Tabela~\ref{tab:categorias-uso}.
+A Tabela~\ref{tab:app-categorias-uso} funciona como uma legenda. Ela informa qual frase pode acompanhar cada categoria e complementa a Tabela~\ref{tab:categorias-uso}.
 
 \begin{table}[htbp]
 \centering
@@ -158,9 +177,9 @@ Categoria & Leitura permitida \\
 \codecell{headline\_candidate} & Resultado principal somente com rota, fonte, unidade e fronteira suficientes.\\
 \codecell{sensitivity\_discussion} & Comportamento condicionado à premissa identificada.\\
 \codecell{limitation\_example} / \codecell{excluded} & Exemplo de limite ou cenário fora da fronteira de uso.\\
-\codecell{reference\_needed} / \codecell{methodology\_blocked} & Lacuna de fonte ou de decisão que impede conclusão quantitativa.\\
+\codecell{reference\_needed} / \codecell{methodology\_blocked} & Falta de fonte ou de decisão que impede conclusão quantitativa.\\
 \codecell{benchmark\_supports\_direction} & Consistência direcional sem calibração de magnitude.\\
-\codecell{benchmark\_boundary\_mismatch} / \codecell{not\_comparable} & Diferença de fronteira ou ausência de comparabilidade numérica.\\
+\codecell{benchmark\_boundary\_mismatch} / \codecell{not\_comparable} & Fronteira diferente ou ausência de comparabilidade numérica.\\
 \bottomrule
 \end{tabularx}
 \end{table}

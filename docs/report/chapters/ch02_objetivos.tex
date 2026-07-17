@@ -4,27 +4,29 @@
 \section{Objetivo geral}
 \label{sec:objetivo-geral}
 
-Desenvolver, implementar e documentar o \CabotageLens{} como um framework computacional auditável para comparar o transporte rodoviário direto com uma cadeia rodoviária--cabotagem--rodoviária em corredores brasileiros, considerando emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado sob fronteiras metodológicas explícitas.
+Desenvolver, implementar e documentar o \CabotageLens{} como um framework computacional auditável para comparar duas formas de transportar a mesma remessa em corredores brasileiros: a rota rodoviária direta e a cadeia rodoviária--cabotagem--rodoviária. A comparação considera emissões operacionais \ttw{} de \cooe{} e um proxy de custo operacional modelado, sempre sob fronteiras metodológicas explícitas.
+
+Em termos práticos, o objetivo geral pode ser lido como um fluxo. O usuário informa origem, destino, carga e parâmetros do cenário. O sistema constrói as duas alternativas, calcula cada perna e registra as fontes utilizadas. A saída permite comparar os resultados e verificar como eles foram obtidos.
 
 \section{Objetivos específicos}
 \label{sec:objetivos-especificos}
 
-Os objetivos específicos do trabalho são:
+Para alcançar o objetivo geral, o trabalho busca:
 
 \begin{itemize}
-  \item Definir a unidade funcional do estudo e as alternativas comparáveis como cadeias porta a porta, distinguindo a rota rodoviária direta da cadeia rodoviária--cabotagem--rodoviária.
-  \item Construir alternativas orientadas por rota para pares origem-destino selecionados, incluindo acesso rodoviário inicial, perna marítima, operações portuárias e \emph{hoteling} quando aplicáveis, e acesso rodoviário final.
-  \item Reconstruir as viagens de cabotagem observadas nas tabelas de Carga e Atracação da ANTAQ, preservando a ordem das escalas, os embarques e desembarques e a carga a bordo em cada subtrecho.
-  \item Considerar, para cada par portuário direcionado, todas as viagens em que a origem antecede o destino, incluindo ligações diretas, escalas intermediárias e corredores distintos observados na base.
-  \item Associar as viagens aos indicadores de intensidade por trabalho de transporte do EU MRV por meio do número IMO e resolver ausências com estatística robusta de classe ou tipo de navio, registrando a origem de cada valor.
-  \item Estimar a intensidade marítima representativa de cada par origem--destino pela mediana ponderada pelo trabalho de transporte das viagens elegíveis, mantendo a escolha do corredor físico separada da agregação estatística da intensidade.
-  \item Preservar a proveniência de distâncias, seleção de portos, construção da perna marítima e insumos de operações portuárias/\emph{hoteling}, incluindo níveis de fonte, \emph{fallbacks}, avisos e dados indisponíveis.
-  \item Estimar, para os cenários selecionados, emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado, mantendo unidades, fronteiras e limites de interpretação explícitos.
-  \item Expor hipóteses, aproximações, avisos de rota, lacunas de dados e componentes indisponíveis, evitando que ausência de informação seja interpretada como valor nulo.
-  \item Documentar a implementação computacional com ênfase em rastreabilidade, reprodutibilidade e recursos acessíveis, priorizando bibliotecas de código aberto e serviços públicos, gratuitos ou com camada gratuita quando aplicável, de modo a facilitar auditoria, inspeção e extensão futura do protótipo.
-  \item Classificar os resultados de forma conservadora segundo qualidade da evidência, sensibilidade a premissas, limitações de rota e comparabilidade externa.
-  \item Usar análises de sensibilidade e evidência externa de benchmark para apoiar interpretação acadêmica defensável, sem afirmar equivalência calibrada de magnitude.
-  \item Discutir limitações e melhorias futuras para o uso metodológico, acadêmico e computacional do \CabotageLens{}.
+  \item Definir a unidade funcional do estudo. Isso significa manter a mesma remessa, origem e destino nas duas alternativas comparadas.
+  \item Construir a rota rodoviária direta e a cadeia multimodal porta a porta. A segunda inclui acesso rodoviário inicial, perna marítima, operações portuárias e \emph{hoteling} quando aplicáveis, e acesso rodoviário final.
+  \item Reconstruir as viagens de cabotagem observadas nas tabelas de Carga e Atracação da ANTAQ. A reconstrução preserva a ordem das escalas, os embarques, os desembarques e a carga a bordo em cada subtrecho.
+  \item Considerar, para cada par portuário direcionado, todas as viagens em que a origem aparece antes do destino. Isso inclui ligações diretas, viagens com escalas intermediárias e diferentes corredores observados.
+  \item Associar cada viagem a uma intensidade por trabalho de transporte do EU MRV por meio do número IMO. Quando não houver correspondência, aplicar uma estatística robusta da classe ou do tipo de navio e registrar a origem do valor.
+  \item Calcular a intensidade marítima representativa de cada par origem--destino pela mediana ponderada pelo trabalho de transporte das viagens elegíveis. A agregação estatística da intensidade permanece separada da escolha do corredor físico.
+  \item Preservar a proveniência das distâncias, da seleção de portos, da perna marítima e dos insumos de operações portuárias e \emph{hoteling}. Isso inclui níveis de fonte, \emph{fallbacks}, avisos e dados indisponíveis.
+  \item Estimar emissões operacionais \ttw{} de \cooe{} e proxy de custo operacional modelado para os cenários selecionados. As unidades, fronteiras e limitações devem acompanhar os resultados.
+  \item Expor hipóteses, aproximações, avisos de rota e lacunas de dados. Uma informação ausente deve permanecer identificada como indisponível e não deve aparecer como zero.
+  \item Documentar a implementação computacional com foco em rastreabilidade e reprodutibilidade. Sempre que aplicável, priorizar bibliotecas de código aberto e serviços públicos, gratuitos ou com camada gratuita.
+  \item Classificar os resultados de forma conservadora, considerando qualidade da evidência, sensibilidade às premissas, limitações de rota e comparabilidade externa.
+  \item Usar análises de sensibilidade e benchmarks externos como apoio à interpretação acadêmica. Esses elementos não são tratados como calibração automática de magnitude.
+  \item Discutir as limitações e as melhorias futuras do uso metodológico, acadêmico e computacional do \CabotageLens{}.
 \end{itemize}
 
-Esses objetivos delimitam a leitura do relatório. O trabalho promete uma comparação auditável e condicionada por fronteiras explícitas; não promete resolver contratação comercial, disponibilidade operacional, preço de mercado, super-rede multimodal completa ou superioridade universal da cabotagem.
+Esses objetivos definem o alcance do relatório. A saída esperada é uma comparação auditável, e não uma decisão comercial automática. O trabalho não determina contratação, disponibilidade operacional, preço de mercado ou superioridade universal da cabotagem. Ele mostra como cada cenário foi construído, calculado e interpretado.

@@ -4,58 +4,68 @@
 \section{Significado dos resultados}
 \label{sec:pergunta-discussao}
 
-Os resultados mostram a aplicação de um framework que compara a rota rodoviária direta com uma cadeia rodoviária--cabotagem--rodoviária sob a mesma unidade funcional. O valor analítico do \CabotageLens{} não reside apenas nos totais de custo e emissão, mas na ligação entre esses totais e a sequência de portos, a carga transportada, a distância de cada perna, a intensidade do navio e a proveniência dos dados.
+O \CabotageLens{} compara duas formas de levar a mesma carga entre a mesma origem e o mesmo destino. A primeira usa rodovia direta. A segunda combina acesso rodoviário ao porto, navegação e acesso rodoviário ao destino. Essa igualdade de origem, destino e massa é necessária para que a comparação seja coerente.
 
-A base marítima evidencia a escala dessa abordagem: 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos resolvidos. Esses números não representam serviços comerciais garantidos, mas demonstram que a estimativa não depende de um único corredor presumido. A sequência efetivamente observada na ANTAQ define quais viagens podem contribuir para cada par OD.
+O resultado não deve ser lido apenas como um total de custo ou de emissão. Ele é a última etapa de uma cadeia. Antes dele, o sistema escolhe os portos, calcula as pernas rodoviárias, identifica as viagens ANTAQ, reconstrói a carga a bordo, associa a intensidade MRV e registra a fonte de cada distância.
+
+A base marítima contém 177 pares direcionais, 12.025 observações viagem--OD e 5.438 subtrechos resolvidos. Esses números mostram a quantidade de evidência processada. Eles não significam que existam 177 serviços comerciais garantidos. A ANTAQ informa operações registradas no período analisado; frequência futura, espaço disponível e contratação precisam ser confirmados fora do modelo.
 
 \section{Corredor geométrico e amostra de intensidade}
 \label{sec:corredores-portos-discussao}
 
-A separação entre geometria e intensidade é central para a interpretação. Um corredor descreve a sequência de portos e as distâncias usadas no cenário. A intensidade representativa, por sua vez, é estimada a partir de todas as viagens elegíveis do mesmo par OD, mesmo quando elas seguem outras sequências de escalas. Dessa forma, o modelo preserva a multiplicidade de operações observadas sem somar distâncias de corredores incompatíveis em uma mesma rota de cenário.
+Dois conceitos precisam permanecer separados. O primeiro é a \emph{amostra de intensidade}. Ela reúne todas as viagens do mesmo OD nas quais a origem aparece antes do destino. O segundo é o \emph{caminho geométrico}. Ele fornece a sequência de portos e a distância usadas para calcular a remessa.
 
-No par Santos--Manaus, por exemplo, o corredor direto de 6.112 km fornece a geometria, mas a amostra de intensidade contém 89 viagens distribuídas em 22 corredores. Viagens que passaram por Suape, Pecém, Vila do Conde ou outros portos podem contribuir para a estatística quando Santos precede Manaus na mesma viagem. Isso não significa que todos esses portos integrem o caminho aplicado ao cenário; significa que o desempenho observado das viagens do mesmo par participa da estimativa OD.
+Em Santos--Manaus, a amostra possui 89 observações em 22 corredores. Ela inclui a ligação direta e corredores como Santos--Suape--Pecém--Manaus; Santos--Rio de Janeiro--Suape--Pecém--Manaus; e Santos--Navegantes--Rio de Janeiro--Salvador--Suape--Pecém--Manaus. Todas essas viagens ajudam a formar a intensidade representativa.
 
-Essa distinção evita duas simplificações. A primeira seria assumir uma sequência fixa de portos como representação de toda a ligação. A segunda seria calcular uma média entre corredores sem ponderar a atividade efetivamente transportada. A mediana ponderada pelo trabalho de transporte trata cada viagem de acordo com a soma de carga a bordo multiplicada pela distância dos subtrechos entre a origem e o destino.
+Para a geometria, a regra encontra uma ligação direta observada. Por isso, escolhe Santos--Manaus, com 6.112~km ou 3.300,216~nm. Os portos intermediários dos outros corredores não são acrescentados a essa rota. Eles permanecem somente na amostra estatística.
+
+Essa separação evita dois erros. O primeiro seria assumir que todo navio percorreu apenas Santos--Manaus sem escalas. O segundo seria montar uma rota artificial, por exemplo unindo Santos--Suape de uma viagem com Suape--Manaus de outra. O sistema usa muitas viagens para estimar intensidade, mas usa uma única cadeia observada e completa para a geometria.
 
 \section{Robustez estatística e proveniência MRV}
 \label{sec:robustez-maritima-discussao}
 
-A hierarquia IMO--classe--tipo preserva a melhor informação disponível para cada navio. A correspondência direta pelo IMO mantém a individualidade da embarcação observada na ANTAQ. Quando essa correspondência não existe, o fallback fornece uma estimativa de grupo, identificada como tal, em vez de atribuir ao navio uma precisão inexistente. Na matriz completa, 60,50\% dos subtrechos usam correspondência por IMO e 39,50\% usam fallback por tipo ou classe.
+A intensidade é procurada primeiro pelo número IMO. Quando existe correspondência, o sistema usa o valor positivo do período MRV mais recente para aquele navio. Quando não existe, usa uma estatística robusta da classe ou do tipo. Essa segunda situação é chamada de fallback e fica identificada no resultado.
 
-As estatísticas de fallback incorporam uma regra explícita para outliers. Para o tipo de navio, aplica-se média aparada simétrica de 1\% quando a amostra permite o corte e mediana quando não permite. Para a classe, usa-se a média aparada registrada no artefato e recorre-se à mediana quando essa estatística não está disponível. Os valores individuais associados exatamente a um IMO são mantidos sem aparagem, pois constituem a observação atribuída àquele navio. A robustez no nível do par OD decorre da mediana ponderada, que reduz a influência de intensidades extremas sem ocultá-las dos metadados e dos indicadores diagnósticos.
+O fallback não deve ser interpretado como medição da embarcação. Ele é uma estimativa de grupo. A regra reduz a influência de valores extremos: o tipo usa média aparada de 1\% em cada cauda quando há observações suficientes; caso contrário, usa mediana. A classe usa a média aparada disponível no artefato ou mediana quando ela não existe. Um valor associado diretamente a um IMO não é aparado.
 
-Santos--Manaus torna esse efeito visível. A mediana ponderada é 9,322050 g/(t$\cdot$nm), enquanto a média aritmética ponderada diagnóstica alcança 25,243618 g/(t$\cdot$nm). A diferença indica que a média é sensível à cauda superior da distribuição. Ao mesmo tempo, 59,54\% do trabalho de transporte do par está associado a observações com fallback. Portanto, a estatística é robusta em relação a valores extremos, mas sua representatividade continua dependente da qualidade e da composição da amostra de fallback.
+No conjunto completo, 60,50\% dos subtrechos usam IMO e 39,50\% usam fallback. Em Santos--Manaus, 40 das 89 observações usam IMO e 49 usam fallback. Mais importante que a contagem, 59,54\% do trabalho de transporte está ligado a fallback. Portanto, a fonte de intensidade precisa acompanhar o resultado.
 
-Robustez não equivale a certeza. A mediana ponderada oferece uma regra determinística, reproduzível e defensável para representar o centro da distribuição segundo a atividade observada; ela não transforma o EU MRV em medição direta das condições brasileiras nem elimina diferenças de operação, velocidade, calado, clima, manutenção ou perfil de carga.
+A mediana ponderada de Santos--Manaus é 9,322050~g/(t$\cdot$nm). A média aritmética ponderada diagnóstica é 25,243618~g/(t$\cdot$nm). A diferença ocorre porque intensidades altas deslocam a média. A mediana ponderada representa o ponto em que o peso acumulado alcança 50\% do trabalho de transporte e é menos sensível à cauda superior.
 
-\section{Por que a comparação porta a porta importa}
+Isso não torna o valor certo em qualquer condição. O EU MRV resume operações reportadas em contexto europeu. Velocidade, calado, manutenção, clima, corrente, combustível e perfil de carga podem ser diferentes no Brasil. A regra robusta melhora a estabilidade do estimador, mas não elimina essas diferenças.
+
+\section{Como interpretar a execução de uma carga}
 \label{sec:porta-a-porta-discussao}
 
-A alternativa multimodal combina acesso rodoviário ao porto de embarque, perna marítima, operações portuárias representáveis e acesso rodoviário ao destino. O \emph{hoteling} pode ser modelado separadamente em decomposições específicas; quando o cenário utiliza a intensidade MRV por trabalho de transporte, o indicador anual é tratado como abrangente do consumo reportado do navio e esse componente não é somado novamente. Comparar apenas o navio com o caminhão ignoraria parcelas indispensáveis da cadeia. O modelo evita essa assimetria ao manter a mesma carga e a mesma origem e destino finais nas duas alternativas.
+O exemplo de 14~t apresentado no Capítulo~\ref{ch:resultados} ajuda a mostrar a função de cada dado. A intensidade de 9,322050~g/(t$\cdot$nm) vem das 89 observações de todos os corredores. A distância de 3.300,216~nm vem somente do caminho direto selecionado. A multiplicação desses valores pela massa resulta em 430,71~kg de combustível de navegação.
 
-Essa leitura é coerente com a literatura de \emph{short sea shipping} e mudança modal, que relaciona o desempenho da cabotagem ao corredor, aos acessos terrestres, à utilização, ao serviço, à frequência, à confiabilidade e ao custo total \cite{shortsea2019,modalshiftreview2020}. A literatura sustenta a necessidade de uma análise porta a porta, mas não valida numericamente um corredor brasileiro específico.
+Os 430,71~kg não representam a cadeia inteira. Para uma comparação porta a porta, ainda são necessários o percurso rodoviário até Santos, as operações portuárias representadas e o percurso rodoviário a partir de Manaus. Comparar apenas o navio com o caminhão retiraria componentes reais da alternativa multimodal.
 
-O indicador marítimo é apenas uma parcela da comparação porta a porta. O resultado total também depende da origem e do destino terrestres, da carga, dos acessos aos portos, das operações portuárias e dos parâmetros rodoviários. Por isso, uma intensidade representativa de um par de portos não determina, isoladamente, a superioridade ambiental ou econômica da alternativa multimodal.
+Quando a intensidade MRV por trabalho de transporte é utilizada, o consumo anual reportado do navio é tratado como abrangente para essa fronteira. Por isso, o \emph{hoteling} não é somado novamente. Essa regra evita dupla contagem. As operações portuárias que são modeladas separadamente permanecem visíveis e devem possuir fonte identificada.
+
+A literatura de \emph{short sea shipping} também mostra que o resultado depende do corredor, dos acessos, da utilização, da frequência, da confiabilidade e do custo total \cite{shortsea2019,modalshiftreview2020}. Essa literatura explica por que a comparação deve ser porta a porta. Ela não valida numericamente Santos--Manaus nem outro corredor brasileiro específico.
 
 \section{Benchmark externo e diferença de magnitude}
 \label{sec:benchmark-discussao}
 
-O benchmark do Prof. Dr. Gustavo Costa fornece uma referência externa para a direção dos resultados. Nos 21 pares positivos e suportados, tanto o benchmark quanto o \CabotageLens{} indicam menor emissão para a alternativa com cabotagem. Essa concordância é evidência direcional; a diferença de magnitude impede tratar a comparação como calibração.
+O benchmark do Prof. Dr. Gustavo Costa permite verificar se a direção geral é semelhante. Nos 21 pares positivos e suportados, tanto o benchmark quanto o \CabotageLens{} indicam menor emissão para a alternativa com cabotagem.
 
-A divergência pode decorrer de diferenças nas distâncias, nos veículos, na carga, na alocação, nos portos, no serviço, nas operações portuárias e na fronteira ambiental. Sem reconciliação dessas variáveis, o benchmark permanece classificado como \codecell{same\_direction\_large\_gap}: apoio qualitativo à direção, não validação quantitativa do estimador.
+Esse acordo não significa que os valores sejam iguais. A classificação \codecell{same\_direction\_large\_gap} informa que existe concordância de direção e diferença relevante de magnitude. Distâncias, carga, veículo, portos, alocação e fronteira ambiental podem ser diferentes. Antes de alinhar esses elementos, o benchmark não pode ser usado para calibrar a intensidade marítima.
 
 \section{Fronteiras econômica, ambiental e portuária}
 \label{sec:fronteiras-discussao}
 
-Os valores monetários são custos operacionais modelados, calculados de acordo com os componentes e as regras de alocação representados. Eles não correspondem a fretes cotados, tarifas contratadas ou demonstração de viabilidade comercial. Decisões logísticas exigem evidência adicional de frequência, prazo, confiabilidade, inventário, margem, seguro, capacidade e estrutura de serviço \cite{competitiveness2024}.
+Os valores monetários são custos operacionais modelados. Eles ajudam a comparar os componentes representados pelo sistema. Não são cotações de frete, tarifas contratadas ou prova de viabilidade comercial. Uma decisão real também depende de margem, seguro, prazo, frequência, confiabilidade, inventário, capacidade e condições do serviço \cite{competitiveness2024}.
 
-As emissões são operacionais \ttw{} de \cooe{}: \emph{tank-to-wheel} nas pernas rodoviárias e \emph{tank-to-wake} na perna marítima. Resultados \wtw{}, LCA ou CO$_2$ isolado pertencem a outras fronteiras e não podem ser comparados diretamente sem reconciliação de gases, fatores, energia, alocação e unidade funcional \cite{decarb2024,maritimelca2024}.
+As emissões são operacionais \ttw{} de \cooe{}. Nas pernas rodoviárias, a fronteira é \emph{tank-to-wheel}; na perna marítima, é \emph{tank-to-wake}. Um estudo \wtw{} inclui a produção e a distribuição dos combustíveis. Uma LCA inclui outras etapas do ciclo de vida. Portanto, números \wtw{}, LCA ou de CO$_2$ isolado não podem ser comparados diretamente com a saída do sistema sem reconciliação \cite{decarb2024,maritimelca2024}.
 
-As operações portuárias permanecem aproximações operacionais e exigem fonte identificada. A decisão de não somar \emph{hoteling} à intensidade MRV por trabalho de transporte é uma hipótese de fronteira para reduzir dupla contagem, não um inventário terminal-específico de produtividade, energia auxiliar, permanência em berço ou qualidade do ar \cite{berth2009,shipops2022,berthairquality2010}.
+As operações portuárias são aproximações operacionais, não inventários completos de cada terminal. A regra de não adicionar \emph{hoteling} à intensidade MRV reduz dupla contagem, mas não descreve produtividade de berço, energia auxiliar, permanência no terminal ou qualidade do ar local \cite{berth2009,shipops2022,berthairquality2010}.
 
 \section{Valor prático e contribuição metodológica}
 \label{sec:valor-pratico-triagem}
 
-O \CabotageLens{} funciona como instrumento de triagem técnica. Ele permite comparar corredores, identificar a contribuição de cada perna, verificar a fonte da intensidade marítima, observar a participação de fallbacks e localizar premissas que exigem validação externa. Um cenário favorável pode orientar investigação com operadores, terminais e dados comerciais, sem ser confundido com decisão operacional pronta.
+O \CabotageLens{} é uma ferramenta de triagem técnica. Ele ajuda a identificar quais pernas dominam o resultado, quais dados vieram de IMO, quanto do peso depende de fallback e quais premissas precisam de evidência adicional.
 
-A contribuição metodológica resulta da combinação entre cálculo, proveniência e controle de inferência. Distâncias, sequências de portos, cargas a bordo, intensidades por IMO, estatísticas de fallback, critério de agregação, componentes portuários e avisos permanecem vinculados ao resultado. Essa trilha permite discutir tanto a direção quanto a incerteza do cenário, preservando a diferença entre estimativa modelada, evidência observada e hipótese operacional.
+Um resultado favorável indica um corredor que merece investigação. O passo seguinte pode incluir consulta a armadores, terminais e transportadores, confirmação de frequência e capacidade e obtenção de tarifas. O modelo não substitui essas verificações.
+
+Sua principal contribuição é manter cálculo e proveniência juntos. Para Santos--Manaus, por exemplo, o leitor consegue identificar as 89 observações, os 22 corredores, a divisão 40/49 entre IMO e fallback, a participação de 59,54\% do fallback, a intensidade de 9,322050 e o caminho direto de 6.112~km. Essa trilha permite explicar o resultado e também seus limites.
