@@ -126,7 +126,7 @@ A fronteira ambiental adotada é a de emissões operacionais TTW de CO$_2$e. Uma
 
 ## 3. Metodologia
 
-A metodologia acompanha a sequência necessária para transformar uma remessa em duas alternativas comparáveis. Primeiro, define o serviço que ambas devem prestar. Depois, reconstrói as viagens marítimas, atribui uma intensidade de consumo aos navios, calcula o indicador representativo da ligação e, por fim, reúne os resultados de todos os trechos da rota porta a porta.
+Esta seção explica como o sistema transforma a pergunta prática — transportar uma carga entre dois pontos do país — em uma comparação entre rodovia e cabotagem. O objetivo é garantir que as duas alternativas representem o mesmo serviço, desde a origem da carga até o destino final. Para isso, o cálculo combina os trechos rodoviários com a atividade marítima realmente registrada, identifica o consumo dos navios e reúne esses resultados em um indicador para cada ligação entre portos. As etapas a seguir mostram de onde vêm os dados, como cada viagem é reconstruída e como o resultado marítimo passa a compor a comparação porta a porta.
 
 ### 3.1 Unidade funcional e alternativas
 
