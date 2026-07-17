@@ -42,7 +42,7 @@ Por fim, o sistema reúne todos os recortes aprovados para a direção pedida. I
 
 O protótipo prioriza recursos computacionais acessíveis. Quando aplicável, utiliza bibliotecas de código aberto e serviços públicos, gratuitos ou com camada gratuita. Essa escolha facilita a reprodução acadêmica e a inspeção dos cálculos. Ela não representa, entretanto, uma garantia de que provedores externos permanecerão gratuitos ou disponíveis.
 
-\methodnote{\textbf{Como ler os limites do resultado.} A saída ambiental considera as emissões produzidas durante o uso do combustível pelo caminhão ou pelo navio. Esse limite é chamado de \ttw{}. A saída econômica é uma estimativa parcial de custo operacional. Ela não é uma cotação de frete.}
+\methodnote{\textbf{Como ler os limites do resultado.} A saída ambiental considera as emissões produzidas durante o uso do combustível pelo caminhão ou pelo navio. Na rodovia, esse limite é chamado de \emph{tank-to-wheel} (tanque à roda); na navegação, de \emph{tank-to-wake} (tanque à esteira). Ambos são abreviados como \ttw{} e não incluem a produção, o processamento, o transporte nem a distribuição do combustível. A saída econômica é uma estimativa parcial de custo operacional. Ela não é uma cotação de frete.}
 
 As operações portuárias entram separadamente quando o sistema possui uma fonte para calculá-las. Quando o cálculo usa o indicador anual do MRV, considera-se que esse valor já inclui o combustível consumido pelo navio enquanto permanece no porto. Por isso, o \emph{hoteling} não é somado novamente. Essa regra evita contar duas vezes o mesmo consumo. Se um dado não estiver disponível, o sistema o identifica como indisponível; ele não o transforma em zero.
 
