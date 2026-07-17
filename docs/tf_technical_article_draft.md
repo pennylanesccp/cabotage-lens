@@ -46,7 +46,7 @@ Um princípio metodológico do estudo é dar preferência a dados públicos, ofi
 
 A fronteira ambiental adotada é a de emissões operacionais TTW de CO$_2$e. Uma avaliação do ciclo de vida (LCA, do inglês *life-cycle assessment*) considera outras etapas, como a produção do combustível, a fabricação, a operação e o fim de vida dos equipamentos. Fatores WTW, resultados de LCA e fatores baseados exclusivamente em dióxido de carbono (CO$_2$), que contabilizam somente esse gás, não são intercambiáveis com a saída do sistema [decarb2024; maritimelca2024]. Operações portuárias e períodos de navio atracado também precisam de tratamento separado, pois dependem do terminal e da operação observada [berth2009; berthairquality2010; shipops2022].
 
-**Tabela 4 — O que está dentro e fora da comparação.**
+**Tabela 1 — O que está dentro e fora da comparação.**
 
 | Dimensão        | Incluído                                                                              | Fora da fronteira                                                                                 |
 | :-------------- | :------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------ |
@@ -75,7 +75,7 @@ O cálculo rodoviário começa pela distância total entre a origem e o destino.
 
 Em seguida, a massa transportada define o veículo representativo. O modelo utiliza os rendimentos médios por número de eixos publicados pela **Agência Nacional de Transportes Terrestres (ANTT)**. Esses dados oficiais foram obtidos na tabela da Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas, disponibilizada no [portal de legislação da ANTT (ANTTlegis)](https://anttlegis.antt.gov.br/action/UrlPublicasAction.php?acao=abrirAtoPublico&cod_menu=9230&cod_modulo=623&num_ato=00000001&seq_ato=ATT&sgl_orgao=SUROC%2FANTT%2FMT&sgl_tipo=POR&vlr_ano=2025). A tabela de referência adotada no modelo associa a faixa de carga ao número de eixos e relaciona cada configuração à eficiência básica em quilômetros por litro (km/L). A seleção automática é uma regra de modelagem para estimar consumo; não é uma verificação de limite legal de peso nem substitui o planejamento operacional de uma transportadora.
 
-**Tabela 5 — Regra automática para o veículo rodoviário representativo e eficiência básica adotada.**
+**Tabela 2 — Regra automática para o veículo rodoviário representativo e eficiência básica adotada.**
 
 | Massa da remessa | Veículo representativo | Eixos | Eficiência básica |
 | :--------------- | :--------------------- | ----: | ----------------: |
@@ -142,13 +142,17 @@ F_{\mathrm{porto,total}}
 =2{,}048~\mathrm{kg}.
 $$
 
-#### 3.3.4 Reconstrução das viagens e da carga a bordo
+#### 3.3.4 Consumo de combustível na perna marítima
 
-Depois de definir a carga, a origem e o destino que serão comparados, o cálculo marítimo começa pela reconstrução da atividade observada dos navios. Os arquivos brutos não entregam uma viagem pronta: cada linha registra uma escala ou uma movimentação de carga. A reconstrução liga esses registros ao mesmo navio, coloca as escalas na ordem em que ocorreram e calcula a carga que permaneceu a bordo entre um porto e outro.
+A perna marítima é o consumo de combustível estimado para levar a remessa pelo mar, em uma viagem de cabotagem, entre o porto de embarque e o porto de desembarque.
 
-Os dados vêm da Agência Nacional de Transportes Aquaviários (ANTAQ). O arquivo de Carga informa a massa e os contêineres embarcados ou desembarcados em cada escala. O arquivo de Atracação identifica o porto, as datas e o número da Organização Marítima Internacional (IMO) do navio. A tabela a seguir mostra os campos brutos usados para reconstituir os movimentos de carga.
+##### 3.3.4.1 Atividade observada na ANTAQ e reconstrução das viagens
 
-**Tabela 1 — Campos do arquivo `2025Carga.txt` usados para reconstruir os movimentos de carga.**
+Para estimar esse consumo, o sistema primeiro precisa reconstruir o que o navio realmente fez. Os arquivos brutos da ANTAQ não trazem uma viagem pronta, como “Santos–Manaus”. Cada linha registra apenas um evento: uma escala em um porto ou uma movimentação de carga. O sistema reúne os registros do mesmo navio, coloca as escalas na ordem em que ocorreram e calcula a carga que permaneceu a bordo em cada trecho entre dois portos.
+
+Os dados são fornecidos pela Agência Nacional de Transportes Aquaviários (ANTAQ). O arquivo de Carga informa a massa e os contêineres embarcados ou desembarcados em cada escala. O arquivo de Atracação identifica o porto, as datas e o número da Organização Marítima Internacional (IMO) do navio. As tabelas a seguir mostram os campos brutos usados para reconstituir os movimentos de carga.
+
+**Tabela 3 — Campos do arquivo `2025Carga.txt` usados para reconstruir os movimentos de carga.**
 
 | Coluna | Uso na avaliação | Valor na viagem `voyage_9612791_00011` |
 | :-- | :-- | :-- |
@@ -164,7 +168,7 @@ Os dados vêm da Agência Nacional de Transportes Aquaviários (ANTAQ). O arquiv
 
 *Nos campos `TEU` e `VLPesoCargaBruta`, os valores mostrados são a soma das linhas brutas do mesmo `IDAtracacao`, separadas por sentido.*
 
-**Tabela 2 — Campos do arquivo `2025Atracacao.txt` usados para identificar e ordenar as escalas dos navios.**
+**Tabela 4 — Campos do arquivo `2025Atracacao.txt` usados para identificar e ordenar as escalas dos navios.**
 
 | Coluna | Uso na avaliação | Valor na viagem `voyage_9612791_00011` |
 | :-- | :-- | :-- |
@@ -180,49 +184,26 @@ Os dados vêm da Agência Nacional de Transportes Aquaviários (ANTAQ). O arquiv
 
 A integração desses dados permite afirmar que na viagem `voyage_9612791_00011`, o navio de IMO 9612791 atracou em Santos em 30 de setembro de 2025 e embarcou 9.881,860 t. Em seguida, passou por Suape e Pecém. Em 13 de outubro, atracou no terminal Super Terminais Comércio e Indústria, em Manaus, onde desembarcou 19.897,560 t e embarcou 7.571,660 t. Esse exemplo mostra que os dados não descrevem somente uma ligação Santos–Manaus: eles registram o que aconteceu em cada escala, e é essa sequência que o sistema reconstrói.
 
-##### Viagem observada: reconstrução por subtrechos
+Para tornar a reconstrução concreta, a Figura 2 mostra somente a parte de ida da viagem `voyage_9612791_00011`, entre Santos e Manaus. Em cada seta, a carga é aquela que estava a bordo enquanto o navio navegava para o porto seguinte.
 
-A viagem `voyage_9612791_00011`, realizada pelo navio de IMO 9612791, registrou Santos–Suape–Pecém–Manaus antes de retornar a Santos. Se a reconstrução começasse em zero, a soma dos saldos atingiria (-2.976,894) t. O sistema acrescentou exatamente 2.976,894 t como carga inicial mínima para impedir uma carga negativa. Em Santos, o saldo entre embarques e desembarques foi positivo em 9.881,860 t; portanto, o navio saiu de Santos com 12.858,754 t. Em Suape, o saldo foi positivo em 3.859,579 t, elevando a carga a bordo para 16.718,333 t. Em Pecém, o saldo foi negativo em 4.392,433 t, e o navio seguiu para Manaus com 12.325,900 t. Em Manaus, o saldo foi negativo em 12.325,900 t. As três distâncias usadas na tabela seguinte vieram da matriz marítima; elas não são trajetórias medidas pelo Sistema de Identificação Automática (AIS, do inglês *Automatic Identification System*).
+```mermaid
+flowchart LR
+    S[Santos] -->|IMO 9612791<br/>1.259,179 nm<br/>Carga a bordo: 12.858,754 t| U[Suape]
+    U -->|IMO 9612791<br/>507,806 nm<br/>Carga a bordo: 16.718,333 t| P[Pecém]
+    P -->|IMO 9612791<br/>1.185,594 nm<br/>Carga a bordo: 12.325,900 t| M[Manaus]
+```
 
-**Tabela 6 — Carga, distância, trabalho de transporte e combustível reconstruídos na viagem `voyage_9612791_00011`.**
+*Figura 2 — Parte de ida reconstruída da viagem `voyage_9612791_00011`. Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ e distâncias da matriz marítima do sistema.*
 
-| Subtrecho    | Carga a bordo |    Distância |                    Trabalho |    Combustível |
-| :----------- | ------------: | -----------: | --------------------------: | -------------: |
-| Santos–Suape |  12.858,754 t | 1.259,179 nm | 16.191.476,419 t$\cdot$nm   | 120.302,670 kg |
-| Suape–Pecém  |  16.718,333 t |   507,806 nm |  8.489.677,588 t$\cdot$nm   |  63.078,304 kg |
-| Pecém–Manaus |  12.325,900 t | 1.185,594 nm | 14.613.514,486 t$\cdot$nm   | 108.578,413 kg |
-| Total        |             — | 2.952,580 nm | 39.294.668,494 t$\cdot$nm   | 291.959,387 kg |
+O período observado começou quando o navio já levava 2.976,894 t a bordo. Essa é a menor carga inicial necessária para que os saldos da viagem não fiquem negativos. Em Santos, o navio embarcou 9.881,860 t e saiu com 12.858,754 t. Em Suape, embarcou mais carga do que desembarcou, por isso a carga a bordo aumentou para 16.718,333 t. Em Pecém, desembarcou mais do que embarcou e seguiu para Manaus com 12.325,900 t.
 
-As cargas, as distâncias e os resultados exibidos na tabela foram arredondados para três casas decimais. Os totais foram calculados com os valores armazenados em maior precisão; por isso, a soma manual das linhas já arredondadas pode diferir do total em 0,001 unidade.
+O fluxo mostra por que as escalas intermediárias não podem ser ignoradas: cada uma altera a carga que será transportada no subtrecho seguinte. Para representar uma ligação entre dois portos, o sistema usa apenas a sequência contínua observada dentro de uma mesma viagem e no mesmo sentido. Assim, Santos–Suape–Pecém–Manaus pode contribuir para a ligação Santos–Manaus, enquanto Manaus–Suape–Santos não pode.
 
-O sistema multiplica a carga pela distância em cada trecho. Esse produto mede quanto transporte foi realizado. Seu nome técnico é trabalho de transporte. A viagem não é representada por uma única carga média: o cálculo usa a carga que realmente estava a bordo na saída de cada porto e soma os três resultados:
+##### 3.3.4.2 Atribuição do consumo com dados do EU MRV
 
-$$
-W=\sum_{s=1}^{3}m_s d_s
-=39.294.668{,}494~\mathrm{t{\cdot}nm}.
-$$
+A ANTAQ informa por onde o navio passou e qual carga levava, mas não informa diretamente quanto combustível ele consumiu. Essa atribuição é feita com a base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV), que publica indicadores anuais de consumo, atividade e emissões por embarcação. O número IMO registrado na ANTAQ permite procurar o mesmo navio nessa base. Na viagem `voyage_9612791_00011`, o IMO 9612791 foi encontrado diretamente no EU MRV de 2023, com intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$ [eumrv2025].
 
-O número IMO 9612791 foi encontrado diretamente no EU MRV. A intensidade registrada para o navio em 2023 foi 7,43 g/(t$\cdot$nm). O combustível associado a toda a atividade entre Santos e Manaus foi:
-
-$$
-F=\frac{7{,}43\times39.294.668{,}494}{1000}=291.959{,}387~\mathrm{kg}.
-$$
-
-Esse caso mostra por que uma escala intermediária não pode ser ignorada. A carga aumentou em Suape e diminuiu em Pecém. Por isso, cada trecho foi calculado com uma carga diferente.
-
-Para formar uma ligação marítima, o sistema escolhe um porto de embarque $o$ e um porto de desembarque $d$. Depois, lê na ordem todos os portos de uma viagem. Na viagem `voyage_9612791_00011`, o recorte de Santos a Manaus mantém Santos–Suape, Suape–Pecém e Pecém–Manaus, pois esses foram os três trechos consecutivos percorridos pelo navio. Esse conjunto recebe o nome técnico de *recorte histórico viagem–OD*, em que OD significa origem–destino. Ele descreve a navegação de Santos para Manaus; não descreve a viagem no sentido contrário.
-
-Entre $o$ e $d$, o navio pode seguir diretamente ou parar em outros portos. A lista completa desses portos, na ordem observada, recebe o nome de corredor. Cada recorte pertence integralmente a uma única viagem, mas o mesmo corredor pode aparecer em várias viagens. O sistema nunca junta o primeiro trecho de uma viagem com o segundo trecho de outra.
-
-Uma mesma viagem fornece apenas um recorte para a ligação escolhida. Se o navio passa mais de uma vez por um dos portos, podem existir diferentes maneiras de recortar a sequência. O sistema escolhe primeiro uma passagem direta entre os dois portos. Se não houver passagem direta, escolhe a sequência completa de menor distância dentro daquela viagem.
-
-Antes que um recorte influencie o indicador final, o sistema verifica quatro condições. Primeiro, a parte aproveitada deve começar no porto escolhido como saída e terminar no porto escolhido como chegada, dentro da mesma viagem. No cálculo Santos–Manaus, ela começa quando o navio sai de Santos e termina quando chega a Manaus; uma sequência Manaus–Suape–Santos não serve. Segundo, nenhum trecho navegado entre essas duas escalas pode estar ausente. Terceiro, deve existir uma intensidade do próprio navio ou uma estimativa identificada. Quarto, a soma da carga a bordo multiplicada pela distância de cada trecho precisa ser positiva para receber peso. Se o peso for zero, o recorte só participa da regra especial usada quando nenhum recorte da ligação possui peso positivo.
-
-#### 3.3.5 Intensidade marítima por IMO e fallback robusto
-
-Com as viagens e as cargas a bordo reconstruídas, o passo seguinte é determinar qual intensidade de consumo será aplicada a cada navio. Para isso, o sistema usa a base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV), que publica indicadores anuais de consumo, atividade e emissões por embarcação. O número IMO registrado na ANTAQ permite procurar o mesmo navio nessa base. Na viagem `voyage_9612791_00011`, o IMO 9612791 foi encontrado diretamente no EU MRV de 2023, com intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$ [eumrv2025].
-
-**Tabela 3 — Dados do EU MRV usados para a viagem `voyage_9612791_00011`.**
+**Tabela 5 — Dados do EU MRV usados para a viagem `voyage_9612791_00011`.**
 
 | Fonte ou campo | Valor usado | Papel no cálculo |
 | :-- | :-- | :-- |
@@ -234,47 +215,29 @@ Com as viagens e as cargas a bordo reconstruídas, o passo seguinte é determina
 
 *Fonte: [THETIS-MRV, Agência Europeia de Segurança Marítima (EMSA)](https://mrv.emsa.europa.eu/), publicação anual de informações do EU MRV.*
 
-**O que entra:** o IMO associado à viagem na tabela de Atracação da ANTAQ e os indicadores positivos de combustível publicados no EU MRV.
+O sistema procura primeiro o mesmo IMO no EU MRV. Quando encontra mais de um ano para o mesmo navio, usa o indicador positivo mais recente. Esse é o melhor caso: a intensidade pertence ao próprio navio que apareceu na ANTAQ.
 
-**O que o sistema faz:** procura o mesmo IMO no EU MRV. Quando encontra mais de um ano, usa o indicador positivo mais recente. Esse valor pertence ao próprio navio observado na ANTAQ.
+Nem todos os navios que operam no Brasil aparecem na base europeia. Quando isso ocorre, o sistema continua usando os valores publicados no EU MRV, mas busca um grupo de navios semelhantes. Primeiro, procura a classe do navio, que é o grupo mais específico disponível. Se ela não estiver disponível, procura o tipo, que é uma categoria mais ampla, como *container ship*. Para recortes conteinerizados sem outro metadado, usa o grupo documentado como *container ship*. O valor obtido é identificado como uma estimativa do grupo, e não como uma medição do navio ausente.
 
-Se o IMO não aparecer no EU MRV, ainda falta uma intensidade para calcular a viagem. O sistema não inventa um valor individual: ele procura um grupo de navios semelhantes. A classe é o agrupamento mais específico disponível no arquivo de eficiência; o tipo é uma categoria mais ampla, como *container ship*. O valor calculado para o grupo substitui o dado ausente e fica identificado como estimativa. Esse procedimento recebe o nome de fallback.
+Para calcular essa estimativa, o sistema evita que poucos valores muito altos ou muito baixos definam o resultado do grupo. Na classe, usa a média depois de retirar os valores abaixo do percentil 1 e acima do percentil 99; se essa média não estiver disponível, usa a mediana. No tipo, guarda um valor recente por IMO, retira 1% dos extremos de cada lado quando a quantidade de navios permite e calcula a média dos valores restantes. Quando o grupo é pequeno demais para essa retirada, usa a mediana.
 
-A ordem de busca é:
+Cada recorte recebe uma intensidade e uma descrição clara de sua origem: IMO do próprio navio, estimativa pela classe ou estimativa pelo tipo. Quando a intensidade vem de um grupo, a saída também registra a estatística usada, o tamanho da amostra e quantos valores extremos foram retirados. Assim, uma estimativa coletiva não aparece como se fosse uma medição individual.
 
-1. indicador positivo mais recente do mesmo IMO;
-
-2. estatística robusta da classe do navio, quando a classe está disponível;
-
-3. estatística robusta do tipo do navio;
-
-4. tipo documentado *container ship* quando o recorte conteinerizado não possui metadado mais específico.
-
-Poucos valores muito altos ou muito baixos podem deslocar a média de todo o grupo. Esses valores extremos recebem o nome de outliers. Para reduzir esse efeito, o sistema usa uma estatística robusta. Essa escolha não garante que o grupo represente perfeitamente o navio ausente; ela apenas reduz a influência de poucos valores extremos.
-
-Para a classe do navio, o sistema usa a média já registrada no arquivo de eficiência depois da retirada dos valores abaixo do percentil 1 e acima do percentil 99. Em linguagem comum, são removidas as extremidades definidas por esses dois limites antes do cálculo da média. Se essa média não estiver disponível, o sistema usa a mediana da classe.
-
-Para o tipo do navio, o sistema mantém um valor recente por IMO e ordena a lista. Em uma amostra com $n$ navios, retira $\lfloor0{,}01n\rfloor$ valores do início e a mesma quantidade do fim. Depois, calcula a média do que permaneceu. Se a lista for pequena demais para retirar pelo menos um valor de cada lado, usa a mediana.
-
-Essa retirada de extremos vale apenas para calcular o valor substituto do grupo. Quando o sistema encontra o IMO exato, mantém a intensidade daquele navio. Ele não apaga nem troca o valor apenas porque está distante dos demais.
-
-**O que sai:** cada recorte recebe uma intensidade e uma descrição da fonte. Essa descrição informa se o valor veio do IMO do próprio navio ou de um grupo de classe ou tipo. Quando houve fallback, o sistema também registra a estatística usada, o tamanho da amostra e quantos extremos foram retirados. Assim, um valor calculado para um grupo não aparece como se fosse uma medição individual.
-
-#### 3.3.6 Trabalho de transporte e intensidade da ligação
+##### 3.3.4.3 Trabalho de transporte e intensidade da ligação
 
 Depois de escolher os portos $o$ e $d$, o sistema separa os trechos navegados entre eles. A letra $v$ identifica a viagem. A letra $s$ identifica um trecho dessa viagem. Em cada trecho, $m_{v,s}$ é a carga a bordo em toneladas e $d_{v,s}$ é a distância em milhas náuticas.
 
 O sistema multiplica carga por distância em cada trecho. Depois, soma os resultados. Essa soma é o trabalho de transporte da viagem entre $o$ e $d$:
 
 $$
-W_{v,o,d}=\sum_{s\in\mathcal{S}*{v,o,d}}m*{v,s}\,d_{v,s}.
+W_{v,o,d}=\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\,d_{v,s}.
 $$
 
 Para calcular o combustível da atividade observada, o sistema multiplica esse trabalho pela intensidade $I_v$ do navio:
 
 $$
 F_{v,o,d}^{\mathrm{obs}}=\frac{I_v}{1000}
-\sum_{s\in\mathcal{S}*{v,o,d}}m*{v,s}\,d_{v,s},
+\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\,d_{v,s},
 $$
 
 Na equação, o sobrescrito $\mathrm{obs}$ significa “observado”, e $I_v$ está em g/(t$\cdot$nm). A divisão por 1.000 transforma gramas em quilogramas.
@@ -297,7 +260,7 @@ $$
 
 O sobrescrito $\mathrm{rep}$ significa “representativa” e indica que essa é a intensidade escolhida para representar a ligação.
 
-##### Resultado observado da mediana ponderada em Santos–Manaus
+###### Resultado observado da mediana ponderada em Santos–Manaus
 
 Os 89 recortes aceitos para Santos–Manaus somaram 3.153.328.821,755 t$\cdot$nm de trabalho de transporte. A metade desse total é 1.576.664.410,877 t$\cdot$nm. Para encontrar a mediana ponderada, o sistema ordenou os 89 recortes da menor para a maior intensidade e acumulou o trabalho de transporte nessa ordem.
 
@@ -305,7 +268,7 @@ Antes de incluir a viagem `voyage_9697002_00002`, a soma acumulada correspondia 
 
 Um recorte com trabalho igual a zero recebe peso zero. Ele não muda a mediana enquanto existir pelo menos um recorte com trabalho positivo. Se todos tiverem trabalho zero, o sistema calcula a mediana sem pesos e registra essa situação.
 
-#### 3.3.7 Separação entre intensidade e sequência de portos
+##### 3.3.4.4 Distância do cenário e escolha do corredor
 
 O cálculo ocorre em duas etapas que não devem ser confundidas. Na preparação da base, as cargas e as distâncias das viagens históricas da ANTAQ servem somente para calcular os pesos da intensidade representativa. Na execução de um novo cenário, o sistema usa essa intensidade uma única vez, junto com a carga informada pelo usuário e com a distância de uma rota completa escolhida. As cargas históricas não são somadas à carga do usuário, e o combustível das viagens históricas não é somado ao novo cenário.
 
@@ -326,7 +289,7 @@ O sobrescrito $\mathrm{cen}$ significa “cenário” e diferencia esse consumo 
 
 O sistema procura a distância de cada trecho na matriz marítima. Se uma distância estiver ausente, pode calcular a distância de grande círculo entre as coordenadas dos dois portos. Isso ocorreu no recorte Santos–Itapoá–Paranaguá–Suape–Manaus da viagem `voyage_9343974_00002`, realizada pelo navio de IMO 9343974. Como a matriz não continha Itapoá–Paranaguá, o sistema estimou 40,974 nm por haversine e registrou essa fonte. A intensidade dessa viagem, 6,8 g/(t$\cdot$nm), veio da correspondência exata do IMO no EU MRV de 2024. A distância de haversine é uma aproximação entre coordenadas; ela não confirma que o navio poderia seguir exatamente aquela linha no mar.
 
-#### 3.3.8 Agregação de emissões, custos e operações portuárias
+#### 3.3.5 Consolidação de emissões e custos
 
 Depois de definir a intensidade e a sequência de portos, o sistema calcula os resultados de cada trecho e os reúne para representar a viagem completa.
 
@@ -380,9 +343,9 @@ Esta seção verifica como o método se comporta com os dados disponíveis. Prim
 
 A base processada contém 1.324 viagens de cabotagem conteinerizada registradas em 2025. Nessas viagens, o sistema identificou 6.797 paradas e 7.103 chamadas portuárias. Uma chamada é um registro original de atracação ou atendimento do navio; chamadas consecutivas que representam o mesmo local são reunidas em uma parada. O trecho navegado entre duas paradas consecutivas é um subtrecho. Um recorte entre dois portos pode conter um ou vários desses subtrechos. A base também contém 389 navios diferentes por número IMO.
 
-O sistema procurou esses 389 números no EU MRV e encontrou 243 correspondências exatas. Esses 243 navios aparecem em 788 das 1.324 viagens. Nas outras 536 viagens, a execução atual usou um valor substituto por tipo de navio. Nenhuma viagem desta execução usou fallback de classe; essa regra permanece disponível para uma base que forneça esse metadado.
+O sistema procurou esses 389 números no EU MRV e encontrou 243 correspondências exatas. Esses 243 navios aparecem em 788 das 1.324 viagens. Nas outras 536 viagens, a execução atual usou uma estimativa baseada no tipo de navio. Nenhuma viagem desta execução precisou de uma estimativa pela classe; essa regra permanece disponível para uma base que forneça esse metadado.
 
-**Tabela 7 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
+**Tabela 6 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
 | Indicador                                |                              Valor | Cobertura |
 | :--------------------------------------- | ---------------------------------: | --------: |
@@ -409,7 +372,7 @@ Em 40 recortes, o sistema encontrou o IMO no EU MRV e usou a intensidade do pró
 
 **O que o sistema faz:** primeiro, ordena as intensidades dos 89 recortes. Depois, soma o trabalho de transporte nessa ordem. A soma alcança metade do trabalho total na intensidade de 9,322050 g/(t$\cdot$nm). Esse é o valor usado para representar Santos–Manaus. Os recortes dos 22 corredores participam dessa conta. O navio não precisa passar por Suape nem por qualquer outro porto predeterminado.
 
-O ponto de 50% cai em uma viagem que usa o tipo-padrão documentado *container ship*, pois o registro não trazia classe ou tipo específico. Por isso, a intensidade final coincide com esse fallback robusto. Para calcular o fallback, o sistema reuniu 243 valores positivos, um por IMO. Ordenou a lista, retirou os dois menores e os dois maiores e calculou a média dos 239 restantes.
+O ponto de 50% cai em uma viagem que usa o tipo-padrão documentado *container ship*, pois o registro não trazia classe ou tipo específico. Por isso, a intensidade final coincide com a estimativa calculada para esse tipo de navio. Para obter essa estimativa, o sistema reuniu 243 valores positivos, um por IMO. Ordenou a lista, retirou os dois menores e os dois maiores e calculou a média dos 239 restantes.
 
 Sem retirar os extremos, a média dos 243 valores seria 21,661852 g/(t$\cdot$nm). A mediana simples da mesma lista seria 4,620000 g/(t$\cdot$nm). Esses dois números ajudam a entender a dispersão dos dados. O sistema não os usa no lugar da regra registrada para Santos–Manaus.
 
@@ -451,7 +414,7 @@ As principais limitações são:
 
 - **Período observado:** o recorte de 2025 não representa automaticamente outros anos. Viagens no começo ou no fim da janela podem estar incompletas.
 
-- **Cobertura do MRV:** nem todos os navios aparecem na base europeia. O valor substituto representa um grupo de navios. Ele não é uma medição da embarcação ausente. Em Santos–Manaus, as viagens com esse valor concentram 59,54% do trabalho. Por isso, o ponto de 50% cai no fallback.
+- **Cobertura do MRV:** nem todos os navios aparecem na base europeia. A estimativa por grupo representa navios semelhantes; ela não é uma medição da embarcação ausente. Em Santos–Manaus, as viagens com esse valor concentram 59,54% do trabalho. Por isso, o ponto de 50% recai em uma estimativa por tipo de navio.
 
 - **Valores extremos:** o sistema trata extremos somente ao calcular uma estimativa de grupo. Para a classe, usa os limites dos percentis 1 e 99 registrados no arquivo; para o tipo, retira uma quantidade inteira correspondente a 1% de cada lado quando a amostra permite. Uma intensidade encontrada pelo IMO permanece na base. Ela só determina a mediana ponderada se os pesos acumulados chegarem ao ponto de 50% naquele valor.
 
