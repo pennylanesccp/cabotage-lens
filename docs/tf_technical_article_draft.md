@@ -119,28 +119,59 @@ A fronteira ambiental adotada é a de emissões operacionais TTW de CO$_2$e. Uma
 
 | Dimensão        | Incluído                                                                              | Fora da fronteira                                                                                 |
 | :-------------- | :------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------ |
-| Emissões        | Emissões operacionais TTW de CO$_2$e por remessa                                    | WTW, LCA, fabricação de ativos e inventário completo de poluentes locais                          |
+| Emissões        | Emissões operacionais TTW de CO$_2$e por remessa                                      | WTW, LCA, fabricação de ativos e inventário completo de poluentes locais                          |
 | Custo           | Estimativa do custo operacional modelado                                              | Frete comercial, negociação, seguro, estoque, multas por permanência e reserva de espaço no navio |
 | Dados marítimos | Escalas e cargas da ANTAQ, intensidades do EU MRV e valores substitutos identificados | Apresentar um valor substituto como se fosse medição individual do navio                          |
 | Serviço         | Sequências de portos realmente registradas no período analisado                       | Garantia de frequência, espaço no navio ou disponibilidade comercial futura                       |
 
 ## 3. Metodologia
 
-Esta seção explica como o sistema transforma a pergunta prática — transportar uma carga entre dois pontos do país — em uma comparação entre rodovia e cabotagem. O objetivo é garantir que as duas alternativas representem o mesmo serviço, desde a origem da carga até o destino final. Para isso, o cálculo combina os trechos rodoviários com a atividade marítima realmente registrada, identifica o consumo dos navios e reúne esses resultados em um indicador para cada ligação entre portos. As etapas a seguir mostram de onde vêm os dados, como cada viagem é reconstruída e como o resultado marítimo passa a compor a comparação porta a porta.
+O ponto de partida do método é uma pergunta simples: qual é o consumo, o custo operacional e a emissão associados a levar uma mesma remessa de uma origem até um destino? Para respondê-la sem comparar serviços diferentes, o sistema monta duas alternativas completas para a mesma carga e os mesmos pontos inicial e final. Na alternativa rodoviária, a carga segue integralmente por caminhão. Na alternativa com cabotagem, ela percorre um acesso rodoviário até o porto de embarque, a perna marítima entre os portos e um acesso rodoviário final até o destino. Cada parte é calculada separadamente e, ao final, os resultados são somados.
 
-### 3.1 Unidade funcional e alternativas
+Esta seção apresenta essa construção em termos logísticos e físicos. Primeiro, descreve como a alternativa rodoviária transforma distância e carga em consumo de diesel. Depois, explica como a atividade marítima observada é usada para formar a perna de navegação. A Seção 4 mostra como essas regras foram organizadas no sistema.
 
-As duas alternativas precisam prestar o mesmo serviço. Neste trabalho, o serviço consiste em transportar a mesma carga, do mesmo ponto de partida até o mesmo destino. Esse serviço comum recebe o nome técnico de unidade funcional. A configuração de referência utiliza uma unidade equivalente a um contêiner de 20 pés (1 TEU, do inglês *twenty-foot equivalent unit*) e 14 t. O TEU permite expressar a carga conteinerizada em uma base comum de contêineres de 20 pés. O usuário pode informar outra massa.
+### 3.1 Serviço comparado e alternativas logísticas
 
-**O que entra:** origem da carga, destino final e massa da remessa.
+As duas alternativas precisam prestar o mesmo serviço: transportar a mesma massa, do mesmo ponto de partida até o mesmo destino. Esse serviço comum recebe o nome técnico de unidade funcional. A configuração de referência corresponde a um contêiner de 20 pés (1 TEU, do inglês *twenty-foot equivalent unit*) com 14 t, mas o usuário pode informar outra massa. O TEU é uma unidade usada para expressar carga conteinerizada a partir do tamanho de um contêiner de 20 pés.
 
-**O que o sistema faz:** constrói duas viagens completas. Na primeira, o caminhão segue da origem ao destino. Na segunda, o caminhão leva a carga até o primeiro porto, o navio transporta a carga entre os portos e outro caminhão completa o percurso. Essa segunda opção é a cadeia multimodal.
+Na alternativa rodoviária, há um único trecho: origem → destino. Na alternativa com cabotagem, há três trechos: origem → porto de embarque; porto de embarque → porto de desembarque; e porto de desembarque → destino. Assim, a cabotagem não é comparada apenas com uma parte da rota terrestre: as duas opções começam e terminam nos mesmos lugares [shortsea2019; competitiveness2024].
 
-**O que sai:** resultados comparáveis para a mesma remessa e para os mesmos pontos inicial e final [shortsea2019; competitiveness2024].
+A massa informada pelo usuário representa a remessa do cenário. Ela não é a carga total de um navio. Os registros históricos de carga dos navios são usados somente para estimar a intensidade da navegação e não são somados à carga da remessa.
 
-A massa informada pelo usuário é a carga que ele deseja transportar. Ela não é a carga total do navio. O sistema reconstrói a carga histórica do navio com os registros da ANTAQ. Essa carga histórica reconstruída determina quanto cada recorte influencia a estimativa marítima.
+### 3.2 Alternativa rodoviária: distância, veículo e consumo de diesel
 
-### 3.2 Reconstrução das viagens e da carga a bordo
+O cálculo rodoviário começa pela distância total entre a origem e o destino. O sistema obtém uma rota rodoviária em quilômetros e utiliza essa distância para representar o percurso do caminhão. A mesma lógica é aplicada aos acessos terrestres da alternativa com cabotagem: um trecho entre a origem e o porto de embarque e outro entre o porto de desembarque e o destino.
+
+Em seguida, a massa transportada define o veículo representativo. A tabela de referência adotada no modelo associa a faixa de carga ao número de eixos e relaciona cada configuração à eficiência básica em quilômetros por litro (km/L). A seleção automática é uma regra de modelagem para estimar consumo; não é uma verificação de limite legal de peso nem substitui o planejamento operacional de uma transportadora.
+
+**Tabela 5 — Regra automática para o veículo rodoviário representativo e eficiência básica adotada.**
+
+| Massa da remessa | Veículo representativo | Eixos | Eficiência básica |
+| :--------------- | :--------------------- | ----: | ----------------: |
+| Até 18 t | Carreta | 5 | 2,3 km/L |
+| Acima de 18 t até 30 t | Carreta | 6 | 2,0 km/L |
+| Acima de 30 t até 40 t | Bitrem | 7 | 2,0 km/L |
+| Acima de 40 t | Rodotrem | 9 | 2,0 km/L |
+
+*Fonte: valores de referência ANTT adotados no modelo para eficiência por número de eixos.*
+
+Com a distância rodoviária $D_{\mathrm{rod}}$, em quilômetros, a eficiência escolhida $\eta_{\mathrm{rod}}$, em km/L, e $N$ viagens carregadas necessárias para transportar a remessa, o consumo de diesel do trecho é calculado por:
+
+$$
+F_{\mathrm{rod}}=N\frac{D_{\mathrm{rod}}}{\eta_{\mathrm{rod}}}.
+$$
+
+Por exemplo, uma remessa de 14 t é representada por uma carreta de cinco eixos, cuja eficiência básica é 2,3 km/L. Se a rota tiver 460 km e a carga couber em uma única viagem, o consumo estimado será $460/2{,}3=200$ L de diesel. Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multiplica esse consumo pelo número necessário de viagens carregadas. Os litros calculados são posteriormente convertidos em custo e emissões com os fatores e preços adotados pelo cenário.
+
+### 3.3 Alternativa com cabotagem
+
+A alternativa com cabotagem também precisa levar a remessa do ponto inicial ao ponto final. Por isso, ela reúne três componentes: o acesso rodoviário até o porto de embarque, a navegação entre os portos e o acesso rodoviário depois do desembarque. Os dois acessos usam o mesmo cálculo rodoviário apresentado anteriormente. A diferença está na perna marítima: em vez de assumir que qualquer navio percorre uma rota teórica, o sistema procura viagens de cabotagem que foram efetivamente registradas entre os portos escolhidos.
+
+Para calcular uma nova remessa, a perna marítima precisa de duas informações. A primeira é a intensidade de consumo, isto é, a quantidade de combustível por tonelada transportada e por milha náutica. A segunda é a distância de um corredor marítimo observado entre os dois portos. Essas informações têm origens diferentes: a intensidade é estimada a partir da atividade histórica dos navios, enquanto a distância pertence a uma única sequência concreta de portos escolhida para o cenário. Essa separação impede que a carga histórica dos navios seja confundida com a carga informada pelo usuário.
+
+As subseções seguintes explicam como as viagens registradas são reconstruídas, como se obtém a intensidade de cada navio e como os resultados das diferentes viagens são reunidos para representar uma ligação portuária.
+
+### 3.4 Reconstrução das viagens e da carga a bordo
 
 Depois de definir a carga, a origem e o destino que serão comparados, o cálculo marítimo começa pela reconstrução da atividade observada dos navios.
 
@@ -160,14 +191,14 @@ Um mesmo complexo portuário pode aparecer com nomes diferentes na base. O siste
 
 A viagem `voyage_9612791_00011`, realizada pelo navio de IMO 9612791, registrou Santos–Suape–Pecém–Manaus antes de retornar a Santos. Se a reconstrução começasse em zero, a soma dos saldos atingiria (-2.976,894) t. O sistema acrescentou exatamente 2.976,894 t como carga inicial mínima para impedir uma carga negativa. Em Santos, o saldo entre embarques e desembarques foi positivo em 9.881,860 t; portanto, o navio saiu de Santos com 12.858,754 t. Em Suape, o saldo foi positivo em 3.859,579 t, elevando a carga a bordo para 16.718,333 t. Em Pecém, o saldo foi negativo em 4.392,433 t, e o navio seguiu para Manaus com 12.325,900 t. Em Manaus, o saldo foi negativo em 12.325,900 t. As três distâncias usadas na tabela seguinte vieram da matriz marítima; elas não são trajetórias medidas pelo Sistema de Identificação Automática (AIS, do inglês *Automatic Identification System*).
 
-**Tabela 5 — Carga, distância, trabalho de transporte e combustível reconstruídos na viagem `voyage_9612791_00011`.**
+**Tabela 6 — Carga, distância, trabalho de transporte e combustível reconstruídos na viagem `voyage_9612791_00011`.**
 
 | Subtrecho    | Carga a bordo |    Distância |                    Trabalho |    Combustível |
 | :----------- | ------------: | -----------: | --------------------------: | -------------: |
-| Santos–Suape |  12.858,754 t | 1.259,179 nm | 16.191.476,419 t$\cdot$nm | 120.302,670 kg |
-| Suape–Pecém  |  16.718,333 t |   507,806 nm |  8.489.677,588 t$\cdot$nm |  63.078,304 kg |
-| Pecém–Manaus |  12.325,900 t | 1.185,594 nm | 14.613.514,486 t$\cdot$nm | 108.578,413 kg |
-| Total        |             — | 2.952,580 nm | 39.294.668,494 t$\cdot$nm | 291.959,387 kg |
+| Santos–Suape |  12.858,754 t | 1.259,179 nm | 16.191.476,419 t$\cdot$nm   | 120.302,670 kg |
+| Suape–Pecém  |  16.718,333 t |   507,806 nm |  8.489.677,588 t$\cdot$nm   |  63.078,304 kg |
+| Pecém–Manaus |  12.325,900 t | 1.185,594 nm | 14.613.514,486 t$\cdot$nm   | 108.578,413 kg |
+| Total        |             — | 2.952,580 nm | 39.294.668,494 t$\cdot$nm   | 291.959,387 kg |
 
 As cargas, as distâncias e os resultados exibidos na tabela foram arredondados para três casas decimais. Os totais foram calculados com os valores armazenados em maior precisão; por isso, a soma manual das linhas já arredondadas pode diferir do total em 0,001 unidade.
 
@@ -194,7 +225,7 @@ Uma mesma viagem fornece apenas um recorte para a ligação escolhida. Se o navi
 
 Antes que um recorte influencie o indicador final, o sistema verifica quatro condições. Primeiro, a parte aproveitada deve começar no porto escolhido como saída e terminar no porto escolhido como chegada, dentro da mesma viagem. No cálculo Santos–Manaus, ela começa quando o navio sai de Santos e termina quando chega a Manaus; uma sequência Manaus–Suape–Santos não serve. Segundo, nenhum trecho navegado entre essas duas escalas pode estar ausente. Terceiro, deve existir uma intensidade do próprio navio ou uma estimativa identificada. Quarto, a soma da carga a bordo multiplicada pela distância de cada trecho precisa ser positiva para receber peso. Se o peso for zero, o recorte só participa da regra especial usada quando nenhum recorte da ligação possui peso positivo.
 
-### 3.3 Intensidade marítima por IMO e fallback robusto
+### 3.5 Intensidade marítima por IMO e fallback robusto
 
 Com as viagens e as cargas a bordo reconstruídas, o passo seguinte é determinar qual intensidade de consumo será aplicada a cada navio.
 
@@ -224,7 +255,7 @@ Essa retirada de extremos vale apenas para calcular o valor substituto do grupo.
 
 **O que sai:** cada recorte recebe uma intensidade e uma descrição da fonte. Essa descrição informa se o valor veio do IMO do próprio navio ou de um grupo de classe ou tipo. Quando houve fallback, o sistema também registra a estatística usada, o tamanho da amostra e quantos extremos foram retirados. Assim, um valor calculado para um grupo não aparece como se fosse uma medição individual.
 
-### 3.4 Trabalho de transporte e intensidade da ligação
+### 3.6 Trabalho de transporte e intensidade da ligação
 
 Depois de escolher os portos $o$ e $d$, o sistema separa os trechos navegados entre eles. A letra $v$ identifica a viagem. A letra $s$ identifica um trecho dessa viagem. Em cada trecho, $m_{v,s}$ é a carga a bordo em toneladas e $d_{v,s}$ é a distância em milhas náuticas.
 
@@ -269,7 +300,7 @@ Antes de incluir a viagem `voyage_9697002_00002`, a soma acumulada correspondia 
 
 Um recorte com trabalho igual a zero recebe peso zero. Ele não muda a mediana enquanto existir pelo menos um recorte com trabalho positivo. Se todos tiverem trabalho zero, o sistema calcula a mediana sem pesos e registra essa situação.
 
-### 3.5 Separação entre intensidade e sequência de portos
+### 3.7 Separação entre intensidade e sequência de portos
 
 O cálculo ocorre em duas etapas que não devem ser confundidas. Na preparação da base, as cargas e as distâncias das viagens históricas da ANTAQ servem somente para calcular os pesos da intensidade representativa. Na execução de um novo cenário, o sistema usa essa intensidade uma única vez, junto com a carga informada pelo usuário e com a distância de uma rota completa escolhida. As cargas históricas não são somadas à carga do usuário, e o combustível das viagens históricas não é somado ao novo cenário.
 
@@ -290,7 +321,7 @@ O sobrescrito $\mathrm{cen}$ significa “cenário” e diferencia esse consumo 
 
 O sistema procura a distância de cada trecho na matriz marítima. Se uma distância estiver ausente, pode calcular a distância de grande círculo entre as coordenadas dos dois portos. Isso ocorreu no recorte Santos–Itapoá–Paranaguá–Suape–Manaus da viagem `voyage_9343974_00002`, realizada pelo navio de IMO 9343974. Como a matriz não continha Itapoá–Paranaguá, o sistema estimou 40,974 nm por haversine e registrou essa fonte. A intensidade dessa viagem, 6,8 g/(t$\cdot$nm), veio da correspondência exata do IMO no EU MRV de 2024. A distância de haversine é uma aproximação entre coordenadas; ela não confirma que o navio poderia seguir exatamente aquela linha no mar.
 
-### 3.6 Agregação de emissões, custos e operações portuárias
+### 3.8 Agregação de emissões, custos e operações portuárias
 
 Depois de definir a intensidade e a sequência de portos, o sistema calcula os resultados de cada trecho e os reúne para representar a viagem completa.
 
@@ -346,7 +377,7 @@ A base processada contém 1.324 viagens de cabotagem conteinerizada registradas 
 
 O sistema procurou esses 389 números no EU MRV e encontrou 243 correspondências exatas. Esses 243 navios aparecem em 788 das 1.324 viagens. Nas outras 536 viagens, a execução atual usou um valor substituto por tipo de navio. Nenhuma viagem desta execução usou fallback de classe; essa regra permanece disponível para uma base que forneça esse metadado.
 
-**Tabela 6 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
+**Tabela 7 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
 | Indicador                                |                              Valor | Cobertura |
 | :--------------------------------------- | ---------------------------------: | --------: |
