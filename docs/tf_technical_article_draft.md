@@ -163,15 +163,21 @@ $$
 
 Por exemplo, uma remessa de 14 t é representada por uma carreta de cinco eixos, cuja eficiência básica é 2,3 km/L. Se a rota tiver 460 km e a carga couber em uma única viagem, o consumo estimado será $460/2{,}3=200$ L de diesel. Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multiplica esse consumo pelo número necessário de viagens carregadas. Os litros calculados são posteriormente convertidos em custo e emissões com os fatores e preços adotados pelo cenário.
 
-### 3.3 Alternativa com cabotagem
+### 3.3 Alternativa multimodal
 
-A alternativa com cabotagem também precisa levar a remessa do ponto inicial ao ponto final. Por isso, ela reúne três componentes: o acesso rodoviário até o porto de embarque, a navegação entre os portos e o acesso rodoviário depois do desembarque. Os dois acessos usam o mesmo cálculo rodoviário apresentado anteriormente. A diferença está na perna marítima: em vez de assumir que qualquer navio percorre uma rota teórica, o sistema procura viagens de cabotagem que foram efetivamente registradas entre os portos escolhidos.
+A alternativa multimodal também precisa levar a remessa do ponto inicial ao ponto final. Ela é formada por três partes: o acesso rodoviário até o porto de embarque, a navegação entre os portos e o acesso rodoviário depois do desembarque. Portanto, o combustível é consumido não só pelo navio, em cada subtrecho marítimo, mas também nos deslocamentos da origem até o porto de embarque e do porto de desembarque até o destino final. Além disso, o sistema calcula separadamente o consumo das operações nos terminais portuários.
 
-Para calcular uma nova remessa, a perna marítima precisa de duas informações. A primeira é a intensidade de consumo, isto é, a quantidade de combustível por tonelada transportada e por milha náutica. A segunda é a distância de um corredor marítimo observado entre os dois portos. Essas informações têm origens diferentes: a intensidade é estimada a partir da atividade histórica dos navios, enquanto a distância pertence a uma única sequência concreta de portos escolhida para o cenário. Essa separação impede que a carga histórica dos navios seja confundida com a carga informada pelo usuário.
+Os próximos subitens mostram como esses componentes são formados: a escolha dos portos define os extremos da ligação; os acessos terrestres usam o cálculo rodoviário; as viagens registradas permitem reconstruir a navegação e a carga a bordo; a intensidade define o consumo do navio; e a agregação reúne combustível, emissões, custo e operações portuárias.
 
-As subseções seguintes explicam como as viagens registradas são reconstruídas, como se obtém a intensidade de cada navio e como os resultados das diferentes viagens são reunidos para representar uma ligação portuária.
+#### 3.3.1 Escolha dos portos
 
-### 3.4 Reconstrução das viagens e da carga a bordo
+O sistema associa a origem ao porto mais próximo disponível na base portuária e faz o mesmo para o destino. Esses dois portos definem a ligação marítima que será pesquisada. Essa regra fornece uma forma objetiva de montar o cenário, mas não afirma que o porto é necessariamente a melhor escolha comercial ou operacional. Um porto mais distante pode ser preferível na prática por motivos como frequência de navios, contrato, terminal, custo ou disponibilidade de espaço, fatores que não são decididos por essa seleção geográfica.
+
+#### 3.3.2 Acessos rodoviários: *first mile* e *last mile*
+
+O primeiro acesso, chamado de *first mile*, leva a carga da origem até o porto de embarque. O segundo, chamado de *last mile*, leva a carga do porto de desembarque até o destino final. Para cada um deles, o sistema obtém uma distância rodoviária e aplica a mesma regra de veículo, eficiência e consumo de diesel descrita na Seção 3.2. Portanto, a comparação inclui o diesel consumido antes e depois da navegação; ela não trata a cabotagem como se a carga já estivesse no porto.
+
+#### 3.3.3 Reconstrução das viagens e da carga a bordo
 
 Depois de definir a carga, a origem e o destino que serão comparados, o cálculo marítimo começa pela reconstrução da atividade observada dos navios.
 
@@ -225,7 +231,7 @@ Uma mesma viagem fornece apenas um recorte para a ligação escolhida. Se o navi
 
 Antes que um recorte influencie o indicador final, o sistema verifica quatro condições. Primeiro, a parte aproveitada deve começar no porto escolhido como saída e terminar no porto escolhido como chegada, dentro da mesma viagem. No cálculo Santos–Manaus, ela começa quando o navio sai de Santos e termina quando chega a Manaus; uma sequência Manaus–Suape–Santos não serve. Segundo, nenhum trecho navegado entre essas duas escalas pode estar ausente. Terceiro, deve existir uma intensidade do próprio navio ou uma estimativa identificada. Quarto, a soma da carga a bordo multiplicada pela distância de cada trecho precisa ser positiva para receber peso. Se o peso for zero, o recorte só participa da regra especial usada quando nenhum recorte da ligação possui peso positivo.
 
-### 3.5 Intensidade marítima por IMO e fallback robusto
+#### 3.3.4 Intensidade marítima por IMO e fallback robusto
 
 Com as viagens e as cargas a bordo reconstruídas, o passo seguinte é determinar qual intensidade de consumo será aplicada a cada navio.
 
@@ -255,7 +261,7 @@ Essa retirada de extremos vale apenas para calcular o valor substituto do grupo.
 
 **O que sai:** cada recorte recebe uma intensidade e uma descrição da fonte. Essa descrição informa se o valor veio do IMO do próprio navio ou de um grupo de classe ou tipo. Quando houve fallback, o sistema também registra a estatística usada, o tamanho da amostra e quantos extremos foram retirados. Assim, um valor calculado para um grupo não aparece como se fosse uma medição individual.
 
-### 3.6 Trabalho de transporte e intensidade da ligação
+#### 3.3.5 Trabalho de transporte e intensidade da ligação
 
 Depois de escolher os portos $o$ e $d$, o sistema separa os trechos navegados entre eles. A letra $v$ identifica a viagem. A letra $s$ identifica um trecho dessa viagem. Em cada trecho, $m_{v,s}$ é a carga a bordo em toneladas e $d_{v,s}$ é a distância em milhas náuticas.
 
@@ -300,7 +306,7 @@ Antes de incluir a viagem `voyage_9697002_00002`, a soma acumulada correspondia 
 
 Um recorte com trabalho igual a zero recebe peso zero. Ele não muda a mediana enquanto existir pelo menos um recorte com trabalho positivo. Se todos tiverem trabalho zero, o sistema calcula a mediana sem pesos e registra essa situação.
 
-### 3.7 Separação entre intensidade e sequência de portos
+#### 3.3.6 Separação entre intensidade e sequência de portos
 
 O cálculo ocorre em duas etapas que não devem ser confundidas. Na preparação da base, as cargas e as distâncias das viagens históricas da ANTAQ servem somente para calcular os pesos da intensidade representativa. Na execução de um novo cenário, o sistema usa essa intensidade uma única vez, junto com a carga informada pelo usuário e com a distância de uma rota completa escolhida. As cargas históricas não são somadas à carga do usuário, e o combustível das viagens históricas não é somado ao novo cenário.
 
@@ -321,7 +327,7 @@ O sobrescrito $\mathrm{cen}$ significa “cenário” e diferencia esse consumo 
 
 O sistema procura a distância de cada trecho na matriz marítima. Se uma distância estiver ausente, pode calcular a distância de grande círculo entre as coordenadas dos dois portos. Isso ocorreu no recorte Santos–Itapoá–Paranaguá–Suape–Manaus da viagem `voyage_9343974_00002`, realizada pelo navio de IMO 9343974. Como a matriz não continha Itapoá–Paranaguá, o sistema estimou 40,974 nm por haversine e registrou essa fonte. A intensidade dessa viagem, 6,8 g/(t$\cdot$nm), veio da correspondência exata do IMO no EU MRV de 2024. A distância de haversine é uma aproximação entre coordenadas; ela não confirma que o navio poderia seguir exatamente aquela linha no mar.
 
-### 3.8 Agregação de emissões, custos e operações portuárias
+#### 3.3.7 Agregação de emissões, custos e operações portuárias
 
 Depois de definir a intensidade e a sequência de portos, o sistema calcula os resultados de cada trecho e os reúne para representar a viagem completa.
 
