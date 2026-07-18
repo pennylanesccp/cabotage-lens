@@ -29,6 +29,8 @@ from modules.costs.diesel_prices import (
     build_price_lookup,
     get_average_price,
     get_average_price_from_lookup,
+    get_price_for_uf,
+    get_price_for_uf_from_lookup,
     normalize_uf,
 )
 from modules.costs.ship_fuel_prices import DEFAULT_OUTPUT_TXT, get_bunker_price
@@ -83,10 +85,11 @@ class PreparedEvaluationContext:
 
 
 def _resolve_uf_from_point(point: Dict[str, Any]) -> str:
-    """Resolve UF code from structured point data or from the point label tail."""
-    uf = normalize_uf(str(point.get("uf") or ""))
-    if uf:
-        return uf
+    """Resolve a UF code from a location or selected-port record."""
+    for key in ("uf", "state"):
+        uf = normalize_uf(str(point.get(key) or ""))
+        if uf:
+            return uf
 
     label = str(point.get("label") or "").strip()
     if "," in label:
@@ -775,55 +778,125 @@ def evaluate_path(
 
     origin_uf = _resolve_uf_from_point(path_data.get("origin", {}))
     destiny_uf = _resolve_uf_from_point(path_data.get("destiny", {}))
+    port_origin_uf = _resolve_uf_from_point(path_data.get("port_origin", {}))
+    port_destiny_uf = _resolve_uf_from_point(path_data.get("port_destiny", {}))
+    active_diesel_override = (
+        float(diesel_price)
+        if diesel_price is not None
+        else (
+            None
+            if context.diesel_price_override is None
+            else float(context.diesel_price_override)
+        )
+    )
 
-    if diesel_price is not None:
-        diesel_meta = {
-            "price_r_per_l": float(diesel_price),
+    def _explicit_diesel_meta(
+        *,
+        price_scope: str,
+        uf_origin: str = "",
+        uf_destiny: str = "",
+        uf: str = "",
+    ) -> dict[str, Any]:
+        assert active_diesel_override is not None
+        meta: dict[str, Any] = {
+            "price_r_per_l": active_diesel_override,
             "source": "explicit_override",
-            "uf_origin": origin_uf or None,
-            "uf_destiny": destiny_uf or None,
+            "price_method": "explicit_override",
+            "price_scope": price_scope,
             "fallback_used": False,
             "csv_path": None,
         }
-        price_l = float(diesel_price)
-        diesel_source = "explicit_override"
-    elif context.diesel_price_override is not None:
-        diesel_meta = {
-            "price_r_per_l": float(context.diesel_price_override),
-            "source": "explicit_override",
-            "uf_origin": origin_uf or None,
-            "uf_destiny": destiny_uf or None,
-            "fallback_used": False,
-            "csv_path": None,
+        if uf:
+            meta["uf"] = uf
+        else:
+            meta["uf_origin"] = uf_origin or None
+            meta["uf_destiny"] = uf_destiny or None
+        return meta
+
+    def _resolve_pair_diesel_meta(
+        uf_start: str,
+        uf_end: str,
+        *,
+        price_scope: str,
+    ) -> dict[str, Any]:
+        if active_diesel_override is not None:
+            return _explicit_diesel_meta(
+                price_scope=price_scope,
+                uf_origin=uf_start,
+                uf_destiny=uf_end,
+            )
+        if context.diesel_lookup is not None:
+            meta = get_average_price_from_lookup(uf_start, uf_end, context.diesel_lookup)
+        else:
+            meta = get_average_price(
+                uf_start,
+                uf_end,
+                default_price_r_per_l=diesel_default_price_r_per_l,
+                csv_path=diesel_csv_path,
+            )
+        return {
+            **meta,
+            "price_method": "uf_pair_arithmetic_mean",
+            "price_scope": price_scope,
         }
-        price_l = float(context.diesel_price_override)
-        diesel_source = "explicit_override"
-    elif context.diesel_lookup is not None:
-        diesel_meta = get_average_price_from_lookup(origin_uf, destiny_uf, context.diesel_lookup)
-        price_l = float(diesel_meta.get("price_r_per_l", diesel_default_price_r_per_l))
-        diesel_source = str(diesel_meta.get("source", "latest_diesel_prices_csv"))
-    else:
-        diesel_meta = get_average_price(
+
+    def _resolve_port_diesel_meta(uf: str, *, price_scope: str) -> dict[str, Any]:
+        if active_diesel_override is not None:
+            return _explicit_diesel_meta(price_scope=price_scope, uf=uf)
+        if context.diesel_lookup is not None:
+            meta = get_price_for_uf_from_lookup(uf, context.diesel_lookup)
+        else:
+            meta = get_price_for_uf(
+                uf,
+                default_price_r_per_l=diesel_default_price_r_per_l,
+                csv_path=diesel_csv_path,
+            )
+        return {**meta, "price_scope": price_scope}
+
+    diesel_price_metas = {
+        "road_direct": _resolve_pair_diesel_meta(
             origin_uf,
             destiny_uf,
-            default_price_r_per_l=diesel_default_price_r_per_l,
-            csv_path=diesel_csv_path,
-        )
-        price_l = float(diesel_meta.get("price_r_per_l", diesel_default_price_r_per_l))
-        diesel_source = str(diesel_meta.get("source", "latest_diesel_prices_csv"))
+            price_scope="road_direct",
+        ),
+        "first_mile": _resolve_pair_diesel_meta(
+            origin_uf,
+            port_origin_uf,
+            price_scope="first_mile",
+        ),
+        "last_mile": _resolve_pair_diesel_meta(
+            port_destiny_uf,
+            destiny_uf,
+            price_scope="last_mile",
+        ),
+        "port_origin": _resolve_port_diesel_meta(
+            port_origin_uf,
+            price_scope="port_origin",
+        ),
+        "port_destiny": _resolve_port_diesel_meta(
+            port_destiny_uf,
+            price_scope="port_destiny",
+        ),
+    }
+    diesel_meta = diesel_price_metas["road_direct"]
+    price_l = float(diesel_meta.get("price_r_per_l", diesel_default_price_r_per_l))
+    diesel_source = str(diesel_meta.get("source", "latest_diesel_prices_csv"))
 
-    _trace(
-        "diesel_price",
-        "complete",
-        diesel_source,
-        price_r_per_l=price_l,
-        uf_origin=origin_uf or None,
-        uf_destiny=destiny_uf or None,
-        price_origin=diesel_meta.get("price_origin"),
-        price_destiny=diesel_meta.get("price_destiny"),
-        fallback_used=diesel_meta.get("fallback_used"),
-        csv_path=diesel_meta.get("csv_path") or diesel_meta.get("source_csv"),
-    )
+    for price_scope, price_meta in diesel_price_metas.items():
+        _trace(
+            "diesel_price" if price_scope == "road_direct" else f"diesel_price_{price_scope}",
+            "complete",
+            str(price_meta.get("source", "latest_diesel_prices_csv")),
+            price_r_per_l=price_meta.get("price_r_per_l"),
+            price_method=price_meta.get("price_method"),
+            uf=price_meta.get("uf"),
+            uf_origin=price_meta.get("uf_origin"),
+            uf_destiny=price_meta.get("uf_destiny"),
+            price_origin=price_meta.get("price_origin"),
+            price_destiny=price_meta.get("price_destiny"),
+            fallback_used=price_meta.get("fallback_used"),
+            csv_path=price_meta.get("csv_path") or price_meta.get("source_csv"),
+        )
 
     _log.debug(
         (
@@ -840,7 +913,12 @@ def evaluate_path(
         include_port_ops,
     )
 
-    def _calc_road(leg_name: str, leg: Dict[str, Any]) -> Dict[str, Any]:
+    def _calc_road(
+        leg_name: str,
+        leg: Dict[str, Any],
+        diesel_price_meta: Mapping[str, Any],
+    ) -> Dict[str, Any]:
+        leg_price_l = float(diesel_price_meta.get("price_r_per_l", diesel_default_price_r_per_l))
         dist_raw = leg.get("distance_km")
         dist_km = float(dist_raw) if dist_raw is not None else 0.0
         if dist_km <= 0.0:
@@ -848,6 +926,8 @@ def evaluate_path(
                 "distance_km": dist_km,
                 "trips": 0,
                 "liters": 0.0,
+                "diesel_price_r_per_l": leg_price_l,
+                "diesel_price_meta": dict(diesel_price_meta),
                 "cost": 0.0,
                 "co2e": 0.0,
             }
@@ -858,6 +938,7 @@ def evaluate_path(
                 distance_km=dist_km,
                 trips=0,
                 liters=0.0,
+                diesel_price_r_per_l=leg_price_l,
                 cost_brl=0.0,
                 co2e_kg=0.0,
             )
@@ -871,13 +952,15 @@ def evaluate_path(
         )
 
         liters = float(liters)
-        cost = liters * price_l
+        cost = liters * leg_price_l
         co2e = liters * _DIESEL_EF_KG_CO2E_PER_L
 
         result = {
             "distance_km": dist_km,
             "trips": int(trips),
             "liters": liters,
+            "diesel_price_r_per_l": leg_price_l,
+            "diesel_price_meta": dict(diesel_price_meta),
             "cost": float(cost),
             "co2e": float(co2e),
         }
@@ -888,7 +971,7 @@ def evaluate_path(
             distance_km=dist_km,
             trips=int(trips),
             liters=liters,
-            diesel_price_r_per_l=price_l,
+            diesel_price_r_per_l=leg_price_l,
             diesel_emission_factor_kg_co2e_per_l=_DIESEL_EF_KG_CO2E_PER_L,
             diesel_emission_factor_source="tracked_model_constant",
             cost_brl=float(cost),
@@ -896,9 +979,21 @@ def evaluate_path(
         )
         return result
 
-    res_direct = _calc_road("road_direct", path_data.get("road_direct", {}))
-    res_first = _calc_road("first_mile", path_data.get("first_mile", {}))
-    res_last = _calc_road("last_mile", path_data.get("last_mile", {}))
+    res_direct = _calc_road(
+        "road_direct",
+        path_data.get("road_direct", {}),
+        diesel_price_metas["road_direct"],
+    )
+    res_first = _calc_road(
+        "first_mile",
+        path_data.get("first_mile", {}),
+        diesel_price_metas["first_mile"],
+    )
+    res_last = _calc_road(
+        "last_mile",
+        path_data.get("last_mile", {}),
+        diesel_price_metas["last_mile"],
+    )
 
     route_quality_warnings = [
         dict(item)
@@ -1261,6 +1356,7 @@ def evaluate_path(
     port_ops_co2e_kg = 0.0
     port_ops_cost_brl = 0.0
     port_ops_exclusion_reason: str | None = None
+    port_diesel_price_meta_per_call: list[dict[str, Any]] = []
 
     port_moves_per_call_effective = port_moves_per_call
     if (
@@ -1276,6 +1372,20 @@ def evaluate_path(
     if include_port_ops and port_calls > 0:
         try:
             port_call_names = _resolve_port_call_names(path_data, port_calls)
+            port_diesel_metas_per_call: list[dict[str, Any]] = []
+            for index in range(len(port_call_names)):
+                if index == 0:
+                    price_meta = diesel_price_metas["port_origin"]
+                elif index == 1:
+                    price_meta = diesel_price_metas["port_destiny"]
+                else:
+                    price_meta = _resolve_port_diesel_meta(
+                        "",
+                        price_scope=f"port_call_{index + 1}_missing_uf",
+                    )
+                port_diesel_metas_per_call.append(dict(price_meta))
+            port_diesel_price_meta_per_call = port_diesel_metas_per_call
+
             port_ops_payload = estimate_port_ops(
                 scenario=port_ops_scenario,
                 port_calls=port_calls,
@@ -1285,12 +1395,24 @@ def evaluate_path(
                 t_per_teu_default=t_per_teu_default,
                 full_call_mode=full_call_mode,
                 stat_key=port_ops_stat_key,
-                diesel_price_per_l=price_l,
+                diesel_prices_per_call=[
+                    float(meta.get("price_r_per_l", diesel_default_price_r_per_l))
+                    for meta in port_diesel_metas_per_call
+                ],
                 params_path=port_ops_params_path,
                 selection=context.port_ops_selection,
                 port_names=port_call_names,
                 observed_port_ops=port_ops_observed_ports,
             )
+            if isinstance(port_ops_payload, dict):
+                port_ops_payload["diesel_price_meta_per_call"] = [
+                    dict(meta) for meta in port_diesel_metas_per_call
+                ]
+                breakdown = port_ops_payload.get("port_call_breakdown")
+                if isinstance(breakdown, list):
+                    for index, port_call in enumerate(breakdown):
+                        if isinstance(port_call, dict) and index < len(port_diesel_metas_per_call):
+                            port_call["diesel_price_meta"] = dict(port_diesel_metas_per_call[index])
             totals = port_ops_payload.get("totals", {}) if isinstance(port_ops_payload, dict) else {}
             port_ops_fuel_kg = float(totals.get("fuel_kg") or 0.0)
             port_ops_co2e_kg = float(totals.get("co2e_kg") or 0.0)
@@ -1564,6 +1686,9 @@ def evaluate_path(
         "port_ops_warnings": (
             [] if not isinstance(port_ops_payload, dict) else list(port_ops_payload.get("warnings") or [])
         ),
+        "port_diesel_price_meta_per_call": [
+            dict(meta) for meta in port_diesel_price_meta_per_call
+        ],
         "port_ops": port_ops_payload,
         "fuel_kg": float(sea_fuel_total_kg),
         "cost": float(sea_cost_total),
@@ -1597,11 +1722,16 @@ def evaluate_path(
             "diesel_price": price_l,
             "diesel_price_source": diesel_source,
             "diesel_price_meta": diesel_meta,
+            "diesel_prices_by_leg": {
+                name: dict(meta) for name, meta in diesel_price_metas.items()
+            },
             "bunker_price": bunker_price_ton,
             "marine_fuel_type": _MARINE_FUEL_TYPE,
             "marine_ef_kg_per_kg": _BUNKER_EF_KG_CO2E_PER_KG,
             "uf_origin": origin_uf or None,
             "uf_destiny": destiny_uf or None,
+            "uf_port_origin": port_origin_uf or None,
+            "uf_port_destiny": port_destiny_uf or None,
             "vessel_class_requested": vessel_eff.requested_class,
             "vessel_class": vessel_eff.vessel_class,
             "sea_fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),

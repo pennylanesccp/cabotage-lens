@@ -15,6 +15,8 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             "status": "ok",
             "origin": {"label": "Origin, SP", "uf": "SP"},
             "destiny": {"label": "Destiny, RJ", "uf": "RJ"},
+            "port_origin": {"name": "Origin Port", "state": "SP"},
+            "port_destiny": {"name": "Destination Port", "state": "RJ"},
             "road_direct": {"distance_km": 1000.0},
             "first_mile": {"distance_km": 100.0},
             "last_mile": {"distance_km": 50.0},
@@ -287,6 +289,114 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         self.assertIn("stage=calculate_hoteling status=complete source=disabled_by_user", trace_text)
         self.assertIn("stage=calculate_port_ops status=complete source=disabled_by_user", trace_text)
         self.assertIn("stage=evaluation status=complete source=calculated_single_eval_outputs", trace_text)
+
+    def test_diesel_prices_follow_each_road_leg_and_port_uf(self) -> None:
+        context = evaluator.PreparedEvaluationContext(
+            truck_spec={
+                "axles": 5,
+                "payload_t": 27.0,
+                "ref_weight_t": 20.0,
+                "empty_efficiency_gain": 0.18,
+            },
+            diesel_lookup=DieselPriceLookup(
+                source_csv="diesel.csv",
+                default_price_r_per_l=6.0,
+                uf_to_price={"SP": 6.0, "RJ": 8.0, "AM": 10.0, "AC": 14.0},
+                row_count=4,
+            ),
+            diesel_price_override=None,
+            bunker_price_ton=2572.34,
+            vessel_eff=self._fake_vessel(),
+            hoteling_sel=None,
+            port_ops_selection=self._fake_port_ops_selection(),
+        )
+        path_data = self._path_data()
+        path_data["destiny"] = {"label": "Destiny, AC", "uf": "AC"}
+        path_data["port_origin"] = {"name": "Porto de Embarque", "state": "RJ"}
+        path_data["port_destiny"] = {"name": "Porto de Desembarque", "state": "AM"}
+
+        with patch.object(
+            evaluator,
+            "estimate_leg_liters",
+            side_effect=self._estimate_leg_liters,
+        ), patch.object(
+            evaluator,
+            "estimate_port_ops",
+            return_value={
+                "source_path": "port_ops.json",
+                "resolved_scenario": "baseline",
+                "port_call_breakdown": [{}, {}],
+                "totals": {"fuel_kg": 0.0, "co2e_kg": 0.0, "cost_brl": 0.0},
+            },
+        ) as port_ops_mock:
+            result = evaluator.evaluate_path(
+                path_data,
+                cargo_t=30.0,
+                truck_key="semi_27t",
+                include_hoteling=False,
+                port_calls=2,
+                include_port_ops=True,
+                prepared_context=context,
+            )
+
+        self.assertAlmostEqual(result["road_only"]["diesel_price_r_per_l"], 10.0)
+        self.assertAlmostEqual(result["multimodal"]["first_mile"]["diesel_price_r_per_l"], 7.0)
+        self.assertAlmostEqual(result["multimodal"]["last_mile"]["diesel_price_r_per_l"], 12.0)
+        self.assertAlmostEqual(result["road_only"]["cost"], 5000.0)
+        self.assertAlmostEqual(result["multimodal"]["first_mile"]["cost"], 350.0)
+        self.assertAlmostEqual(result["multimodal"]["last_mile"]["cost"], 300.0)
+
+        prices_by_leg = result["inputs"]["diesel_prices_by_leg"]
+        self.assertEqual(prices_by_leg["first_mile"]["price_method"], "uf_pair_arithmetic_mean")
+        self.assertEqual(prices_by_leg["port_origin"]["price_method"], "single_uf")
+        self.assertEqual(prices_by_leg["port_origin"]["uf"], "RJ")
+        self.assertEqual(prices_by_leg["port_destiny"]["uf"], "AM")
+        self.assertEqual(
+            port_ops_mock.call_args.kwargs["diesel_prices_per_call"],
+            [8.0, 10.0],
+        )
+        port_breakdown = result["multimodal"]["sea"]["port_ops"]["port_call_breakdown"]
+        self.assertEqual(port_breakdown[0]["diesel_price_meta"]["uf"], "RJ")
+        self.assertEqual(port_breakdown[1]["diesel_price_meta"]["uf"], "AM")
+
+    def test_explicit_diesel_price_override_remains_global(self) -> None:
+        context = evaluator.PreparedEvaluationContext(
+            truck_spec={
+                "axles": 5,
+                "payload_t": 27.0,
+                "ref_weight_t": 20.0,
+                "empty_efficiency_gain": 0.18,
+            },
+            diesel_lookup=None,
+            diesel_price_override=11.0,
+            bunker_price_ton=2572.34,
+            vessel_eff=self._fake_vessel(),
+            hoteling_sel=None,
+            port_ops_selection=None,
+        )
+        path_data = self._path_data()
+        path_data["destiny"] = {"label": "Destiny, AC", "uf": "AC"}
+        path_data["port_origin"] = {"name": "Porto de Embarque", "state": "RJ"}
+        path_data["port_destiny"] = {"name": "Porto de Desembarque", "state": "AM"}
+
+        with patch.object(
+            evaluator,
+            "estimate_leg_liters",
+            side_effect=self._estimate_leg_liters,
+        ):
+            result = evaluator.evaluate_path(
+                path_data,
+                cargo_t=30.0,
+                truck_key="semi_27t",
+                include_hoteling=False,
+                include_port_ops=False,
+                prepared_context=context,
+            )
+
+        self.assertEqual(result["inputs"]["diesel_price_source"], "explicit_override")
+        for price_meta in result["inputs"]["diesel_prices_by_leg"].values():
+            self.assertEqual(price_meta["price_r_per_l"], 11.0)
+            self.assertEqual(price_meta["source"], "explicit_override")
 
     def test_pipeline_json_reports_observed_port_pair_metrics_for_cargo(self) -> None:
         context = evaluator.PreparedEvaluationContext(

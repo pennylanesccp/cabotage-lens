@@ -86,13 +86,13 @@ Em seguida, a massa transportada define o veículo representativo. O modelo util
 
 *Fonte: elaboração do sistema a partir dos rendimentos médios por número de eixos publicados pela Agência Nacional de Transportes Terrestres (ANTT), no portal ANTTlegis.*
 
-Com a distância rodoviária $D_{\mathrm{rod}}$, em quilômetros, a eficiência escolhida $\eta_{\mathrm{rod}}$, em km/L, e $N$ viagens carregadas necessárias para transportar a remessa, o consumo de diesel do trecho é calculado por:
+Com a distância rodoviária $D_{\mathrm{rod}}$, em quilômetros, a eficiência aplicada $\eta_{\mathrm{rod}}$, em km/L, e $N$ viagens carregadas necessárias para transportar a remessa, o consumo de diesel do trecho é calculado por:
 
 $$
 F_{\mathrm{rod}}=N\frac{D_{\mathrm{rod}}}{\eta_{\mathrm{rod}}}.
 $$
 
-Como exemplo real, usemos os 3.491 km de distância rodoviária entre São Paulo e Rio Branco. Para transportar uma remessa de 14 t nessa ligação, o modelo seleciona uma carreta de cinco eixos, com eficiência básica de 2,3 km/L. Como a remessa cabe em uma viagem carregada, o consumo estimado é $1\times3.491/2{,}3=1.517{,}826$ L de diesel. Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multiplica esse consumo pelo número necessário de viagens carregadas. Os litros calculados são posteriormente convertidos em custo e emissões com os fatores e preços adotados pelo cenário.
+Como exemplo de execução reproduzida, usemos os 3.491,431 km de distância rodoviária entre São Paulo e Rio Branco. Para transportar uma remessa de 14 t nessa ligação, o modelo seleciona uma carreta de cinco eixos, com eficiência de 2,3 km/L. Como a remessa cabe em uma única viagem, o consumo estimado é $1\times3.491{,}431/2{,}3=1.518{,}014$ L de diesel. Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multiplica esse consumo pelo número necessário de viagens carregadas. Os litros calculados são posteriormente convertidos em custo e emissões com os fatores e preços adotados pelo cenário.
 
 ### 3.3 Alternativa multimodal
 
@@ -321,25 +321,27 @@ Essa média não monta uma rota artificial com trechos de navios diferentes. Cad
 
 Ao fim das etapas anteriores, o sistema já estimou o combustível de cada parte da viagem. Nesta etapa, ele transforma esse consumo em duas saídas comparáveis: emissões operacionais de dióxido de carbono equivalente (CO$_2$e) e custo modelado do combustível. A conversão é feita primeiro para cada parte da rota. Só depois os resultados são somados. Dessa forma, é possível ver separadamente quanto o acesso inicial, a navegação, as operações no terminal e o acesso final acrescentam à alternativa multimodal.
 
-**Tabela 6 — Conversão do combustível estimado em custo modelado.**
+Os preços unitários da Tabela 6 correspondem ao registro da execução de São Paulo–Rio Branco.
 
-| Etapa do pipeline | Combustível e preço usado | Cálculo do custo |
+**Tabela 6 — Preços unitários usados para calcular o custo modelado.**
+
+| Etapa do transporte | Origem do dado | Preço do combustível |
 | :-- | :-- | :-- |
-| Rodovia direta | Diesel S10; preço em R$/L por Unidade da Federação (UF), processado a partir da [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). O cenário usa a média entre as UFs de origem e de destino. | $C_{\mathrm{rod,direta}}=F_{\mathrm{rod,direta}}\,p_{\mathrm{diesel}}$. |
-| *First mile* | Diesel S10; mesmo preço de diesel do cenário. | $C_{\mathrm{first}}=F_{\mathrm{first}}\,p_{\mathrm{diesel}}$. |
-| Operações portuárias | Diesel; mesmo preço de diesel do cenário. | $C_{\mathrm{porto}}=V_{\mathrm{porto}}\,p_{\mathrm{diesel}}$. |
-| Navegação | VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre); preço em Santos, publicado pela [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), convertido para R$/t e registrado na execução. | $C_{\mathrm{nav}}=\frac{F_{\mathrm{nav}}}{1000}\,p_{\mathrm{VLSFO}}$. |
-| *Last mile* | Diesel S10; mesmo preço de diesel do cenário. | $C_{\mathrm{last}}=F_{\mathrm{last}}\,p_{\mathrm{diesel}}$. |
+| Rodovia direta | [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). | Diesel S10: R$ 8,115/L (média de R$ 6,960/L em São Paulo e R$ 9,270/L no Acre, registrada na execução) |
+| *First mile* | [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). | Diesel S10: R$ 8,115/L |
+| Operações portuárias | [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). | Diesel: R$ 8,115/L |
+| Navegação | Preço em Santos publicado pela [Ship & Bunker](https://shipandbunker.com/prices/br-brazil) e convertido para reais na execução. | VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre): R$ 3.812,31/t |
+| *Last mile* | [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). | Diesel S10: R$ 8,115/L |
 
-**Tabela 7 — Conversão do combustível estimado em emissões operacionais.**
+**Tabela 7 — Fatores usados para calcular as emissões operacionais.**
 
-| Etapa do pipeline | Conversão em emissões e origem do fator |
-| :-- | :-- |
-| Rodovia direta | $E_{\mathrm{rod,direta}}=F_{\mathrm{rod,direta}}\times2{,}68\ \mathrm{kgCO_2e/L}$. O IPCC (2006) [ipcc2006] é a base da combustão direta de diesel. Costa et al. [competitiveness2024] é uma referência metodológica de comparação rodoviária, mas o fator WTW do artigo não é usado no modelo. |
-| *First mile* | $E_{\mathrm{first}}=F_{\mathrm{first}}\times2{,}68\ \mathrm{kgCO_2e/L}$, com a mesma base de combustão direta de diesel do IPCC (2006) [ipcc2006]. |
-| Operações portuárias | $E_{\mathrm{porto}}=m_{\mathrm{porto}}\times3{,}15\ \mathrm{kgCO_2e/kg}$. A base é o IPCC (2006) [ipcc2006], expressa por massa. |
-| Navegação | $E_{\mathrm{nav}}=F_{\mathrm{nav}}\times3{,}114\ \mathrm{kgCO_2e/kg}$. A fonte é Costa et al. [competitiveness2024], Apêndice A, Tabela 13, que reproduz parâmetros da Resolução IMO MEPC.391(81). O modelo usa somente a parcela de combustão. |
-| *Last mile* | $E_{\mathrm{last}}=F_{\mathrm{last}}\times2{,}68\ \mathrm{kgCO_2e/L}$, com a mesma base de combustão direta de diesel do IPCC (2006) [ipcc2006]. |
+| Etapa do transporte | Origem do dado | Fator de emissão |
+| :-- | :-- | :-- |
+| Rodovia direta | IPCC (2006) [ipcc2006], como base da combustão direta de diesel. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+| *First mile* | Mesma base do IPCC (2006) [ipcc2006]. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+| Operações portuárias | Mesma base do IPCC (2006) [ipcc2006], expresso por massa. | $3{,}15\ \mathrm{kgCO_2e/kg}$ de diesel |
+| Navegação | Costa et al. [competitiveness2024], Apêndice A, Tabela 13, que reproduz parâmetros da Resolução IMO MEPC.391(81). | $3{,}114\ \mathrm{kgCO_2e/kg}$ de VLSFO |
+| *Last mile* | Mesma base do IPCC (2006) [ipcc2006]. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
 
 O preço do diesel vem da tabela da **Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)**, agência federal que divulga pesquisas semanais de preços de combustíveis. Os dois fatores de diesel expressam a mesma emissão de combustão em unidades diferentes: $3{,}15\ \mathrm{kgCO_2e/kg}$ quando o consumo é registrado em massa e $2{,}68\ \mathrm{kgCO_2e/L}$ quando é registrado em volume. Para o VLSFO, a conversão usa somente a parcela de combustão da fonte marítima; os valores que incluem produção e distribuição do combustível não entram na conta. Todos os preços e fatores ficam registrados como parâmetros operacionais do modelo.
 
@@ -373,39 +375,6 @@ $$
 
 A alternativa totalmente rodoviária é calculada separadamente, com o custo e a emissão do trecho direto. Assim, a comparação não soma custos ou emissões de uma alternativa à outra.
 
-**Exemplo de execução reproduzida — São Paulo–Manaus.** O exemplo considera uma remessa de 14 t, equivalente a 1 TEU. Para tornar a conta verificável, foram usadas as distâncias rodoviárias já armazenadas para a execução: 3.870,006 km na rota direta, 86,174 km entre São Paulo e o Porto de Santos e 6,763 km entre o Porto de Manaus e o destino. Na navegação Santos–Manaus, foram usados os 6.115,349 km (3.302,024 nm) e a intensidade de 9,009824 g/(t$\cdot$nm) obtidos dos 89 recortes observados. A execução usa a configuração de carreta de cinco eixos. Ela parte do rendimento básico de 2,3 km/L da ANTT, mas o ajuste de carga aplicado pelo modelo resulta em 1,495 km/L efetivo.
-
-Os preços registrados nesse conjunto de insumos foram R$ 6,315/L para o diesel — média de R$ 6,120/L em São Paulo e R$ 6,510/L no Amazonas — e R$ 2.572,34/t para o VLSFO, com registro de 17 de novembro de 2025. A Tabela 7 apresenta as parcelas calculadas. Ela separa a rota rodoviária direta da alternativa multimodal para que a soma de cada uma possa ser conferida.
-
-**Tabela 7 — Consolidação de uma remessa de 14 t entre São Paulo e Manaus.**
-
-| Alternativa | Parte da viagem | Combustível calculado | Custo modelado | Emissões operacionais |
-| :-- | :-- | --: | --: | --: |
-| Rodoviária | Rota direta | 2.588,633 L de diesel | R$ 16.347,22 | 6.937,536 kgCO$_2$e |
-| Multimodal | São Paulo $\rightarrow$ Porto de Santos | 57,641 L de diesel | R$ 364,01 | 154,479 kgCO$_2$e |
-| Multimodal | Navegação Santos $\rightarrow$ Manaus | 416,509 kg de VLSFO | R$ 1.071,40 | 1.297,010 kgCO$_2$e |
-| Multimodal | Operações em dois portos | 4,820 L de diesel (4,097 kg) | R$ 30,44 | 12,905 kgCO$_2$e |
-| Multimodal | Porto de Manaus $\rightarrow$ destino | 4,524 L de diesel | R$ 28,57 | 12,124 kgCO$_2$e |
-| **Multimodal** | **Soma dos componentes quantificados** | — | **R$ 1.494,41** | **1.476,518 kgCO$_2$e** |
-
-No exemplo, a soma usa as casas decimais mantidas pelo cálculo antes do arredondamento exibido na tabela:
-
-$$
-C_{\mathrm{multi}}=
-364{,}005893+1.071{,}403298+30{,}437459+28{,}567455
-=1.494{,}414105.
-$$
-
-$$
-E_{\mathrm{multi}}=
-154{,}479144+1.297{,}009676+12{,}905193+12{,}123639
-=1.476{,}517652\ \mathrm{kgCO_2e}.
-$$
-
-Portanto, o custo multimodal arredondado é R$ 1.494,41 e as emissões são 1.476,518 kgCO$_2$e. O total rodoviário, calculado de forma independente, é R$ 16.347,22 e 6.937,536 kgCO$_2$e.
-
-As operações portuárias desse exemplo usam o cenário documentado de Santos para as duas chamadas e, por isso, são identificadas como uma referência documentada, não como uma medição específica dos terminais de Santos e Manaus. O guindaste de cais (STS) teve movimentos previstos, mas não possuía parâmetro de consumo de combustível disponível. Ele é marcado como indisponível e não como consumo zero. Portanto, R$ 1.494,41 e 1.476,518 kgCO$_2$e são a soma dos componentes que puderam ser quantificados; o resultado portuário, e consequentemente o total multimodal, permanece parcial.
-
 O sistema também evita contar duas vezes o consumo do navio atracado. Quando a intensidade por trabalho de transporte do EU MRV é aplicada à navegação, não acrescenta uma estimativa separada de *hoteling*, isto é, de combustível consumido pelo navio enquanto está no porto. Os equipamentos do terminal permanecem em uma linha própria, porque seu consumo não faz parte dessa intensidade [berth2009; shipops2022]. O custo apresentado é um custo operacional de combustível modelado; não é uma cotação de frete comercial.
 
 ## 4. Implementação computacional
@@ -426,7 +395,7 @@ A Tabela 8 apresenta as tecnologias e os serviços que dão suporte ao sistema. 
 | :-- | :-- | :-- |
 | Python | Linguagem principal do projeto. | Executa o tratamento de dados, a reconstrução marítima, os cálculos e os scripts de atualização. |
 | Streamlit | Ferramenta para construir a interface web em Python. | Recebe o cenário informado pelo usuário e apresenta mapas, totais, detalhamentos e avisos. |
-| Supabase PostgreSQL e `psycopg` | Supabase fornece o banco PostgreSQL, também chamado de Postgres; `psycopg` é a biblioteca que conecta o Python a esse banco. | Guarda pontos geocodificados, rotas reutilizáveis, execuções em lote e resultados que precisam permanecer disponíveis. |
+| Supabase PostgreSQL e `psycopg` | Supabase fornece o banco de dados (PostgreSQL), também chamado de Postgres; `psycopg` é a biblioteca que conecta o Python a esse banco. | Guarda pontos geocodificados, rotas reutilizáveis, execuções em lote e resultados que precisam permanecer disponíveis. |
 | Supabase Storage | Armazenamento remoto opcional de arquivos. | Pode sincronizar artefatos de dados e registros de execução; não substitui as fontes originais nem o banco Postgres. |
 | OpenRouteService (ORS) | Serviço externo de localização e roteamento. | É o provedor principal para transformar um local em coordenadas e obter a geometria das rotas rodoviárias. |
 | LocationIQ | Serviço externo alternativo de localização e roteamento. | É consultado somente quando o ORS não entrega uma resposta utilizável e há credencial configurada. |

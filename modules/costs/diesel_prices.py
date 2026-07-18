@@ -300,6 +300,71 @@ def get_average_price_from_lookup(
     }
 
 
+def get_price_for_uf_from_lookup(
+    uf: str,
+    lookup: DieselPriceLookup,
+) -> Dict[str, Any]:
+    """Resolve the diesel price recorded for one UF without averaging states."""
+    uf_norm = normalize_uf(uf)
+
+    if not lookup.uf_to_price or not uf_norm:
+        reason_parts: list[str] = []
+        if not lookup.uf_to_price:
+            reason_parts.append("empty_or_missing_table")
+        if not uf_norm:
+            reason_parts.append("missing_uf")
+        reason = ",".join(reason_parts) or "unknown"
+        price = float(lookup.default_price_r_per_l)
+        _log.warning(
+            "get_price_for_uf_from_lookup: fallback to default. uf=%r default=%.4f reason=%s",
+            uf_norm,
+            price,
+            reason,
+        )
+        return {
+            "price_r_per_l": price,
+            "source": "default_price_param",
+            "price_method": "single_uf",
+            "uf": uf_norm or None,
+            "price_uf": None,
+            "source_csv": lookup.source_csv,
+            "csv_path": lookup.source_csv,
+            "fallback_used": True,
+            "fallback_reason": reason,
+        }
+
+    price = lookup.uf_to_price.get(uf_norm)
+    if price is None:
+        fallback_price = float(lookup.default_price_r_per_l)
+        _log.warning(
+            "get_price_for_uf_from_lookup: fallback to default. uf=%r default=%.4f reason=uf_not_found",
+            uf_norm,
+            fallback_price,
+        )
+        return {
+            "price_r_per_l": fallback_price,
+            "source": "default_price_param",
+            "price_method": "single_uf",
+            "uf": uf_norm,
+            "price_uf": None,
+            "source_csv": lookup.source_csv,
+            "csv_path": lookup.source_csv,
+            "fallback_used": True,
+            "fallback_reason": "uf_not_found",
+        }
+
+    return {
+        "price_r_per_l": float(price),
+        "source": "latest_diesel_prices_csv",
+        "price_method": "single_uf",
+        "uf": uf_norm,
+        "price_uf": float(price),
+        "source_csv": lookup.source_csv,
+        "csv_path": lookup.source_csv,
+        "fallback_used": False,
+    }
+
+
 def get_average_price(
     uf_o: str,
     uf_d: str,
@@ -321,6 +386,20 @@ def get_average_price(
         float(meta.get("price_r_per_l") or 0.0),
     )
     return meta
+
+
+def get_price_for_uf(
+    uf: str,
+    *,
+    default_price_r_per_l: float = 6.0,
+    csv_path: str | Path | None = None,
+) -> Dict[str, Any]:
+    """UF-specific adapter used when a calculation occurs at one port."""
+    lookup = build_price_lookup(
+        default_price_r_per_l=default_price_r_per_l,
+        csv_path=csv_path,
+    )
+    return get_price_for_uf_from_lookup(uf, lookup)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -222,6 +222,25 @@ class PortOpsFallbackTests(unittest.TestCase):
         self.assertEqual(result["port_call_breakdown"][1]["source_level"], "estimated_port_average")
         self.assertGreater(result["totals"]["co2e_kg"], 0.0)
 
+    def test_documented_port_calls_use_individual_diesel_prices(self) -> None:
+        result = estimate_port_ops(
+            port_calls=2,
+            cargo_teu=1.0,
+            selection=self._documented_selection(),
+            port_names=["Porto A", "Porto B"],
+            diesel_prices_per_call=[5.0, 10.0],
+        )
+
+        first_call, second_call = result["port_call_breakdown"]
+        self.assertAlmostEqual(first_call["diesel_liters"], 2.0)
+        self.assertAlmostEqual(second_call["diesel_liters"], 2.0)
+        self.assertAlmostEqual(first_call["diesel_price_r_per_l"], 5.0)
+        self.assertAlmostEqual(second_call["diesel_price_r_per_l"], 10.0)
+        self.assertAlmostEqual(first_call["cost_brl"], 10.0)
+        self.assertAlmostEqual(second_call["cost_brl"], 20.0)
+        self.assertAlmostEqual(result["totals"]["cost_brl"], 30.0)
+        self.assertEqual(result["diesel_prices_per_call"], [5.0, 10.0])
+
     def test_default_santos_scenario_total_is_unchanged_with_metadata(self) -> None:
         result = estimate_port_ops(port_calls=2, cargo_teu=1.0)
 
@@ -301,8 +320,8 @@ class EvaluatorPortOpsIntegrationTests(unittest.TestCase):
             "status": "ok",
             "origin": {"label": "Origin, SP", "uf": "SP"},
             "destiny": {"label": "Destiny, RJ", "uf": "RJ"},
-            "port_origin": {"name": port_origin_name},
-            "port_destiny": {"name": port_destiny_name},
+            "port_origin": {"name": port_origin_name, "state": "SP"},
+            "port_destiny": {"name": port_destiny_name, "state": "RJ"},
             "road_direct": {"distance_km": road_direct_km},
             "first_mile": {"distance_km": first_mile_km},
             "last_mile": {"distance_km": last_mile_km},

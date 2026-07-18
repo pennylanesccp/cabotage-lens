@@ -663,6 +663,22 @@ def _resolve_port_call_names(port_names: Sequence[str] | None, calls: int) -> li
     return names
 
 
+def _resolve_diesel_prices_per_call(
+    diesel_prices_per_call: Sequence[float | None] | None,
+    calls: int,
+    diesel_price_per_l: float | None,
+) -> list[float | None]:
+    """Resolve one diesel price per port call, preserving scalar compatibility."""
+    fallback_price = _nonnegative_float_or_none(diesel_price_per_l)
+    supplied = tuple(diesel_prices_per_call) if diesel_prices_per_call is not None else ()
+    resolved: list[float | None] = []
+    for index in range(max(int(calls), 0)):
+        supplied_price = supplied[index] if index < len(supplied) else None
+        price = _nonnegative_float_or_none(supplied_price)
+        resolved.append(fallback_price if price is None else float(price))
+    return resolved
+
+
 def _equipment_zero_warning(
     *,
     equipment_name: str,
@@ -738,6 +754,7 @@ def estimate_port_ops(
     full_call_mode: bool = False,
     stat_key: str = "median",
     diesel_price_per_l: float | None = None,
+    diesel_prices_per_call: Sequence[float | None] | None = None,
     params_path: Path | None = None,
     selection: PortOpsScenarioSelection | None = None,
     port_names: Sequence[str] | None = None,
@@ -758,6 +775,16 @@ def estimate_port_ops(
     selection = selection or resolve_port_ops_scenario(scenario=scenario, params_path=params_path)
 
     calls = max(int(port_calls), 0)
+    resolved_diesel_prices_per_call = _resolve_diesel_prices_per_call(
+        diesel_prices_per_call,
+        calls,
+        diesel_price_per_l,
+    )
+    effective_diesel_price_per_l = (
+        sum(float(price) for price in resolved_diesel_prices_per_call) / float(calls)
+        if calls > 0 and all(price is not None for price in resolved_diesel_prices_per_call)
+        else _nonnegative_float_or_none(diesel_price_per_l)
+    )
 
     requested_moves = None if port_moves_per_call is None else max(float(port_moves_per_call), 0.0)
 
@@ -824,7 +851,11 @@ def estimate_port_ops(
         electricity_kwh = equipment_moves_total * electric_kwh_per_move
         electricity_co2e_kg = electricity_kwh * selection.electricity_kg_co2e_per_kwh
 
-        diesel_cost_brl = diesel_liters * float(diesel_price_per_l) if diesel_price_per_l is not None else 0.0
+        diesel_cost_brl = (
+            diesel_liters * float(effective_diesel_price_per_l)
+            if effective_diesel_price_per_l is not None
+            else 0.0
+        )
         electricity_cost_brl = electricity_kwh * selection.electricity_price_brl_per_kwh
         total_cost_brl = diesel_cost_brl + electricity_cost_brl
         zero_warning = _equipment_zero_warning(
@@ -903,7 +934,7 @@ def estimate_port_ops(
             "cost_brl": 0.0,
         }
         if calls > 0:
-            for port_name in port_call_names:
+            for index, port_name in enumerate(port_call_names):
                 port_call_breakdown.append(
                     {
                         "port_name": str(port_name),
@@ -912,6 +943,7 @@ def estimate_port_ops(
                         "fuel_kg": 0.0,
                         "co2e_kg": 0.0,
                         "diesel_liters": 0.0,
+                        "diesel_price_r_per_l": resolved_diesel_prices_per_call[index],
                         "cost_brl": 0.0,
                         "source_level": _SOURCE_ZERO_ACTIVITY,
                         "basis": "zero_activity",
@@ -933,7 +965,7 @@ def estimate_port_ops(
             "cost_brl": 0.0,
         }
 
-        for port_name in port_call_names:
+        for index, port_name in enumerate(port_call_names):
             fuel_resolution = resolve_port_ops_intensity(
                 port_name=port_name,
                 denominator=moves_per_call,
@@ -977,7 +1009,12 @@ def estimate_port_ops(
                 co2e_kg = 0.0 if co2e_value is None else float(co2e_value)
 
             diesel_liters = fuel_kg / selection.diesel_density_kg_per_l if selection.diesel_density_kg_per_l > 0 else 0.0
-            diesel_cost_brl = diesel_liters * float(diesel_price_per_l) if diesel_price_per_l is not None else 0.0
+            diesel_price_for_call = resolved_diesel_prices_per_call[index]
+            diesel_cost_brl = (
+                diesel_liters * float(diesel_price_for_call)
+                if diesel_price_for_call is not None
+                else 0.0
+            )
 
             source_level = str(fuel_resolution.get("source_level") or _SOURCE_UNAVAILABLE)
             if source_level == _SOURCE_UNAVAILABLE and str(co2e_resolution.get("source_level")) != _SOURCE_UNAVAILABLE:
@@ -1001,6 +1038,7 @@ def estimate_port_ops(
                     "fuel_kg": None if fuel_value is None else float(fuel_kg),
                     "co2e_kg": None if co2e_value is None and fuel_value is None else float(co2e_kg),
                     "diesel_liters": float(diesel_liters),
+                    "diesel_price_r_per_l": diesel_price_for_call,
                     "cost_brl": float(diesel_cost_brl),
                     "source_level": source_level,
                     "fuel_available": fuel_value is not None,
@@ -1018,10 +1056,21 @@ def estimate_port_ops(
             totals["co2e_kg"] += co2e_kg
             totals["cost_brl"] += diesel_cost_brl
     else:
+        totals["cost_brl"] = 0.0
         if calls > 0:
-            for port_name in port_call_names:
+            for index, port_name in enumerate(port_call_names):
                 call_share = (moves_per_call / total_denominator) if total_denominator > 0.0 else 0.0
                 call_available = scenario_totals["fuel_kg"] > 0.0 or scenario_totals["co2e_kg"] > 0.0
+                diesel_liters = float(scenario_totals["diesel_liters"] * call_share)
+                electricity_kwh = float(scenario_totals["electricity_kwh"] * call_share)
+                diesel_price_for_call = resolved_diesel_prices_per_call[index]
+                diesel_cost_brl = (
+                    diesel_liters * float(diesel_price_for_call)
+                    if diesel_price_for_call is not None
+                    else 0.0
+                )
+                electricity_cost_brl = electricity_kwh * selection.electricity_price_brl_per_kwh
+                call_cost_brl = diesel_cost_brl + electricity_cost_brl
                 port_call_breakdown.append(
                     {
                         "port_name": str(port_name),
@@ -1029,8 +1078,10 @@ def estimate_port_ops(
                         "activity_unit": denominator_unit,
                         "fuel_kg": float(scenario_totals["fuel_kg"] * call_share) if call_available else None,
                         "co2e_kg": float(scenario_totals["co2e_kg"] * call_share) if call_available else None,
-                        "diesel_liters": float(scenario_totals["diesel_liters"] * call_share),
-                        "cost_brl": float(scenario_totals["cost_brl"] * call_share),
+                        "diesel_liters": diesel_liters,
+                        "diesel_price_r_per_l": diesel_price_for_call,
+                        "electricity_kwh": electricity_kwh,
+                        "cost_brl": float(call_cost_brl),
                         "source_level": _SOURCE_LITERATURE_DEFAULT if call_available else _SOURCE_UNAVAILABLE,
                         "basis": "documented_moves_based_scenario",
                         "fuel_available": scenario_totals["fuel_kg"] > 0.0,
@@ -1045,6 +1096,7 @@ def estimate_port_ops(
                         else "No observed port-ops records or valid documented positive default were available.",
                     }
                 )
+                totals["cost_brl"] += call_cost_brl
         if scenario_totals["fuel_kg"] > 0.0 or scenario_totals["co2e_kg"] > 0.0:
             warnings.append(
                 "No port-specific observed port-ops records were available; used documented moves-based scenario."
@@ -1095,6 +1147,11 @@ def estimate_port_ops(
         "default_port_moves_per_call": selection.default_port_moves_per_call,
         "diesel_fuel_type": selection.diesel_fuel_type,
         "diesel_density_kg_per_l": float(selection.diesel_density_kg_per_l),
+        "diesel_price_r_per_l": effective_diesel_price_per_l,
+        "diesel_prices_per_call": [
+            None if price is None else float(price)
+            for price in resolved_diesel_prices_per_call
+        ],
         "electricity_kg_co2e_per_kwh": float(selection.electricity_kg_co2e_per_kwh),
         "source_level": source_level,
         "source_level_counts": source_counts,
