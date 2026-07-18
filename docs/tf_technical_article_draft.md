@@ -554,12 +554,12 @@ Depois de confirmar que o XLSX baixado gerou uma tabela válida de preços por U
 
 **Tabela 12 — Recorte bruto da planilha semanal da ANP para `OLEO DIESEL S10`.**
 
-| DATA INICIAL | DATA FINAL | REGIÃO | ESTADO | PRODUTO | NÚMERO DE POSTOS PESQUISADOS | UNIDADE DE MEDIDA | PREÇO MÉDIO REVENDA | PREÇO MÍNIMO REVENDA | PREÇO MÁXIMO REVENDA |
-| :-- | :-- | :-- | :-- | :-- | --: | :-- | --: | --: | --: |
-| 07-12-26 | 07-18-26 | SUDESTE | SAO PAULO | OLEO DIESEL S10 | 865 | R$/l | 6.96 | 5.99 | 9.99 |
-| 07-12-26 | 07-18-26 | NORTE | ACRE | OLEO DIESEL S10 | 1 | R$/l | 9.27 | 9.27 | 9.27 |
-| 07-12-26 | 07-18-26 | NORTE | AMAZONAS | OLEO DIESEL S10 | 35 | R$/l | 7.25 | 6.99 | 8.99 |
-| 07-12-26 | 07-18-26 | NORDESTE | PERNAMBUCO | OLEO DIESEL S10 | 162 | R$/l | 6.88 | 6.49 | 7.99 |
+| DATA INICIAL | DATA FINAL | REGIÃO | ESTADO | PRODUTO | UNIDADE DE MEDIDA | PREÇO MÉDIO REVENDA |
+| :-- | :-- | :-- | :-- | :-- | :-- | --: |
+| 07-12-26 | 07-18-26 | SUDESTE | SAO PAULO | OLEO DIESEL S10 | R$/l | 6.96 |
+| 07-12-26 | 07-18-26 | NORTE | ACRE | OLEO DIESEL S10 | R$/l | 9.27 |
+| 07-12-26 | 07-18-26 | NORTE | AMAZONAS | OLEO DIESEL S10 | R$/l | 7.25 |
+| 07-12-26 | 07-18-26 | NORDESTE | PERNAMBUCO | OLEO DIESEL S10 | R$/l | 6.88 |
 
 *Fonte: planilha semanal de preços de revenda por estado da ANP, aba `ESTADOS - DESDE 30.12.2012`, produto `OLEO DIESEL S10`, período de 12 a 18 de julho de 2026. Valores reproduzidos do arquivo `SEMANAL_ESTADOS-DESDE_2013.xlsx` usado para conferir a rotina de leitura.*
 
@@ -588,21 +588,23 @@ flowchart LR
 
 ### 4.4 Montagem da alternativa multimodal
 
-Depois de calcular a rota rodoviária direta, começa a construção da alternativa multimodal. É aproveitado da etapa anterior: o(s) veículo(s) para transporte rodoviário; os endereços geocodificados; e os preços do diesel por UF.
+Depois de calcular a rota rodoviária direta, o sistema monta a alternativa multimodal. Essa etapa reutiliza os veículos representativos do transporte rodoviário, os endereços já geocodificados e os preços de diesel por unidade federativa.
 
 #### 4.4.1 Reconstrução das viagens e matriz marítima
 
 Antes de definir os portos de um novo cenário, o sistema prepara a referência marítima com viagens de cabotagem que realmente ocorreram. Essa preparação é feita quando a base é atualizada, e não a cada consulta. Assim, a comparação não precisa reprocessar os arquivos brutos para cada rota: ela consulta uma matriz marítima já construída com dados observados.
 
-A função de reconstrução lê as tabelas de Carga e Atracação da Agência Nacional de Transportes Aquaviários (ANTAQ). A Atracação identifica o navio, o porto, a data da escala e o número IMO; a Carga informa os embarques e os desembarques realizados nessa escala. A função reúne os registros da mesma viagem, ordena as escalas no tempo e atualiza a carga a bordo após cada movimentação. Com isso, transforma linhas isoladas das tabelas em subtrechos consecutivos percorridos pelo navio.
+A função de reconstrução lê as tabelas de Carga, Atracação e Tempos de Atracação da Agência Nacional de Transportes Aquaviários (ANTAQ). Ela mantém os registros de cabotagem conteinerizada e relaciona cada movimentação de carga à escala correspondente. A Atracação fornece o porto, a data e o número da Organização Marítima Internacional (IMO) do navio; a Carga informa o que foi embarcado e desembarcado.
 
-Quando um porto aparece antes de outro na mesma viagem, o sistema forma um recorte completo entre eles. Esse recorte pode ser direto ou incluir escalas intermediárias. Por exemplo, uma sequência Santos–Suape–Pecém–Manaus contribui para a ligação Santos–Manaus com os três subtrechos observados; uma sequência Manaus–Suape–Santos não contribui, pois está no sentido contrário. Portanto, a reconstrução usa os corredores que aparecem nos dados, sem impor uma rota fixa.
+Em seguida, a função reúne as escalas do mesmo navio em ordem cronológica. Escalas consecutivas no mesmo porto são unificadas, e uma nova viagem é iniciada quando há uma interrupção superior a 240 horas ou quando o navio retorna ao porto inicial. Isso impede que trechos de viagens diferentes sejam combinados como se formassem um único percurso.
 
-Na etapa seguinte, cada recorte recebe a distância de seus subtrechos e a intensidade de combustível do navio. A busca começa pelo número IMO no sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV). Quando não há um indicador individual utilizável, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem, conforme o método apresentado na Seção 3.3.4.
+A carga a bordo também é reconstruída em cada escala. O sistema calcula o saldo entre o que entrou e o que saiu do navio e aplica esse saldo ao subtrecho seguinte. Quando o recorte de dados começa com o navio já carregado, é calculada a carga inicial mínima necessária para evitar valores negativos. Depois disso, cada par de portos em que a origem aparece antes do destino forma um recorte completo. Esse recorte pode ser direto ou incluir escalas intermediárias. Por exemplo, Santos–Suape–Pecém–Manaus contribui para Santos–Manaus com seus três subtrechos; Manaus–Suape–Santos não contribui, pois está no sentido contrário.
 
-Esses resultados são reunidos na estrutura \`SeaMatrix\`. Para cada par ordenado de portos, ela mantém a distância média dos recortes completos observados, a intensidade média ponderada pelo trabalho de transporte, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois podem reunir viagens e distâncias observadas diferentes.
+Para cada subtrecho, a distância é buscada primeiro na matriz de distâncias entre portos. Quando esse dado não está disponível, a rotina estima a distância por Haversine e registra essa condição. A intensidade de combustível é buscada pelo IMO no sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV). Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem, conforme o método apresentado na Seção 3.3.4.
 
-\`\`\`mermaid
+Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância média dos recortes completos observados, a intensidade média ponderada pelo trabalho de transporte, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois podem reunir viagens e distâncias observadas diferentes.
+
+```mermaid
 flowchart LR
     A["Carga e Atracação<br/>ANTAQ"] --> B["Reconstrução das viagens<br/>e da carga a bordo"]
     B --> C["Recortes completos<br/>entre portos ordenados"]
@@ -610,13 +612,13 @@ flowchart LR
     C --> F["SeaMatrix<br/>distância, intensidade e cobertura"]
     E --> F
     F --> G["Consulta posterior<br/>do par de portos selecionado"]
-\`\`\`
+```
 
-As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A distância é a média das viagens completas observadas para cada sentido. A contagem representa um recorte completo elegível por viagem e por par ordenado; ela não corresponde ao número de escalas nem apenas a ligações diretas. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
+As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A distância é a média das viagens completas observadas para cada sentido. Em cada célula da segunda tabela, a contagem representa as viagens que geraram um recorte completo elegível naquele par ordenado; ela não corresponde ao número de escalas nem apenas a ligações diretas. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
 
 **Tabela 13 — Distância média dos recortes completos observados na matriz marítima (km).**
 
-| Origem \ Destino | Santos | Salvador | Suape | Pecém | Manaus |
+| Origem / destino | Santos | Salvador | Suape | Pecém | Manaus |
 | :-- | --: | --: | --: | --: | --: |
 | Santos | — | 2.459,033 | 3.051,949 | 3.696,619 | 6.115,349 |
 | Salvador | 3.066,008 | — | 3.119,115 | 2.676,181 | 3.848,299 |
@@ -626,9 +628,9 @@ As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. 
 
 *Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
 
-**Tabela 14 — Quantidade de recortes completos observados na matriz marítima.**
+**Tabela 14 — Número de viagens observadas (recortes completos) na matriz marítima.**
 
-| Origem \ Destino | Santos | Salvador | Suape | Pecém | Manaus |
+| Origem / destino | Santos | Salvador | Suape | Pecém | Manaus |
 | :-- | --: | --: | --: | --: | --: |
 | Santos | — | 165 | 270 | 167 | 89 |
 | Salvador | 195 | — | 119 | 101 | 53 |
@@ -648,9 +650,9 @@ O pipeline executa a função uma vez para as coordenadas da origem, definindo o
 
 Essa sequência reduz consultas desnecessárias aos provedores de rota. Em vez de solicitar uma rota rodoviária para cada porto candidato de uma coordenada, o sistema faz uma única consulta para o acesso do porto já selecionado. Assim, a distância usada no cálculo continua sendo rodoviária, enquanto a distância de Haversine é usada apenas como um filtro rápido para definir qual porto consultar.
 
-No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque. A Tabela 13 compara a distância de Haversine usada na seleção com a distância rodoviária calculada depois que cada porto foi escolhido.
+No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque. A Tabela 15 compara a distância de Haversine usada na seleção com a distância rodoviária calculada depois que cada porto foi escolhido.
 
-**Tabela 13 — Distâncias de seleção e de acesso rodoviário no exemplo São Paulo–Rio Branco.**
+**Tabela 15 — Distâncias de seleção e de acesso rodoviário no exemplo São Paulo–Rio Branco.**
 
 | Acesso | Ponto geocodificado | Referência do porto | Haversine: seleção | Distância rodoviária: cálculo |
 | :-- | :-- | :-- | --: | --: |
@@ -675,7 +677,7 @@ flowchart LR
     F --> G["Rio Branco, AC"]
 ```
 
-**Tabela 14 — Cadeia multimodal montada pelo pipeline no exemplo São Paulo–Rio Branco.**
+**Tabela 16 — Cadeia multimodal montada pelo pipeline no exemplo São Paulo–Rio Branco.**
 
 | Etapa | Resultado montado na execução | Como o sistema obtém o dado |
 | :-- | :-- | :-- |
@@ -688,35 +690,15 @@ flowchart LR
 
 A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,91 kg CO₂e.
 
-### 4.5 Preparação e consulta da matriz marítima
+### 4.5 Consulta da ligação marítima
 
-Esta etapa ocorre antes da avaliação de um cenário. Em outras palavras, a aplicação não reconstrói todos os arquivos da ANTAQ cada vez que o usuário consulta uma origem e um destino. Primeiro, o pipeline prepara uma matriz com as ligações marítimas observadas; depois, durante a comparação, consulta nessa matriz apenas o par de portos selecionado.
+Com os portos de embarque e desembarque já definidos, o avaliador consulta a matriz preparada na Seção 4.4.1. Nessa etapa, ele não escolhe um novo corredor nem reconstrói as viagens históricas: apenas recupera os valores representativos do par de portos selecionado e os aplica à carga do cenário.
 
-#### 4.5.1 Preparação com dados históricos
+#### 4.5.1 Consulta da ligação marítima no cenário
 
-Na atualização da base, o pipeline lê os arquivos de Carga e Atracação da Agência Nacional de Transportes Aquaviários (ANTAQ), associa os registros ao mesmo navio e coloca as escalas em ordem cronológica. Os embarques e desembarques de cada escala atualizam a carga a bordo antes do subtrecho seguinte. Assim, a implementação produz viagens observadas com seus subtrechos, em vez de impor ao navio uma sequência de portos definida no código.
+No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos–Manaus. A Tabela 17 mostra o que a matriz devolve para esse par. Um recorte é a parte de uma viagem observada compreendida entre os dois portos da ligação; ele pode ser direto ou conter escalas intermediárias.
 
-Para cada viagem reconstruída, o sistema também consulta o número da Organização Marítima Internacional (IMO) no sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV). Quando o indicador individual do navio está disponível e não é classificado como valor atípico, ele é usado. Nos demais casos, o pipeline aplica a estatística robusta da classe do navio ou, quando necessário, do tipo. A fonte efetivamente aplicada permanece registrada em cada recorte.
-
-#### 4.5.2 Formação da matriz marítima
-
-Os recortes entre dois portos são reunidos em uma estrutura chamada `SeaMatrix`. Para cada par ordenado de portos, ela armazena a intensidade média ponderada pelo trabalho de transporte, a distância média das viagens completas e as informações de procedência. A matriz, portanto, separa o tratamento dos dados históricos da consulta feita em um novo cenário.
-
-```mermaid
-flowchart LR
-    A["Carga e Atracação<br/>ANTAQ"] --> B["Ordenar escalas e<br/>reconstruir subtrechos"]
-    B --> C["Recortes observados<br/>entre os portos"]
-    D["EU MRV<br/>intensidade por IMO"] --> E["Intensidade individual<br/>ou referência robusta"]
-    C --> F["SeaMatrix"]
-    E --> F
-    F --> G["Consulta Santos–Manaus<br/>intensidade e distância"]
-```
-
-#### 4.5.3 Consulta da ligação marítima no cenário
-
-No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos–Manaus. A Tabela 15 mostra o que a matriz devolve para esse par. Um recorte é a parte de uma viagem observada compreendida entre os dois portos da ligação; ele pode ser direto ou conter escalas intermediárias.
-
-**Tabela 15 — Informações devolvidas pela matriz marítima para a ligação Santos–Manaus.**
+**Tabela 17 — Informações devolvidas pela matriz marítima para a ligação Santos–Manaus.**
 
 | Informação | Valor retornado na execução | Como deve ser lido |
 | :-- | :-- | :-- |
@@ -754,7 +736,7 @@ flowchart LR
 
 Quando a intensidade marítima do EU MRV já representa o consumo por trabalho de transporte, o avaliador não acrescenta uma parcela separada para o combustível do navio durante a atracação. Essa decisão evita dupla contagem. Os equipamentos portuários permanecem como parcela própria, pois representam uma atividade diferente.
 
-**Tabela 16 — Parcelas geradas pelo avaliador no exemplo São Paulo–Rio Branco.**
+**Tabela 18 — Parcelas geradas pelo avaliador no exemplo São Paulo–Rio Branco.**
 
 | Parcela | Custo modelado | Emissões TTW | Situação registrada |
 | :-- | --: | --: | :-- |
@@ -768,9 +750,9 @@ O total acima é o mesmo apresentado na Seção 3.3.7. A comparação final com
 
 ### 4.7 Rastreabilidade e auditoria
 
-O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 17 exemplifica esse registro no cenário São Paulo–Rio Branco.
+O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 19 exemplifica esse registro no cenário São Paulo–Rio Branco.
 
-**Tabela 17 — Informações de rastreabilidade registradas no exemplo São Paulo–Rio Branco.**
+**Tabela 19 — Informações de rastreabilidade registradas no exemplo São Paulo–Rio Branco.**
 
 | Informação registrada | Exemplo no cenário | Finalidade |
 | :-- | :-- | :-- |
@@ -807,9 +789,9 @@ flowchart LR
     E --> F
 ```
 
-A Tabela 18 mostra quatro formas de medir a cobertura do cruzamento entre a Agência Nacional de Transportes Aquaviários (ANTAQ) e o sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV): por navio, por viagem, pela massa e por contêiner equivalente. Cada proporção responde a uma pergunta diferente; por isso, elas não devem ser somadas nem interpretadas como uma única taxa de qualidade.
+A Tabela 20 mostra quatro formas de medir a cobertura do cruzamento entre a Agência Nacional de Transportes Aquaviários (ANTAQ) e o sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV): por navio, por viagem, pela massa e por contêiner equivalente. Cada proporção responde a uma pergunta diferente; por isso, elas não devem ser somadas nem interpretadas como uma única taxa de qualidade.
 
-**Tabela 18 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
+**Tabela 20 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
 | Indicador                                |                              Valor | Cobertura |
 | :--------------------------------------- | ---------------------------------: | --------: |
@@ -818,9 +800,9 @@ A Tabela 18 mostra quatro formas de medir a cobertura do cruzamento entre a Agê
 | Carga em massa com correspondência exata | 15.959.761,561 de 30.191.845,948 t |     52,9% |
 | Carga em TEU com correspondência exata   |   1.454.351,75 de 2.872.715,00 TEU |     50,6% |
 
-Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 19 separa essas situações e também mostra a procedência das distâncias marítimas.
+Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 21 separa essas situações e também mostra a procedência das distâncias marítimas.
 
-**Tabela 19 — Reconstrução e procedência dos dados na base processada.**
+**Tabela 21 — Reconstrução e procedência dos dados na base processada.**
 
 | Resultado do processamento | Quantidade | Leitura para o cálculo |
 | :-- | --: | :-- |
@@ -853,7 +835,7 @@ flowchart LR
 
 O fluxograma não representa uma rota única criada pelo sistema. Ele mostra exemplos de sequências observadas na Agência Nacional de Transportes Aquaviários (ANTAQ). A ligação é calculada com todos os recortes aceitos no mesmo sentido, inclusive os que não passam por Suape.
 
-**Tabela 20 — Formação do indicador marítimo Santos–Manaus.**
+**Tabela 22 — Formação do indicador marítimo Santos–Manaus.**
 
 | Informação | Valor observado ou calculado | Papel no indicador |
 | :-- | :-- | :-- |
@@ -868,7 +850,7 @@ O fluxograma não representa uma rota única criada pelo sistema. Ele mostra exe
 
 Como verificação da dispersão do conjunto de navios do tipo *container ship*, a média aritmética sem tratamento dos 243 valores seria 21,661852 g/(t·nm), enquanto a mediana seria 4,620000 g/(t·nm). Esses números não substituem a regra aplicada: eles mostram por que a média aparada é usada como referência quando não há intensidade individual utilizável.
 
-Os valores da Tabela 20 não são a carga nem o combustível de uma nova remessa. Eles formam a intensidade e a distância que serão aplicadas à carga informada pelo usuário. Portanto, a média representa a ligação Santos–Manaus sem se transformar em uma viagem física única.
+Os valores da Tabela 22 não são a carga nem o combustível de uma nova remessa. Eles formam a intensidade e a distância que serão aplicadas à carga informada pelo usuário. Portanto, a média representa a ligação Santos–Manaus sem se transformar em uma viagem física única.
 
 #### 5.2.2 Conferência de uma viagem histórica
 
