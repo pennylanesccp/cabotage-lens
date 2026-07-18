@@ -548,22 +548,20 @@ Essa proximidade mostra que a distância usada no cálculo representa uma rota p
 
 #### 4.3.2 Consulta do preço do diesel
 
-Para calcular o custo, a rotina Python busca os preços mais recentes de Diesel S10. Ela baixa a planilha semanal de preços de revenda por estado da Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP), disponibilizada no site oficial da agência.
+Para calcular o custo, a rotina Python busca os preços mais recentes de Diesel S10. Ela baixa a planilha semanal de preços de revenda por estado da Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP), disponibilizada no [site oficial da agência](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/precos-revenda-e-de-distribuicao-combustiveis/shlp/semanal/).
 
-Depois de confirmar que o XLSX baixado gerou uma tabela válida de preços por Unidade da Federação (UF), a rotina envia os dois arquivos ao Supabase Storage, o espaço de armazenamento de arquivos do projeto. O XLSX substitui o objeto anterior em `data/raw/road_data/semanal-estados-desde-2013.xlsx`, preservando a fonte bruta. O CSV normalizado substitui `data/processed/road_data/latest_diesel_prices.csv`, que é o insumo consultado pelo sistema. Se a consulta à ANP ou o envio ao armazenamento falhar, o cálculo mantém a última tabela válida disponível e registra um aviso, em vez de usar preço zero.
+Depois de confirmar que o XLSX baixado gerou uma tabela válida de preços por Unidade da Federação (UF), a rotina também salva os dois arquivos no Supabase Storage, o espaço de armazenamento de arquivos do projeto, para garantir rastreabilidade e uma alternativa caso o site da ANP esteja indisponível.
 
 **Tabela 12 — Exemplo de dados da planilha semanal da ANP e sua associação à UF para Diesel S10.**
 
 | UF após o tratamento | Estado na planilha | Postos pesquisados | Preço médio de revenda | Preço mínimo | Preço máximo |
 | :-- | :-- | --: | --: | --: | --: |
-| SP | São Paulo | 744 | R$ 6,12/L | R$ 5,39/L | R$ 8,99/L |
-| AC | Acre | 8 | R$ 7,61/L | R$ 7,30/L | R$ 8,17/L |
-| AM | Amazonas | 33 | R$ 6,51/L | R$ 6,49/L | R$ 6,78/L |
-| PE | Pernambuco | 129 | R$ 5,82/L | R$ 5,49/L | R$ 6,99/L |
+| SP | São Paulo | 865 | R$ 6,96/L | R$ 5,99/L | R$ 9,99/L |
+| AC | Acre | 1 | R$ 9,27/L | R$ 9,27/L | R$ 9,27/L |
+| AM | Amazonas | 35 | R$ 7,25/L | R$ 6,99/L | R$ 8,99/L |
+| PE | Pernambuco | 162 | R$ 6,88/L | R$ 6,49/L | R$ 7,99/L |
 
-*Fonte: planilha semanal de preços de revenda por estado da ANP, aba `ESTADOS - DESDE 30.12.2012`, produto `OLEO DIESEL S10`, período de 9 a 15 de novembro de 2025. Valores reproduzidos do arquivo `semanal-estados-desde-2013.xlsx` usado para conferir a rotina de leitura.*
-
-Esse arquivo de conferência tem dados até novembro de 2025; portanto, os valores da Tabela 12 ilustram a estrutura da fonte e não substituem os preços atualizados empregados no exemplo São Paulo–Rio Branco. Os valores dessa execução, obtidos na atualização de julho de 2026, estão identificados na Seção 3.2.2. Depois de obter a tabela por UF, a regra de precificação é a mesma apresentada naquela seção: em uma rota entre dois estados, o avaliador calcula a média entre os preços da UF de origem e da UF de destino; em uma rota dentro do mesmo estado, utiliza o preço dessa própria UF.
+*Fonte: planilha semanal de preços de revenda por estado da ANP, aba `ESTADOS - DESDE 30.12.2012`, produto `OLEO DIESEL S10`, período de 12 a 18 de julho de 2026. Valores reproduzidos do arquivo `SEMANAL_ESTADOS-DESDE_2013.xlsx` usado para conferir a rotina de leitura.*
 
 #### 4.3.3 Consumo, custo e emissões rodoviárias
 
@@ -594,9 +592,11 @@ Depois de calcular a rota rodoviária direta, começa a construção da alternat
 
 #### 4.4.1 Escolha dos portos
 
-A definição dos portos de embarque e desembarque da carga é feita pela função `find_nearest_port`. A partir de uma coordenada (latitude e longitude), a distância de Haversine é calculada até cada porto disponível. Ao final, a função retorna o porto cuja distância é a menor entre todas as alternativas avaliadas.
+A definição dos portos de embarque e desembarque começa pela função `find_nearest_port`. Ela usa a distância de Haversine, um cálculo geométrico feito a partir da latitude e da longitude que estima a menor distância sobre a superfície da Terra entre dois pontos. Esse cálculo é rápido, executado localmente e não representa uma rota por estrada. A função mede essa distancia entre um ponto para cada porto disponível para, então, selecionar porto com a menor distância.
 
-O pipeline chama essa função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque. Em seguida, as rotas por estrada são calculadas até esses pontos, conforme o procedimento da Seção 4.3.1.
+A distância de Haversine serve somente para essa escolha inicial; ela não entra no consumo, no custo ou nas emissões. O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque. Depois de escolher os dois portos, calcula a distância real de cada acesso rodoviário pelo mesmo procedimento da Seção 4.3.1.
+
+Essa sequência reduz consultas desnecessárias aos provedores de rota. Em vez de solicitar uma rota rodoviária para cada porto candidato de uma coordenada, o sistema faz uma única consulta para o acesso do porto já selecionado. Assim, a distância usada no cálculo continua sendo rodoviária, enquanto a distância de Haversine é usada apenas como um filtro rápido para definir qual porto consultar.
 
 No exemplo São Paulo–Rio Branco, o sistema selecionou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque.
 
