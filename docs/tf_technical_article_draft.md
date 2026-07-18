@@ -381,22 +381,35 @@ O sistema também busca a cotação mais recente do VLSFO em Santos na [Ship & B
 | Navegação | VLSFO: [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), Santos; taxa USD/BRL: BCE, via [CurrencyConverter](https://pypi.org/project/CurrencyConverter/). | VLSFO: US\$ 741,50/mt; USD/BRL: R\$ 5,141345 por US\$. | R\$ 3,812/kg de VLSFO. |
 | *Last mile* | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: Porto de Manaus (AM), R\$ 7,250/L; Acre, R\$ 9,270/L. | R\$ 8,260/L — média AM–AC. |
 
+#### 3.3.7 Resultado consolidado da alternativa multimodal
+
+Para a remessa de 14 t entre São Paulo (SP) e Rio Branco (AC), a Tabela 8 reúne os resultados das etapas que compõem a alternativa multimodal. Os cálculos e as fontes de cada etapa estão descritos nas Seções 3.3.1 a 3.3.6.
+
+**Tabela 8 — Resultado da alternativa multimodal no exemplo São Paulo–Rio Branco, para uma remessa de 14 t.**
+
+| Etapa | Percurso | Distância | Combustível estimado | Custo modelado | Emissões operacionais TTW |
+| :-- | :-- | --: | --: | --: | --: |
+| *First mile* | São Paulo–Porto de Santos | 86,170 km | 37,465 L de diesel | R\$ 260,76 | 100,41 kg CO₂e |
+| Navegação | Porto de Santos–Porto de Manaus | 6.115,349 km (3.302,024 milhas náuticas) | 416,509 kg de VLSFO | R\$ 1.587,86 | 1.297,01 kg CO₂e |
+| Operações portuárias | Santos e Manaus | — | 4,097 kg de diesel | R\$ 34,25 | 12,91 kg CO₂e |
+| *Last mile* | Porto de Manaus–Rio Branco | 1.403,691 km | 610,300 L de diesel | R\$ 5.041,08 | 1.635,60 kg CO₂e |
+| **Total** | — | **7.605,210 km** | — | **R\$ 6.923,95** | **3.045,93 kg CO₂e** |
+
+Os valores das operações portuárias seguem o escopo e a disponibilidade de dados indicados na Seção 3.3.3.
+
 ### 3.4 Resultado consolidado do exemplo São Paulo–Rio Branco
 
-Esta seção reúne os resultados do cenário de uma remessa de 14 t entre São Paulo (SP) e Rio Branco (AC). A alternativa rodoviária segue os cálculos das Seções 3.2.1 e 3.2.2. A alternativa multimodal combina os portos e acessos definidos nas Seções 3.3.1 e 3.3.2, as operações portuárias da Seção 3.3.3, a perna marítima da Seção 3.3.4 e os fatores de emissão e preços das Seções 3.3.5 e 3.3.6.
+Esta seção compara, para a mesma remessa de 14 t, os resultados totais da alternativa A, rodoviária direta, e da alternativa B, multimodal. Os valores da alternativa A vêm das Seções 3.2.1 e 3.2.2; os da alternativa B foram consolidados na Seção 3.3.7.
 
-**Tabela 8 — Resultados do exemplo São Paulo–Rio Branco, para uma remessa de 14 t.**
+**Tabela 9 — Comparação dos resultados totais no exemplo São Paulo–Rio Branco, para uma remessa de 14 t.**
 
-| Alternativa ou etapa | Distância | Combustível estimado | Custo modelado | Emissões operacionais TTW |
-| :-- | --: | --: | --: | --: |
-| **Rodovia direta: São Paulo–Rio Branco** | 3.491,431 km | 1.518,014 L de diesel | R\$ 12.318,68 | 4.068,28 kg CO₂e |
-| *First mile*: São Paulo–Porto de Santos | 86,170 km | 37,465 L de diesel | R\$ 260,76 | 100,41 kg CO₂e |
-| Navegação: Porto de Santos–Porto de Manaus | 6.115,349 km (3.302,024 milhas náuticas) | 416,509 kg de VLSFO | R\$ 1.587,86 | 1.297,01 kg CO₂e |
-| Operações portuárias: Santos e Manaus | — | 4,097 kg de diesel | R\$ 34,25 | 12,91 kg CO₂e |
-| *Last mile*: Porto de Manaus–Rio Branco | 1.403,691 km | 610,300 L de diesel | R\$ 5.041,08 | 1.635,60 kg CO₂e |
-| **Total multimodal** | — | — | **R\$ 6.923,95** | **3.045,93 kg CO₂e** |
+| Indicador | Alternativa A: rodovia direta | Alternativa B: multimodal | Resultado da alternativa B em relação à A |
+| :-- | --: | --: | :-- |
+| Distância percorrida | 3.491,431 km | 7.605,210 km | 4.113,779 km a mais (117,82%). |
+| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.045,93 kg CO₂e | 1.022,35 kg CO₂e a menos (25,13%). |
+| Custo modelado do combustível | R\$ 12.318,68 | R\$ 6.923,95 | R\$ 5.394,73 a menos (43,79%). |
 
-No cenário analisado, a alternativa rodoviária direta totalizou R\$ 12.318,68 e 4.068,28 kg CO₂e. A alternativa multimodal totalizou R\$ 6.923,95 e 3.045,93 kg CO₂e. Portanto, para a mesma remessa, o resultado multimodal reduziu o custo modelado do combustível em R\$ 5.394,73 (43,79%) e as emissões operacionais TTW em 1.022,35 kg CO₂e (25,13%). Os valores das operações portuárias seguem o escopo e a disponibilidade de dados indicados na Seção 3.3.3.
+Embora a alternativa multimodal percorra uma distância total maior, ela apresenta menor custo modelado de combustível e menores emissões operacionais TTW no cenário analisado.
 
 ## 4. Implementação computacional
 
@@ -408,9 +421,9 @@ O CabotageLens separa a preparação dos dados históricos da execução de uma 
 
 O sistema é desenvolvido principalmente em Python. A interface, os cálculos, a organização dos dados e as integrações externas ficam em componentes separados. Essa divisão permite, por exemplo, testar uma regra de combustível sem abrir a interface ou atualizar a base marítima sem executar uma comparação completa.
 
-A Tabela 9 apresenta as tecnologias e os serviços que dão suporte ao sistema. Eles não devem ser confundidos com as fontes metodológicas e de insumos: ANTAQ, EU MRV, Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP) e Ship & Bunker fornecem dados ou preços externos; as ferramentas desta tabela permitem obter, tratar, calcular, armazenar ou apresentar essas informações.
+A Tabela 10 apresenta as tecnologias e os serviços que dão suporte ao sistema. Eles não devem ser confundidos com as fontes metodológicas e de insumos: ANTAQ, EU MRV, Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP) e Ship & Bunker fornecem dados ou preços externos; as ferramentas desta tabela permitem obter, tratar, calcular, armazenar ou apresentar essas informações.
 
-**Tabela 9 — Tecnologias e serviços utilizados na implementação do CabotageLens.**
+**Tabela 10 — Tecnologias e serviços utilizados na implementação do CabotageLens.**
 
 | Tecnologia ou serviço | Função no sistema | Papel na execução |
 | :-- | :-- | :-- |
@@ -561,7 +574,7 @@ A base processada contém 1.324 viagens de cabotagem conteinerizada registradas 
 
 O sistema procurou esses 389 números no EU MRV e encontrou 243 correspondências exatas. Esses 243 navios aparecem em 788 das 1.324 viagens. Nas outras 536 viagens, a execução atual usou uma estimativa baseada no tipo de navio. Nenhuma viagem desta execução precisou de uma estimativa pela classe; essa regra permanece disponível para uma base que forneça esse metadado.
 
-**Tabela 10 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
+**Tabela 11 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
 | Indicador                                |                              Valor | Cobertura |
 | :--------------------------------------- | ---------------------------------: | --------: |
