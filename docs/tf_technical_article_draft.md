@@ -327,7 +327,7 @@ Ao fim das etapas anteriores, o sistema já estimou o combustível de cada parte
 | :-- | :-- | :-- |
 | Rodovia direta | Diesel S10; preço em R$/L por Unidade da Federação (UF), processado a partir da [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). O cenário usa a média entre as UFs de origem e de destino. | $C_{\mathrm{rod,direta}}=F_{\mathrm{rod,direta}}\,p_{\mathrm{diesel}}$. |
 | *First mile* | Diesel S10; mesmo preço de diesel do cenário. | $C_{\mathrm{first}}=F_{\mathrm{first}}\,p_{\mathrm{diesel}}$. |
-| Operações portuárias | Diesel; mesmo preço de diesel do cenário. | $C_{\mathrm{porto}}=F_{\mathrm{porto}}\,p_{\mathrm{diesel}}$. |
+| Operações portuárias | Diesel; mesmo preço de diesel do cenário. | $C_{\mathrm{porto}}=V_{\mathrm{porto}}\,p_{\mathrm{diesel}}$. |
 | Navegação | VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre); preço em Santos, publicado pela [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), convertido para R$/t e registrado na execução. | $C_{\mathrm{nav}}=\frac{F_{\mathrm{nav}}}{1000}\,p_{\mathrm{VLSFO}}$. |
 | *Last mile* | Diesel S10; mesmo preço de diesel do cenário. | $C_{\mathrm{last}}=F_{\mathrm{last}}\,p_{\mathrm{diesel}}$. |
 
@@ -337,7 +337,7 @@ Ao fim das etapas anteriores, o sistema já estimou o combustível de cada parte
 | :-- | :-- |
 | Rodovia direta | $E_{\mathrm{rod,direta}}=F_{\mathrm{rod,direta}}\times2{,}68\ \mathrm{kgCO_2e/L}$. O IPCC (2006) [ipcc2006] é a base da combustão direta de diesel. Costa et al. [competitiveness2024] é uma referência metodológica de comparação rodoviária, mas o fator WTW do artigo não é usado no modelo. |
 | *First mile* | $E_{\mathrm{first}}=F_{\mathrm{first}}\times2{,}68\ \mathrm{kgCO_2e/L}$, com a mesma base de combustão direta de diesel do IPCC (2006) [ipcc2006]. |
-| Operações portuárias | $E_{\mathrm{porto}}=F_{\mathrm{porto}}\times3{,}15\ \mathrm{kgCO_2e/kg}$. A base é o IPCC (2006) [ipcc2006], expressa por massa. |
+| Operações portuárias | $E_{\mathrm{porto}}=m_{\mathrm{porto}}\times3{,}15\ \mathrm{kgCO_2e/kg}$. A base é o IPCC (2006) [ipcc2006], expressa por massa. |
 | Navegação | $E_{\mathrm{nav}}=F_{\mathrm{nav}}\times3{,}114\ \mathrm{kgCO_2e/kg}$. A fonte é Costa et al. [competitiveness2024], Apêndice A, Tabela 13, que reproduz parâmetros da Resolução IMO MEPC.391(81). O modelo usa somente a parcela de combustão. |
 | *Last mile* | $E_{\mathrm{last}}=F_{\mathrm{last}}\times2{,}68\ \mathrm{kgCO_2e/L}$, com a mesma base de combustão direta de diesel do IPCC (2006) [ipcc2006]. |
 
@@ -359,7 +359,7 @@ C_{\mathrm{nav}}=\frac{F_{\mathrm{nav}}}{1000}\,p_{\mathrm{VLSFO}},
 E_{\mathrm{nav}}=F_{\mathrm{nav}}\,f_{\mathrm{VLSFO}}.
 $$
 
-No cenário atual de operações portuárias, os equipamentos quantificados são movidos a diesel. Portanto, o custo é a soma dos litros desses equipamentos multiplicados pelo preço do diesel, e a emissão é a soma da massa de diesel multiplicada pelo respectivo fator de emissão.
+No cenário atual de operações portuárias, os equipamentos quantificados são movidos a diesel. Portanto, $V_{\mathrm{porto}}$ representa a soma dos litros usados no cálculo de custo, enquanto $m_{\mathrm{porto}}$ representa a massa correspondente usada no cálculo de emissões.
 
 Por fim, a alternativa multimodal reúne as quatro parcelas:
 
@@ -412,7 +412,7 @@ O sistema também evita contar duas vezes o consumo do navio atracado. Quando a 
 
 A Seção 3 descreve o que é calculado: duas alternativas que prestam o mesmo serviço logístico, seus trechos, os dados usados e as regras físicas aplicadas. Esta seção mostra como essas regras foram transformadas em software. O objetivo não é repetir as fórmulas, mas explicar como o sistema recebe os dados, executa cada etapa, trata uma informação ausente e registra de onde veio cada resultado.
 
-O CabotageLens separa a preparação dos dados históricos da execução de uma comparação. Assim, uma pessoa que informa uma origem, um destino e uma carga não precisa reconstruir toda a base da Agência Nacional de Transportes Aquaviários (ANTAQ) nem consultar novamente a base de Monitoramento, Reporte e Verificação da União Europeia (EU MRV). A aplicação utiliza os artefatos marítimos já preparados e concentra a execução na montagem do cenário porta a porta.
+O CabotageLens separa a preparação dos dados históricos da execução de uma comparação. Assim, uma pessoa que informa uma origem, um destino e uma carga não precisa reconstruir toda a base da Agência Nacional de Transportes Aquaviários (ANTAQ) nem consultar novamente a base de Monitoramento, Reporte e Verificação da União Europeia (EU MRV), por exemplo. A aplicação utiliza os artefatos marítimos já preparados e concentra a execução na montagem do cenário porta a porta.
 
 ### 4.1 Arquitetura do sistema e tecnologias utilizadas
 
