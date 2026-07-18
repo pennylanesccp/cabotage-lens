@@ -594,7 +594,9 @@ Depois de calcular a rota rodoviária direta, começa a construção da alternat
 
 A definição dos portos de embarque e desembarque começa pela função `find_nearest_port`. Ela usa a distância de Haversine, um cálculo geométrico feito a partir da latitude e da longitude que estima a menor distância sobre a superfície da Terra entre dois pontos. Esse cálculo é rápido, executado localmente e não representa uma rota por estrada. A função mede essa distancia entre um ponto para cada porto disponível para, então, selecionar porto com a menor distância.
 
-A distância de Haversine serve somente para essa escolha inicial; ela não entra no consumo, no custo ou nas emissões. O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque. Depois de escolher os dois portos, calcula a distância real de cada acesso rodoviário pelo mesmo procedimento da Seção 4.3.1.
+A distância de Haversine, porém, é utilizada somente para essa escolha inicial não entrando nos cálculos consumo, no custo ou nas emissões.
+
+O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque. Depois de escolher os dois portos e suas respectivas coordenadas, calcula a distância real de ambos acessos rodoviários (origem->porto embarque; porto desembarque->destino) pelo mesmo procedimento da Seção 4.3.1.
 
 Essa sequência reduz consultas desnecessárias aos provedores de rota. Em vez de solicitar uma rota rodoviária para cada porto candidato de uma coordenada, o sistema faz uma única consulta para o acesso do porto já selecionado. Assim, a distância usada no cálculo continua sendo rodoviária, enquanto a distância de Haversine é usada apenas como um filtro rápido para definir qual porto consultar.
 
