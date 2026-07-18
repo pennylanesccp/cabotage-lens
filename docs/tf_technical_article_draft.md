@@ -588,19 +588,38 @@ flowchart LR
 
 ### 4.4 Montagem da alternativa multimodal
 
-Depois de calcular a rota rodoviária direta, o sistema monta a alternativa multimodal. Essa etapa reutiliza os veículos representativos do transporte rodoviário, os endereços já geocodificados e os preços de diesel por unidade federativa.
+Depois de calcular a rota rodoviária direta, o sistema monta a alternativa multimodal. Essa etapa reutiliza os veículos representativos do transporte rodoviário, os endereços já geocodificados, os preços de diesel por unidade federativa e a cotação do VLSFO.
 
-#### 4.4.1 Matriz marítima
+#### 4.4.1 Consulta e conversão do preço do VLSFO
 
-Antes de definir os portos de um novo cenário, o sistema prepara a referência marítima com viagens de cabotagem que realmente ocorreram. O produto dessa preparação foi chamado de matriz marítima, construída com dados observados.
+Antes de avaliar a alternativa multimodal, o pipeline busca atualizar a cotação do VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre) no Porto de Santos. A biblioteca `requests` acessa a página brasileira da [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), localiza a linha de Santos e obtém o preço do VLSFO em dólares por tonelada métrica (US$/mt).
 
-##### 4.4.1.1 Dados da ANTAQ
+A cotação internacional precisa ser convertida antes de entrar no cálculo de custo. A biblioteca [CurrencyConverter](https://pypi.org/project/CurrencyConverter/) obtém a taxa USD/BRL a partir das referências do Banco Central Europeu (BCE). No exemplo São Paulo–Rio Branco, a conversão é:
+
+$$
+\begin{aligned}
+P_{\mathrm{VLSFO,\,R\$/mt}}
+&= 741{,}50\ \mathrm{US\$/mt} \times 5{,}141345\ \mathrm{R\$/US\$} \\
+&= 3.812{,}31\ \mathrm{R\$/mt}, \\[4pt]
+P_{\mathrm{VLSFO,\,R\$/kg}}
+&= \frac{3.812{,}31\ \mathrm{R\$/mt}}{1.000\ \mathrm{kg/mt}} \\
+&= 3{,}812\ \mathrm{R\$/kg}.
+\end{aligned}
+$$
+
+Esse é o valor entregue ao avaliador para calcular o custo do combustível marítimo. A fonte, os valores e a regra de custo estão detalhados na Seção 3.3.6 e na Tabela 8.
+
+#### 4.4.2 Matriz marítima
+
+Antes de definir os portos de um novo cenário, o sistema prepara a referência marítima com viagens de cabotagem que realmente ocorreram. O produto dessa preparação é uma matriz marítima construída com dados observados.
+
+##### 4.4.2.1 Dados da ANTAQ
 
 A rotina de atualização acessa o [Painel Estatístico Aquaviário da ANTAQ](https://estatistica.antaq.gov.br/ea/sense/download.html), portal oficial de download das tabelas públicas. A biblioteca `requests` realiza as consultas e baixa os arquivos em formato TXT. A biblioteca Beautiful Soup lê a página e seus arquivos de apoio para localizar os endereços de download disponibilizados pela ANTAQ. São obtidas as tabelas de Carga, Atracação e Tempos de Atracação. Os campos de Carga e Atracação usados na reconstrução estão detalhados na Seção 3.3.4.1, nas Tabelas 4 e 5.
 
 A atualização também sincroniza os dados necessários e os artefatos gerados para o Supabase Storage, o armazenamento de arquivos do projeto. Dessa forma, os arquivos usados na reconstrução e a matriz marítima permanecem disponíveis para reutilização e rastreabilidade, sem depender apenas do acesso imediato ao portal da ANTAQ.
 
-##### 4.4.1.2 Reconstrução das viagens
+##### 4.4.2.2 Reconstrução das viagens
 
 Com esses arquivos, a função de reconstrução mantém os registros de cabotagem conteinerizada e relaciona cada movimentação de carga à escala correspondente. A Atracação fornece o porto, a data e o número da Organização Marítima Internacional (IMO) do navio; a Carga informa o que foi embarcado e desembarcado.
 
@@ -608,15 +627,15 @@ Em seguida, a função reúne as escalas do mesmo navio em ordem cronológica. A
 
 O resultado da reconstrução também é gravado em tabelas do Supabase PostgreSQL. A tabela `antaq_voyages` registra cada viagem reconstruída; `antaq_voyage_stops` armazena suas paradas em ordem; e `antaq_voyage_stop_calls` preserva as escalas que formaram cada parada. Isso permite consultar as viagens já reconstruídas sem repetir o processamento dos arquivos brutos.
 
-##### 4.4.1.3 Dados da EU MRV
+##### 4.4.2.3 Dados da EU MRV
 
 Os arquivos anuais do sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV) são obtidos no [THETIS-MRV, da Agência Europeia de Segurança Marítima](https://mrv.emsa.europa.eu/), e armazenados no Supabase Storage. Os campos e o exemplo de correspondência por IMO estão apresentados na Seção 3.3.4.2 na Tabela 6.
 
-##### 4.4.1.4 Cálculo do trabalho de transporte
+##### 4.4.2.4 Cálculo do trabalho de transporte
 
 Com esse índice de intensidades, o sistema procura primeiro o IMO do navio observado na ANTAQ. Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem. A regra de composição dessa intensidade para uma ligação entre portos está detalhada na Seção 3.3.4.3.
 
-##### 4.4.1.5 Compilação na estrutura matricial
+##### 4.4.2.5 Compilação na estrutura matricial
 
 Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância média dos recortes completos observados, a intensidade média ponderada pelo trabalho de transporte, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes (também presentes na matriz), pois reunem viagens e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
 
@@ -629,7 +648,7 @@ flowchart LR
     E --> F
 ```
 
-As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A distância é a média das viagens completas observadas para cada sentido. Por isso, a distância de ida pode ser ligeiramente diferente da distância de volta. Essa diferença é normal, pois cada sentido reúne seu próprio conjunto de viagens observadas. Em cada célula da segunda tabela, a contagem representa as viagens que geraram um recorte completo elegível naquele par ordenado; ela não corresponde ao número de escalas nem apenas a ligações diretas. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
+As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A Tabela 13 apresenta a distância média das viagens completas observadas para cada sentido. Por isso, a distância de ida pode ser ligeiramente diferente da distância de volta. Essa diferença é normal, pois cada sentido reúne seu próprio conjunto de viagens observadas. A Tabela 14 apresenta a intensidade média ponderada pelo trabalho de transporte. Nessa média, uma viagem recebe mais peso quando transporta mais carga ou realiza mais trabalho de transporte, calculado pela carga a bordo multiplicada pela distância. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
 
 **Tabela 13 — Distância média dos recortes completos observados na matriz marítima (km).**
 
@@ -643,33 +662,33 @@ As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. 
 
 *Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
 
-**Tabela 14 — Número de viagens observadas (recortes completos) na matriz marítima.**
+**Tabela 14 — Intensidade média da ligação marítima, ponderada pelo trabalho de transporte [g/(t·nm)].**
 
 | Origem / destino | Santos | Salvador | Suape | Pecém | Manaus |
 | :-- | --: | --: | --: | --: | --: |
-| Santos | — | 165 | 270 | 167 | 89 |
-| Salvador | 195 | — | 119 | 101 | 53 |
-| Suape | 285 | 113 | — | 233 | 146 |
-| Pecém | 217 | 124 | 161 | — | 142 |
-| Manaus | 136 | 35 | 126 | 82 | — |
+| Santos | — | 9,605744 | 8,729368 | 9,745651 | 9,009824 |
+| Salvador | 9,338150 | — | 8,558943 | 10,183560 | 9,322050 |
+| Suape | 9,292748 | 9,984933 | — | 9,551157 | 9,034616 |
+| Pecém | 9,643543 | 9,716983 | 8,681143 | — | 9,092814 |
+| Manaus | 9,098669 | 9,322050 | 9,178646 | 9,055626 | — |
 
 *Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
 
-#### 4.4.2 Escolha dos portos e acessos rodoviários
+#### 4.4.3 Escolha dos portos e acessos rodoviários
 
-#### 4.4.2.1 Escolha dos portos
+##### 4.4.3.1 Escolha dos portos
 
 A definição dos portos de embarque e desembarque começa pela função `find_nearest_port`. Ela usa a distância de Haversine, um cálculo geométrico feito a partir da latitude e da longitude que estima a menor distância sobre a superfície da Terra entre dois pontos. Esse cálculo é rápido, executado localmente e não representa uma rota por estrada. A função mede essa distancia entre um ponto para cada porto disponível para, então, selecionar porto com a menor distância. O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque.
 
 A distância de Haversine, porém, é utilizada somente para essa escolha inicial não entrando nos cálculos consumo, no custo ou nas emissões.
 
-#### 4.4.2.2 Acessos rodoviários: *first mile* e *last mile*
+##### 4.4.3.2 Acessos rodoviários: *first mile* e *last mile*
 
 Depois de escolher os dois portos e suas respectivas coordenadas, é calculada a distância real de ambos acessos rodoviários (origem → porto de embarque; porto de desembarque → destino) pelo mesmo procedimento da Seção 4.3.1.
 
 Essa sequência reduz consultas desnecessárias aos provedores de rota. Em vez de solicitar uma rota rodoviária para cada porto candidato de uma coordenada, o sistema faz uma única consulta para o acesso do porto já selecionado. Assim, a distância usada no cálculo continua sendo rodoviária, enquanto a distância de Haversine é usada apenas como um filtro rápido para definir qual porto consultar.
 
-#### 4.4.2.2 Resultado consolidado do exemplo São Paulo–Rio Branco
+##### 4.4.3.3 Resultado consolidado do exemplo São Paulo–Rio Branco
 
 No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque. A Tabela 15 compara a distância de Haversine usada na seleção com a distância rodoviária calculada depois que cada porto foi escolhido.
 
@@ -677,14 +696,14 @@ No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de S
 
 | Acesso | Ponto geocodificado | Referência do porto | Haversine: seleção | Distância rodoviária: cálculo |
 | :-- | :-- | :-- | --: | --: |
-| *First mile*:<br/>São Paulo → Porto de Santos | São Paulo:<br/>[−23,550520°; −46,633308°] | Porto de Santos:<br/>[−23,987012°; −46,293383°] | 59,601 km | 86,170 km |
-| *Last mile*:<br/>Porto de Manaus → Rio Branco | Rio Branco:<br/>[−9,989637°; −67,822462°] | Porto de Manaus:<br/>[−3,156700°; −60,007900°] | 1.149,569 km | 1.403,691 km |
+| *First mile*:<br/>São Paulo → Porto de Santos | São Paulo:<br/>[−23,550520°; −46,633308°] | Porto de Santos (embarque):<br/>[−23,987012°; −46,293383°] | 59,601 km | 86,170 km |
+| *Last mile*:<br/>Porto de Manaus → Rio Branco | Rio Branco (desembarque):<br/>[−9,989637°; −67,822462°] | Porto de Manaus:<br/>[−3,156700°; −60,007900°] | 1.149,569 km | 1.403,691 km |
 
 *Fonte: elaboração própria com a base de portos do sistema e as rotas rodoviárias obtidas no cenário.*
 
 A diferença entre as duas colunas é esperada: Haversine mede a separação geométrica entre os pontos, enquanto a distância rodoviária acompanha o caminho percorrido pela malha viária. Apenas a última é usada nos cálculos da alternativa multimodal.
 
-#### 4.4.3 Formação dos trechos da cadeia
+#### 4.4.4 Formação dos trechos da cadeia
 
 Com os portos definidos, o pipeline organiza quatro parcelas: o acesso inicial por rodovia, as operações nos dois terminais, a navegação entre os portos e o acesso final por rodovia. O fluxo abaixo mostra os trechos efetivamente montados para a remessa de 14 t entre São Paulo e Rio Branco.
 
@@ -707,13 +726,13 @@ flowchart LR
 | Navegação | Porto de Santos → Porto de Manaus: 6.115,349 km | Consulta da matriz marítima preparada com viagens observadas |
 | *Last mile* | Porto de Manaus → Rio Branco: 1.403,691 km | Consulta de rota rodoviária descrita na Seção 4.3.1 |
 
-#### 4.4.4 Operações portuárias
+#### 4.4.5 Operações portuárias
 
-A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,91 kg CO₂e.
+A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas para realizar o procedimento descrito na Seção 3.3.3. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,91 kg CO₂e.
 
 ### 4.5 Consulta da ligação marítima
 
-Com os portos de embarque e desembarque já definidos, o avaliador consulta a matriz preparada na Seção 4.4.1. Nessa etapa, ele não escolhe um novo corredor nem reconstrói as viagens históricas: apenas recupera os valores representativos do par de portos selecionado e os aplica à carga do cenário.
+Com os portos de embarque e desembarque já definidos, o avaliador consulta a matriz preparada na Seção 4.4.2. Nessa etapa, ele não escolhe um novo corredor nem reconstrói as viagens históricas: apenas recupera os valores representativos do par de portos selecionado e os aplica à carga do cenário.
 
 #### 4.5.1 Consulta da ligação marítima no cenário
 
@@ -732,44 +751,19 @@ No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos
 
 Os 89 recortes não são somados como se fossem a carga do novo cenário. Eles servem para estimar a intensidade e a distância representativas de Santos–Manaus. Na etapa seguinte, esses dois valores são aplicados à remessa informada pelo usuário — 14 t neste exemplo. Dessa forma, a aplicação usa todos os corredores observados sem transformar a média em uma rota física única.
 
-### 4.6 Avaliação e consolidação do cenário
+### 4.6 Resultado final do cenário
 
-#### 4.6.1 Insumos atualizados antes da avaliação
+Depois de executar as etapas descritas nas seções anteriores, o pipeline reúne os totais das duas alternativas para a mesma remessa. A Tabela 18 apresenta o resultado final do exemplo São Paulo–Rio Branco, com 14 t de carga.
 
-Antes de executar as quatro parcelas, o pipeline busca os preços mais recentes do Diesel S10 na Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP) e do VLSFO em Santos na Ship & Bunker. A conversão do preço marítimo para reais é feita antes de o avaliador receber o dado. Os preços por etapa seguem a regra da Seção 3.3.6 e os valores usados na execução estão registrados na Tabela 8.
+**Tabela 18 — Resultado final do cenário São Paulo–Rio Branco.**
 
-Se uma atualização não puder ser concluída, o sistema mantém o último valor válido disponível e registra essa condição. Isso evita que uma falha de consulta seja confundida com preço zero ou esconda a data e a origem do insumo empregado no cálculo.
-
-#### 4.6.2 Resultado das quatro parcelas
-
-O avaliador recebe as quatro parcelas já montadas, os preços e os fatores de emissão definidos na Seção 3. Ele calcula o consumo de diesel nos acessos rodoviários, o consumo marítimo com a intensidade devolvida pela matriz e o consumo dos equipamentos portuários que possuem fator disponível. A rota rodoviária direta é avaliada separadamente; ela não é somada à alternativa multimodal.
-
-```mermaid
-flowchart LR
-    A["First mile"] --> E["Avaliador do cenário"]
-    B["Navegação"] --> E
-    C["Operações portuárias"] --> E
-    D["Last mile"] --> E
-    P["Preços e fatores<br/>de emissão"] --> E
-    E --> F["Custo modelado e<br/>emissões TTW"]
-    F --> G["Comparação com a rota<br/>rodoviária direta"]
-```
-
-Quando a intensidade marítima do EU MRV já representa o consumo por trabalho de transporte, o avaliador não acrescenta uma parcela separada para o combustível do navio durante a atracação. Essa decisão evita dupla contagem. Os equipamentos portuários permanecem como parcela própria, pois representam uma atividade diferente.
-
-**Tabela 18 — Parcelas geradas pelo avaliador no exemplo São Paulo–Rio Branco.**
-
-| Parcela | Custo modelado | Emissões TTW | Situação registrada |
+| Indicador | Rodovia direta | Alternativa multimodal | Diferença da alternativa multimodal |
 | :-- | --: | --: | :-- |
-| *First mile* | R$ 260,76 | 100,41 kg CO₂e | Rota rodoviária calculada até Santos |
-| Navegação | R$ 1.587,86 | 1.297,01 kg CO₂e | Matriz marítima observada; um subtrecho aproximado permanece sinalizado |
-| Operações portuárias | R$ 34,25 | 12,91 kg CO₂e | Parcela parcial: equipamento de cais sem fator energético disponível |
-| *Last mile* | R$ 5.041,08 | 1.635,60 kg CO₂e | Rota rodoviária calculada de Manaus até Rio Branco |
-| **Total multimodal** | **R$ 6.923,95** | **3.045,93 kg CO₂e** | **Parcial devido às operações portuárias** |
+| Distância percorrida | 3.491,431 km | 7.605,210 km | 4.113,779 km a mais (117,82%) |
+| Custo modelado do combustível | R$ 12.318,68 | R$ 6.923,95 | R$ 5.394,73 a menos (43,79%) |
+| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.045,93 kg CO₂e | 1.022,35 kg CO₂e a menos (25,13%) |
 
-O total acima é o mesmo apresentado na Seção 3.3.7. A comparação final com a alternativa rodoviária, que totalizou R$ 12.318,68 e 4.068,28 kg CO₂e para a mesma remessa, está reunida na Seção 3.4.
-
-### 4.7 Rastreabilidade e auditoria
+### 4.7 Rastreabilidade, auditoria e versionamento
 
 O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 19 exemplifica esse registro no cenário São Paulo–Rio Branco.
 
@@ -781,17 +775,13 @@ O resultado não guarda apenas os totais de custo e emissão. A cada execução,
 | Portos selecionados | Santos (SP) e Manaus (AM) | Mostra onde começam e terminam os acessos marítimos e rodoviários |
 | Ligação marítima | 89 viagens completas observadas em 22 corredores | Identifica a base da intensidade e da distância marítimas |
 | Intensidade marítima | 9,009824 g/(t·nm); fontes por IMO e por tipo identificadas | Diferencia medição individual de estimativa de grupo |
-| Operações portuárias | Parâmetros documentados; parcela parcial por equipamento sem fator energético | Evita que ausência de dado seja interpretada como consumo nulo |
+| Operações portuárias | RTG e caminhão interno do terminal | Identifica os equipamentos considerados no cálculo |
 | Preços de combustível | Diesel S10 da ANP e VLSFO da Ship & Bunker, com data e valor usados | Permite atualizar ou repetir o componente de custo |
 | Avisos de qualidade | Um subtrecho marítimo aproximado por haversine | Sinaliza a aproximação sem ocultá-la no total |
 
-Quando é necessário examinar uma viagem marítima específica, o processo de atualização aceita o identificador da viagem com `--audit-voyage-id` e usa `--log-level DEBUG`. Para `voyage_9612791_00011`, por exemplo, o log apresenta os embarques e desembarques, a carga a bordo, a distância, o trabalho de transporte, a intensidade e o combustível de cada subtrecho. Esse modo expõe os valores intermediários para conferência e não altera o arquivo resultante.
+### 4.7.1 Versionamento e reprodução do cálculo
 
-### 4.8 Versionamento e reprodução do cálculo
-
-O código, os dados processados rastreados e os documentos do projeto são versionados com Git e disponibilizados no GitHub. Essa organização permite identificar qual versão da implementação produziu um resultado e revisar mudanças nas regras ou nos insumos. Credenciais de provedores, banco de dados e serviços externos permanecem fora do repositório.
-
-Para reproduzir uma execução, não basta registrar origem, destino e carga. Também devem estar disponíveis as coordenadas resolvidas, os portos selecionados, as fontes das distâncias, a intensidade marítima, os preços e fatores usados e os avisos emitidos. Com esses elementos, o resultado pode ser lido como uma cadeia de dados e decisões verificáveis, e não apenas como um valor final [cabotagelensrepo; cabotagelensapp].
+O versionamento é etapa fundamental do desenvolvimento de sistemas. Git é uma ferramenta que registra o histórico das alterações feitas nos arquivos de um projeto. O GitHub é a plataforma on-line em que esse histórico é armazenado e pode ser consultado. O código e os documentos do CabotageLens estão disponíveis [no repositório público do GitHub](https://github.com/pennylanesccp/cabotage-lens). Esse registro permite identificar quais regras e arquivos foram usados em cada versão do estudo, comparar alterações e apoiar a rastreabilidade e a auditoria dos resultados.
 
 ## 5. Evidência empírica e resultados
 
