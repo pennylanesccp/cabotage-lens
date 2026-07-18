@@ -243,72 +243,101 @@ Portanto, todos os subtrechos dessa viagem recebem a intensidade de $9{,}322050\
 
 ##### 3.3.4.3 Trabalho de transporte e intensidade da ligação
 
-Uma viagem pode ter uma ou várias escalas entre os dois portos escolhidos. Para saber quanto transporte ela realizou, o sistema não usa uma carga média para toda a viagem. Ele calcula cada subtrecho com a carga que o navio levava ao sair daquele porto.
+Uma ligação entre dois portos não corresponde, necessariamente, a uma única viagem nem a uma única sequência de escalas. Para representar Santos–Manaus, por exemplo, o sistema aproveita cada recorte histórico que começou em Santos e chegou a Manaus na mesma viagem e no mesmo sentido. Antes de reunir esses recortes em uma única intensidade, ele calcula quanto transporte foi realizado em cada um deles.
 
-O resultado de multiplicar a carga pela distância recebe o nome de trabalho de transporte. Para uma viagem $v$, entre a origem $o$ e o destino $d$, o cálculo é:
+Esse cálculo usa o trabalho de transporte. Em cada subtrecho, a carga a bordo é multiplicada pela distância percorrida; depois, os resultados dos subtrechos são somados. Para uma viagem $v$, o trabalho entre a origem $o$ e o destino $d$ é:
 
 $$
 W_{v,o,d}=\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\,d_{v,s}.
 $$
 
-Nessa fórmula, $\mathcal{S}_{v,o,d}$ reúne os subtrechos da viagem entre os dois portos escolhidos, $m_{v,s}$ é a carga a bordo no subtrecho $s$, em toneladas, e $d_{v,s}$ é a distância desse subtrecho, em milhas náuticas. O resultado $W_{v,o,d}$ é expresso em tonelada-milha náutica ($\mathrm{t\cdot nm}$).
+Nessa fórmula, $\mathcal{S}_{v,o,d}$ é o conjunto de subtrechos entre os dois portos, $m_{v,s}$ é a carga a bordo no subtrecho $s$, em toneladas, e $d_{v,s}$ é a distância correspondente, em milhas náuticas. O resultado $W_{v,o,d}$ é expresso em tonelada-milha náutica ($\mathrm{t\cdot nm}$). Portanto, uma viagem recebe mais peso quando transporta mais carga, percorre uma distância maior ou reúne as duas condições.
 
-Na viagem `voyage_9612791_00011`, o recorte Santos–Manaus contém três subtrechos, mostrados na Figura 2. O trabalho de transporte é:
+O exemplo real da viagem `voyage_9612791_00011` mostra por que a carga precisa ser reconstruída trecho a trecho. Entre Santos e Manaus, o navio passou por Suape e Pecém; a carga a bordo mudou em cada escala.
+
+| Subtrecho observado | Carga a bordo (t) | Distância (nm) | Trabalho de transporte ($\mathrm{t\cdot nm}$) |
+| :-- | --: | --: | --: |
+| Santos → Suape | 12.858,754 | 1.259,179 | 16.191.476,419 |
+| Suape → Pecém | 16.718,333 | 507,806 | 8.489.677,588 |
+| Pecém → Manaus | 12.325,900 | 1.185,594 | 14.613.514,486 |
+| **Total Santos → Manaus** | — | — | **39.294.668,494** |
+
+*Fonte: elaboração própria com os registros de Carga e Atracação da ANTAQ, a matriz marítima e a reconstrução da viagem `voyage_9612791_00011`. Os valores exibidos foram arredondados.*
+
+O trabalho de transporte desse recorte é, portanto:
 
 $$
 \begin{aligned}
 W_{\mathrm{Santos,Manaus}}
-&=(12.858{,}754\times1.259{,}179)\\
-&+(16.718{,}333\times507{,}806)\\
-&+(12.325{,}900\times1.185{,}594)\\
-&\approx39.294.668{,}494\ \mathrm{t\cdot nm}.
+&=16.191.476{,}419+8.489.677{,}588+14.613.514{,}486\\
+&=39.294.668{,}494\ \mathrm{t\cdot nm}.
 \end{aligned}
 $$
 
-As cargas e as distâncias exibidas na Figura 2 foram arredondadas para três casas decimais. O valor final da fórmula foi calculado com os números armazenados com maior precisão; por isso, uma conta manual feita apenas com os valores exibidos pode apresentar pequena diferença.
-
-Como a intensidade do navio de IMO 9612791 é $7{,}43\ \mathrm{g/(t\cdot nm)}$, o consumo associado a essa atividade observada é:
+O IMO 9612791 possui intensidade individual de $7{,}43\ \mathrm{g/(t\cdot nm)}$ no EU MRV. O consumo reconstruído para essa viagem observada é:
 
 $$
-F_{\mathrm{Santos,Manaus}}=
-\frac{7{,}43\times39.294.668{,}494}{1000}
+F_v=\frac{I_v\,W_{v,o,d}}{1000}
+=\frac{7{,}43\times39.294.668{,}494}{1000}
 =291.959{,}387\ \mathrm{kg}.
 $$
 
-Para formar uma ligação, o sistema repete esse cálculo em todas as viagens que saíram do porto de origem e chegaram ao porto de destino no mesmo sentido. Cada sequência contínua entre os dois portos é um recorte histórico da viagem. Ela pode ser direta, como Santos–Manaus, ou conter escalas intermediárias, como Santos–Suape–Pecém–Manaus. O sistema nunca combina trechos de viagens diferentes, nem usa uma viagem no sentido contrário.
+Esse valor descreve a atividade histórica daquela viagem específica. Ele não é somado diretamente ao consumo de uma nova remessa simulada pelo usuário. Seu papel é informar o peso e a intensidade com que esse recorte participa da preparação do indicador Santos–Manaus.
 
-As viagens não recebem o mesmo peso na escolha da intensidade da ligação. Uma viagem que transportou mais carga por uma distância maior representa uma parcela maior da atividade observada. Por isso, o peso de cada recorte é o seu trabalho de transporte. A intensidade representativa é a média ponderada: cada intensidade é multiplicada pelo trabalho de transporte da própria viagem, e a soma desses produtos é dividida pelo trabalho total.
+Depois de repetir a reconstrução para todos os recortes aceitos, o sistema calcula uma média ponderada pelo trabalho de transporte. Ele não escolhe a intensidade de uma única viagem, nem escolhe o corredor com maior volume. A intensidade da ligação é:
 
 $$
 I_{o,d}^{\mathrm{rep}}=
-\frac{\sum_v I_v\,W_{v,o,d}}
-{\sum_v W_{v,o,d}}.
+\frac{\sum_{v=1}^{n}I_v\,W_{v,o,d}}
+{\sum_{v=1}^{n}W_{v,o,d}}.
 $$
 
-Em Santos–Manaus, os 89 recortes aceitos somaram $3.153.328.821{,}755\ \mathrm{t\cdot nm}$ de trabalho de transporte. Depois de aplicar a regra para valores anômalos do EU MRV, o sistema calcula a soma de $I_v\,W_{v,o,d}$ para todos os recortes e divide pelo trabalho total. O resultado é $9{,}009824\ \mathrm{g/(t\cdot nm)}$. Assim, cada viagem influencia a média na proporção da carga que transportou e da distância que percorreu; nenhuma viagem isolada é escolhida para representar toda a ligação.
+Aqui, $I_v$ é a intensidade atribuída à viagem $v$, $W_{v,o,d}$ é o trabalho de transporte dessa viagem entre os portos escolhidos e $n$ é o número de recortes aceitos. Assim, o sistema dá maior influência a uma viagem que movimentou mais tonelada-milhas náuticas, sem descartar as demais viagens diretas ou com escalas.
 
-Recortes com trabalho de transporte igual a zero não entram na média ponderada quando houver pelo menos um recorte com trabalho positivo. Se todos os recortes tiverem peso zero, o sistema calcula a média simples das intensidades disponíveis e registra essa condição.
+Em Santos–Manaus, os 89 recortes aceitos somam $3.153.328.821{,}755\ \mathrm{t\cdot nm}$ de trabalho de transporte. Antes da média, são aplicadas as regras de intensidade explicadas na subseção anterior: 19 recortes usam a intensidade individual do IMO, 49 usam a estimativa pelo tipo porque não possuem correspondência individual no EU MRV e 21 mantêm a viagem observada, mas recebem a estimativa pelo tipo porque o valor individual ultrapassou o limiar de anomalia. A soma dos produtos $I_v\,W_{v,o,d}$ é $28.410.938.295{,}411\ \mathrm{g}$. Logo:
+
+$$
+I_{\mathrm{Santos,Manaus}}^{\mathrm{rep}}=
+\frac{28.410.938.295{,}411}
+{3.153.328.821{,}755}
+=9{,}009824\ \mathrm{g/(t\cdot nm)}.
+$$
+
+Esse resultado não é a intensidade de um navio escolhido como representante. É a média das 89 viagens, em que cada uma contribui conforme a carga efetivamente transportada e a distância percorrida. Recortes com trabalho de transporte igual a zero não entram na média ponderada quando houver pelo menos um recorte com trabalho positivo. Se todos os recortes tiverem peso zero, o sistema calcula a média simples das intensidades disponíveis e registra essa condição.
 
 ##### 3.3.4.4 Distância do cenário e escolha do corredor
 
-O cálculo ocorre em duas etapas que não devem ser confundidas. Na preparação da base, as cargas e as distâncias das viagens históricas da ANTAQ servem somente para calcular os pesos da intensidade representativa. Na execução de um novo cenário, o sistema usa essa intensidade uma única vez, junto com a carga informada pelo usuário e com a distância de uma rota completa escolhida. As cargas históricas não são somadas à carga do usuário, e o combustível das viagens históricas não é somado ao novo cenário.
+A intensidade da ligação e a distância do cenário respondem a perguntas diferentes. A intensidade informa quanto combustível é associado ao transporte de uma tonelada por uma milha náutica. Ela é calculada a partir de todas as viagens aceitas entre os dois portos, como explicado na subseção anterior. A distância, por sua vez, precisa vir de um único corredor completo para que o sistema possa calcular uma nova remessa com a carga informada pelo usuário.
 
-**Preparação da intensidade:** o sistema reúne todos os recortes que começam em Santos e terminam em Manaus. Entre eles estão o recorte direto da viagem `voyage_9612789_00004`, Santos–Suape–Pecém–Manaus da viagem `voyage_9612791_00011`, Santos–Itapoá–Paranaguá–Suape–Manaus da viagem `voyage_9343974_00002` e Santos–Navegantes–Pecém–Manaus da viagem `voyage_9852365_00011`. O último exemplo mostra concretamente que o recorte não precisa passar por Suape. A média ponderada de todos os recortes aceitos fornece a intensidade representativa.
+Na preparação da intensidade Santos–Manaus, entram os 89 recortes históricos das 22 sequências de portos observadas. Entre eles estão o recorte direto da viagem `voyage_9612789_00004`, Santos–Suape–Pecém–Manaus da viagem `voyage_9612791_00011`, Santos–Itapoá–Paranaguá–Suape–Manaus da viagem `voyage_9343974_00002` e Santos–Navegantes–Pecém–Manaus da viagem `voyage_9852365_00011`. Esses exemplos deixam claro que a preparação não obriga o navio a passar por Suape nem por qualquer outro porto predeterminado. Todos contribuem para a média ponderada de $9{,}009824\ \mathrm{g/(t\cdot nm)}$.
 
-**Execução com uma distância:** o sistema precisa de um corredor concreto para somar as milhas atribuídas aos subtrechos do cenário. Considera somente corredores inteiros observados dentro de uma única viagem, com distância conhecida em todos os subtrechos e um valor de consumo disponível. Se existir um recorte direto entre os dois portos, usa esse corredor. Caso contrário, escolhe o corredor completo mais curto entre os que possuem escalas. Essa escolha não elimina os outros recortes da preparação do indicador.
+Depois de calcular essa média, o sistema escolhe separadamente o corredor que fornecerá a distância do cenário. Só podem ser escolhidos corredores completos observados dentro de uma mesma viagem, com distância disponível para todos os seus subtrechos. Se houver uma viagem direta entre os dois portos, ela tem prioridade. Se não houver, o sistema escolhe o corredor completo de menor distância entre os que possuem escalas. Esse critério define somente a geometria da nova remessa; ele não retira nenhum dos outros corredores da média de intensidade.
 
-Em Santos–Manaus, a base contém o recorte direto da viagem `voyage_9612789_00004` e recortes com escalas, como Santos–Suape–Pecém–Manaus da viagem `voyage_9612791_00011`. Os dois ajudam a estimar a intensidade representativa, assim como os demais recortes aceitos para essa direção. Como existe um recorte direto, o sistema usa as 3.300,216 nm que a matriz marítima atribui a ele para representar a distância do novo cenário. Os recortes com escalas e os outros corredores não são descartados da estimativa da intensidade; apenas não fornecem a distância escolhida para o cenário.
+Em Santos–Manaus, existe o recorte direto da viagem `voyage_9612789_00004`. Por isso, a distância escolhida para o cenário é $3.300{,}216\ \mathrm{nm}$, atribuída pela matriz marítima ao trecho direto. A carga observada nessa viagem, 11.584,165 t, e sua intensidade histórica de $9{,}322050\ \mathrm{g/(t\cdot nm)}$ não são usadas como valores-padrão do novo cenário. O cenário usa a carga escolhida pelo usuário e a intensidade da ligação calculada com todos os 89 recortes: $9{,}009824\ \mathrm{g/(t\cdot nm)}$.
 
-Depois dessas duas decisões, o usuário informa a carga $M$. O sistema multiplica essa carga pela intensidade da ligação e pela distância da sequência escolhida. O consumo marítimo é:
+Se $D_{o,d}^{*}$ representa a soma das distâncias do corredor escolhido, então:
 
 $$
-F_{o,d}^{\mathrm{cen}}=\frac{I_{o,d}^{\mathrm{rep}}\,M}{1000}
-\sum_{s\in\mathcal{S}^{*}_{o,d}}d_s.
+D_{o,d}^{*}=\sum_{s\in\mathcal{S}_{o,d}^{*}}d_s.
 $$
 
-O sobrescrito $\mathrm{cen}$ significa “cenário” e diferencia esse consumo calculado para a nova remessa do consumo reconstruído nas viagens históricas.
+Para uma carga de cenário $M$, em toneladas, o consumo marítimo é:
 
-O sistema procura a distância de cada trecho na matriz marítima. Se uma distância estiver ausente, pode calcular a distância de grande círculo entre as coordenadas dos dois portos. Isso ocorreu no recorte Santos–Itapoá–Paranaguá–Suape–Manaus da viagem `voyage_9343974_00002`, realizada pelo navio de IMO 9343974. Como a matriz não continha Itapoá–Paranaguá, o sistema estimou 40,974 nm por haversine e registrou essa fonte. A intensidade dessa viagem, 6,8 g/(t$\cdot$nm), veio da correspondência exata do IMO no EU MRV de 2024. A distância de haversine é uma aproximação entre coordenadas; ela não confirma que o navio poderia seguir exatamente aquela linha no mar.
+$$
+F_{o,d}^{\mathrm{cen}}=
+\frac{I_{o,d}^{\mathrm{rep}}\,M\,D_{o,d}^{*}}{1000}.
+$$
+
+Em Santos–Manaus, a expressão aplicada pela ferramenta fica:
+
+$$
+F_{\mathrm{Santos,Manaus}}^{\mathrm{cen}}=
+\frac{9{,}009824\times M\times3.300{,}216}{1000}\ \mathrm{kg}.
+$$
+
+O sobrescrito $\mathrm{cen}$ indica que esse é o consumo de uma nova remessa, e não o consumo reconstruído de uma viagem histórica. Assim, o histórico serve para estimar a intensidade; a carga e a distância do cenário servem para calcular o consumo que será apresentado ao usuário.
+
+O sistema procura primeiro a distância de cada subtrecho na matriz marítima. Quando ela não está disponível, pode usar a distância de grande círculo entre as coordenadas dos dois portos, calculada pelo método de haversine. Isso ocorreu no subtrecho Itapoá–Paranaguá da viagem `voyage_9343974_00002`: a matriz não continha essa distância, e o sistema registrou a estimativa de $40{,}974\ \mathrm{nm}$ como uma aproximação. Esse registro deixa claro que a distância não foi observada como uma rota navegada e pode diferir de uma rota marítima real.
 
 #### 3.3.5 Consolidação de emissões e custos
 
