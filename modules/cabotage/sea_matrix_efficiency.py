@@ -28,19 +28,22 @@ DEFAULT_CLASS_EFFICIENCY_JSON_PATH = Path(
 )
 DEFAULT_SHIP_TYPE = "Container ship"
 PARSER_VERSION = "sea_matrix_efficiency_v3"
-MARITIME_INTENSITY_SCHEMA_VERSION = 3
+MARITIME_INTENSITY_SCHEMA_VERSION = 4
 _KM_PER_NAUTICAL_MILE = 1.852
 DEPLOYMENT_REQUIRED_ROUTE = ("Porto de Santos", "Porto de Manaus")
 ROUTE_OBSERVATION_MODE = "observed_voyage_corridors"
 CORRIDOR_SELECTION_CRITERION = "direct_first_then_shortest_distance_km"
 FALLBACK_TRIM_FRACTION_EACH_TAIL = 0.01
 FALLBACK_OUTLIER_RULE = "symmetric_trim_1pct_each_tail_floor_count"
-PAIR_INTENSITY_METHOD = "transport_work_weighted_median"
+MRV_IMO_OUTLIER_UPPER_QUANTILE = 0.95
+MRV_IMO_OUTLIER_MIN_SAMPLE_SIZE = 20
+MRV_IMO_OUTLIER_RULE = "above_ship_type_p95_latest_positive_per_imo"
+PAIR_INTENSITY_METHOD = "transport_work_weighted_mean"
 PAIR_INTENSITY_SCOPE = "all_eligible_same_od_voyage_observations_across_corridors"
 PAIR_INTENSITY_WEIGHT = "observed_transport_work_tnm"
-PAIR_INTENSITY_SOURCE = "antaq_mrv_same_od_transport_work_weighted_median"
+PAIR_INTENSITY_SOURCE = "antaq_mrv_same_od_transport_work_weighted_mean"
 PAIR_INTENSITY_ZERO_WORK_SOURCE = (
-    "antaq_mrv_same_od_unweighted_median_zero_transport_work"
+    "antaq_mrv_same_od_unweighted_mean_zero_transport_work"
 )
 PAIR_INTENSITY_UNAVAILABLE_SOURCE = (
     "antaq_mrv_same_od_representative_intensity_unavailable"
@@ -226,8 +229,9 @@ def enrich_sea_matrix_with_efficiency(
         "generated_at": datetime.now(UTC).isoformat(),
         "source": (
             "ANTAQ observed same-voyage corridors + EU MRV latest IMO intensity with "
-            "robust vessel-class and ship-type fallbacks; same-OD transport-work-"
-            "weighted median applied to selected-corridor geometry"
+            "explicit IMO outlier replacement and robust vessel-class and ship-type "
+            "estimates; same-OD transport-work-weighted mean applied to selected-"
+            "corridor geometry"
         ),
         "route_observation_mode": ROUTE_OBSERVATION_MODE,
         "corridor_selection_criterion": CORRIDOR_SELECTION_CRITERION,
@@ -237,12 +241,13 @@ def enrich_sea_matrix_with_efficiency(
         "pair_intensity_weight": PAIR_INTENSITY_WEIGHT,
         "pair_intensity_source": PAIR_INTENSITY_SOURCE,
         "pair_intensity_zero_weight_source": PAIR_INTENSITY_ZERO_WORK_SOURCE,
-        "pair_intensity_tie_rule": (
-            "lower_inverse_cdf_first_intensity_reaching_50pct_cumulative_weight"
+        "pair_intensity_positive_weight_rule": (
+            "sum(intensity_g_per_tnm * transport_work_tnm) / "
+            "sum(transport_work_tnm)"
         ),
         "pair_intensity_zero_weight_rule": (
             "exclude_zero_weight_when_positive_transport_work_exists; otherwise use "
-            "unweighted_median_of_resolved_same_od_voyages"
+            "unweighted_mean_of_resolved_same_od_voyages"
         ),
         "segment_cargo_rule": (
             "minimum nonnegative onboard reconstruction: initial onboard equals max(0, "
@@ -255,13 +260,22 @@ def enrich_sea_matrix_with_efficiency(
         ),
         "intensity_resolution_hierarchy": [
             "eu_mrv_imo_latest",
+            "eu_mrv_imo_outlier_replaced_by_vessel_class_or_ship_type",
             "eu_mrv_vessel_class_trimmed_mean_1pct_or_median",
             "eu_mrv_ship_type_trimmed_mean_1pct_or_median",
             "eu_mrv_ship_type_robust_default_container_ship",
             "unavailable",
         ],
         "fallback_outlier_policy": {
-            "exact_imo_values": "preserved_without_trimming",
+            "exact_imo_values": {
+                "rule": MRV_IMO_OUTLIER_RULE,
+                "upper_quantile": MRV_IMO_OUTLIER_UPPER_QUANTILE,
+                "minimum_same_type_sample_size": MRV_IMO_OUTLIER_MIN_SAMPLE_SIZE,
+                "replacement": (
+                    "vessel_class_robust_statistic_when_available_else_"
+                    "ship_type_robust_statistic"
+                ),
+            },
             "ship_type": FALLBACK_OUTLIER_RULE,
             "vessel_class": (
                 "use artifact trimmed_mean_1pct; median when trimmed mean is unavailable"
@@ -525,6 +539,26 @@ def _robust_fallback_statistic(values: list[float]) -> dict[str, Any]:
     }
 
 
+def _linear_percentile(values: list[float], quantile: float) -> float:
+    """Return an inclusive linear percentile without adding a dependency."""
+    ordered = sorted(float(value) for value in values if float(value) > 0.0)
+    if not ordered:
+        raise ValueError("Percentile requires at least one positive MRV value.")
+    if not 0.0 <= quantile <= 1.0:
+        raise ValueError("Percentile quantile must be between zero and one.")
+
+    position = (len(ordered) - 1) * quantile
+    lower_index = math.floor(position)
+    upper_index = math.ceil(position)
+    if lower_index == upper_index:
+        return float(ordered[lower_index])
+    fraction = position - lower_index
+    return float(
+        ordered[lower_index]
+        + fraction * (ordered[upper_index] - ordered[lower_index])
+    )
+
+
 def _load_mrv_intensity_catalog(path: Path | str) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     ships = payload.get("ships") if isinstance(payload, dict) else None
@@ -602,6 +636,7 @@ def _load_mrv_intensity_catalog(path: Path | str) -> dict[str, Any]:
         type_members.setdefault(key, []).append({"imo": imo, **item})
 
     ship_type_fallbacks: dict[str, dict[str, Any]] = {}
+    ship_type_outlier_profiles: dict[str, dict[str, Any]] = {}
     for key, members in type_members.items():
         values = [float(member["intensity_g_per_tnm"]) for member in members]
         robust = _robust_fallback_statistic(values)
@@ -645,11 +680,23 @@ def _load_mrv_intensity_catalog(path: Path | str) -> dict[str, Any]:
             "is_fallback": True,
             "used_default_ship_type": False,
         }
+        if len(values) >= MRV_IMO_OUTLIER_MIN_SAMPLE_SIZE:
+            ship_type_outlier_profiles[key] = {
+                "ship_type": type_labels[key],
+                "sample_size": len(values),
+                "upper_quantile": MRV_IMO_OUTLIER_UPPER_QUANTILE,
+                "upper_threshold_g_per_tnm": _linear_percentile(
+                    values,
+                    MRV_IMO_OUTLIER_UPPER_QUANTILE,
+                ),
+                "outlier_rule": MRV_IMO_OUTLIER_RULE,
+            }
 
     return {
         "by_imo": by_imo,
         "ship_metadata": ship_metadata,
         "ship_type_fallbacks": ship_type_fallbacks,
+        "ship_type_outlier_profiles": ship_type_outlier_profiles,
         "summary": {
             "ship_records": len(ships),
             "latest_positive_imo_count": len(by_imo),
@@ -739,6 +786,72 @@ def _resolve_voyage_intensity(
     imo = str(voyage.get("imo") or "").strip()
     direct = mrv_catalog["by_imo"].get(imo)
     if isinstance(direct, dict):
+        ship_type = _text_or_none(voyage.get("ship_type")) or _text_or_none(
+            direct.get("ship_type")
+        )
+        outlier_profile = (
+            mrv_catalog.get("ship_type_outlier_profiles", {}).get(
+                _norm(ship_type)
+            )
+            if ship_type
+            else None
+        )
+        direct_intensity = _float_or_none(direct.get("intensity_g_per_tnm"))
+        upper_threshold = (
+            _float_or_none(outlier_profile.get("upper_threshold_g_per_tnm"))
+            if isinstance(outlier_profile, dict)
+            else None
+        )
+        if (
+            direct_intensity is not None
+            and upper_threshold is not None
+            and direct_intensity > upper_threshold
+        ):
+            vessel_class = _text_or_none(voyage.get("vessel_class")) or _text_or_none(
+                direct.get("vessel_class")
+            )
+            class_mean = (
+                class_means.get(_norm(vessel_class)) if vessel_class else None
+            )
+            replacement = (
+                dict(class_mean)
+                if isinstance(class_mean, dict)
+                else dict(
+                    mrv_catalog["ship_type_fallbacks"].get(_norm(ship_type)) or {}
+                )
+            )
+            if replacement:
+                replacement_level = str(
+                    replacement.get("intensity_source_level") or "ship_type"
+                )
+                replacement["intensity_source"] = (
+                    "eu_mrv_imo_outlier_replaced_by_vessel_class"
+                    if replacement_level == "vessel_class"
+                    else "eu_mrv_imo_outlier_replaced_by_ship_type"
+                )
+                replacement["intensity_source_level"] = replacement_level
+                replacement["is_fallback"] = True
+                replacement["used_default_ship_type"] = False
+                replacement["ship_type"] = ship_type
+                replacement["vessel_class"] = vessel_class
+                replacement["matched_imo"] = imo
+                replacement["matched_imo_intensity_g_per_tnm"] = direct_intensity
+                replacement["matched_imo_reporting_period"] = direct.get(
+                    "reporting_period"
+                )
+                replacement["matched_imo_source_file"] = direct.get("source_file")
+                replacement["outlier_rule"] = str(
+                    outlier_profile.get("outlier_rule")
+                    or MRV_IMO_OUTLIER_RULE
+                )
+                replacement["outlier_upper_quantile"] = outlier_profile.get(
+                    "upper_quantile"
+                )
+                replacement["outlier_upper_threshold_g_per_tnm"] = upper_threshold
+                replacement["outlier_reference_sample_size"] = outlier_profile.get(
+                    "sample_size"
+                )
+                return replacement
         return dict(direct)
 
     metadata = mrv_catalog["ship_metadata"].get(imo) or {}
@@ -1513,7 +1626,7 @@ def _pair_representative_intensity(
     *,
     audit_voyage_ids: set[str] | None = None,
 ) -> dict[str, Any]:
-    """Return one robust intensity for every eligible voyage of an OD pair."""
+    """Return the transport-work-weighted mean for every eligible OD voyage."""
     resolved: list[tuple[float, float, VoyageSubroute]] = []
     for subroute in subroutes:
         intensity = _float_or_none(
@@ -1530,50 +1643,21 @@ def _pair_representative_intensity(
     method = PAIR_INTENSITY_METHOD
     source = PAIR_INTENSITY_SOURCE
     total_weight = sum(item[1] for item in positive_weight)
-    crossing_subroute: VoyageSubroute | None = None
-    crossing_weight = 0.0
-    cumulative_before_crossing = 0.0
-    cumulative_at_crossing = 0.0
+    values = [item[0] for item in resolved]
 
     if positive_weight:
-        ordered = sorted(
-            positive_weight,
-            key=lambda item: (
-                item[0],
-                item[2].voyage_id,
-                item[2].origin_sequence,
-                item[2].destination_sequence,
-                item[2].corridor_port_path,
-            ),
-        )
-        threshold = total_weight / 2.0
-        cumulative = 0.0
-        for intensity, weight, subroute in ordered:
-            previous_cumulative = cumulative
-            cumulative += weight
-            effective_source_counts.update(
-                [
-                    str(
-                        subroute.intensity_provenance.get("intensity_source")
-                        or "unavailable"
-                    )
-                ]
-            )
-            if representative is None and cumulative >= threshold:
-                # Deterministic lower inverse-CDF convention: the first
-                # observed intensity whose cumulative weight reaches 50%.
-                representative = intensity
-                crossing_subroute = subroute
-                crossing_weight = weight
-                cumulative_before_crossing = previous_cumulative
-                cumulative_at_crossing = cumulative
         weighted_mean = sum(
             intensity * weight for intensity, weight, _ in positive_weight
         ) / total_weight
+        representative = weighted_mean
+        effective_source_counts.update(
+            str(subroute.intensity_provenance.get("intensity_source") or "unavailable")
+            for _, _, subroute in positive_weight
+        )
     elif resolved:
-        representative = statistics.median(item[0] for item in resolved)
+        representative = statistics.fmean(values)
         weighted_mean = None
-        method = "unweighted_median_resolved_same_od_voyages_zero_transport_work"
+        method = "unweighted_mean_resolved_same_od_voyages_zero_transport_work"
         source = PAIR_INTENSITY_ZERO_WORK_SOURCE
         effective_source_counts.update(
             str(item[2].intensity_provenance.get("intensity_source") or "unavailable")
@@ -1592,14 +1676,10 @@ def _pair_representative_intensity(
             "maritime_pair_intensity origin=%r destination=%r "
             "candidate_voyage_count=%d resolved_voyage_count=%d "
             "positive_weight_voyage_count=%d total_transport_work_tnm=%.6f "
-            "threshold_tnm=%.6f representative_intensity_g_per_tnm=%s "
-            "crossing_voyage_id=%s crossing_imo=%s crossing_path=%s "
-            "crossing_transport_work_tnm=%.6f cumulative_before_tnm=%.6f "
-            "cumulative_at_tnm=%.6f cumulative_before_percent=%s "
-            "cumulative_at_percent=%s crossing_intensity_source=%s "
-            "crossing_intensity_source_level=%s crossing_is_fallback=%s "
-            "crossing_statistic=%s crossing_outlier_rule=%s "
-            "crossing_raw_sample_size=%s crossing_retained_sample_size=%s "
+            "representative_intensity_g_per_tnm=%s "
+            "transport_work_weighted_mean_g_per_tnm=%s "
+            "unweighted_median_g_per_tnm=%s "
+            "effective_source_counts=%s "
             "method=%s source=%s",
             origin,
             destination,
@@ -1607,72 +1687,14 @@ def _pair_representative_intensity(
             len(resolved),
             len(positive_weight),
             total_weight,
-            total_weight / 2.0,
             representative,
-            crossing_subroute.voyage_id if crossing_subroute is not None else "unavailable",
-            crossing_subroute.imo if crossing_subroute is not None else "unavailable",
-            (
-                " -> ".join(crossing_subroute.corridor_port_path)
-                if crossing_subroute is not None
-                else "unavailable"
-            ),
-            crossing_weight,
-            cumulative_before_crossing,
-            cumulative_at_crossing,
-            (
-                f"{100.0 * cumulative_before_crossing / total_weight:.6f}"
-                if total_weight > 0.0
-                else "unavailable"
-            ),
-            (
-                f"{100.0 * cumulative_at_crossing / total_weight:.6f}"
-                if total_weight > 0.0
-                else "unavailable"
-            ),
-            (
-                crossing_subroute.intensity_provenance.get("intensity_source")
-                if crossing_subroute is not None
-                else "unavailable"
-            ),
-            (
-                crossing_subroute.intensity_provenance.get(
-                    "intensity_source_level"
-                )
-                if crossing_subroute is not None
-                else "unavailable"
-            ),
-            (
-                bool(crossing_subroute.intensity_provenance.get("is_fallback"))
-                if crossing_subroute is not None
-                else "unavailable"
-            ),
-            (
-                crossing_subroute.intensity_provenance.get("statistic")
-                if crossing_subroute is not None
-                else "unavailable"
-            ),
-            (
-                crossing_subroute.intensity_provenance.get("outlier_rule")
-                if crossing_subroute is not None
-                else "unavailable"
-            ),
-            (
-                crossing_subroute.intensity_provenance.get("raw_sample_size")
-                if crossing_subroute is not None
-                else "unavailable"
-            ),
-            (
-                crossing_subroute.intensity_provenance.get(
-                    "retained_sample_size"
-                )
-                if crossing_subroute is not None
-                else "unavailable"
-            ),
+            weighted_mean,
+            statistics.median(values) if values else None,
+            dict(sorted(effective_source_counts.items())),
             method,
             source,
         )
 
-    values = [item[0] for item in resolved]
     return {
         "pair_intensity_g_per_tnm": (
             round(representative, 6) if representative is not None else None

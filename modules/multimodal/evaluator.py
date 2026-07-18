@@ -57,15 +57,15 @@ _BUNKER_EF_KG_CO2E_PER_KG = float(get_ef_kg_per_kg(_MARINE_FUEL_TYPE))
 _NM_TO_KM = 1.852
 _KG_PER_TONNE = 1000.0
 _DEFAULT_TEU_LOAD_FACTOR = 0.80
-_PAIR_WEIGHTED_MEDIAN_METHOD = "transport_work_weighted_median"
-_PAIR_ZERO_WORK_MEDIAN_METHOD = (
-    "unweighted_median_resolved_same_od_voyages_zero_transport_work"
+_PAIR_WEIGHTED_MEAN_METHOD = "transport_work_weighted_mean"
+_PAIR_ZERO_WORK_MEAN_METHOD = (
+    "unweighted_mean_resolved_same_od_voyages_zero_transport_work"
 )
-_PAIR_WEIGHTED_MEDIAN_SOURCE = (
-    "antaq_mrv_same_od_transport_work_weighted_median"
+_PAIR_WEIGHTED_MEAN_SOURCE = (
+    "antaq_mrv_same_od_transport_work_weighted_mean"
 )
-_PAIR_ZERO_WORK_MEDIAN_SOURCE = (
-    "antaq_mrv_same_od_unweighted_median_zero_transport_work"
+_PAIR_ZERO_WORK_MEAN_SOURCE = (
+    "antaq_mrv_same_od_unweighted_mean_zero_transport_work"
 )
 
 
@@ -940,9 +940,9 @@ def evaluate_path(
     ).strip() or None
     if pair_intensity_g_per_tnm is not None and pair_intensity_source is None:
         pair_intensity_source = (
-            _PAIR_ZERO_WORK_MEDIAN_SOURCE
-            if pair_intensity_method == _PAIR_ZERO_WORK_MEDIAN_METHOD
-            else _PAIR_WEIGHTED_MEDIAN_SOURCE
+            _PAIR_ZERO_WORK_MEAN_SOURCE
+            if pair_intensity_method == _PAIR_ZERO_WORK_MEAN_METHOD
+            else _PAIR_WEIGHTED_MEAN_SOURCE
         )
     sea_leg_fuel_g_per_tnm = _positive_float_or_none(
         sea_leg_data.get("fuel_g_per_tnm")
@@ -1047,7 +1047,7 @@ def evaluate_path(
     if pair_intensity_g_per_tnm is not None:
         sea_fuel_g_per_tnm_source = (
             pair_intensity_source
-            or _PAIR_WEIGHTED_MEDIAN_SOURCE
+            or _PAIR_WEIGHTED_MEAN_SOURCE
         )
     elif selected_corridor_sublegs_complete:
         sea_fuel_g_per_tnm_source = (
@@ -1083,13 +1083,13 @@ def evaluate_path(
         )
         if pair_intensity_g_per_tnm is None:
             sailing_fuel_mode = "observed_voyage_corridor_sublegs"
-        elif pair_intensity_method == _PAIR_ZERO_WORK_MEDIAN_METHOD:
+        elif pair_intensity_method == _PAIR_ZERO_WORK_MEAN_METHOD:
             sailing_fuel_mode = (
-                "same_od_unweighted_median_zero_transport_work_on_selected_corridor"
+                "same_od_unweighted_mean_zero_transport_work_on_selected_corridor"
             )
-        elif pair_intensity_method == _PAIR_WEIGHTED_MEDIAN_METHOD:
+        elif pair_intensity_method == _PAIR_WEIGHTED_MEAN_METHOD:
             sailing_fuel_mode = (
-                "same_od_transport_work_weighted_median_on_selected_corridor"
+                "same_od_transport_work_weighted_mean_on_selected_corridor"
             )
         else:
             sailing_fuel_mode = "same_od_representative_intensity_on_selected_corridor"

@@ -263,10 +263,11 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
             "destination='Porto de Manaus'",
             log_text,
         )
-        self.assertIn("crossing_intensity_source=eu_mrv_imo_latest", log_text)
-        self.assertIn("crossing_intensity_source_level=imo", log_text)
-        self.assertIn("crossing_is_fallback=False", log_text)
-        self.assertIn("crossing_statistic=latest_positive", log_text)
+        self.assertIn(
+            "transport_work_weighted_mean_g_per_tnm=7.429999999999999",
+            log_text,
+        )
+        self.assertIn("effective_source_counts={'eu_mrv_imo_latest': 1}", log_text)
 
     def test_collapsed_calls_preserve_loaded_and_unloaded_audit_totals(self) -> None:
         rows = [
@@ -384,6 +385,37 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
             robust["statistic"],
             "median_of_latest_positive_per_imo_small_sample",
         )
+
+    def test_extreme_exact_imo_uses_same_type_robust_estimate(self) -> None:
+        ships = [
+            self._ship(str(1000000 + index), [self._record(2024, 5.0)])
+            for index in range(19)
+        ]
+        ships.append(self._ship("9999999", [self._record(2024, 100.0)]))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port B"],
+                matrix=self._symmetric_matrix({("Port A", "Port B"): 185.2}),
+                voyages=[{"voyage_id": "outlier", "imo": "9999999"}],
+                stops=[
+                    self._stop("outlier", 0, "Port A", 100.0, 10.0),
+                    self._stop("outlier", 1, "Port B", -100.0, -10.0),
+                ],
+                ships=ships,
+            )
+
+        provenance = payload["voyage_intensity_provenance"]["outlier"]
+        self.assertEqual(
+            provenance["intensity_source"],
+            "eu_mrv_imo_outlier_replaced_by_ship_type",
+        )
+        self.assertEqual(provenance["matched_imo"], "9999999")
+        self.assertEqual(provenance["matched_imo_intensity_g_per_tnm"], 100.0)
+        self.assertEqual(provenance["outlier_upper_quantile"], 0.95)
+        self.assertLess(provenance["outlier_upper_threshold_g_per_tnm"], 100.0)
+        self.assertEqual(provenance["intensity_g_per_tnm"], 5.0)
 
     def test_negative_prefix_reconstructs_initial_cargo_and_keeps_zero_leg(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -546,7 +578,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertEqual(stats["corridor_port_path"], ["Port A", "Port B"])
         self.assertEqual(stats["selected_corridor_fuel_g_per_tnm_weighted_mean"], 30.0)
         self.assertEqual(stats["selected_corridor_sublegs"][0]["fuel_g_per_tnm"], 30.0)
-        self.assertEqual(stats["pair_intensity_g_per_tnm"], 5.0)
+        self.assertAlmostEqual(stats["pair_intensity_g_per_tnm"], 8.26087)
         self.assertEqual(stats["fuel_g_per_tnm_weighted_mean"], 30.0)
         self.assertEqual(stats["pair_intensity_candidate_voyage_count"], 2)
         self.assertEqual(stats["pair_intensity_positive_weight_voyage_count"], 2)
@@ -598,7 +630,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         )
         self.assertEqual(direct_option["fuel_g_per_tnm_weighted_mean"], 10.0)
 
-    def test_pair_intensity_uses_unweighted_median_when_all_work_is_zero(self) -> None:
+    def test_pair_intensity_uses_unweighted_mean_when_all_work_is_zero(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             payload, _ = self._run_enrichment(
                 Path(tmpdir),
@@ -626,7 +658,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertEqual(stats["pair_intensity_zero_weight_voyage_count"], 2)
         self.assertEqual(
             stats["pair_intensity_method"],
-            "unweighted_median_resolved_same_od_voyages_zero_transport_work",
+            "unweighted_mean_resolved_same_od_voyages_zero_transport_work",
         )
         self.assertEqual(
             stats["pair_intensity_source"],
@@ -644,10 +676,10 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         )
         self.assertEqual(
             validation["required_route"]["pair_intensity_method"],
-            "unweighted_median_resolved_same_od_voyages_zero_transport_work",
+            "unweighted_mean_resolved_same_od_voyages_zero_transport_work",
         )
 
-    def test_pair_intensity_tie_uses_lower_inverse_cdf_value(self) -> None:
+    def test_pair_intensity_uses_weighted_mean_for_equal_work(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             payload, _ = self._run_enrichment(
                 Path(tmpdir),
@@ -670,7 +702,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
             )
 
         stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
-        self.assertEqual(stats["pair_intensity_g_per_tnm"], 5.0)
+        self.assertEqual(stats["pair_intensity_g_per_tnm"], 10.0)
 
     def test_repeated_ports_contribute_once_per_voyage_and_od(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

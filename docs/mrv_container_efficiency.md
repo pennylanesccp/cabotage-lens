@@ -149,9 +149,9 @@ containerized-cargo pipeline; physical calls with no observed container
 movement may be absent. If all derived transport work for a resolved subleg or
 corridor is zero, the diagnostic fuel attributed to the observed activity stays
 zero and corridor diagnostics retain their explicitly labeled arithmetic
-behavior. At pair level, zero-work observations
-are excluded whenever positive work exists; the all-zero case uses the labeled
-ordinary-median fallback above.
+behavior. At pair level, zero-work observations are excluded whenever positive
+work exists; the all-zero case uses the labeled ordinary mean of the resolved
+intensities.
 
 For routes backed by directional ANTAQ+MRV observations, the single-evaluation
 pipeline JSON exposes the selected sublegs under
@@ -166,15 +166,16 @@ The explicit `pair_intensity_*` fields are canonical for scenario intensity.
 The legacy `fuel_g_per_tnm_weighted_mean` field keeps its original selected-
 corridor weighted-mean meaning, and evaluated sublegs keep their historical
 `fuel_g_per_tnm`; scenario values use the separate `scenario_fuel_g_per_tnm`
-field. The directional metadata declares `maritime_intensity_schema_version=3`
+field. The directional metadata declares `maritime_intensity_schema_version=4`
 and a generation timestamp so a complete newer tracked contract can replace an
 older or partially upgraded cache.
 
 The usual pair source is
-`antaq_mrv_same_od_transport_work_weighted_median`. In the all-zero-work case,
-the source changes explicitly to
-`antaq_mrv_same_od_unweighted_median_zero_transport_work`; the validator and
-runtime accept zero transport work only for that labeled method.
+`antaq_mrv_same_od_transport_work_weighted_mean`: it is the sum of each
+voyage intensity multiplied by its observed transport work, divided by total
+observed transport work. In the all-zero-work case, the source changes
+explicitly to `antaq_mrv_same_od_unweighted_mean_zero_transport_work`; the
+validator and runtime accept zero transport work only for that labeled method.
 
 `attributed_cargo_t` is the scenario input (14 t for a 14 t evaluation), not a
 hard-coded constant. It must not be confused with the reconstructed ANTAQ cargo
@@ -191,15 +192,20 @@ Voyage intensity resolution is auditable and ordered as follows:
    containerized ANTAQ scope; samples too small to trim use the median;
 4. explicit unresolved status when none of those sources is usable.
 
-Exact IMO matches and class/type fallbacks remain separate in coverage and
-source-count indicators. Exact IMO values are preserved without clipping. The
-outlier rule applies only to fallback aggregation: sort the positive latest-IMO
-values and exclude `floor(0.01 * n)` observations from each tail. Ship-type
-fallback provenance stores the raw and retained sample sizes, excluded count,
+Exact IMO matches and class/type estimates remain separate in coverage and
+source-count indicators. When at least 20 latest positive IMO values are
+available for a ship type, an exact IMO value above that type's 95th percentile
+is treated as an outlier. The ANTAQ voyage remains in the calculation, but its
+intensity is replaced by the robust vessel-class estimate when available, or by
+the robust ship-type estimate otherwise. Provenance records the original IMO
+value, the threshold, the reference-sample size, and the replacement source.
+
+The same robust statistic is also used for a missing IMO: sort the positive
+latest-IMO values and exclude `floor(0.01 * n)` observations from each tail.
+Ship-type provenance stores the raw and retained sample sizes, excluded count,
 retained bounds, raw mean, raw median, and statistic actually used. Class
-fallback provenance retains the statistic and sample metadata available in its
-tracked artifact. This prevents extreme MRV tail values from dominating a
-ship-type fallback without rewriting an exact ship-level record.
+provenance retains the statistic and sample metadata available in its tracked
+artifact.
 
 In the current `Container ship` fallback sample, the rule starts from 243
 latest positive IMO values, removes two observations from each tail, and keeps

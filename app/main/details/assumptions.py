@@ -44,11 +44,17 @@ _CORRIDOR_SELECTION_LABELS = {
 }
 
 _INTENSITY_SOURCE_LABELS = {
-    "antaq_mrv_same_od_transport_work_weighted_median": (
-        "ANTAQ + EU MRV same-OD transport-work-weighted median"
+    "antaq_mrv_same_od_transport_work_weighted_mean": (
+        "ANTAQ + EU MRV same-OD transport-work-weighted mean"
     ),
-    "antaq_mrv_same_od_unweighted_median_zero_transport_work": (
-        "ANTAQ + EU MRV same-OD unweighted median (all transport work zero)"
+    "antaq_mrv_same_od_unweighted_mean_zero_transport_work": (
+        "ANTAQ + EU MRV same-OD unweighted mean (all transport work zero)"
+    ),
+    "eu_mrv_imo_outlier_replaced_by_vessel_class": (
+        "EU MRV IMO outlier replaced by vessel-class estimate"
+    ),
+    "eu_mrv_imo_outlier_replaced_by_ship_type": (
+        "EU MRV IMO outlier replaced by ship-type estimate"
     ),
     "eu_mrv_imo_latest": "EU MRV latest record by IMO",
     "mrv_imo": "EU MRV match by IMO",
@@ -74,9 +80,9 @@ _INTENSITY_SOURCE_LABELS = {
 }
 
 _PAIR_INTENSITY_METHOD_LABELS = {
-    "transport_work_weighted_median": "Transport-work-weighted median",
-    "unweighted_median_resolved_same_od_voyages_zero_transport_work": (
-        "Unweighted median because all resolved voyages had zero transport work"
+    "transport_work_weighted_mean": "Transport-work-weighted mean",
+    "unweighted_mean_resolved_same_od_voyages_zero_transport_work": (
+        "Unweighted mean because all resolved voyages had zero transport work"
     ),
 }
 

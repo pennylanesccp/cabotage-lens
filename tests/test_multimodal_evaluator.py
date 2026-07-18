@@ -383,15 +383,15 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             "source": "observed_voyage_corridor",
             "route_observation_mode": "observed_voyage_corridors",
             "fuel_g_per_tnm": 9.0,
-            "fuel_g_per_tnm_source": "antaq_mrv_same_od_transport_work_weighted_median",
+            "fuel_g_per_tnm_source": "antaq_mrv_same_od_transport_work_weighted_mean",
             "pair_intensity_g_per_tnm": 9.0,
-            "pair_intensity_method": "transport_work_weighted_median",
+            "pair_intensity_method": "transport_work_weighted_mean",
             "pair_intensity_scope": (
                 "all_eligible_same_od_voyage_observations_across_corridors"
             ),
             "pair_intensity_weight": "observed_transport_work_tnm",
             "pair_intensity_source": (
-                "antaq_mrv_same_od_transport_work_weighted_median"
+                "antaq_mrv_same_od_transport_work_weighted_mean"
             ),
             "pair_intensity_candidate_voyage_count": 4,
             "pair_intensity_resolved_voyage_count": 3,
@@ -483,7 +483,7 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         sea = result["multimodal"]["sea"]
         self.assertEqual(
             sea["sailing_fuel_calc_mode"],
-            "same_od_transport_work_weighted_median_on_selected_corridor",
+            "same_od_transport_work_weighted_mean_on_selected_corridor",
         )
         self.assertAlmostEqual(sea["fuel_kg_sailing"], 27.0)
         self.assertNotEqual(sea["fuel_kg_sailing"], sea["observed_fuel_kg"])
@@ -534,7 +534,7 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         self.assertEqual(first_subleg["intensity_source_level"], "imo")
         self.assertEqual(
             first_subleg["scenario_intensity_source"],
-            "antaq_mrv_same_od_transport_work_weighted_median",
+            "antaq_mrv_same_od_transport_work_weighted_mean",
         )
         self.assertEqual(first_subleg["scenario_intensity_source_level"], "od_pair")
         self.assertEqual(
@@ -543,7 +543,7 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         )
         self.assertEqual(
             result["inputs"]["sea_pair_intensity_method"],
-            "transport_work_weighted_median",
+            "transport_work_weighted_mean",
         )
         self.assertEqual(
             result["inputs"]["sea_route_selected_corridor_id"],
@@ -565,7 +565,7 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             any("haversine fallback" in item for item in result["calculation_warnings"])
         )
 
-    def test_zero_work_pair_median_has_explicit_source_and_mode(self) -> None:
+    def test_zero_work_pair_mean_has_explicit_source_and_mode(self) -> None:
         context = evaluator.PreparedEvaluationContext(
             truck_spec={
                 "axles": 5,
@@ -592,10 +592,10 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             "route_observation_mode": "observed_voyage_corridors",
             "pair_intensity_g_per_tnm": 8.0,
             "pair_intensity_method": (
-                "unweighted_median_resolved_same_od_voyages_zero_transport_work"
+                "unweighted_mean_resolved_same_od_voyages_zero_transport_work"
             ),
             "pair_intensity_source": (
-                "antaq_mrv_same_od_unweighted_median_zero_transport_work"
+                "antaq_mrv_same_od_unweighted_mean_zero_transport_work"
             ),
             "pair_intensity_candidate_voyage_count": 2,
             "pair_intensity_resolved_voyage_count": 2,
@@ -632,11 +632,11 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         sea = result["multimodal"]["sea"]
         self.assertEqual(
             sea["sailing_fuel_calc_mode"],
-            "same_od_unweighted_median_zero_transport_work_on_selected_corridor",
+            "same_od_unweighted_mean_zero_transport_work_on_selected_corridor",
         )
         self.assertEqual(
             sea["fuel_g_per_tnm_source"],
-            "antaq_mrv_same_od_unweighted_median_zero_transport_work",
+            "antaq_mrv_same_od_unweighted_mean_zero_transport_work",
         )
         self.assertAlmostEqual(sea["fuel_kg_sailing"], 16.0)
         self.assertEqual(sea["pair_intensity_effective_voyage_count"], 2)

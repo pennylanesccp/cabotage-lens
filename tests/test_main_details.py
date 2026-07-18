@@ -130,10 +130,10 @@ class MainDetailsTests(unittest.TestCase):
                         "eu_mrv_ship_type_trimmed_mean_1pct": 1,
                     },
                     "pair_intensity_g_per_tnm": 9.32205,
-                    "pair_intensity_method": "transport_work_weighted_median",
+                    "pair_intensity_method": "transport_work_weighted_mean",
                     "pair_intensity_weight": "observed_transport_work_tnm",
                     "pair_intensity_source": (
-                        "antaq_mrv_same_od_transport_work_weighted_median"
+                        "antaq_mrv_same_od_transport_work_weighted_mean"
                     ),
                     "pair_intensity_candidate_voyage_count": 4,
                     "pair_intensity_resolved_voyage_count": 4,
@@ -192,7 +192,7 @@ class MainDetailsTests(unittest.TestCase):
             "9.322050 g/(t·nm)",
         )
         self.assertIn(
-            "Transport-work-weighted median",
+            "Transport-work-weighted mean",
             rows["OD intensity aggregation"]["Value"],
         )
         distance_sources = rows["Selected-corridor distance sources"]["Value"]
@@ -349,7 +349,7 @@ class MainDetailsTests(unittest.TestCase):
                             "applied_pair_intensity_g_per_tnm": 9.0,
                             "observed_corridor_fuel_g_per_tnm": 8.0,
                             "scenario_intensity_source": (
-                                "antaq_mrv_same_od_transport_work_weighted_median"
+                                "antaq_mrv_same_od_transport_work_weighted_mean"
                             ),
                             "observed_corridor_intensity_source": "eu_mrv_imo_latest",
                             "observed_fuel_kg": 80.0,
@@ -364,7 +364,7 @@ class MainDetailsTests(unittest.TestCase):
                             "applied_pair_intensity_g_per_tnm": 9.0,
                             "observed_corridor_fuel_g_per_tnm": 6.0,
                             "scenario_intensity_source": (
-                                "antaq_mrv_same_od_transport_work_weighted_median"
+                                "antaq_mrv_same_od_transport_work_weighted_mean"
                             ),
                             "observed_corridor_intensity_source": (
                                 "eu_mrv_vessel_class_trimmed_mean_1pct"
@@ -395,7 +395,7 @@ class MainDetailsTests(unittest.TestCase):
         )
         self.assertEqual(
             rows[0]["Applied intensity basis"],
-            "ANTAQ + EU MRV same-OD transport-work-weighted median",
+            "ANTAQ + EU MRV same-OD transport-work-weighted mean",
         )
         self.assertEqual(
             rows[0]["Observed intensity basis"],
@@ -405,7 +405,7 @@ class MainDetailsTests(unittest.TestCase):
         self.assertEqual(rows[0]["Scenario-attributed fuel"], "11.2 kg")
         self.assertEqual(
             rows[1]["Applied intensity basis"],
-            "ANTAQ + EU MRV same-OD transport-work-weighted median",
+            "ANTAQ + EU MRV same-OD transport-work-weighted mean",
         )
         self.assertEqual(
             rows[1]["Observed intensity basis"],

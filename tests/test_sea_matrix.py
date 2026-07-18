@@ -28,7 +28,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             "voyage_fuel_g_per_tnm_directional_meta": {
                 "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                 "maritime_intensity_schema_version": 3,
-                "pair_intensity_method": "transport_work_weighted_median",
+                "pair_intensity_method": "transport_work_weighted_mean",
                 "generated_at": "2026-07-16T12:00:00+00:00",
             },
             "voyage_fuel_g_per_tnm_directional": {
@@ -65,16 +65,16 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "distance_nm": 300.0,
                         "fuel_g_per_tnm_weighted_mean": 9.0,
                         "fuel_g_per_tnm_source": (
-                            "antaq_mrv_same_od_transport_work_weighted_median"
+                            "antaq_mrv_same_od_transport_work_weighted_mean"
                         ),
                         "pair_intensity_g_per_tnm": 9.0,
-                        "pair_intensity_method": "transport_work_weighted_median",
+                        "pair_intensity_method": "transport_work_weighted_mean",
                         "pair_intensity_scope": (
                             "all_eligible_same_od_voyage_observations_across_corridors"
                         ),
                         "pair_intensity_weight": "observed_transport_work_tnm",
                         "pair_intensity_source": (
-                            "antaq_mrv_same_od_transport_work_weighted_median"
+                            "antaq_mrv_same_od_transport_work_weighted_mean"
                         ),
                         "pair_intensity_candidate_voyage_count": 4,
                         "pair_intensity_resolved_voyage_count": 3,
@@ -136,12 +136,12 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "fuel_g_per_tnm_weighted_mean": 8.0,
                         "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                         "pair_intensity_g_per_tnm": 8.0,
-                        "pair_intensity_method": "transport_work_weighted_median",
+                        "pair_intensity_method": "transport_work_weighted_mean",
                         "pair_intensity_scope": (
                             "all_eligible_same_od_voyage_observations_across_corridors"
                         ),
                         "pair_intensity_source": (
-                            "antaq_mrv_same_od_transport_work_weighted_median"
+                            "antaq_mrv_same_od_transport_work_weighted_mean"
                         ),
                         "pair_intensity_candidate_voyage_count": 1,
                     },
@@ -152,12 +152,12 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "fuel_g_per_tnm_weighted_mean": 8.0,
                         "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                         "pair_intensity_g_per_tnm": 8.0,
-                        "pair_intensity_method": "transport_work_weighted_median",
+                        "pair_intensity_method": "transport_work_weighted_mean",
                         "pair_intensity_scope": (
                             "all_eligible_same_od_voyage_observations_across_corridors"
                         ),
                         "pair_intensity_source": (
-                            "antaq_mrv_same_od_transport_work_weighted_median"
+                            "antaq_mrv_same_od_transport_work_weighted_mean"
                         ),
                         "pair_intensity_candidate_voyage_count": 1,
                     }
@@ -279,7 +279,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(stats["pair_intensity_g_per_tnm"], 9.0)
         self.assertEqual(
             stats["pair_intensity_method"],
-            "transport_work_weighted_median",
+            "transport_work_weighted_mean",
         )
 
     def test_partially_upgraded_remote_yields_to_complete_tracked_schema(self) -> None:
@@ -438,13 +438,13 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(sea_leg["source"], "observed_voyage_corridor")
         self.assertEqual(
             sea_leg["fuel_g_per_tnm_source"],
-            "antaq_mrv_same_od_transport_work_weighted_median",
+            "antaq_mrv_same_od_transport_work_weighted_mean",
         )
         self.assertEqual(sea_leg["fuel_g_per_tnm"], 9.0)
         self.assertEqual(sea_leg["pair_intensity_g_per_tnm"], 9.0)
         self.assertEqual(
             sea_leg["pair_intensity_method"],
-            "transport_work_weighted_median",
+            "transport_work_weighted_mean",
         )
         self.assertEqual(
             sea_leg["selected_corridor_fuel_g_per_tnm_weighted_mean"],
@@ -478,7 +478,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             payload["voyage_fuel_g_per_tnm_directional_meta"][
                 "maritime_intensity_schema_version"
             ],
-            3,
+            4,
         )
 
         validation = validate_enriched_sea_matrix_payload(
@@ -522,7 +522,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         )
         self.assertEqual(
             stats["pair_intensity_method"],
-            "transport_work_weighted_median",
+            "transport_work_weighted_mean",
         )
         self.assertEqual(
             stats["pair_intensity_scope"],
@@ -534,13 +534,14 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(
             stats["pair_intensity_effective_source_counts"],
             {
-                "eu_mrv_imo_latest": 40,
+                "eu_mrv_imo_latest": 19,
+                "eu_mrv_imo_outlier_replaced_by_ship_type": 21,
                 "eu_mrv_ship_type_trimmed_mean_1pct": 49,
             },
         )
         self.assertAlmostEqual(
             stats["pair_intensity_transport_work_weighted_mean_g_per_tnm"],
-            25.243618,
+            9.009824,
             places=6,
         )
         self.assertAlmostEqual(
@@ -594,13 +595,16 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(sea_leg["source"], "observed_voyage_corridor")
         self.assertEqual(
             sea_leg["fuel_g_per_tnm_source"],
-            "antaq_mrv_same_od_transport_work_weighted_median",
+            "antaq_mrv_same_od_transport_work_weighted_mean",
         )
         self.assertEqual(sea_leg["distance_km"], expected["distance_km"])
-        self.assertEqual(sea_leg["fuel_g_per_tnm"], expected["fuel_g_per_tnm_weighted_mean"])
+        self.assertEqual(
+            sea_leg["fuel_g_per_tnm"],
+            expected["pair_intensity_g_per_tnm"],
+        )
         self.assertEqual(
             sea_leg["pair_intensity_method"],
-            "transport_work_weighted_median",
+            "transport_work_weighted_mean",
         )
         self.assertEqual(sea_leg["pair_intensity_candidate_voyage_count"], 89)
         self.assertEqual(sea_leg["matched_segment_count"], expected["matched_segment_count"])
