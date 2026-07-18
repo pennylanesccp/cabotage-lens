@@ -73,7 +73,7 @@ A massa informada pelo usuário representa a remessa do cenário. Ela não é a 
 
 O cálculo rodoviário começa pela distância total entre a origem e o destino. O sistema obtém uma rota rodoviária em quilômetros e utiliza essa distância para representar o percurso do caminhão. 
 
-### 3.2.1 Escolha do veículo e consumo de diesel
+#### 3.2.1 Escolha do veículo e consumo de diesel
 
 Em seguida, a massa transportada define o veículo representativo. O modelo utiliza os rendimentos médios por número de eixos publicados pela **Agência Nacional de Transportes Terrestres (ANTT)**. Esses dados oficiais foram obtidos na tabela da Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas, disponibilizada no [portal de legislação da ANTT (ANTTlegis)](https://anttlegis.antt.gov.br/action/UrlPublicasAction.php?acao=abrirAtoPublico&cod_menu=9230&cod_modulo=623&num_ato=00000001&seq_ato=ATT&sgl_orgao=SUROC%2FANTT%2FMT&sgl_tipo=POR&vlr_ano=2025). A tabela de referência adotada no modelo associa a faixa de carga ao número de eixos e relaciona cada configuração à eficiência básica em quilômetros por litro (km/L). A seleção automática é uma regra de modelagem para estimar consumo; não é uma verificação de limite legal de peso nem substitui o planejamento operacional de uma transportadora.
 
@@ -96,7 +96,23 @@ $$
 
 Como exemplo de execução reproduzida, usemos os 3.491,431 km de distância rodoviária entre São Paulo e Rio Branco. Para transportar uma remessa de 14 t nessa ligação, o modelo seleciona uma carreta de cinco eixos, com eficiência de 2,3 km/L. Como a remessa cabe em uma única viagem, o consumo estimado é $1\times3.491{,}431/2{,}3=1.518{,}014$ L de diesel. Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multiplica esse consumo pelo número necessário de viagens carregadas. Os litros calculados são posteriormente convertidos em custo e emissões com os fatores e preços adotados pelo cenário.
 
-#### 3.2.2 custo estimado
+#### 3.2.2 Custo estimado do combustível
+
+Depois de estimar o consumo em litros, o sistema calcula o custo do diesel da rota rodoviária. O preço do Diesel S10 vem do levantamento semanal da [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas), agência federal que publica preços médios de combustíveis por Unidade da Federação (UF).
+
+Nas rotas entre estados, o preço adotado é a média aritmética entre o valor registrado na UF de origem e o valor registrado na UF de destino. Em uma rota inteiramente dentro de uma mesma UF, os dois valores são iguais e, portanto, o cálculo mantém o preço desse estado. O preço usado na rota é dado por:
+
+$$
+p_{\mathrm{diesel}}=\frac{p_{\mathrm{origem}}+p_{\mathrm{destino}}}{2}.
+$$
+
+O custo estimado é o consumo calculado na Seção 3.2.1 multiplicado pelo preço do litro:
+
+$$
+C_{\mathrm{rod}}=F_{\mathrm{rod}}\,p_{\mathrm{diesel}}.
+$$
+
+Nessas expressões, $F_{\mathrm{rod}}$ é o consumo de diesel, em litros, e $p_{\mathrm{diesel}}$ é o preço adotado, em reais por litro. Na execução São Paulo–Rio Branco, a tabela da ANP registrou R\$ 6,960/L em São Paulo e R\$ 9,270/L no Acre. O preço utilizado foi, portanto, $(6{,}960+9{,}270)/2=8{,}115$ R\$/L. Com o consumo de 1.518,014 L calculado para a remessa de 14 t, a conta é $1.518{,}014\times8{,}115=12.318{,}68$; portanto, o custo estimado da rota rodoviária é R\$ 12.318,68.
 
 ### 3.3 Alternativa multimodal
 
@@ -319,31 +335,37 @@ $$
 \bar D_{o,d}=\frac{1}{n}\sum_{v=1}^{n}D_{v,o,d}.
 $$
 
-Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média. Em Santos–Manaus, os 89 recortes completos observados em 22 sequências de portos resultam em $6.115{,}349\ \mathrm{km}$, ou $3.302{,}024\ \mathrm{nm}$.
+Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média. Em Santos–Manaus, os 89 recortes completos observados resultam em $6.115{,}349\ \mathrm{km}$, ou $3.302{,}024\ \mathrm{nm}$.
 
-#### 3.3.5 Consolidação de emissões e custos
+#### 3.3.5 Emissões operacionais (TTW)
 
-Ao fim das etapas anteriores, o sistema já estimou o combustível consumido em cada parte da viagem. Nesta etapa, esse consumo é convertido separadamente em custo modelado do combustível e em emissões operacionais de dióxido de carbono equivalente (CO$_2$e) resultantes da queima do combustível. Para o diesel, o preço acompanha a perna em que ele é consumido: a rodovia direta usa a média entre as Unidades da Federação (UFs) de origem e destino; o *first mile*, a média entre a origem e o porto de embarque; o *last mile*, a média entre o porto de desembarque e o destino final; e cada operação portuária, o preço da UF do porto onde ocorre. Depois, os resultados das etapas são somados. O custo representa apenas o combustível estimado, não uma cotação de frete.
+Depois de calcular o combustível consumido em cada etapa, o sistema o converte em emissões operacionais de dióxido de carbono equivalente (CO$_2$e). A fronteira adotada é *tank-to-wheel* (TTW, do tanque à roda): ela considera somente a emissão gerada pela queima do diesel ou do óleo combustível durante o transporte, sem incluir a extração, a produção, o refino ou a distribuição do combustível. Para o diesel, o fator de combustão direta vem das Diretrizes de 2006 do Painel Intergovernamental sobre Mudanças Climáticas (IPCC) [ipcc2006]; Costa et al. [competitiveness2024] é a referência brasileira usada para separar a fronteira TTW da fronteira *well-to-wheel* (WTW, do poço à roda). Para o VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre), o sistema utiliza apenas o componente TTW dos parâmetros apresentados por Costa et al. [competitiveness2024] a partir da Resolução MEPC.391(81) da Organização Marítima Internacional (IMO). A Tabela 6 identifica a fonte e o valor de cada fator.
 
-**Tabela 6 — Preços unitários usados para calcular o custo modelado no cenário São Paulo–Rio Branco.**
+**Tabela 6 — Fatores de emissão operacionais adotados.**
 
-| Etapa do transporte | Origem do dado | Preço do combustível |
+| Etapa do transporte | Fonte do fator | Fator de emissão |
 | :-- | :-- | :-- |
-| Rodovia direta | [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). | Diesel S10: R$ 8,115/L — média entre São Paulo (R$ 6,960/L) e Acre (R$ 9,270/L). |
-| *First mile* | [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). | Diesel S10: R$ 6,960/L — São Paulo–Porto de Santos (SP–SP). |
-| Operações portuárias | [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). | Diesel: R$ 6,960/L no Porto de Santos (SP) e R$ 7,250/L no Porto de Manaus (AM). |
-| Navegação | Preço em Santos publicado pela [Ship & Bunker](https://shipandbunker.com/prices/br-brazil) e convertido para reais na execução. | VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre): R$ 3.812,31/t |
-| *Last mile* | [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). | Diesel S10: R$ 8,260/L — média entre Porto de Manaus (R$ 7,250/L) e Acre (R$ 9,270/L). |
-
-**Tabela 7 — Fatores usados para calcular as emissões operacionais.**
-
-| Etapa do transporte | Origem do dado | Fator de emissão |
-| :-- | :-- | :-- |
-| Rodovia direta | IPCC (2006) [ipcc2006], como base da combustão direta de diesel. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
-| *First mile* | Mesma base do IPCC (2006) [ipcc2006]. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+| Rodovia direta | IPCC (2006) [ipcc2006], para a combustão direta do diesel; Costa et al. [competitiveness2024], como referência brasileira para a fronteira TTW. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+| *First mile* | Mesmas referências da rodovia direta. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
 | Operações portuárias | Mesma base do IPCC (2006) [ipcc2006], expresso por massa. | $3{,}15\ \mathrm{kgCO_2e/kg}$ de diesel |
-| Navegação | Costa et al. [competitiveness2024], Apêndice A, Tabela 13, que reproduz parâmetros da Resolução IMO MEPC.391(81). | $3{,}114\ \mathrm{kgCO_2e/kg}$ de VLSFO |
-| *Last mile* | Mesma base do IPCC (2006) [ipcc2006]. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+| Navegação | Costa et al. [competitiveness2024], Apêndice A, Tabela 13: componente TTW dos parâmetros da Resolução IMO MEPC.391(81). | $3{,}114\ \mathrm{kgCO_2e/kg}$ de VLSFO |
+| *Last mile* | Mesmas referências da rodovia direta. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+
+#### 3.3.6 Custo modelado do combustível
+
+O custo modelado reúne somente o combustível estimado em cada etapa; ele não representa uma cotação de frete. Nos acessos rodoviários, chamados de *first mile* e *last mile*, o sistema aplica a mesma escolha de veículo, número de viagens e cálculo de consumo descritos na Seção 3.2.1. Para atribuir preço a esse diesel, segue a regra da Seção 3.2.2: no *first mile*, calcula a média entre a UF de origem e a UF do porto de embarque; no *last mile*, entre a UF do porto de desembarque e a UF de destino. Nas operações portuárias, não há média: cada porto usa o preço do diesel da sua própria UF, obtido na mesma tabela da Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP).
+
+Na navegação, a [Ship & Bunker](https://shipandbunker.com/prices/br-brazil) publica em Santos a cotação do VLSFO em dólares por tonelada (US\$/t). O sistema converte esse preço para reais por tonelada com a taxa USD/BRL da execução, obtida pela biblioteca CurrencyConverter a partir de dados do Banco Central Europeu (BCE). Como o consumo marítimo já é calculado em quilogramas, não é necessária uma conversão por densidade: o custo é obtido multiplicando a massa em toneladas — quilogramas divididos por 1.000 — pelo preço em R\$/t. A Tabela 7 apresenta a fonte, os valores de origem e os preços efetivamente usados no exemplo São Paulo–Rio Branco.
+
+**Tabela 7 — Preços de combustível usados no exemplo São Paulo–Rio Branco.**
+
+| Etapa do transporte | Fonte do preço | Valores de origem | Preço usado no exemplo |
+| :-- | :-- | :-- | :-- |
+| Rodovia direta | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: São Paulo, R\$ 6,960/L; Acre, R\$ 9,270/L. | R\$ 8,115/L — média entre São Paulo e Acre. |
+| *First mile* | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: São Paulo, R\$ 6,960/L; Porto de Santos (SP), R\$ 6,960/L. | R\$ 6,960/L — média SP–SP. |
+| Operações portuárias | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel: Porto de Santos (SP), R\$ 6,960/L; Porto de Manaus (AM), R\$ 7,250/L. | R\$ 6,960/L em Santos e R\$ 7,250/L em Manaus. |
+| Navegação | [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), Santos; taxa USD/BRL do BCE, via CurrencyConverter. | Cotação em US\$/t; o arquivo de resultados disponível não preserva o valor em dólar nem o câmbio desta execução. | R\$ 3.812,31/t, equivalente a R\$ 3,812/kg de VLSFO. |
+| *Last mile* | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: Porto de Manaus (AM), R\$ 7,250/L; Acre, R\$ 9,270/L. | R\$ 8,260/L — média AM–AC. |
 
 ## 4. Implementação computacional
 
@@ -355,7 +377,7 @@ O CabotageLens separa a preparação dos dados históricos da execução de uma 
 
 O sistema é desenvolvido principalmente em Python. A interface, os cálculos, a organização dos dados e as integrações externas ficam em componentes separados. Essa divisão permite, por exemplo, testar uma regra de combustível sem abrir a interface ou atualizar a base marítima sem executar uma comparação completa.
 
-A Tabela 8 apresenta as tecnologias e os serviços que dão suporte ao sistema. Eles não devem ser confundidos com as fontes metodológicas: ANTAQ, EU MRV, Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP) e Ship & Bunker são fontes dos dados explicadas na Seção 3; as ferramentas desta tabela permitem obter, tratar, calcular, armazenar ou apresentar esses dados.
+A Tabela 8 apresenta as tecnologias e os serviços que dão suporte ao sistema. Eles não devem ser confundidos com as fontes metodológicas e de insumos: ANTAQ, EU MRV, Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP) e Ship & Bunker fornecem dados ou preços externos; as ferramentas desta tabela permitem obter, tratar, calcular, armazenar ou apresentar essas informações.
 
 **Tabela 8 — Tecnologias e serviços utilizados na implementação do CabotageLens.**
 
@@ -466,7 +488,7 @@ Antes de avaliar as pernas, a aplicação tenta atualizar os dois preços que va
 
 #### 4.6.2 Avaliação dos quatro componentes multimodais
 
-O avaliador recebe a geometria das pernas, a massa, os parâmetros do cenário, os preços e os fatores de emissão. Ele executa a conta rodoviária no *first mile* e no *last mile*, aplica a intensidade marítima à carga e à distância entre os portos e soma o consumo dos equipamentos portuários que puderam ser quantificados. Em seguida, converte cada combustível em custo modelado e emissões operacionais com os preços e fatores apresentados na Seção 3.3.5.
+O avaliador recebe a geometria das pernas, a massa, os parâmetros do cenário, os preços e os fatores de emissão. Ele executa a conta rodoviária no *first mile* e no *last mile*, aplica a intensidade marítima à carga e à distância entre os portos e soma o consumo dos equipamentos portuários que puderam ser quantificados. Em seguida, converte cada combustível em custo modelado e em emissões operacionais com os fatores apresentados na Seção 3.3.5.
 
 Quando a intensidade marítima por trabalho de transporte do EU MRV é aplicada, o avaliador não acrescenta uma estimativa separada do combustível consumido pelo navio atracado, chamado de *hoteling*. Essa regra impede a dupla contagem entre a intensidade marítima e uma parcela adicional de consumo a bordo. Os equipamentos do terminal permanecem separados porque representam outra atividade.
 
