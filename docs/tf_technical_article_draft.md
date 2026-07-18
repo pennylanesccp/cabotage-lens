@@ -590,19 +590,35 @@ flowchart LR
 
 Depois de calcular a rota rodoviária direta, o sistema monta a alternativa multimodal. Essa etapa reutiliza os veículos representativos do transporte rodoviário, os endereços já geocodificados e os preços de diesel por unidade federativa.
 
-#### 4.4.1 Reconstrução das viagens e matriz marítima
+#### 4.4.1 Matriz marítima
 
-Antes de definir os portos de um novo cenário, o sistema prepara a referência marítima com viagens de cabotagem que realmente ocorreram. Essa preparação é feita quando a base é atualizada, e não a cada consulta. Assim, a comparação não precisa reprocessar os arquivos brutos para cada rota: ela consulta uma matriz marítima já construída com dados observados.
+Antes de definir os portos de um novo cenário, o sistema prepara a referência marítima com viagens de cabotagem que realmente ocorreram. O produto dessa preparação foi chamado de matriz marítima, construída com dados observados.
 
-A função de reconstrução lê as tabelas de Carga, Atracação e Tempos de Atracação da Agência Nacional de Transportes Aquaviários (ANTAQ). Ela mantém os registros de cabotagem conteinerizada e relaciona cada movimentação de carga à escala correspondente. A Atracação fornece o porto, a data e o número da Organização Marítima Internacional (IMO) do navio; a Carga informa o que foi embarcado e desembarcado.
+##### 4.4.1.1 Dados da ANTAQ
 
-Em seguida, a função reúne as escalas do mesmo navio em ordem cronológica. Escalas consecutivas no mesmo porto são unificadas, e uma nova viagem é iniciada quando há uma interrupção superior a 240 horas ou quando o navio retorna ao porto inicial. Isso impede que trechos de viagens diferentes sejam combinados como se formassem um único percurso.
+A rotina de atualização acessa o [Painel Estatístico Aquaviário da ANTAQ](https://estatistica.antaq.gov.br/ea/sense/download.html), portal oficial de download das tabelas públicas. A biblioteca `requests` realiza as consultas e baixa os arquivos em formato TXT. A biblioteca Beautiful Soup lê a página e seus arquivos de apoio para localizar os endereços de download disponibilizados pela ANTAQ. São obtidas as tabelas de Carga, Atracação e Tempos de Atracação. Os campos de Carga e Atracação usados na reconstrução estão detalhados na Seção 3.3.4.1, nas Tabelas 4 e 5.
 
-A carga a bordo também é reconstruída em cada escala. O sistema calcula o saldo entre o que entrou e o que saiu do navio e aplica esse saldo ao subtrecho seguinte. Quando o recorte de dados começa com o navio já carregado, é calculada a carga inicial mínima necessária para evitar valores negativos. Depois disso, cada par de portos em que a origem aparece antes do destino forma um recorte completo. Esse recorte pode ser direto ou incluir escalas intermediárias. Por exemplo, Santos–Suape–Pecém–Manaus contribui para Santos–Manaus com seus três subtrechos; Manaus–Suape–Santos não contribui, pois está no sentido contrário.
+A atualização também sincroniza os dados necessários e os artefatos gerados para o Supabase Storage, o armazenamento de arquivos do projeto. Dessa forma, os arquivos usados na reconstrução e a matriz marítima permanecem disponíveis para reutilização e rastreabilidade, sem depender apenas do acesso imediato ao portal da ANTAQ.
 
-Para cada subtrecho, a distância é buscada primeiro na matriz de distâncias entre portos. Quando esse dado não está disponível, a rotina estima a distância por Haversine e registra essa condição. A intensidade de combustível é buscada pelo IMO no sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV). Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem, conforme o método apresentado na Seção 3.3.4.
+##### 4.4.1.2 Reconstrução das viagens
 
-Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância média dos recortes completos observados, a intensidade média ponderada pelo trabalho de transporte, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois podem reunir viagens e distâncias observadas diferentes.
+Com esses arquivos, a função de reconstrução mantém os registros de cabotagem conteinerizada e relaciona cada movimentação de carga à escala correspondente. A Atracação fornece o porto, a data e o número da Organização Marítima Internacional (IMO) do navio; a Carga informa o que foi embarcado e desembarcado.
+
+Em seguida, a função reúne as escalas do mesmo navio em ordem cronológica. A carga a bordo também é reconstruída em cada escala. O sistema calcula o saldo entre o que entrou e o que saiu do navio e aplica esse saldo ao subtrecho seguinte. Quando o recorte de dados começa com o navio já carregado, é calculada a carga inicial mínima necessária para evitar valores negativos. Depois disso, cada par de portos em que a origem aparece antes do destino forma um recorte completo. Esse recorte pode ser direto ou incluir escalas intermediárias. Por exemplo, Santos–Suape–Pecém–Manaus contribui para Santos–Manaus com seus três subtrechos; Manaus–Suape–Santos não contribui, pois está no sentido contrário.
+
+O resultado da reconstrução também é gravado em tabelas do Supabase PostgreSQL. A tabela `antaq_voyages` registra cada viagem reconstruída; `antaq_voyage_stops` armazena suas paradas em ordem; e `antaq_voyage_stop_calls` preserva as escalas que formaram cada parada. Isso permite consultar as viagens já reconstruídas sem repetir o processamento dos arquivos brutos.
+
+##### 4.4.1.3 Dados da EU MRV
+
+Os arquivos anuais do sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV) são obtidos no [THETIS-MRV, da Agência Europeia de Segurança Marítima](https://mrv.emsa.europa.eu/), e armazenados no Supabase Storage. Os campos e o exemplo de correspondência por IMO estão apresentados na Seção 3.3.4.2 na Tabela 6.
+
+##### 4.4.1.4 Cálculo do trabalho de transporte
+
+Com esse índice de intensidades, o sistema procura primeiro o IMO do navio observado na ANTAQ. Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem. A regra de composição dessa intensidade para uma ligação entre portos está detalhada na Seção 3.3.4.3.
+
+##### 4.4.1.5 Compilação na estrutura matricial
+
+Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância média dos recortes completos observados, a intensidade média ponderada pelo trabalho de transporte, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes (também presentes na matriz), pois reunem viagens e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
 
 ```mermaid
 flowchart LR
@@ -611,10 +627,9 @@ flowchart LR
     D["EU MRV<br/>intensidade por IMO"] --> E["Intensidade individual<br/>ou referência robusta"]
     C --> F["SeaMatrix<br/>distância, intensidade e cobertura"]
     E --> F
-    F --> G["Consulta posterior<br/>do par de portos selecionado"]
 ```
 
-As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A distância é a média das viagens completas observadas para cada sentido. Em cada célula da segunda tabela, a contagem representa as viagens que geraram um recorte completo elegível naquele par ordenado; ela não corresponde ao número de escalas nem apenas a ligações diretas. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
+As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A distância é a média das viagens completas observadas para cada sentido. Por isso, a distância de ida pode ser ligeiramente diferente da distância de volta. Essa diferença é normal, pois cada sentido reúne seu próprio conjunto de viagens observadas. Em cada célula da segunda tabela, a contagem representa as viagens que geraram um recorte completo elegível naquele par ordenado; ela não corresponde ao número de escalas nem apenas a ligações diretas. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
 
 **Tabela 13 — Distância média dos recortes completos observados na matriz marítima (km).**
 
@@ -640,15 +655,21 @@ As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. 
 
 *Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
 
-#### 4.4.2 Escolha dos portos
+#### 4.4.2 Escolha dos portos e acessos rodoviários
 
-A definição dos portos de embarque e desembarque começa pela função `find_nearest_port`. Ela usa a distância de Haversine, um cálculo geométrico feito a partir da latitude e da longitude que estima a menor distância sobre a superfície da Terra entre dois pontos. Esse cálculo é rápido, executado localmente e não representa uma rota por estrada. A função mede essa distancia entre um ponto para cada porto disponível para, então, selecionar porto com a menor distância.
+#### 4.4.2.1 Escolha dos portos
+
+A definição dos portos de embarque e desembarque começa pela função `find_nearest_port`. Ela usa a distância de Haversine, um cálculo geométrico feito a partir da latitude e da longitude que estima a menor distância sobre a superfície da Terra entre dois pontos. Esse cálculo é rápido, executado localmente e não representa uma rota por estrada. A função mede essa distancia entre um ponto para cada porto disponível para, então, selecionar porto com a menor distância. O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque.
 
 A distância de Haversine, porém, é utilizada somente para essa escolha inicial não entrando nos cálculos consumo, no custo ou nas emissões.
 
-O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque. Depois de escolher os dois portos e suas respectivas coordenadas, calcula a distância real de ambos acessos rodoviários (origem → porto de embarque; porto de desembarque → destino) pelo mesmo procedimento da Seção 4.3.1.
+#### 4.4.2.2 Acessos rodoviários: *first mile* e *last mile*
+
+Depois de escolher os dois portos e suas respectivas coordenadas, é calculada a distância real de ambos acessos rodoviários (origem → porto de embarque; porto de desembarque → destino) pelo mesmo procedimento da Seção 4.3.1.
 
 Essa sequência reduz consultas desnecessárias aos provedores de rota. Em vez de solicitar uma rota rodoviária para cada porto candidato de uma coordenada, o sistema faz uma única consulta para o acesso do porto já selecionado. Assim, a distância usada no cálculo continua sendo rodoviária, enquanto a distância de Haversine é usada apenas como um filtro rápido para definir qual porto consultar.
+
+#### 4.4.2.2 Resultado consolidado do exemplo São Paulo–Rio Branco
 
 No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque. A Tabela 15 compara a distância de Haversine usada na seleção com a distância rodoviária calculada depois que cada porto foi escolhido.
 
@@ -656,7 +677,7 @@ No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de S
 
 | Acesso | Ponto geocodificado | Referência do porto | Haversine: seleção | Distância rodoviária: cálculo |
 | :-- | :-- | :-- | --: | --: |
-| *First mile*:<br/>São Paulo → Porto de Santos | São Paulo:<br/>[−23,550520°; −46,633308°] | Ponta da Praia, Santos:<br/>[−23,987012°; −46,293383°] | 59,601 km | 86,170 km |
+| *First mile*:<br/>São Paulo → Porto de Santos | São Paulo:<br/>[−23,550520°; −46,633308°] | Porto de Santos:<br/>[−23,987012°; −46,293383°] | 59,601 km | 86,170 km |
 | *Last mile*:<br/>Porto de Manaus → Rio Branco | Rio Branco:<br/>[−9,989637°; −67,822462°] | Porto de Manaus:<br/>[−3,156700°; −60,007900°] | 1.149,569 km | 1.403,691 km |
 
 *Fonte: elaboração própria com a base de portos do sistema e as rotas rodoviárias obtidas no cenário.*
