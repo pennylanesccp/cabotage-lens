@@ -480,9 +480,11 @@ Cada execução do pipeline recebe três dados: a origem, o destino e a massa da
 
 Origem e destino precisam ser convertidos em latitude e longitude antes de uma rota ser calculada. Esse procedimento é chamado de geocodificação. A entrada pode ser o nome de uma cidade, um endereço completo, coordenadas já conhecidas ou um Código de Endereçamento Postal (CEP).
 
+Quando o provedor encontra uma correspondência suficiente, o motor de geocodificação também pode reconhecer abreviações e pequenos erros de digitação. Por exemplo, `av prof luciano galberto` é interpretado corretamente como "Avenida Professor Luciano Gualberto, São Paulo, SP".
+
 #### 4.2.3 Consulta aos serviços de localização
 
-O pipeline envia o texto de origem ou destino primeiro ao OpenRouteService (ORS). Se o ORS devolver uma localização válida, recebe o rótulo do local, a latitude, a longitude e a identificação do provedor. Quando o ORS não devolve uma resposta utilizável, o pipeline envia a mesma consulta ao LocationIQ. A saída desta etapa é um ponto identificado por coordenadas (latidude e longitude).
+O pipeline envia o texto de origem ou destino primeiro ao OpenRouteService (ORS). Se o ORS devolver uma localização válida, recebe o rótulo do local, a latitude, a longitude e a identificação do provedor. Quando o ORS não devolve uma resposta utilizável, o pipeline envia a mesma consulta ao LocationIQ. A saída desta etapa é um ponto identificado por coordenadas (latitude e longitude).
 
 #### 4.2.4 Fluxograma explicativo
 
@@ -490,21 +492,28 @@ O fluxograma mostra o caminho de três formas de entrada para o mesmo local:
 
 ```mermaid
 flowchart TB
-    A["'Avenida Professor Luciano Gualberto, São Paulo'"] --> O["Consulta ao ORS/LocationIQ"]
-    B["'av prof Luciano Gualberto, SP'"] --> O
-    C["'05508-010'"] --> O
+    A["''Avenida Professor Luciano Gualberto, São Paulo, SP''"] --> O["Consulta ao ORS/LocationIQ"]
+    B["''av prof Luciano Gualberto, SP''"] --> O
+    C["''05508-010''"] --> O
+    D["''av prof luciano galberto''"] --> O
     O -->R["Ponto resolvido:<br/>Latitude: -23,558808<br/>Longitude: -46,730357"]
 ```
 
-Para evitar reprocessamentos desnecessários, a geocodificação é salva no banco de dados Supabase. Assim, se o usuário fizer outra comparação que envolva este ponto, a geocodificação é buscada dos dados previamente armazenados.
+Depois que um local é resolvido, suas coordenadas são armazenadas no banco de dados Supabase/PostgreSQL. Se o mesmo ponto for usado novamente, o sistema reutiliza esse resultado em vez de realizar outra geocodificação.
 
 ### 4.3 Implementação da alternativa rodoviária
 
-#### 4.3.1 Construção da distância por estrada
+#### 4.3.1 Consulta de rota rodoviária
 
-Depois da etapa de geocodificação, o sistema solicita a geometria da rota rodoviária direta. A mesma rotina é reutilizada para os acessos terrestres da alternativa multimodal: origem até o porto de embarque e porto de desembarque até o destino. Antes de chamar um provedor, ela procura uma rota equivalente armazenada no banco. Se encontra uma, reaproveita a distância e os metadados já registrados; caso contrário, solicita uma nova rota ao provedor disponível.
+Depois da geocodificação, o pipeline possui a latitude e a longitude da origem e do destino. Ele envia esse par de coordenadas primeiro ao OpenRouteService (ORS). Se o ORS não devolver uma rota utilizável, envia o mesmo par ao LocationIQ. O provedor que responder devolve a distância rodoviária e sua identificação, que ficam associadas ao cenário.
 
-Na interface atual, a geometria é solicitada com o perfil técnico `driving-car`. Esse perfil serve para obter uma rota por estrada. A escolha do caminhão, seus eixos e sua eficiência acontece depois, no cálculo do consumo. Portanto, a rota resultante é uma estimativa de trajeto fornecida por uma plataforma de roteamento; ela não é uma viagem registrada por Sistema de Posicionamento Global (GPS), nem uma rota de transporte contratada ou validada em campo.
+No exemplo São Paulo–Rio Branco, com coordenadas já resolvidas como em 4.2, o ORS recebeu as coordenadas de São Paulo (latitude -23,550520; longitude -46,633308) e de Rio Branco (latitude -9,989637; longitude -67,822462). A distância rodoviária devolvida foi 3.491,431 km.
+
+```mermaid
+flowchart LR
+    A["Origem: São Paulo, SP<br/>(lat.: -23,550520; lon.: -46,633308)<br/>Destino: Rio Branco<br/>(lat.: -9,989637; lon.: -67,822462)"] --> R["Consulta de rota<br/>ORS/LocationIQ"]
+    R --> D["Distância rodoviária devolvida<br/>3.491,431 km"]
+```
 
 #### 4.3.2 Consumo, custo e emissões rodoviárias
 
