@@ -452,7 +452,7 @@ O CabotageLens separa a preparação dos dados históricos da execução de uma 
 
 ### 4.1 Arquitetura do sistema e tecnologias utilizadas
 
-O sistema é desenvolvido principalmente em Python. A interface, os cálculos, a organização dos dados e as integrações externas ficam em componentes separados. Essa divisão permite, por exemplo, testar uma regra de combustível sem abrir a interface ou atualizar a base marítima sem executar uma comparação completa.
+O sistema é desenvolvido em Python. A interface, os cálculos, a organização dos dados e as integrações externas ficam em componentes separados. Essa divisão permite, por exemplo, testar uma regra de combustível sem abrir a interface ou atualizar a base marítima sem executar uma comparação completa.
 
 A Tabela 11 apresenta as tecnologias e os serviços essenciais para entender a execução do sistema. Ela não lista todas as bibliotecas internas utilizadas no código. Essas ferramentas também não devem ser confundidas com as fontes metodológicas e de insumos: ANTAQ, EU MRV, Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP) e Ship & Bunker fornecem dados ou preços externos; as tecnologias da tabela permitem obter, tratar, calcular, armazenar ou apresentar essas informações.
 
@@ -478,21 +478,31 @@ Cada execução do pipeline recebe três dados: a origem, o destino e a massa da
 
 #### 4.2.2 Do texto às coordenadas
 
-Origem e destino precisam ser convertidos em latitude e longitude antes de uma rota ser calculada. Esse procedimento é chamado de geocodificação. A entrada pode ser o nome de uma cidade, um endereço completo, coordenadas já conhecidas ou um Código de Endereçamento Postal (CEP). Quando recebe um CEP, o pipeline tenta primeiro interpretá-lo como uma consulta estruturada antes de buscar uma localização mais ampla.
+Origem e destino precisam ser convertidos em latitude e longitude antes de uma rota ser calculada. Esse procedimento é chamado de geocodificação. A entrada pode ser o nome de uma cidade, um endereço completo, coordenadas já conhecidas ou um Código de Endereçamento Postal (CEP).
 
-O resultado não é apenas um ponto no mapa. O sistema preserva o rótulo devolvido pelo provedor, as coordenadas e a identificação de quem fez a consulta. Isso permite verificar posteriormente se a rota partiu do centro de uma cidade, de um endereço específico ou de coordenadas fornecidas no cenário.
+#### 4.2.3 Consulta aos serviços de localização
 
-#### 4.2.3 Provedores de localização e alternativa de consulta
+O pipeline envia o texto de origem ou destino primeiro ao OpenRouteService (ORS). Se o ORS devolver uma localização válida, recebe o rótulo do local, a latitude, a longitude e a identificação do provedor. Quando o ORS não devolve uma resposta utilizável, o pipeline envia a mesma consulta ao LocationIQ. A saída desta etapa é um ponto identificado por coordenadas (latidude e longitude).
 
-Antes de consultar a internet, a aplicação procura no banco um local equivalente que já tenha sido resolvido. Quando esse registro não existe, ela consulta primeiro o OpenRouteService (ORS). Se o ORS estiver indisponível, não reconhecer o local ou não devolver uma resposta aproveitável, o sistema pode tentar o LocationIQ, desde que esse serviço tenha sido configurado.
+#### 4.2.4 Fluxograma explicativo
 
-Essa segunda tentativa não é apresentada como se fosse a mesma fonte da primeira. O resultado registra qual provedor foi usado. Se nenhum provedor conseguir localizar o ponto, a comparação é interrompida com uma mensagem clara; o sistema não inventa uma coordenada para continuar o cálculo.
+O fluxograma mostra o caminho de três formas de entrada para o mesmo local:
+
+```mermaid
+flowchart TB
+    A["'Avenida Professor Luciano Gualberto, São Paulo'"] --> O["Consulta ao ORS/LocationIQ"]
+    B["'av prof Luciano Gualberto, SP'"] --> O
+    C["'05508-010'"] --> O
+    O -->R["Ponto resolvido:<br/>Latitude: -23,558808<br/>Longitude: -46,730357"]
+```
+
+Para evitar reprocessamentos desnecessários, a geocodificação é salva no banco de dados Supabase. Assim, se o usuário fizer outra comparação que envolva este ponto, a geocodificação é buscada dos dados previamente armazenados.
 
 ### 4.3 Implementação da alternativa rodoviária
 
 #### 4.3.1 Construção da distância por estrada
 
-Depois de resolver os dois pontos, o sistema solicita a geometria da rota rodoviária direta. A mesma rotina é reutilizada para os acessos terrestres da alternativa multimodal: origem até o porto de embarque e porto de desembarque até o destino. Antes de chamar um provedor, ela procura uma rota equivalente armazenada no banco. Se encontra uma, reaproveita a distância e os metadados já registrados; caso contrário, solicita uma nova rota ao provedor disponível.
+Depois da etapa de geocodificação, o sistema solicita a geometria da rota rodoviária direta. A mesma rotina é reutilizada para os acessos terrestres da alternativa multimodal: origem até o porto de embarque e porto de desembarque até o destino. Antes de chamar um provedor, ela procura uma rota equivalente armazenada no banco. Se encontra uma, reaproveita a distância e os metadados já registrados; caso contrário, solicita uma nova rota ao provedor disponível.
 
 Na interface atual, a geometria é solicitada com o perfil técnico `driving-car`. Esse perfil serve para obter uma rota por estrada. A escolha do caminhão, seus eixos e sua eficiência acontece depois, no cálculo do consumo. Portanto, a rota resultante é uma estimativa de trajeto fornecida por uma plataforma de roteamento; ela não é uma viagem registrada por Sistema de Posicionamento Global (GPS), nem uma rota de transporte contratada ou validada em campo.
 
