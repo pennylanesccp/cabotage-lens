@@ -515,6 +515,16 @@ flowchart LR
     R --> D["Distância rodoviária devolvida<br/>3.491,431 km"]
 ```
 
+##### 4.3.1.1 Conferência da distância rodoviária
+
+A Figura 3 apresenta uma consulta independente no Google Maps para a mesma ligação entre São Paulo e Rio Branco. A rota selecionada pelo Google Maps tem 3.497 km, enquanto o motor do sistema retornou 3.491,431 km. A diferença é de 5,569 km, ou 0,16% da distância exibida no Google Maps.
+
+![Rota rodoviária entre São Paulo e Rio Branco no Google Maps.](images/Screenshot%202026-07-15%20144749.png)
+
+*Figura 3 — Consulta no Google Maps para São Paulo–Rio Branco: rota selecionada de 3.497 km. Fonte: captura de tela do Google Maps realizada em 15 de julho de 2026.*
+
+Essa proximidade mostra que a distância usada no cálculo representa uma rota pela malha rodoviária, e não a distância geográfica em linha reta entre as cidades. Usar a distância em linha reta reduziria artificialmente os quilômetros percorridos e poderia distorcer as estimativas de consumo, custo e emissões. A comparação é uma conferência de consistência entre motores de rota; ela não substitui o registro de uma viagem realizada em campo.
+
 #### 4.3.2 Consumo, custo e emissões rodoviárias
 
 Com a distância disponível, o avaliador aplica as regras das Seções 3.2.1 a 3.2.3. Ele seleciona a configuração rodoviária representativa a partir da massa da remessa, calcula os litros de diesel de cada perna e converte esse consumo em custo e emissões. A mesma conta é feita separadamente para a rota direta, o *first mile* e o *last mile*.
