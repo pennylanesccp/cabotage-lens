@@ -44,13 +44,13 @@ Estudos de *short sea shipping*, ou navegação marítima de curta distância, t
 
 Um princípio metodológico do estudo é dar preferência a dados públicos, oficiais, observados e auditáveis. A Agência Nacional de Transportes Aquaviários (ANTAQ), órgão federal que regula e acompanha o transporte aquaviário brasileiro, fornece os registros de escalas e de movimentação de carga. A base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) publica indicadores anuais de consumo e atividade dos navios. Essas fontes permitem relacionar uma operação registrada no Brasil ao desempenho do navio identificado pelo número da Organização Marítima Internacional (IMO), uma identificação permanente da embarcação. Os campos utilizados, os arquivos de origem e a forma de reconstruir as viagens são apresentados na Seção 3.3 [antaq2025; eumrv2025].
 
-A fronteira ambiental adotada é a de emissões operacionais *tank-to-wheel* (TTW, do tanque à roda) de dióxido de carbono equivalente (CO$_2$e). Ela considera o combustível queimado durante a operação do caminhão ou do navio, mas não as etapas anteriores de produção e distribuição desse combustível. Uma avaliação do ciclo de vida (LCA, do inglês *life-cycle assessment*) considera outras etapas, como a produção do combustível, a fabricação, a operação e o fim de vida dos equipamentos. Fatores *well-to-wheel* (WTW, do poço à roda), resultados de LCA e fatores baseados exclusivamente em dióxido de carbono (CO$_2$), que contabilizam somente esse gás, não são intercambiáveis com a saída do sistema [decarb2024; maritimelca2024]. Operações portuárias e períodos de navio atracado também precisam de tratamento separado, pois dependem do terminal e da operação observada [berth2009; berthairquality2010; shipops2022].
+A fronteira ambiental adotada é a de emissões operacionais *tank-to-wheel* (TTW, do tanque à roda) de dióxido de carbono equivalente (CO₂e). Ela considera o combustível queimado durante a operação do caminhão ou do navio, mas não as etapas anteriores de produção e distribuição desse combustível. Uma avaliação do ciclo de vida (LCA, do inglês *life-cycle assessment*) considera outras etapas, como a produção do combustível, a fabricação, a operação e o fim de vida dos equipamentos. Fatores *well-to-wheel* (WTW, do poço à roda), resultados de LCA e fatores baseados exclusivamente em dióxido de carbono (CO₂), que contabilizam somente esse gás, não são intercambiáveis com a saída do sistema [decarb2024; maritimelca2024]. Operações portuárias e períodos de navio atracado também precisam de tratamento separado, pois dependem do terminal e da operação observada [berth2009; berthairquality2010; shipops2022].
 
 **Tabela 1 — O que está dentro e fora da comparação.**
 
 | Dimensão        | Incluído                                                                              | Fora da fronteira                                                                                 |
 | :-------------- | :------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------ |
-| Emissões        | Emissões operacionais TTW de CO$_2$e por remessa                                      | WTW, LCA, fabricação de ativos e inventário completo de poluentes locais                          |
+| Emissões        | Emissões operacionais TTW de CO₂e por remessa                                          | WTW, LCA, fabricação de ativos e inventário completo de poluentes locais                          |
 | Custo           | Estimativa do custo operacional modelado                                              | Frete comercial, negociação, seguro, estoque, multas por permanência e reserva de espaço no navio |
 | Dados marítimos | Escalas e cargas da ANTAQ, intensidades do EU MRV e valores substitutos identificados | Apresentar um valor substituto como se fosse medição individual do navio                          |
 | Serviço         | Sequências de portos realmente registradas no período analisado                       | Garantia de frequência, espaço no navio ou disponibilidade comercial futura                       |
@@ -112,7 +112,21 @@ $$
 C_{\mathrm{rod}}=F_{\mathrm{rod}}\,p_{\mathrm{diesel}}.
 $$
 
-Nessas expressões, $F_{\mathrm{rod}}$ é o consumo de diesel, em litros, e $p_{\mathrm{diesel}}$ é o preço adotado, em reais por litro. Na execução São Paulo–Rio Branco, a tabela da ANP registrou R\$ 6,960/L em São Paulo e R\$ 9,270/L no Acre. O preço utilizado foi, portanto, $(6{,}960+9{,}270)/2=8{,}115$ R\$/L. Com o consumo de 1.518,014 L calculado para a remessa de 14 t, a conta é $1.518{,}014\times8{,}115=12.318{,}68$; portanto, o custo estimado da rota rodoviária é R\$ 12.318,68.
+Nessas expressões, $F_{\mathrm{rod}}$ é o consumo de diesel, em litros, e $p_{\mathrm{diesel}}$ é o preço adotado, em reais por litro. Na execução São Paulo–Rio Branco, os valores correspondem aos preços médios de revenda do Diesel S10 divulgados pela ANP para a semana de 12 a 18 de julho de 2026, com data final de pesquisa em 18 de julho de 2026. Nesse levantamento, São Paulo registrou R\$ 6,960/L e o Acre, R\$ 9,270/L. Assim, o preço aplicado à rota foi:
+
+$$
+p_{\mathrm{diesel}}
+=\frac{6{,}960+9{,}270}{2}
+=8{,}115\ \text{R\$/L}.
+$$
+
+Com o consumo de 1.518,014 L calculado para a remessa de 14 t, o custo estimado da rota rodoviária é:
+
+$$
+C_{\mathrm{rod}}
+=1.518{,}014\ \mathrm{L}\times8{,}115\ \text{R\$/L}
+=12.318{,}68\ \text{R\$}.
+$$
 
 ### 3.3 Alternativa multimodal
 
@@ -339,17 +353,17 @@ Essa média não monta uma rota artificial com trechos de navios diferentes. Cad
 
 #### 3.3.5 Emissões operacionais (TTW)
 
-Depois de calcular o combustível consumido em cada etapa, o sistema o converte em emissões operacionais de dióxido de carbono equivalente (CO$_2$e). A fronteira adotada é *tank-to-wheel* (TTW, do tanque à roda): ela considera somente a emissão gerada pela queima do diesel ou do óleo combustível durante o transporte, sem incluir a extração, a produção, o refino ou a distribuição do combustível. Para o diesel, o fator de combustão direta vem das Diretrizes de 2006 do Painel Intergovernamental sobre Mudanças Climáticas (IPCC) [ipcc2006]; Costa et al. [competitiveness2024] é a referência brasileira usada para separar a fronteira TTW da fronteira *well-to-wheel* (WTW, do poço à roda). Para o VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre), o sistema utiliza apenas o componente TTW dos parâmetros apresentados por Costa et al. [competitiveness2024] a partir da Resolução MEPC.391(81) da Organização Marítima Internacional (IMO). A Tabela 6 identifica a fonte e o valor de cada fator.
+Depois de calcular o combustível consumido em cada etapa, o sistema o converte em emissões operacionais de dióxido de carbono equivalente (CO₂e). A fronteira adotada é *tank-to-wheel* (TTW, do tanque à roda): ela considera somente a emissão gerada pela queima do diesel ou do óleo combustível durante o transporte, sem incluir a extração, a produção, o refino ou a distribuição do combustível. Para o diesel, o fator de combustão direta vem das Diretrizes de 2006 do Painel Intergovernamental sobre Mudanças Climáticas (IPCC) [ipcc2006]; Costa et al. [competitiveness2024] é a referência brasileira usada para separar a fronteira TTW da fronteira *well-to-wheel* (WTW, do poço à roda). Para o VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre), o sistema utiliza apenas o componente TTW dos parâmetros apresentados por Costa et al. [competitiveness2024] a partir da Resolução MEPC.391(81) da Organização Marítima Internacional (IMO). A Tabela 6 identifica a fonte e o valor de cada fator.
 
 **Tabela 6 — Fatores de emissão operacionais adotados.**
 
 | Etapa do transporte | Fonte do fator | Fator de emissão |
 | :-- | :-- | :-- |
 | Rodovia direta | IPCC (2006) [ipcc2006], para a combustão direta do diesel; Costa et al. [competitiveness2024], como referência brasileira para a fronteira TTW. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
-| *First mile* | Mesmas referências da rodovia direta. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+| *First mile* | Mesma base do IPCC (2006) [ipcc2006]. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
 | Operações portuárias | Mesma base do IPCC (2006) [ipcc2006], expresso por massa. | $3{,}15\ \mathrm{kgCO_2e/kg}$ de diesel |
 | Navegação | Costa et al. [competitiveness2024], Apêndice A, Tabela 13: componente TTW dos parâmetros da Resolução IMO MEPC.391(81). | $3{,}114\ \mathrm{kgCO_2e/kg}$ de VLSFO |
-| *Last mile* | Mesmas referências da rodovia direta. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+| *Last mile* | Mesma base do IPCC (2006) [ipcc2006]. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
 
 #### 3.3.6 Custo modelado do combustível
 
@@ -364,7 +378,7 @@ Na navegação, a [Ship & Bunker](https://shipandbunker.com/prices/br-brazil) pu
 | Rodovia direta | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: São Paulo, R\$ 6,960/L; Acre, R\$ 9,270/L. | R\$ 8,115/L — média entre São Paulo e Acre. |
 | *First mile* | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: São Paulo, R\$ 6,960/L; Porto de Santos (SP), R\$ 6,960/L. | R\$ 6,960/L — média SP–SP. |
 | Operações portuárias | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel: Porto de Santos (SP), R\$ 6,960/L; Porto de Manaus (AM), R\$ 7,250/L. | R\$ 6,960/L em Santos e R\$ 7,250/L em Manaus. |
-| Navegação | [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), Santos; taxa USD/BRL do BCE, via CurrencyConverter. | Cotação em US\$/t; o arquivo de resultados disponível não preserva o valor em dólar nem o câmbio desta execução. | R\$ 3.812,31/t, equivalente a R\$ 3,812/kg de VLSFO. |
+| Navegação | [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), Santos; taxa USD/BRL do BCE, via CurrencyConverter. | VLSFO: 741,50 US\$/t. | R\$ 3,812/kg de VLSFO. |
 | *Last mile* | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: Porto de Manaus (AM), R\$ 7,250/L; Acre, R\$ 9,270/L. | R\$ 8,260/L — média AM–AC. |
 
 ## 4. Implementação computacional
@@ -583,7 +597,7 @@ Esse número não é o total da alternativa multimodal. Ele não inclui o acesso
 
 Depois da análise detalhada de Santos–Manaus, a planilha associada aos estudos de Gustavo Costa fornece uma comparação externa [workbookdados]. Ela contém 21 ligações entre seis cidades. Em todas, a carga de referência é um contêiner de 14 t.
 
-Na planilha, as emissões semanais agregadas são 7.614,97 toneladas de dióxido de carbono equivalente (tCO$_2$e) para o cenário rodoviário e 4.159,79 tCO$_2$e para o cenário com cabotagem. A diferença é aproximadamente 45,4%.
+Na planilha, as emissões semanais agregadas são 7.614,97 toneladas de dióxido de carbono equivalente (tCO₂e) para o cenário rodoviário e 4.159,79 tCO₂e para o cenário com cabotagem. A diferença é aproximadamente 45,4%.
 
 Esses valores mostram o sentido e a ordem de grandeza do resultado dentro das regras da própria planilha. Eles não servem para escolher ou ajustar a intensidade marítima do CabotageLens. As duas análises podem usar rotas, fatores e limites diferentes.
 
@@ -607,7 +621,7 @@ As principais limitações são:
 
 - **Oferta de serviço:** uma viagem observada mostra que a sequência ocorreu na janela analisada. Ela não garante frequência futura, espaço disponível ou serviço comercial regular.
 
-- **Fronteira ambiental:** os resultados são emissões operacionais TTW de CO$_2$e. Não incluem produção do combustível, construção de veículos, navios ou infraestrutura, nem uma LCA completa.
+- **Fronteira ambiental:** os resultados são emissões operacionais TTW de CO₂e. Não incluem produção do combustível, construção de veículos, navios ou infraestrutura, nem uma LCA completa.
 
 - **Fronteira econômica:** o valor monetário estima componentes operacionais. Não é cotação de frete, contrato de armador ou análise comercial completa.
 
