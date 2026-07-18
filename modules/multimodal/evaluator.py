@@ -938,6 +938,10 @@ def evaluate_path(
     pair_intensity_source = str(
         sea_leg_data.get("pair_intensity_source") or ""
     ).strip() or None
+    scenario_distance_method = str(
+        sea_leg_data.get("scenario_distance_method") or ""
+    ).strip() or None
+    uses_mean_observed_distance = bool(scenario_distance_method)
     if pair_intensity_g_per_tnm is not None and pair_intensity_source is None:
         pair_intensity_source = (
             _PAIR_ZERO_WORK_MEAN_SOURCE
@@ -955,6 +959,11 @@ def evaluate_path(
             pair_intensity_source=pair_intensity_source,
         )
     )
+    if uses_mean_observed_distance:
+        # A mean distance represents many complete observed voyages. It has no
+        # single corridor whose sublegs could be used in the scenario formula.
+        selected_corridor_sublegs = []
+        selected_corridor_sublegs_complete = False
     route_observation_mode = str(
         sea_leg_data.get("route_observation_mode") or ""
     ).strip()
@@ -994,8 +1003,25 @@ def evaluate_path(
         if isinstance(raw_selected_distance_source_counts, Mapping)
         else {}
     )
+    raw_scenario_distance_source_counts = sea_leg_data.get(
+        "scenario_distance_source_counts"
+    )
+    scenario_distance_source_counts = (
+        dict(raw_scenario_distance_source_counts)
+        if isinstance(raw_scenario_distance_source_counts, Mapping)
+        else dict(distance_source_counts)
+    )
     if route_observation_mode == "observed_voyage_corridors":
-        if not selected_corridor_sublegs:
+        if uses_mean_observed_distance:
+            if int(
+                scenario_distance_source_counts.get("haversine_fallback", 0)
+                or 0
+            ) > 0:
+                calculation_warnings.append(
+                    "mean observed maritime distance includes subleg distances "
+                    "estimated by coordinate haversine fallback"
+                )
+        elif not selected_corridor_sublegs:
             calculation_warnings.append(
                 "selected observed voyage corridor has no subleg details; "
                 "aggregate maritime intensity fallback was applied"
@@ -1005,7 +1031,7 @@ def evaluate_path(
                 "selected observed voyage corridor has unresolved subleg distance or "
                 "intensity; aggregate maritime intensity fallback was applied"
             )
-        if int(
+        if not uses_mean_observed_distance and int(
             selected_corridor_distance_source_counts.get(
                 "haversine_fallback", 0
             )
@@ -1075,7 +1101,29 @@ def evaluate_path(
         and isinstance(fuel_g_per_tnm, (int, float))
         and float(fuel_g_per_tnm) > 0.0
     )
-    if selected_corridor_sublegs_complete:
+    if (
+        uses_mean_observed_distance
+        and isinstance(fuel_g_per_tnm, (int, float))
+        and fuel_g_per_tnm > 0
+    ):
+        sea_fuel_sailing_kg = (
+            float(fuel_g_per_tnm) * cargo_t * sea_dist_nm
+        ) / _KG_PER_TONNE
+        if pair_intensity_method == _PAIR_ZERO_WORK_MEAN_METHOD:
+            sailing_fuel_mode = (
+                "same_od_unweighted_mean_with_mean_observed_voyage_distance"
+            )
+        elif pair_intensity_method == _PAIR_WEIGHTED_MEAN_METHOD:
+            sailing_fuel_mode = (
+                "same_od_transport_work_weighted_mean_with_"
+                "mean_observed_voyage_distance"
+            )
+        else:
+            sailing_fuel_mode = (
+                "same_od_representative_intensity_with_"
+                "mean_observed_voyage_distance"
+            )
+    elif selected_corridor_sublegs_complete:
         sea_fuel_sailing_kg = sum(
             float(item["scenario_fuel_kg"])
             for item in selected_corridor_sublegs
@@ -1304,6 +1352,30 @@ def evaluate_path(
         "distance_nm": float(sea_dist_nm),
         "distance_source": sea_leg_data.get("source"),
         "distance_provenance": sea_leg_data.get("distance_provenance"),
+        "scenario_distance_method": scenario_distance_method,
+        "scenario_distance_scope": sea_leg_data.get("scenario_distance_scope"),
+        "scenario_distance_observation_count": int(
+            sea_leg_data.get("scenario_distance_observation_count") or 0
+        ),
+        "scenario_distance_corridor_count": int(
+            sea_leg_data.get("scenario_distance_corridor_count") or 0
+        ),
+        "scenario_distance_km": _positive_float_or_none(
+            sea_leg_data.get("scenario_distance_km")
+        ),
+        "scenario_distance_nm": _positive_float_or_none(
+            sea_leg_data.get("scenario_distance_nm")
+        ),
+        "scenario_distance_min_km": _positive_float_or_none(
+            sea_leg_data.get("scenario_distance_min_km")
+        ),
+        "scenario_distance_max_km": _positive_float_or_none(
+            sea_leg_data.get("scenario_distance_max_km")
+        ),
+        "scenario_distance_stddev_km": _nonnegative_float_or_none(
+            sea_leg_data.get("scenario_distance_stddev_km")
+        ),
+        "scenario_distance_source_counts": scenario_distance_source_counts,
         "vessel_class": vessel_eff.vessel_class,
         "fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
         "fuel_g_per_tnm": (None if fuel_g_per_tnm is None else float(fuel_g_per_tnm)),
@@ -1535,6 +1607,32 @@ def evaluate_path(
             "sea_fuel_per_nm_kg": float(vessel_eff.fuel_per_nm),
             "sea_fuel_g_per_tnm": (None if fuel_g_per_tnm is None else float(fuel_g_per_tnm)),
             "sea_fuel_g_per_tnm_source": sea_fuel_g_per_tnm_source,
+            "sea_scenario_distance_method": scenario_distance_method,
+            "sea_scenario_distance_scope": sea_leg_data.get(
+                "scenario_distance_scope"
+            ),
+            "sea_scenario_distance_observation_count": int(
+                sea_leg_data.get("scenario_distance_observation_count") or 0
+            ),
+            "sea_scenario_distance_corridor_count": int(
+                sea_leg_data.get("scenario_distance_corridor_count") or 0
+            ),
+            "sea_scenario_distance_km": _positive_float_or_none(
+                sea_leg_data.get("scenario_distance_km")
+            ),
+            "sea_scenario_distance_nm": _positive_float_or_none(
+                sea_leg_data.get("scenario_distance_nm")
+            ),
+            "sea_scenario_distance_min_km": _positive_float_or_none(
+                sea_leg_data.get("scenario_distance_min_km")
+            ),
+            "sea_scenario_distance_max_km": _positive_float_or_none(
+                sea_leg_data.get("scenario_distance_max_km")
+            ),
+            "sea_scenario_distance_stddev_km": _nonnegative_float_or_none(
+                sea_leg_data.get("scenario_distance_stddev_km")
+            ),
+            "sea_scenario_distance_source_counts": scenario_distance_source_counts,
             "sea_pair_intensity_g_per_tnm": pair_intensity_g_per_tnm,
             "sea_pair_intensity_method": pair_intensity_method,
             "sea_pair_intensity_scope": sea_leg_data.get(

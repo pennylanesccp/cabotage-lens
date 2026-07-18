@@ -112,37 +112,38 @@ origin/destination pair represented in a voyage:
 
 For each ordered origin/destination pair, every resolved voyage observation
 from every complete observed corridor contributes directly to the pair
-estimator. It is not a median of corridor aggregates. With voyage intensity
-`I_v` and full same-OD transport work `W_v`, the applied value is the lower
-weighted median:
+intensity. With voyage intensity `I_v` and full same-OD transport work `W_v`,
+the applied value is the transport-work-weighted arithmetic mean:
 
-- `pair_intensity = min(x: sum(W_v for I_v <= x) >= 0.5 * sum(W_v))`
+- `pair_intensity = sum(I_v * W_v) / sum(W_v)`
 
-Only positive `W_v` values influence this weighted statistic. If all resolved
-same-OD voyages have zero transport work, the system uses an explicitly labeled
-ordinary median so the scenario does not turn a `0/0` diagnostic into missing
-intensity. The rule uses no route-target value or manually chosen closeness
-band.
+Only positive `W_v` values influence this statistic. If all resolved same-OD
+voyages have zero transport work, the system uses an explicitly labeled
+ordinary arithmetic mean of the resolved intensities. The rule uses no
+route-target value or manually chosen closeness band.
 
 Only complete corridors observed within one ANTAQ voyage are eligible. A
 corridor is never synthesized by joining port-pair legs from different voyages.
 Each voyage contributes once per ordered origin/destination pair. If repeated
 calls create multiple eligible slices inside the same voyage, direct is
-preferred and otherwise the shortest complete slice is retained, matching the
-model's corridor criterion.
-All observed alternatives are evaluated; the current rule prefers a usable
-direct observed corridor and otherwise selects the complete corridor with the shortest
-distance. That selection controls path and distance only. It does not restrict
-the voyage population used by the same-OD pair intensity.
+preferred and otherwise the shortest complete slice is retained only to avoid
+counting that same voyage twice.
+
+Scenario distance is calculated separately. For every complete voyage
+observation, the pipeline sums the distances of its own sublegs between the
+ordered origin and destination. It then uses the arithmetic mean of those
+complete-voyage totals. Direct and multistop voyages therefore contribute one
+distance each, and the result does not form a synthetic route from different
+voyages.
 
 Terminal aliases in the ANTAQ tables are resolved to canonical port complexes.
 Adjacent calls that resolve to the same canonical port are collapsed after
 their net weight and TEU movements are summed, so no cargo movement is dropped.
 For distinct ports, each subleg uses a positive sea-matrix distance when
 available. Missing or nonpositive values use a coordinate-based haversine
-fallback; `distance_source_counts` and each selected subleg retain that
-provenance because the fallback is an approximation and can affect the
-shortest-distance selection.
+fallback; `scenario_distance_source_counts` retains that provenance because
+the fallback is an approximation included in the observed-voyage distance
+mean.
 
 The normalized stop sequence is limited to ANTAQ calls represented in the
 containerized-cargo pipeline; physical calls with no observed container
@@ -154,21 +155,18 @@ work exists; the all-zero case uses the labeled ordinary mean of the resolved
 intensities.
 
 For routes backed by directional ANTAQ+MRV observations, the single-evaluation
-pipeline JSON exposes the selected sublegs under
-`results.multimodal.sea.selected_corridor_sublegs` and keeps the compatible
-`observed_port_pair_legs` view. Each selected subleg separates the historical
-corridor intensity (`observed_corridor_fuel_g_per_tnm`) from the pair value
-actually applied to scenario cargo (`scenario_fuel_g_per_tnm`). Pair-level
-fields record the estimator, scope, transport-work total, effective voyage
-count, source counts, and the selected corridor's original intensity.
+pipeline JSON records `pair_intensity_*` fields for the intensity estimator and
+`scenario_distance_*` fields for the observed-voyage distance mean. The latter
+include the method, scope, number of complete voyage observations, number of
+observed corridors, minimum and maximum distance, and source counts. No
+selected-corridor sublegs are used to calculate a mean-distance scenario.
 
-The explicit `pair_intensity_*` fields are canonical for scenario intensity.
-The legacy `fuel_g_per_tnm_weighted_mean` field keeps its original selected-
-corridor weighted-mean meaning, and evaluated sublegs keep their historical
-`fuel_g_per_tnm`; scenario values use the separate `scenario_fuel_g_per_tnm`
-field. The directional metadata declares `maritime_intensity_schema_version=4`
-and a generation timestamp so a complete newer tracked contract can replace an
-older or partially upgraded cache.
+The explicit `pair_intensity_*` fields are canonical for scenario intensity;
+`scenario_distance_*` fields are canonical for scenario distance. The legacy
+`fuel_g_per_tnm_weighted_mean` field carries the pair intensity for the current
+contract. The directional metadata declares
+`maritime_intensity_schema_version=5` and a generation timestamp so a complete
+newer tracked contract can replace an older or partially upgraded cache.
 
 The usual pair source is
 `antaq_mrv_same_od_transport_work_weighted_mean`: it is the sum of each

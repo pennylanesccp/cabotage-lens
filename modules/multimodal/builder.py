@@ -99,6 +99,16 @@ class SeaResult(TypedDict, total=False):
     match_rate_tonne_nm: float
     observed_port_pair_legs: list[Dict[str, Any]]
     route_observation_mode: str
+    scenario_distance_method: str
+    scenario_distance_scope: str
+    scenario_distance_observation_count: int
+    scenario_distance_corridor_count: int
+    scenario_distance_km: float
+    scenario_distance_nm: float
+    scenario_distance_min_km: float
+    scenario_distance_max_km: float
+    scenario_distance_stddev_km: float
+    scenario_distance_source_counts: Dict[str, int]
     corridor_count: int
     candidate_voyage_count: int
     selected_corridor_candidate_voyage_count: int
@@ -505,6 +515,10 @@ def build_path_geometry_from_resolved(
         route_observation_mode = str(
             directional_stats.get("route_observation_mode") or ""
         ).strip()
+        scenario_distance_method = str(
+            directional_stats.get("scenario_distance_method") or ""
+        ).strip()
+        uses_mean_observed_distance = bool(scenario_distance_method)
         route_distance_km = directional_stats.get("distance_km")
         if isinstance(route_distance_km, (int, float)) and float(route_distance_km) > 0.0:
             directional_source = str(directional_stats.get("distance_source") or sea_src)
@@ -516,11 +530,22 @@ def build_path_geometry_from_resolved(
                 distance_nm=directional_stats.get("distance_nm"),
                 source=directional_source,
                 unit="km",
-                source_type="seamatrix",
-                notes=(
-                    "SeaMatrix directional/corridor distance replaced the base "
-                    "port-pair distance; base provenance is retained."
+                source_type=(
+                    "observed_voyage_mean"
+                    if uses_mean_observed_distance
+                    else "seamatrix"
                 ),
+                notes=(
+                    "Arithmetic mean of total distances across complete observed "
+                    "same-OD voyages; individual subleg sources are retained."
+                    if uses_mean_observed_distance
+                    else (
+                        "SeaMatrix directional/corridor distance replaced the base "
+                        "port-pair distance; base provenance is retained."
+                    )
+                ),
+                lower_bound_km=directional_stats.get("scenario_distance_min_km"),
+                upper_bound_km=directional_stats.get("scenario_distance_max_km"),
             )
         pair_intensity = directional_stats.get("pair_intensity_g_per_tnm")
         uses_pair_intensity = (
@@ -575,6 +600,8 @@ def build_path_geometry_from_resolved(
             ]
         for key in (
             "route_observation_mode",
+            "scenario_distance_method",
+            "scenario_distance_scope",
             "selection_criterion",
             "selected_corridor_id",
             "pair_intensity_method",
@@ -590,6 +617,8 @@ def build_path_geometry_from_resolved(
             "corridor_count",
             "candidate_voyage_count",
             "candidate_voyage_observation_count",
+            "scenario_distance_observation_count",
+            "scenario_distance_corridor_count",
             "selected_corridor_candidate_voyage_count",
             "direct_voyage_count",
             "multistop_voyage_count",
@@ -637,6 +666,7 @@ def build_path_geometry_from_resolved(
             }
         for key in (
             "distance_source_counts",
+            "scenario_distance_source_counts",
             "selected_corridor_distance_source_counts",
         ):
             value = directional_stats.get(key)
@@ -655,6 +685,11 @@ def build_path_geometry_from_resolved(
             "pair_intensity_transport_work_tnm",
             "pair_intensity_unweighted_median_g_per_tnm",
             "pair_intensity_transport_work_weighted_mean_g_per_tnm",
+            "scenario_distance_km",
+            "scenario_distance_nm",
+            "scenario_distance_min_km",
+            "scenario_distance_max_km",
+            "scenario_distance_stddev_km",
             "selected_corridor_fuel_g_per_tnm_weighted_mean",
         ):
             value = directional_stats.get(key)

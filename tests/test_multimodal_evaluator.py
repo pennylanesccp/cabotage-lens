@@ -565,6 +565,91 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             any("haversine fallback" in item for item in result["calculation_warnings"])
         )
 
+    def test_pair_intensity_uses_mean_complete_observed_voyage_distance(self) -> None:
+        context = evaluator.PreparedEvaluationContext(
+            truck_spec={
+                "axles": 5,
+                "payload_t": 27.0,
+                "ref_weight_t": 20.0,
+                "empty_efficiency_gain": 0.18,
+            },
+            diesel_lookup=DieselPriceLookup(
+                source_csv="diesel.csv",
+                default_price_r_per_l=6.0,
+                uf_to_price={"SP": 6.12, "RJ": 6.15},
+                row_count=2,
+            ),
+            diesel_price_override=None,
+            bunker_price_ton=2572.34,
+            vessel_eff=self._fake_vessel(),
+            hoteling_sel=None,
+            port_ops_selection=None,
+        )
+        path_data = self._path_data()
+        path_data["sea_leg"] = {
+            "distance_km": 370.4,
+            "distance_nm": 200.0,
+            "source": "observed_complete_voyage_distance_mean",
+            "route_observation_mode": "observed_voyage_corridors",
+            "scenario_distance_method": (
+                "arithmetic_mean_complete_observed_voyage_distances"
+            ),
+            "scenario_distance_scope": (
+                "one_complete_ordered_od_observation_per_voyage"
+            ),
+            "scenario_distance_observation_count": 4,
+            "scenario_distance_corridor_count": 3,
+            "scenario_distance_km": 370.4,
+            "scenario_distance_nm": 200.0,
+            "scenario_distance_source_counts": {
+                "sea_matrix": 6,
+                "haversine_fallback": 1,
+            },
+            "fuel_g_per_tnm": 9.0,
+            "pair_intensity_g_per_tnm": 9.0,
+            "pair_intensity_method": "transport_work_weighted_mean",
+            "pair_intensity_source": (
+                "antaq_mrv_same_od_transport_work_weighted_mean"
+            ),
+            # A stale selected-corridor diagnostic must not override the mean.
+            "selected_corridor_sublegs": [
+                {
+                    "origin_port": "Port A",
+                    "destination_port": "Port B",
+                    "distance_nm": 100.0,
+                    "fuel_g_per_tnm": 9.0,
+                }
+            ],
+        }
+
+        with patch.object(
+            evaluator,
+            "estimate_leg_liters",
+            side_effect=self._estimate_leg_liters,
+        ):
+            result = evaluator.evaluate_path(
+                path_data,
+                cargo_t=20.0,
+                truck_key="semi_27t",
+                include_hoteling=False,
+                include_port_ops=False,
+                prepared_context=context,
+            )
+
+        sea = result["multimodal"]["sea"]
+        self.assertEqual(
+            sea["sailing_fuel_calc_mode"],
+            "same_od_transport_work_weighted_mean_with_"
+            "mean_observed_voyage_distance",
+        )
+        self.assertAlmostEqual(sea["fuel_kg_sailing"], 36.0)
+        self.assertEqual(sea["scenario_distance_observation_count"], 4)
+        self.assertEqual(sea["scenario_distance_corridor_count"], 3)
+        self.assertEqual(sea["selected_corridor_sublegs"], [])
+        self.assertTrue(
+            any("mean observed maritime distance" in item for item in result["calculation_warnings"])
+        )
+
     def test_zero_work_pair_mean_has_explicit_source_and_mode(self) -> None:
         context = evaluator.PreparedEvaluationContext(
             truck_spec={

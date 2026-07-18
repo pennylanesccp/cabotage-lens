@@ -27,12 +27,17 @@ DEFAULT_CLASS_EFFICIENCY_JSON_PATH = Path(
     "data/processed/cabotage_data/container_ship_efficiency_classes.json"
 )
 DEFAULT_SHIP_TYPE = "Container ship"
-PARSER_VERSION = "sea_matrix_efficiency_v3"
-MARITIME_INTENSITY_SCHEMA_VERSION = 4
+PARSER_VERSION = "sea_matrix_efficiency_v4"
+MARITIME_INTENSITY_SCHEMA_VERSION = 5
 _KM_PER_NAUTICAL_MILE = 1.852
 DEPLOYMENT_REQUIRED_ROUTE = ("Porto de Santos", "Porto de Manaus")
 ROUTE_OBSERVATION_MODE = "observed_voyage_corridors"
-CORRIDOR_SELECTION_CRITERION = "direct_first_then_shortest_distance_km"
+SCENARIO_DISTANCE_METHOD = "arithmetic_mean_complete_observed_voyage_distances"
+SCENARIO_DISTANCE_SCOPE = "one_complete_ordered_od_observation_per_voyage"
+SCENARIO_DISTANCE_SOURCE = "observed_complete_voyage_distance_mean"
+# Compatibility alias for callers that imported the former name. It no longer
+# denotes a selected corridor; it identifies the scenario-distance rule.
+CORRIDOR_SELECTION_CRITERION = SCENARIO_DISTANCE_METHOD
 FALLBACK_TRIM_FRACTION_EACH_TAIL = 0.01
 FALLBACK_OUTLIER_RULE = "symmetric_trim_1pct_each_tail_floor_count"
 MRV_IMO_OUTLIER_UPPER_QUANTILE = 0.95
@@ -230,11 +235,12 @@ def enrich_sea_matrix_with_efficiency(
         "source": (
             "ANTAQ observed same-voyage corridors + EU MRV latest IMO intensity with "
             "explicit IMO outlier replacement and robust vessel-class and ship-type "
-            "estimates; same-OD transport-work-weighted mean applied to selected-"
-            "corridor geometry"
+            "estimates; same-OD transport-work-weighted intensity and arithmetic "
+            "mean distance across complete observed voyages"
         ),
         "route_observation_mode": ROUTE_OBSERVATION_MODE,
-        "corridor_selection_criterion": CORRIDOR_SELECTION_CRITERION,
+        "scenario_distance_method": SCENARIO_DISTANCE_METHOD,
+        "scenario_distance_scope": SCENARIO_DISTANCE_SCOPE,
         "weighting": "tonne_nm",
         "pair_intensity_method": PAIR_INTENSITY_METHOD,
         "pair_intensity_scope": PAIR_INTENSITY_SCOPE,
@@ -436,6 +442,20 @@ def validate_enriched_sea_matrix_payload(
         "destination": destination,
         "route_observation_mode": route_observation_mode,
         "distance_km": stats.get("distance_km"),
+        "scenario_distance_method": stats.get("scenario_distance_method"),
+        "scenario_distance_scope": stats.get("scenario_distance_scope"),
+        "scenario_distance_observation_count": stats.get(
+            "scenario_distance_observation_count"
+        ),
+        "scenario_distance_corridor_count": stats.get(
+            "scenario_distance_corridor_count"
+        ),
+        "scenario_distance_nm": stats.get("scenario_distance_nm"),
+        "scenario_distance_min_km": stats.get("scenario_distance_min_km"),
+        "scenario_distance_max_km": stats.get("scenario_distance_max_km"),
+        "scenario_distance_source_counts": stats.get(
+            "scenario_distance_source_counts"
+        ),
         "fuel_g_per_tnm_weighted_mean": stats.get("fuel_g_per_tnm_weighted_mean"),
         "pair_intensity_g_per_tnm": stats.get("pair_intensity_g_per_tnm"),
         "pair_intensity_method": stats.get("pair_intensity_method"),
@@ -1434,8 +1454,9 @@ def _build_segments(
         "unusable_subroutes": skipped_incomplete_subroutes,
         "subroute_calculation_policy": "complete_leg_chain_only_no_partial_sums",
         "voyage_od_observation_policy": (
-            "one_observation_per_voyage_and_ordered_port_pair_using_"
-            "direct_first_then_shortest_distance_km"
+            "one_complete_observation_per_voyage_and_ordered_port_pair; "
+            "direct_first_then_shortest_distance_km only resolves duplicate "
+            "occurrences within the same voyage"
         ),
         "cargo_reconstruction_rule": "minimum_nonnegative_prefix_offset",
         "voyages_with_reconstructed_initial_cargo": (
@@ -1486,55 +1507,54 @@ def _aggregate_subroute_stats(
         ordered_options = sorted(
             options,
             key=lambda item: (
-                0 if int(item["corridor_leg_count"]) == 1 else 1,
                 float(item["distance_km"]),
                 int(item["corridor_leg_count"]),
                 str(item["corridor_id"]),
             ),
         )
-        usable_options = [
-            item
-            for item in ordered_options
-            if _float_or_none(item.get("fuel_g_per_tnm_weighted_mean")) is not None
-            and float(item["fuel_g_per_tnm_weighted_mean"]) > 0.0
+        pair_observations = pair_subroutes[(origin, destination)]
+        distance_km_values = [
+            float(subroute.distance_km) for subroute in pair_observations
         ]
-        direct_options = [
-            item for item in usable_options if int(item["corridor_leg_count"]) == 1
+        distance_nm_values = [
+            float(subroute.distance_nm) for subroute in pair_observations
         ]
-        selectable = direct_options or usable_options or ordered_options
-        selected = min(
-            selectable,
-            key=lambda item: (
-                float(item["distance_km"]),
-                int(item["corridor_leg_count"]),
-                str(item["corridor_id"]),
+        mean_distance_km = statistics.fmean(distance_km_values)
+        mean_distance_nm = statistics.fmean(distance_nm_values)
+
+        # The scenario distance is an arithmetic mean over complete voyage
+        # observations. A corridor repeated by several voyages therefore has
+        # the same weight as that number of voyages, not one weight per unique
+        # port sequence. This is intentionally separate from the transport-work
+        # weighting used for the pair intensity below.
+        stats: dict[str, Any] = {
+            "distance_km": round(mean_distance_km, 3),
+            "distance_nm": round(mean_distance_nm, 3),
+            "distance_source": SCENARIO_DISTANCE_SOURCE,
+            "scenario_distance_km": round(mean_distance_km, 3),
+            "scenario_distance_nm": round(mean_distance_nm, 3),
+            "scenario_distance_method": SCENARIO_DISTANCE_METHOD,
+            "scenario_distance_scope": SCENARIO_DISTANCE_SCOPE,
+            "scenario_distance_observation_count": len(pair_observations),
+            "scenario_distance_corridor_count": len(ordered_options),
+            "scenario_distance_min_km": round(min(distance_km_values), 3),
+            "scenario_distance_max_km": round(max(distance_km_values), 3),
+            "scenario_distance_stddev_km": round(
+                statistics.pstdev(distance_km_values), 3
+            )
+            if len(distance_km_values) > 1
+            else 0.0,
+            "route_observation_mode": ROUTE_OBSERVATION_MODE,
+            "corridor_count": len(ordered_options),
+            "candidate_voyage_count": len(pair_observations),
+            "candidate_voyage_observation_count": len(pair_observations),
+            "direct_voyage_count": sum(
+                1 for subroute in pair_observations if subroute.is_direct
             ),
-        )
-        # Keep the selected aggregate at pair level without serializing its leg
-        # audit twice. Runtime-facing leg data is copied explicitly to
-        # ``selected_corridor_sublegs``; option summaries retain every observed
-        # path and the voyage IDs that contributed to it.
-        stats = {
-            key: value
-            for key, value in selected.items()
-            if key not in {"corridor_sublegs", "candidate_voyage_ids"}
+            "multistop_voyage_count": sum(
+                1 for subroute in pair_observations if not subroute.is_direct
+            ),
         }
-        stats["selected_corridor_fuel_g_per_tnm_weighted_mean"] = selected.get(
-            "fuel_g_per_tnm_weighted_mean"
-        )
-        stats["selected_corridor_intensity_weighting"] = selected.get(
-            "intensity_weighting"
-        )
-        stats["route_observation_mode"] = ROUTE_OBSERVATION_MODE
-        stats["selection_criterion"] = CORRIDOR_SELECTION_CRITERION
-        stats["selected_corridor_id"] = selected["corridor_id"]
-        stats["corridor_port_path"] = list(selected["corridor_port_path"])
-        stats["corridor_leg_count"] = int(selected["corridor_leg_count"])
-        stats["selected_corridor_sublegs"] = list(selected["corridor_sublegs"])
-        stats["selected_corridor_distance_source_counts"] = dict(
-            selected.get("distance_source_counts") or {}
-        )
-        stats["corridor_count"] = len(ordered_options)
         option_summary_fields = (
             "corridor_port_path",
             "distance_km",
@@ -1556,27 +1576,21 @@ def _aggregate_subroute_stats(
             }
             for option in ordered_options
         ]
-        stats["selected_corridor_candidate_voyage_count"] = int(
-            selected["candidate_voyage_count"]
-        )
-        stats["selected_corridor_candidate_voyage_ids"] = list(
-            selected.get("candidate_voyage_ids") or []
-        )
 
-        count_fields = (
-            "candidate_voyage_count",
-            "candidate_voyage_observation_count",
-            "direct_voyage_count",
-            "multistop_voyage_count",
+        aggregate_integer_fields = (
+            "segment_count",
+            "matched_segment_count",
+            "resolved_segment_count",
+            "haversine_fallback_segment_count",
+            "matched_voyage_count",
             "resolved_voyage_count",
             "imo_intensity_voyage_count",
             "class_fallback_voyage_count",
             "type_fallback_voyage_count",
             "fallback_voyage_count",
             "unresolved_intensity_voyage_count",
-            "haversine_fallback_segment_count",
         )
-        for field in count_fields:
+        for field in aggregate_integer_fields:
             stats[field] = sum(int(item.get(field) or 0) for item in ordered_options)
         all_source_counts: Counter[str] = Counter()
         all_distance_source_counts: Counter[str] = Counter()
@@ -1589,6 +1603,9 @@ def _aggregate_subroute_stats(
         stats["distance_source_counts"] = dict(
             sorted(all_distance_source_counts.items())
         )
+        stats["scenario_distance_source_counts"] = dict(
+            sorted(all_distance_source_counts.items())
+        )
         stats["candidate_observed_transport_work_tnm"] = round(
             sum(float(item.get("observed_transport_work_tnm") or 0.0) for item in ordered_options),
             3,
@@ -1597,8 +1614,89 @@ def _aggregate_subroute_stats(
             sum(float(item.get("observed_fuel_kg") or 0.0) for item in ordered_options),
             6,
         )
+        stats["observed_transport_work_tnm"] = stats[
+            "candidate_observed_transport_work_tnm"
+        ]
+        stats["observed_fuel_kg"] = stats["candidate_observed_fuel_kg"]
+        all_segments = [
+            segment for subroute in pair_observations for segment in subroute.segments
+        ]
+        imo_matched_subroutes = [
+            subroute
+            for subroute in pair_observations
+            if str(subroute.intensity_provenance.get("matched_imo") or "").strip()
+        ]
+        resolved_subroutes = [
+            subroute
+            for subroute in pair_observations
+            if (_float_or_none(
+                subroute.intensity_provenance.get("intensity_g_per_tnm")
+            ) or 0.0)
+            > 0.0
+        ]
+        matched_imos = {
+            subroute.imo
+            for subroute in imo_matched_subroutes
+            if subroute.imo
+        }
+        stats["voyage_count"] = len(
+            {subroute.voyage_id for subroute in pair_observations}
+        )
+        stats["unique_imo_count"] = len(
+            {subroute.imo for subroute in pair_observations if subroute.imo}
+        )
+        stats["matched_imo_count"] = len(matched_imos)
+        matched_transport_work_tnm = sum(
+            segment.tonne_nm
+            for subroute in imo_matched_subroutes
+            for segment in subroute.segments
+        )
+        total_transport_work_tnm = sum(segment.tonne_nm for segment in all_segments)
+        resolved_transport_work_tnm = sum(
+            segment.tonne_nm
+            for subroute in resolved_subroutes
+            for segment in subroute.segments
+        )
+        stats["cargo_weight_t_total"] = round(
+            sum(segment.cargo_weight_t for segment in all_segments), 3
+        )
+        stats["cargo_weight_t_matched_total"] = round(
+            sum(
+                segment.cargo_weight_t
+                for subroute in imo_matched_subroutes
+                for segment in subroute.segments
+            ),
+            3,
+        )
+        stats["tonne_nm_total"] = round(total_transport_work_tnm, 3)
+        stats["tonne_nm_matched_total"] = round(matched_transport_work_tnm, 3)
+        stats["tonne_nm_resolved_total"] = round(resolved_transport_work_tnm, 3)
+        stats["match_rate_segments"] = (
+            round(
+                sum(
+                    1
+                    for subroute in imo_matched_subroutes
+                    for _ in subroute.segments
+                )
+                / len(all_segments),
+                6,
+            )
+            if all_segments
+            else None
+        )
+        stats["match_rate_tonne_nm"] = (
+            round(matched_transport_work_tnm / total_transport_work_tnm, 6)
+            if total_transport_work_tnm > 0.0
+            else None
+        )
+        stats["intensity_resolution_rate_voyages"] = round(
+            len(resolved_subroutes) / len(pair_observations), 6
+        )
+        stats["intensity_resolution_rate"] = stats[
+            "intensity_resolution_rate_voyages"
+        ]
         pair_intensity = _pair_representative_intensity(
-            pair_subroutes[(origin, destination)],
+            pair_observations,
             audit_voyage_ids=audit_voyage_ids,
         )
         stats.update(pair_intensity)
@@ -1606,17 +1704,24 @@ def _aggregate_subroute_stats(
             pair_intensity.get("pair_intensity_g_per_tnm")
         )
         if representative is not None and representative > 0.0:
-            # Keep the legacy weighted-mean fields scoped to the selected
-            # corridor. New consumers must use the explicit pair fields.
-            stats["fuel_g_per_tnm_weighted_mean"] = selected.get(
-                "fuel_g_per_tnm_weighted_mean"
+            stats["fuel_g_per_tnm_weighted_mean"] = representative
+            stats["intensity_weighting"] = pair_intensity.get(
+                "pair_intensity_method"
             )
-            stats["intensity_weighting"] = selected.get(
-                "intensity_weighting"
+            stats["fuel_g_per_tnm_source"] = pair_intensity.get(
+                "pair_intensity_source"
             )
-            stats["fuel_g_per_tnm_source"] = selected.get(
-                "fuel_g_per_tnm_source"
-            ) or "selected_observed_voyage_corridor"
+        resolved_count = int(stats.get("resolved_voyage_count") or 0)
+        if resolved_count == len(pair_observations):
+            stats["calculation_status"] = (
+                "complete_zero_transport_work_intensity_mean"
+                if total_transport_work_tnm <= 0.0
+                else "complete"
+            )
+        elif resolved_count:
+            stats["calculation_status"] = "partial_intensity_coverage"
+        else:
+            stats["calculation_status"] = "unusable_missing_intensity"
         out.setdefault(origin, {})[destination] = stats
     return out
 

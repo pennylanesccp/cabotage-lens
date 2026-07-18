@@ -27,7 +27,7 @@ __all__ = ["OBSERVED_VOYAGE_CORRIDORS_MODE", "SeaMatrix"]
 
 _log = get_logger(__name__)
 OBSERVED_VOYAGE_CORRIDORS_MODE = "observed_voyage_corridors"
-MARITIME_INTENSITY_SCHEMA_VERSION = 3
+MARITIME_INTENSITY_SCHEMA_VERSION = 5
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -453,6 +453,9 @@ class SeaMatrix:
             "pair_intensity_scope",
             "pair_intensity_source",
             "pair_intensity_candidate_voyage_count",
+            "scenario_distance_method",
+            "scenario_distance_scope",
+            "scenario_distance_observation_count",
         )
         return bool(directional_stats) and all(
             _clean_route_observation_mode(stats.get("route_observation_mode"))
@@ -493,21 +496,41 @@ class SeaMatrix:
 
     @staticmethod
     def _selected_observed_corridor_stats(stats: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Normalize the corridor selected offline without selecting or stitching at runtime."""
+        """Normalize observed OD statistics without stitching routes at runtime."""
         merged = dict(stats)
         selected = None
-        for key in ("selected_corridor", "selected_voyage_corridor", "selected_route"):
-            candidate = stats.get(key)
-            if isinstance(candidate, dict):
-                selected = dict(candidate)
-                break
+        uses_mean_observed_distance = bool(
+            str(stats.get("scenario_distance_method") or "").strip()
+        )
+        if uses_mean_observed_distance:
+            for key in (
+                "selected_corridor",
+                "selected_voyage_corridor",
+                "selected_route",
+                "selected_corridor_id",
+                "selected_route_id",
+                "selected_corridor_sublegs",
+                "corridor_port_path",
+                "corridor_leg_count",
+            ):
+                merged.pop(key, None)
+        if not uses_mean_observed_distance:
+            for key in ("selected_corridor", "selected_voyage_corridor", "selected_route"):
+                candidate = stats.get(key)
+                if isinstance(candidate, dict):
+                    selected = dict(candidate)
+                    break
 
         selected_corridor_id = _first_value(
             stats,
             "selected_corridor_id",
             "selected_route_id",
         )
-        if selected is None and selected_corridor_id is not None:
+        if (
+            not uses_mean_observed_distance
+            and selected is None
+            and selected_corridor_id is not None
+        ):
             candidates = _first_value(stats, "corridors", "candidate_corridors", "routes")
             if isinstance(candidates, list):
                 for candidate in candidates:
@@ -587,12 +610,16 @@ class SeaMatrix:
             if observed_fuel_g is not None:
                 merged["observed_fuel_kg"] = observed_fuel_g / 1000.0
 
-        raw_sublegs = _first_value(
-            merged,
-            "selected_corridor_sublegs",
-            "subleg_details",
-            "sublegs",
-            "legs",
+        raw_sublegs = (
+            []
+            if uses_mean_observed_distance
+            else _first_value(
+                merged,
+                "selected_corridor_sublegs",
+                "subleg_details",
+                "sublegs",
+                "legs",
+            )
         )
         sublegs = [
             _canonical_corridor_subleg(dict(item))
@@ -655,7 +682,8 @@ class SeaMatrix:
 
         if _positive_float(merged.get("distance_km")) is None and not sublegs:
             return None
-        merged["distance_source"] = "observed_voyage_corridor"
+        if not uses_mean_observed_distance:
+            merged["distance_source"] = "observed_voyage_corridor"
         merged["route_observation_mode"] = OBSERVED_VOYAGE_CORRIDORS_MODE
         return merged
 

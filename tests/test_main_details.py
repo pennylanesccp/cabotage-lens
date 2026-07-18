@@ -199,6 +199,49 @@ class MainDetailsTests(unittest.TestCase):
         self.assertIn("Sea-matrix distance: 1", distance_sources)
         self.assertIn("Coordinate haversine fallback: 1", distance_sources)
 
+    def test_assumptions_show_mean_observed_voyage_distance(self) -> None:
+        results = {
+            "inputs": {},
+            "multimodal": {
+                "sea": {
+                    "route_observation_mode": "observed_voyage_corridors",
+                    "scenario_distance_method": (
+                        "arithmetic_mean_complete_observed_voyage_distances"
+                    ),
+                    "scenario_distance_observation_count": 4,
+                    "scenario_distance_corridor_count": 3,
+                    "scenario_distance_km": 400.0,
+                    "scenario_distance_source_counts": {
+                        "sea_matrix": 6,
+                        "haversine_fallback": 1,
+                    },
+                    # These fields model stale legacy data and must not be shown
+                    # as the geometry of the mean-distance scenario.
+                    "route_corridor_port_path": ["Porto A", "Porto C", "Porto B"],
+                    "selected_corridor_id": "legacy-corridor",
+                }
+            },
+        }
+
+        rows = {
+            row["Parameter"]: row
+            for row in _assumptions_table(results=results, payload={}).to_dict(
+                "records"
+            )
+        }
+
+        self.assertIn("Maritime scenario distance", rows)
+        value = rows["Maritime scenario distance"]["Value"]
+        self.assertIn("Arithmetic mean of complete observed voyage distances", value)
+        self.assertIn("400.000 km", value)
+        self.assertIn("complete voyages: 4", value)
+        self.assertNotIn("Selected distance corridor", rows)
+        self.assertIn("Observed-voyage distance sources", rows)
+        self.assertIn(
+            "Coordinate haversine fallback: 1",
+            rows["Observed-voyage distance sources"]["Value"],
+        )
+
     def test_legacy_stitched_corridor_is_not_labeled_as_observed_voyage(self) -> None:
         results = {
             "multimodal": {

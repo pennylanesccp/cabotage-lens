@@ -44,7 +44,7 @@ Estudos de *short sea shipping*, ou navegação marítima de curta distância, t
 
 Um princípio metodológico do estudo é dar preferência a dados públicos, oficiais, observados e auditáveis. A Agência Nacional de Transportes Aquaviários (ANTAQ), órgão federal que regula e acompanha o transporte aquaviário brasileiro, fornece os registros de escalas e de movimentação de carga. A base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) publica indicadores anuais de consumo e atividade dos navios. Essas fontes permitem relacionar uma operação registrada no Brasil ao desempenho do navio identificado pelo número da Organização Marítima Internacional (IMO), uma identificação permanente da embarcação. Os campos utilizados, os arquivos de origem e a forma de reconstruir as viagens são apresentados na Seção 3.3 [antaq2025; eumrv2025].
 
-A fronteira ambiental adotada é a de emissões operacionais TTW de CO$_2$e. Uma avaliação do ciclo de vida (LCA, do inglês *life-cycle assessment*) considera outras etapas, como a produção do combustível, a fabricação, a operação e o fim de vida dos equipamentos. Fatores WTW, resultados de LCA e fatores baseados exclusivamente em dióxido de carbono (CO$_2$), que contabilizam somente esse gás, não são intercambiáveis com a saída do sistema [decarb2024; maritimelca2024]. Operações portuárias e períodos de navio atracado também precisam de tratamento separado, pois dependem do terminal e da operação observada [berth2009; berthairquality2010; shipops2022].
+A fronteira ambiental adotada é a de emissões operacionais *tank-to-wheel* (TTW, do tanque à roda) de dióxido de carbono equivalente (CO$_2$e). Ela considera o combustível queimado durante a operação do caminhão ou do navio, mas não as etapas anteriores de produção e distribuição desse combustível. Uma avaliação do ciclo de vida (LCA, do inglês *life-cycle assessment*) considera outras etapas, como a produção do combustível, a fabricação, a operação e o fim de vida dos equipamentos. Fatores *well-to-wheel* (WTW, do poço à roda), resultados de LCA e fatores baseados exclusivamente em dióxido de carbono (CO$_2$), que contabilizam somente esse gás, não são intercambiáveis com a saída do sistema [decarb2024; maritimelca2024]. Operações portuárias e períodos de navio atracado também precisam de tratamento separado, pois dependem do terminal e da operação observada [berth2009; berthairquality2010; shipops2022].
 
 **Tabela 1 — O que está dentro e fora da comparação.**
 
@@ -305,85 +305,249 @@ $$
 
 Esse resultado não é a intensidade de um navio escolhido como representante. É a média das 89 viagens, em que cada uma contribui conforme a carga efetivamente transportada e a distância percorrida. Recortes com trabalho de transporte igual a zero não entram na média ponderada quando houver pelo menos um recorte com trabalho positivo. Se todos os recortes tiverem peso zero, o sistema calcula a média simples das intensidades disponíveis e registra essa condição.
 
-##### 3.3.4.4 Distância do cenário e escolha do corredor
+##### 3.3.4.4 Distância marítima média entre os portos
 
-A intensidade da ligação e a distância do cenário respondem a perguntas diferentes. A intensidade informa quanto combustível é associado ao transporte de uma tonelada por uma milha náutica. Ela é calculada a partir de todas as viagens aceitas entre os dois portos, como explicado na subseção anterior. A distância, por sua vez, precisa vir de um único corredor completo para que o sistema possa calcular uma nova remessa com a carga informada pelo usuário.
+Para calcular o consumo de uma nova remessa, o sistema usa a distância média das viagens completas observadas entre o porto de origem e o porto de destino. Em cada viagem, soma as distâncias de todos os subtrechos entre os dois portos. Em seguida, calcula a média aritmética desses totais. Cada viagem conta uma vez: entram tanto viagens diretas quanto viagens com escalas intermediárias.
 
-Na preparação da intensidade Santos–Manaus, entram os 89 recortes históricos das 22 sequências de portos observadas. Entre eles estão o recorte direto da viagem `voyage_9612789_00004`, Santos–Suape–Pecém–Manaus da viagem `voyage_9612791_00011`, Santos–Itapoá–Paranaguá–Suape–Manaus da viagem `voyage_9343974_00002` e Santos–Navegantes–Pecém–Manaus da viagem `voyage_9852365_00011`. Esses exemplos deixam claro que a preparação não obriga o navio a passar por Suape nem por qualquer outro porto predeterminado. Todos contribuem para a média ponderada de $9{,}009824\ \mathrm{g/(t\cdot nm)}$.
-
-Depois de calcular essa média, o sistema escolhe separadamente o corredor que fornecerá a distância do cenário. Só podem ser escolhidos corredores completos observados dentro de uma mesma viagem, com distância disponível para todos os seus subtrechos. Se houver uma viagem direta entre os dois portos, ela tem prioridade. Se não houver, o sistema escolhe o corredor completo de menor distância entre os que possuem escalas. Esse critério define somente a geometria da nova remessa; ele não retira nenhum dos outros corredores da média de intensidade.
-
-Em Santos–Manaus, existe o recorte direto da viagem `voyage_9612789_00004`. Por isso, a distância escolhida para o cenário é $3.300{,}216\ \mathrm{nm}$, atribuída pela matriz marítima ao trecho direto. A carga observada nessa viagem, 11.584,165 t, e sua intensidade histórica de $9{,}322050\ \mathrm{g/(t\cdot nm)}$ não são usadas como valores-padrão do novo cenário. O cenário usa a carga escolhida pelo usuário e a intensidade da ligação calculada com todos os 89 recortes: $9{,}009824\ \mathrm{g/(t\cdot nm)}$.
-
-Se $D_{o,d}^{*}$ representa a soma das distâncias do corredor escolhido, então:
+Se $D_{v,o,d}$ é a distância total observada na viagem $v$ entre a origem $o$ e o destino $d$, e $n$ é o número de viagens completas aceitas, a distância usada no cenário é:
 
 $$
-D_{o,d}^{*}=\sum_{s\in\mathcal{S}_{o,d}^{*}}d_s.
+\bar D_{o,d}=\frac{1}{n}\sum_{v=1}^{n}D_{v,o,d}.
 $$
 
-Para uma carga de cenário $M$, em toneladas, o consumo marítimo é:
-
-$$
-F_{o,d}^{\mathrm{cen}}=
-\frac{I_{o,d}^{\mathrm{rep}}\,M\,D_{o,d}^{*}}{1000}.
-$$
-
-Em Santos–Manaus, a expressão aplicada pela ferramenta fica:
-
-$$
-F_{\mathrm{Santos,Manaus}}^{\mathrm{cen}}=
-\frac{9{,}009824\times M\times3.300{,}216}{1000}\ \mathrm{kg}.
-$$
-
-O sobrescrito $\mathrm{cen}$ indica que esse é o consumo de uma nova remessa, e não o consumo reconstruído de uma viagem histórica. Assim, o histórico serve para estimar a intensidade; a carga e a distância do cenário servem para calcular o consumo que será apresentado ao usuário.
-
-O sistema procura primeiro a distância de cada subtrecho na matriz marítima. Quando ela não está disponível, pode usar a distância de grande círculo entre as coordenadas dos dois portos, calculada pelo método de haversine. Isso ocorreu no subtrecho Itapoá–Paranaguá da viagem `voyage_9343974_00002`: a matriz não continha essa distância, e o sistema registrou a estimativa de $40{,}974\ \mathrm{nm}$ como uma aproximação. Esse registro deixa claro que a distância não foi observada como uma rota navegada e pode diferir de uma rota marítima real.
+Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média. Em Santos–Manaus, os 89 recortes completos observados em 22 sequências de portos resultam em $6.115{,}349\ \mathrm{km}$, ou $3.302{,}024\ \mathrm{nm}$. As distâncias dos subtrechos são obtidas primeiro na matriz marítima; quando uma delas não está disponível, o sistema aplica o método de haversine e registra a aproximação.
 
 #### 3.3.5 Consolidação de emissões e custos
 
-Depois de definir a intensidade e a sequência de portos, o sistema calcula os resultados de cada trecho e os reúne para representar a viagem completa.
+Ao fim das etapas anteriores, o sistema já estimou o combustível de cada parte da viagem. Nesta etapa, ele transforma esse consumo em duas saídas comparáveis: emissões operacionais de dióxido de carbono equivalente (CO$_2$e) e custo modelado do combustível. A conversão é feita primeiro para cada parte da rota. Só depois os resultados são somados. Dessa forma, é possível ver separadamente quanto o acesso inicial, a navegação, as operações no terminal e o acesso final acrescentam à alternativa multimodal.
 
-**O que entra:** o consumo de cada trecho, o preço do combustível, o fator que converte combustível em emissões e os dados disponíveis das operações portuárias.
+**Tabela 6 — Dados e contas usados para converter combustível em emissões e custo.**
 
-**O que o sistema faz:** calcula separadamente cada parte da viagem. Por exemplo, mantém distintos o primeiro acesso rodoviário, a navegação e o acesso rodoviário final. Depois, soma somente as partes que foram representadas no cenário:
+| Componente | Como o combustível é obtido | Preço usado no custo | Conversão em emissões |
+| :-- | :-- | :-- | :-- |
+| Rodovia direta, *first mile* e *last mile* | Distância da rota, número de viagens do caminhão e rendimento definido pela tabela oficial da ANTT. | Preço do diesel S10 por Unidade da Federação (UF), processado a partir da [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). O cenário usa a média entre as UFs de origem e de destino. | Litros de diesel $\times 2{,}68\ \mathrm{kgCO_2e/L}$, fator operacional TTW registrado pelo modelo. |
+| Navegação | Intensidade da ligação ANTAQ–EU MRV $\times$ massa da remessa $\times$ distância marítima média observada, conforme a Seção 3.3.4. | Preço em Santos do VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre), publicado pela [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), convertido para R$/t e registrado na execução. | Massa de VLSFO $\times 3{,}114\ \mathrm{kgCO_2e/kg}$, fator operacional TTW registrado pelo modelo. |
+| Operações portuárias | Movimentos de contêineres e fatores de consumo dos equipamentos do terminal, conforme a Seção 3.3.3. | O diesel dos equipamentos usa o mesmo preço de diesel do cenário. | Massa de diesel $\times 3{,}15\ \mathrm{kgCO_2e/kg}$. Um componente elétrico só é somado quando há fator de emissão e tarifa registrados. |
+
+O preço do diesel vem da tabela da **Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)**, agência federal que divulga pesquisas semanais de preços de combustíveis. A execução tenta atualizar essa tabela e o preço de VLSFO antes do cálculo; se uma consulta não estiver disponível, conserva o último valor válido registrado. Por isso, cada resultado informa o preço e a fonte efetivamente usados. Os fatores de emissão também ficam registrados como parâmetros operacionais do modelo: eles não são medidos em cada viagem.
+
+Para um trecho rodoviário $i$, em que $F_{\mathrm{rod},i}$ é o consumo em litros, $p_{\mathrm{diesel}}$ é o preço em R$/L e $f_{\mathrm{diesel}}$ é o fator de emissão em kgCO$_2$e/L, o custo e a emissão são:
 
 $$
-E_a=\sum_{\ell\in L_a}E_{\ell},
+C_{\mathrm{rod},i}=F_{\mathrm{rod},i}\,p_{\mathrm{diesel}},
 \qquad
-C_a=\sum_{\ell\in L_a}C_{\ell}.
+E_{\mathrm{rod},i}=F_{\mathrm{rod},i}\,f_{\mathrm{diesel}}.
 $$
 
-**O que sai:** os totais de emissões operacionais e custo modelado. A saída também mostra quanto cada trecho acrescentou ao total.
+Na navegação, $F_{\mathrm{nav}}$ é a massa de VLSFO em quilogramas, $p_{\mathrm{VLSFO}}$ é o preço em R$/t e $f_{\mathrm{VLSFO}}$ é o fator em kgCO$_2$e/kg. Como o preço marítimo está em toneladas, a conta é:
 
-O combustível marítimo é convertido em emissões e custo por meio dos fatores e preços registrados. O resultado econômico não inclui margem comercial, seguro, estoque, contrato, frequência ou tarifa final de mercado.
+$$
+C_{\mathrm{nav}}=\frac{F_{\mathrm{nav}}}{1000}\,p_{\mathrm{VLSFO}},
+\qquad
+E_{\mathrm{nav}}=F_{\mathrm{nav}}\,f_{\mathrm{VLSFO}}.
+$$
 
-O sistema calcula as operações portuárias em linhas separadas quando encontra uma fonte utilizável. A saída informa se o valor veio de uma medição específica da operação naquele porto, de uma média do porto ou de uma referência da literatura. Se não houver dado, mostra que o componente está indisponível. Ele não transforma silenciosamente a ausência em consumo zero.
+No cenário atual de operações portuárias, os equipamentos com fator disponível são movidos a diesel. Portanto, o custo é a soma dos litros desses equipamentos multiplicados pelo preço do diesel, e a emissão é a soma da massa de diesel multiplicada pelo respectivo fator de emissão. Quando houver energia elétrica com dados suficientes, ela entra como uma parcela adicional de custo e emissões.
 
-O indicador anual do MRV considera o combustível reportado pelo navio dentro de sua fronteira. Por isso, quando esse indicador é aplicado à navegação, o sistema não soma novamente o consumo do navio enquanto ele está atracado. Esse consumo atracado recebe o nome de hoteling. Somá-lo novamente contaria parte do combustível duas vezes. O consumo dos equipamentos do terminal continua separado quando existe dado para calculá-lo [berth2009; shipops2022].
+Por fim, a alternativa multimodal reúne as quatro parcelas:
+
+$$
+C_{\mathrm{multi}}=C_{\mathrm{first}}+C_{\mathrm{nav}}+C_{\mathrm{porto}}+C_{\mathrm{last}}.
+$$
+
+$$
+E_{\mathrm{multi}}=E_{\mathrm{first}}+E_{\mathrm{nav}}+E_{\mathrm{porto}}+E_{\mathrm{last}}.
+$$
+
+A alternativa totalmente rodoviária é calculada separadamente, com o custo e a emissão do trecho direto. Assim, a comparação não soma custos ou emissões de uma alternativa à outra.
+
+**Exemplo de execução reproduzida — São Paulo–Manaus.** O exemplo considera uma remessa de 14 t, equivalente a 1 TEU. Para tornar a conta verificável, foram usadas as distâncias rodoviárias já armazenadas para a execução: 3.870,006 km na rota direta, 86,174 km entre São Paulo e o Porto de Santos e 6,763 km entre o Porto de Manaus e o destino. Na navegação Santos–Manaus, foram usados os 6.115,349 km (3.302,024 nm) e a intensidade de 9,009824 g/(t$\cdot$nm) obtidos dos 89 recortes observados. A execução usa a configuração de carreta de cinco eixos. Ela parte do rendimento básico de 2,3 km/L da ANTT, mas o ajuste de carga aplicado pelo modelo resulta em 1,495 km/L efetivo.
+
+Os preços registrados nesse conjunto de insumos foram R$ 6,315/L para o diesel — média de R$ 6,120/L em São Paulo e R$ 6,510/L no Amazonas — e R$ 2.572,34/t para o VLSFO, com registro de 17 de novembro de 2025. A Tabela 7 apresenta as parcelas calculadas. Ela separa a rota rodoviária direta da alternativa multimodal para que a soma de cada uma possa ser conferida.
+
+**Tabela 7 — Consolidação de uma remessa de 14 t entre São Paulo e Manaus.**
+
+| Alternativa | Parte da viagem | Combustível calculado | Custo modelado | Emissões operacionais |
+| :-- | :-- | --: | --: | --: |
+| Rodoviária | Rota direta | 2.588,633 L de diesel | R$ 16.347,22 | 6.937,536 kgCO$_2$e |
+| Multimodal | São Paulo $\rightarrow$ Porto de Santos | 57,641 L de diesel | R$ 364,01 | 154,479 kgCO$_2$e |
+| Multimodal | Navegação Santos $\rightarrow$ Manaus | 416,509 kg de VLSFO | R$ 1.071,40 | 1.297,010 kgCO$_2$e |
+| Multimodal | Operações em dois portos | 4,820 L de diesel (4,097 kg) | R$ 30,44 | 12,905 kgCO$_2$e |
+| Multimodal | Porto de Manaus $\rightarrow$ destino | 4,524 L de diesel | R$ 28,57 | 12,124 kgCO$_2$e |
+| **Multimodal** | **Soma dos componentes quantificados** | — | **R$ 1.494,41** | **1.476,518 kgCO$_2$e** |
+
+No exemplo, a soma usa as casas decimais mantidas pelo cálculo antes do arredondamento exibido na tabela:
+
+$$
+C_{\mathrm{multi}}=
+364{,}005893+1.071{,}403298+30{,}437459+28{,}567455
+=1.494{,}414105.
+$$
+
+$$
+E_{\mathrm{multi}}=
+154{,}479144+1.297{,}009676+12{,}905193+12{,}123639
+=1.476{,}517652\ \mathrm{kgCO_2e}.
+$$
+
+Portanto, o custo multimodal arredondado é R$ 1.494,41 e as emissões são 1.476,518 kgCO$_2$e. O total rodoviário, calculado de forma independente, é R$ 16.347,22 e 6.937,536 kgCO$_2$e.
+
+As operações portuárias desse exemplo usam o cenário documentado de Santos para as duas chamadas e, por isso, são identificadas como uma referência documentada, não como uma medição específica dos terminais de Santos e Manaus. O guindaste de cais (STS) teve movimentos previstos, mas não possuía fator de energia disponível. Ele é marcado como indisponível e não como consumo zero. Portanto, R$ 1.494,41 e 1.476,518 kgCO$_2$e são a soma dos componentes que puderam ser quantificados; o resultado portuário, e consequentemente o total multimodal, permanece parcial.
+
+O sistema também evita contar duas vezes o consumo do navio atracado. Quando a intensidade por trabalho de transporte do EU MRV é aplicada à navegação, não acrescenta uma estimativa separada de *hoteling*, isto é, de combustível consumido pelo navio enquanto está no porto. Os equipamentos do terminal permanecem em uma linha própria, porque seu consumo não faz parte dessa intensidade [berth2009; shipops2022]. O custo apresentado é um custo operacional de energia modelado; não é uma cotação de frete comercial.
 
 ## 4. Implementação computacional
 
-As regras descritas na metodologia foram implementadas no CabotageLens, que funciona em uma página web construída com Streamlit. O usuário informa a origem da carga, o destino final e a massa. Os cálculos ficam em módulos separados da tela. Essa separação permite testar as contas sem depender da interface.
+A Seção 3 descreve o que é calculado: duas alternativas que prestam o mesmo serviço logístico, seus trechos, os dados usados e as regras físicas aplicadas. Esta seção mostra como essas regras foram transformadas em software. O objetivo não é repetir as fórmulas, mas explicar como o sistema recebe os dados, executa cada etapa, trata uma informação ausente e registra de onde veio cada resultado.
 
-Uma execução segue estas etapas:
+O CabotageLens separa a preparação dos dados históricos da execução de uma comparação. Assim, uma pessoa que informa uma origem, um destino e uma carga não precisa reconstruir toda a base da Agência Nacional de Transportes Aquaviários (ANTAQ) nem consultar novamente a base de Monitoramento, Reporte e Verificação da União Europeia (EU MRV). A aplicação utiliza os artefatos marítimos já preparados e concentra a execução na montagem do cenário porta a porta.
 
-1. o usuário informa a origem da carga, o destino final e a massa;
+### 4.1 Arquitetura do sistema e tecnologias utilizadas
 
-2. o sistema localiza esses lugares no mapa e obtém as distâncias rodoviárias;
+O sistema é desenvolvido principalmente em Python. A interface, os cálculos, a organização dos dados e as integrações externas ficam em componentes separados. Essa divisão permite, por exemplo, testar uma regra de combustível sem abrir a interface ou atualizar a base marítima sem executar uma comparação completa.
 
-3. aplica as regras de seleção de portos para formar as opções com cabotagem;
+A Tabela 8 apresenta as tecnologias e os serviços que dão suporte ao sistema. Eles não devem ser confundidos com as fontes metodológicas: ANTAQ, EU MRV, Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP) e Ship & Bunker são fontes dos dados explicadas na Seção 3; as ferramentas desta tabela permitem obter, tratar, calcular, armazenar ou apresentar esses dados.
 
-4. para cada ligação portuária, lê a intensidade, a sequência de portos, a distância e a fonte dos dados;
+**Tabela 8 — Tecnologias e serviços utilizados na implementação do CabotageLens.**
 
-5. calcula consumo, emissões e custo modelado de cada trecho;
+| Tecnologia ou serviço | Função no sistema | Papel na execução |
+| :-- | :-- | :-- |
+| Python | Linguagem principal do projeto. | Executa o tratamento de dados, a reconstrução marítima, os cálculos e os scripts de atualização. |
+| Streamlit | Ferramenta para construir a interface web em Python. | Recebe o cenário informado pelo usuário e apresenta mapas, totais, detalhamentos e avisos. |
+| Supabase PostgreSQL e `psycopg` | Supabase fornece o banco PostgreSQL, também chamado de Postgres; `psycopg` é a biblioteca que conecta o Python a esse banco. | Guarda pontos geocodificados, rotas reutilizáveis, execuções em lote e resultados que precisam permanecer disponíveis. |
+| Supabase Storage | Armazenamento remoto opcional de arquivos. | Pode sincronizar artefatos de dados e registros de execução; não substitui as fontes originais nem o banco Postgres. |
+| OpenRouteService (ORS) | Serviço externo de localização e roteamento. | É o provedor principal para transformar um local em coordenadas e obter a geometria das rotas rodoviárias. |
+| LocationIQ | Serviço externo alternativo de localização e roteamento. | É consultado somente quando o ORS não entrega uma resposta utilizável e há credencial configurada. |
+| `requests` e Beautiful Soup | `requests` realiza consultas pela internet; Beautiful Soup lê a estrutura de páginas em HyperText Markup Language (HTML), formato que organiza o conteúdo de uma página web. | Ajudam a buscar serviços externos e, no fluxo de preparação marítima, a localizar no portal da ANTAQ os arquivos públicos a serem baixados. |
+| `pandas` e `openpyxl` | Bibliotecas de leitura e organização de tabelas e planilhas. | Tratam planilhas como as referências de preço do diesel e os arquivos usados para preparar indicadores. |
+| `CurrencyConverter` | Biblioteca de conversão de moedas. | Converte para reais a referência internacional de preço do combustível marítimo quando ela está em dólar por tonelada. |
+| Pydeck | Biblioteca de visualização cartográfica. | Desenha portos, trajetos e camadas de mapa; não participa do cálculo das distâncias ou do consumo. |
+| `unittest` | Biblioteca padrão de testes do Python. | Verifica regras de cálculo e ajuda a identificar regressões quando o código é alterado. |
+| Git e GitHub | Sistema de controle de versão e repositório do projeto. | Registram código, documentos e alterações rastreáveis; não participam do cálculo durante uma execução. |
 
-6. apresenta os totais e mostra como cada trecho participou do resultado.
+*Fonte: elaboração própria a partir da arquitetura versionada do CabotageLens.*
 
-O sistema prepara os dados marítimos antes da consulta do usuário. Primeiro, ordena as linhas da ANTAQ para reconstruir cada viagem, cada escala e cada movimentação de carga. Depois, associa os navios ao EU MRV pelo IMO. Também calcula os valores substitutos por classe e tipo. Por fim, grava uma tabela de consulta. Para cada porto de embarque e porto de desembarque, essa tabela guarda os recortes usados, as sequências de portos, os trechos, as intensidades e suas fontes.
+### 4.2 Dois fluxos computacionais
 
-Para conferir uma viagem real sem gerar registros para toda a base, o pipeline aceita o identificador da viagem com `--audit-voyage-id` e exige `--log-level DEBUG`. Na viagem `voyage_9612791_00011`, o log mostra, em cada subtrecho, o embarque, o desembarque, o saldo da escala de partida, a carga inicial reconstruída, a carga a bordo, a distância e sua fonte, o trabalho de transporte, a intensidade e sua proveniência, e o combustível calculado. Para cada ligação, o mesmo log informa o trabalho total, a média ponderada e as fontes que contribuíram para o resultado. Esse modo apenas expõe valores intermediários e não altera o arquivo resultante.
+O sistema opera em dois fluxos complementares. O primeiro prepara os dados que mudam com menor frequência, especialmente os dados marítimos. O segundo executa uma comparação solicitada pelo usuário. Separá-los reduz o tempo de resposta da interface e evita que uma consulta comum altere os dados históricos utilizados pelo modelo.
 
-Quando o usuário executa um cenário, a aplicação lê essa tabela já preparada. O Supabase, serviço usado para armazenar os dados da aplicação, utiliza o banco de dados PostgreSQL, também chamado de Postgres, para guardar lugares, rotas e resultados que podem ser reutilizados. Essa cópia reutilizável recebe o nome de cache. O cache evita solicitar novamente a mesma rota a um provedor. Mesmo assim, o resultado continua sendo uma rota calculada. Ele não é uma trajetória registrada pelo Sistema de Posicionamento Global (GPS), isto é, não reproduz as posições reais percorridas durante uma viagem, e não garante a existência de um serviço comercial [cabotagelensrepo; cabotagelensapp].
+#### 4.2.1 Preparação dos dados marítimos
+
+O fluxo automatizado de preparação, chamado aqui de *pipeline*, começa no portal da ANTAQ. Ele localiza e baixa os arquivos de Atracação e Carga, organiza os registros, reconstrói as viagens e identifica os subtrechos entre as escalas. Em seguida, associa o número IMO de cada navio aos indicadores disponíveis no EU MRV, aplica as regras de intensidade descritas na Seção 3.3.4 e consolida os resultados em uma matriz marítima.
+
+Essa matriz é o arquivo de consulta usado pela aplicação. Para cada par ordenado de portos, ela pode registrar a distância média das viagens completas observadas, a intensidade média ponderada pelo trabalho de transporte, a quantidade de viagens, os corredores que contribuíram para o resultado e a origem de cada intensidade. A preparação ocorre quando os dados são atualizados; ela não é repetida a cada clique na interface.
+
+#### 4.2.2 Execução de um cenário
+
+Quando o usuário executa uma comparação, o sistema segue uma sequência curta: recebe a origem, o destino e a carga; atualiza os preços que podem variar; resolve os locais no mapa; constrói a rota rodoviária direta e as três pernas da alternativa multimodal; consulta a matriz marítima; calcula combustível, custo e emissões; e apresenta os totais com os respectivos avisos. No código, essa sequência é organizada em três responsabilidades: atualização dos preços, construção da geometria da viagem e avaliação dos resultados. As próximas subseções detalham cada uma delas.
+
+### 4.3 Entrada do cenário, tratamento de endereços e geocodificação
+
+#### 4.3.1 Dados informados pelo usuário
+
+No Router, a tela de comparação individual, o usuário informa ao menos a origem, o destino e a massa da remessa. Também pode informar a quantidade de unidades equivalentes a contêineres de 20 pés (TEU), escolher parâmetros do caminhão e definir opções do cenário. Antes de iniciar os cálculos, a aplicação remove espaços desnecessários, verifica os valores numéricos e reúne as escolhas em uma única estrutura de dados. Isso garante que a alternativa rodoviária e a multimodal usem a mesma remessa e os mesmos pontos inicial e final.
+
+#### 4.3.2 Do texto às coordenadas
+
+Um endereço escrito por uma pessoa não pode ser usado diretamente para calcular uma rota. O sistema precisa convertê-lo em latitude e longitude, procedimento chamado de geocodificação. A entrada pode ser o nome de uma cidade, um endereço mais completo ou coordenadas já conhecidas. Quando se trata de um Código de Endereçamento Postal (CEP), a aplicação tenta interpretá-lo como consulta estruturada antes de buscar uma localização mais ampla.
+
+O resultado dessa etapa não é somente um ponto no mapa. O sistema preserva o rótulo devolvido pelo provedor, as coordenadas e a identificação do provedor que fez a consulta. Por isso, é possível verificar posteriormente se a rota começou, por exemplo, no centro de uma cidade, em um endereço específico ou em uma coordenada informada pelo usuário.
+
+#### 4.3.3 Provedores de localização e alternativa de consulta
+
+Antes de consultar a internet, a aplicação procura no banco um local equivalente que já tenha sido resolvido. Quando esse registro não existe, ela consulta primeiro o OpenRouteService (ORS). Se o ORS estiver indisponível, não reconhecer o local ou não devolver uma resposta aproveitável, o sistema pode tentar o LocationIQ, desde que esse serviço tenha sido configurado.
+
+Essa segunda tentativa não é apresentada como se fosse a mesma fonte da primeira. O resultado registra qual provedor foi usado. Se nenhum provedor conseguir localizar o ponto, a comparação é interrompida com uma mensagem clara; o sistema não inventa uma coordenada para continuar o cálculo.
+
+### 4.4 Implementação da alternativa rodoviária
+
+#### 4.4.1 Construção da distância por estrada
+
+Depois de resolver os dois pontos, o sistema solicita a geometria da rota rodoviária direta. A mesma rotina é reutilizada para os acessos terrestres da alternativa multimodal: origem até o porto de embarque e porto de desembarque até o destino. Antes de chamar um provedor, ela procura uma rota equivalente armazenada no banco. Se encontra uma, reaproveita a distância e os metadados já registrados; caso contrário, solicita uma nova rota ao provedor disponível.
+
+Na interface atual, a geometria é solicitada com o perfil técnico `driving-car`. Esse perfil serve para obter uma rota por estrada. A escolha do caminhão, seus eixos e sua eficiência acontece depois, no cálculo do consumo. Portanto, a rota resultante é uma estimativa de trajeto fornecida por uma plataforma de roteamento; ela não é uma viagem registrada por Sistema de Posicionamento Global (GPS), nem uma rota de transporte contratada ou validada em campo.
+
+#### 4.4.2 Consumo, custo e emissões rodoviárias
+
+Com a distância disponível, o avaliador aplica as regras da Seção 3.2. Ele seleciona a configuração rodoviária representativa a partir da massa da remessa, calcula os litros de diesel de cada perna e converte esse consumo em custo e emissões. A mesma conta é feita separadamente para a rota direta, o *first mile* e o *last mile*.
+
+Cada perna guarda, além do valor calculado, a distância, o tipo de veículo, o preço de diesel, o fator de emissão e a origem desses insumos. Dessa forma, o total rodoviário pode ser conferido sem misturá-lo com as parcelas portuárias ou marítimas.
+
+### 4.5 Implementação da alternativa multimodal
+
+#### 4.5.1 Escolha dos portos e construção dos acessos
+
+Com as coordenadas de origem e destino, o sistema consulta a base portuária e seleciona o porto disponível mais próximo de cada ponto, preferencialmente a partir das coordenadas do portão portuário. Esses dois portos definem a consulta da perna marítima. Em seguida, a aplicação monta os três componentes da cadeia multimodal: o acesso inicial até o porto de embarque, a ligação marítima entre os portos e o acesso final até o destino.
+
+Essa regra automatiza a construção de um cenário geográfico, mas não afirma que o porto selecionado é a melhor opção comercial. O resultado mantém os nomes dos portos e emite avisos para situações que exigem leitura cuidadosa, como origem e destino associados ao mesmo porto ou uso de uma distância marítima aproximada.
+
+#### 4.5.2 Operações portuárias
+
+Depois de definir os dois portos, o avaliador calcula as operações de terminal como uma parcela própria. Ele converte a massa em TEU quando necessário, identifica os movimentos previstos por equipamento e aplica os parâmetros disponíveis para cada escala. Na execução normal do Router, essa parcela permanece habilitada, pois a transferência da carga entre caminhão, terminal e navio faz parte da alternativa multimodal.
+
+Os parâmetros de operação portuária podem ter diferentes níveis de detalhe: um dado específico do porto, uma estimativa formada por portos comparáveis ou uma referência documentada. Quando não há fator suficiente para quantificar um equipamento, o resultado o identifica como indisponível. A ausência não é transformada em consumo igual a zero; por isso, o total pode ser apresentado como parcial.
+
+#### 4.5.3 Perna marítima
+
+A perna marítima utiliza a matriz preparada previamente pelo pipeline, em vez de tentar inferir uma rota de navio a partir de uma única sequência escolhida pela aplicação. Essa separação é importante porque a atividade observada de cabotagem precisa ser reconstruída e conferida antes de ser usada em um novo cenário.
+
+##### 4.5.3.1 Reconstrução dos arquivos da ANTAQ
+
+No fluxo de atualização, o sistema localiza os arquivos públicos no portal da ANTAQ, lê as escalas e as movimentações de carga e liga os registros do mesmo navio pelo identificador de atracação e pelo IMO. As escalas são ordenadas cronologicamente. A cada escala, os embarques e desembarques atualizam a carga que permanece a bordo antes do subtrecho seguinte.
+
+O resultado dessa etapa é uma coleção de viagens observadas, não uma rota imposta pelo código. Assim, ao preparar Santos–Manaus, o pipeline mantém tanto as viagens diretas quanto as que passaram por Suape, Pecém, Vila do Conde ou outros portos, desde que Santos apareça antes de Manaus na mesma viagem e no mesmo sentido.
+
+##### 4.5.3.2 Associação com o EU MRV e tratamento das intensidades
+
+Para cada viagem reconstruída, o pipeline procura primeiro a intensidade do próprio navio por meio do IMO no EU MRV. Quando não há indicador individual utilizável, a rotina calcula uma referência robusta para a classe ou para o tipo de navio, conforme a regra metodológica. Essa origem continua associada ao resultado: intensidade do IMO, estimativa da classe ou estimativa do tipo.
+
+O processamento também verifica valores individuais muito afastados do conjunto de navios comparáveis. Quando a regra de valor atípico é acionada, a viagem observada não é apagada. Sua carga e suas distâncias continuam na base, mas a intensidade usada passa a ser a referência robusta do grupo e o log preserva o valor original, o limiar e a razão da substituição.
+
+##### 4.5.3.3 Matriz marítima consultada pelo cenário
+
+Na execução de uma comparação, a classe `SeaMatrix` consulta o par ordenado de portos na matriz marítima. Quando há cobertura observada, ela entrega a intensidade média ponderada pelo trabalho de transporte e a distância média das viagens completas, exatamente como descrito nas Seções 3.3.4.3 e 3.3.4.4. Não há uma regra que fixe previamente Santos → Suape → Manaus, escolha apenas o corredor mais curto ou use uma única viagem como representante.
+
+Se uma distância necessária não estiver disponível na matriz, o sistema estima a separação geográfica entre as coordenadas dos portos pelo método de haversine, ajustado à costa, e marca a procedência como `haversine_fallback`. Esse rótulo informa que a distância é uma aproximação e deve ser interpretada com menor confiança que uma distância observada na matriz.
+
+### 4.6 Cálculo por perna e consolidação do resultado
+
+#### 4.6.1 Atualização dos preços de combustível
+
+Antes de avaliar as pernas, a aplicação tenta atualizar os dois preços que variam com maior frequência: o Diesel S10 da ANP e o VLSFO em Santos publicado pela Ship & Bunker. O preço marítimo é convertido para reais por tonelada quando necessário. Se uma atualização não puder ser concluída, o sistema conserva o último valor válido disponível e registra esse fato. Assim, a falha de uma consulta externa não muda silenciosamente o preço para zero nem impede que a origem do insumo seja identificada.
+
+#### 4.6.2 Avaliação dos quatro componentes multimodais
+
+O avaliador recebe a geometria das pernas, a massa, os parâmetros do cenário, os preços e os fatores de emissão. Ele executa a conta rodoviária no *first mile* e no *last mile*, aplica a intensidade marítima à carga e à distância entre os portos e soma o consumo dos equipamentos portuários que puderam ser quantificados. Em seguida, converte cada combustível em custo modelado e emissões operacionais, sem repetir as fórmulas já apresentadas na Seção 3.3.5.
+
+Quando a intensidade marítima por trabalho de transporte do EU MRV é aplicada, o avaliador não acrescenta uma estimativa separada do combustível consumido pelo navio atracado, chamado de *hoteling*. Essa regra impede a dupla contagem entre a intensidade marítima e uma parcela adicional de consumo a bordo. Os equipamentos do terminal permanecem separados porque representam outra atividade.
+
+#### 4.6.3 Totais, avisos e componentes parciais
+
+O sistema soma as quatro parcelas da alternativa multimodal — acesso inicial, navegação, operações portuárias e acesso final — e calcula a alternativa rodoviária direta de modo independente. Ele nunca soma os dois modos como se fossem partes de uma única viagem.
+
+Além dos totais, a saída informa se algum componente foi aproximado, indisponível ou parcialmente quantificado. Um aviso não significa que o cálculo inteiro seja inválido, mas deixa claro quais parcelas sustentam o valor exibido e quais exigem cautela na interpretação.
+
+### 4.7 Cache, alternativas de consulta e rastreabilidade
+
+Um cache é uma cópia reutilizável de uma consulta já feita. No CabotageLens, ele evita chamadas repetidas a serviços externos e mantém as informações que levaram a um resultado. Há registros persistentes de locais e rotas no Postgres, dados de portos e matriz marítima reutilizados pela aplicação e respostas temporárias mantidas durante a execução.
+
+O reaproveitamento segue uma ordem clara. Para localização e rotas rodoviárias, o sistema procura primeiro o dado persistente e só consulta o provedor quando há ausência de registro. Durante a preparação marítima, procura a intensidade do IMO e, se necessário, usa a estatística documentada do grupo de navios. Para distâncias marítimas sem cobertura, identifica a aproximação por haversine. Para preços que não puderam ser atualizados, mantém o último valor válido. Em todos os casos, a origem efetivamente usada acompanha o resultado.
+
+Esse mecanismo melhora a repetibilidade e reduz a dependência de consultas externas, mas não transforma uma rota calculada em viagem real, nem confirma disponibilidade de navio, frequência, contrato de frete ou viabilidade comercial. Um registro recuperado do cache indica apenas que a mesma informação computacional já havia sido obtida anteriormente.
+
+### 4.8 Interface, persistência e auditoria
+
+O Streamlit organiza a aplicação em três usos principais. O Router avalia uma origem e um destino por vez. O Heatmap executa ou recupera comparações para um conjunto de destinos e apresenta sua distribuição no mapa. O Dashboard permite explorar os dados marítimos processados. Pydeck é usado para desenhar as camadas cartográficas desses ambientes.
+
+O Router mantém o resultado analítico da comparação na sessão da interface, mas reutiliza no banco os pontos e as rotas que já existem. Já as execuções em lote e os resultados usados pelo Heatmap podem ser persistidos no Supabase com seus metadados. Essa diferença evita afirmar que toda consulta individual foi gravada como um resultado permanente, ao mesmo tempo em que preserva o reaproveitamento das rotas e das localizações.
+
+Para verificar uma viagem marítima sem gerar uma nova base completa, o pipeline aceita o identificador da viagem com `--audit-voyage-id` e exige `--log-level DEBUG`. Na viagem `voyage_9612791_00011`, por exemplo, o log pode apresentar os embarques, desembarques, carga a bordo, distância, trabalho de transporte, intensidade e combustível de cada subtrecho. Esse modo só expõe valores intermediários para auditoria; ele não altera o arquivo resultante.
+
+### 4.9 Versionamento e reprodução do cálculo
+
+O código, os dados processados rastreados e os documentos do projeto são versionados com Git e disponibilizados no GitHub. Essa prática permite identificar qual implementação produziu um resultado, revisar mudanças nas regras e executar testes direcionados após uma alteração. Credenciais de provedores, banco de dados e serviços externos permanecem fora do repositório.
+
+Reproduzir um cenário exige, portanto, registrar não só origem, destino e carga, mas também as coordenadas resolvidas, os portos escolhidos, a fonte das distâncias, os preços e fatores usados, o status de reaproveitamento de dados e eventuais avisos. A implementação torna essa cadeia visível para que os resultados da próxima seção possam ser lidos junto com sua proveniência, e não apenas como valores finais [cabotagelensrepo; cabotagelensapp].
 
 ## 5. Evidência empírica e resultados
 
@@ -395,7 +559,7 @@ A base processada contém 1.324 viagens de cabotagem conteinerizada registradas 
 
 O sistema procurou esses 389 números no EU MRV e encontrou 243 correspondências exatas. Esses 243 navios aparecem em 788 das 1.324 viagens. Nas outras 536 viagens, a execução atual usou uma estimativa baseada no tipo de navio. Nenhuma viagem desta execução precisou de uma estimativa pela classe; essa regra permanece disponível para uma base que forneça esse metadado.
 
-**Tabela 6 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
+**Tabela 9 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
 | Indicador                                |                              Valor | Cobertura |
 | :--------------------------------------- | ---------------------------------: | --------: |
@@ -426,9 +590,9 @@ A estimativa do tipo *container ship* é calculada a partir de 243 valores posit
 
 Sem retirar os extremos, a média dos 243 valores seria 21,661852 g/(t$\cdot$nm). A mediana simples da mesma lista seria 4,620000 g/(t$\cdot$nm). Esses dois números ajudam a entender a dispersão dos dados. O sistema não os usa no lugar da regra registrada para Santos–Manaus.
 
-**Execução da nova remessa:** os 89 recortes históricos definem a intensidade de $9{,}009824\ \mathrm{g/(t\cdot nm)}$. As cargas históricas servem apenas para calcular os pesos. Elas não são somadas à carga informada pelo usuário, e o combustível das 89 viagens históricas não é somado ao novo cenário. A execução usa essa intensidade uma vez e percorre a distância de uma única sequência concreta de portos.
+**Execução da nova remessa:** os 89 recortes históricos definem a intensidade de $9{,}009824\ \mathrm{g/(t\cdot nm)}$. As cargas históricas servem apenas para calcular os pesos. Elas não são somadas à carga informada pelo usuário, e o combustível das 89 viagens históricas não é somado ao novo cenário. A execução aplica essa intensidade à carga informada pelo usuário e à distância marítima média observada.
 
-Para escolher essa distância, o sistema encontrou um recorte direto de Santos a Manaus dentro da viagem `voyage_9612789_00004`. A regra dá preferência a esse recorte sem escala intermediária. A matriz marítima atribui 6.112 quilômetros (km), equivalentes a 3.300,216 nm, ao subtrecho. Essa escolha vale somente para a distância modelada do cenário. Os 89 recortes continuam participando da intensidade.
+Para calcular essa distância, o sistema soma os subtrechos de cada um dos 89 recortes completos e calcula a média aritmética dos totais. O resultado Santos–Manaus é 6.115,349 quilômetros (km), equivalentes a 3.302,024 nm. O recorte direto e os recortes com escalas participam dessa média, cada um uma vez. O valor representa a distância típica observada; não representa uma nova rota formada pela combinação de trechos de viagens diferentes.
 
 É possível conferir a reconstrução histórica com o recorte direto observado em `voyage_9612789_00004`. O navio de IMO 9612789 saiu de Santos com 11.584,165 t e chegou a Manaus na escala seguinte. A matriz marítima atribuiu 3.300,216 nm ao subtrecho. Como não há correspondência individual aplicável para esse IMO, a intensidade reconstruída da viagem é $9{,}322050\ \mathrm{g/(t\cdot nm)}$, obtida pela média aparada em 1% do tipo-padrão documentado *container ship*:
 
@@ -486,7 +650,7 @@ No cálculo marítimo, o sistema lê as escalas da ANTAQ na ordem em que acontec
 
 Para analisar Santos–Manaus, o sistema examina uma viagem de cada vez e lê suas escalas na ordem em que aconteceram. Na viagem `voyage_9612791_00011`, o navio saiu de Santos, passou por Suape e Pecém e chegou a Manaus; por isso, os três subtrechos consecutivos entram no recorte Santos–Manaus. Uma viagem Manaus–Suape–Santos não entra, porque o navio fez o percurso no sentido contrário. O recorte aceito pode ser direto ou conter outros portos. Cada recorte recebe um peso igual à soma da carga a bordo multiplicada pela distância de cada subtrecho. A intensidade de Santos–Manaus é a média dessas intensidades, ponderada por esses pesos.
 
-Em uma etapa separada, o sistema escolhe o corredor usado para calcular a distância do cenário. Considera somente corredores inteiros observados dentro de uma única viagem, com distância conhecida em todos os subtrechos e um valor de consumo disponível. Se existir um recorte direto, usa esse corredor. Caso contrário, escolhe o corredor completo mais curto entre os que possuem escalas. Essa escolha não retira os outros recortes do cálculo da intensidade.
+Em uma etapa separada, o sistema calcula a distância média das viagens completas observadas. Para cada recorte, soma as distâncias de todos os subtrechos entre a origem e o destino; depois calcula a média aritmética desses totais. Viagens diretas e viagens com escalas entram nessa média, cada uma uma vez. A média não elimina recortes do cálculo da intensidade nem cria uma rota com trechos de viagens diferentes.
 
 Em Santos–Manaus, 89 recortes históricos provenientes de 89 viagens distintas seguiram 22 sequências de portos. O trabalho total é $3.153.328.821{,}755\ \mathrm{t\cdot nm}$ e, depois do tratamento explícito dos valores anômalos do MRV, a média ponderada resulta em $9{,}009824\ \mathrm{g/(t\cdot nm)}$. No recorte direto de `voyage_9612789_00004`, a reconstrução histórica usa $9{,}322050\ \mathrm{g/(t\cdot nm)}$ e corresponde a 356.384,277 kg de combustível de navegação. Esse valor histórico não inclui acessos rodoviários nem operações portuárias e não é somado ao novo cenário.
 

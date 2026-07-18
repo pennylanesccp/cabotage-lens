@@ -12,6 +12,8 @@ _SOURCE_TYPE_ALIASES = {
     "matrix": "seamatrix",
     "directional_direct": "seamatrix",
     "directional_corridor": "seamatrix",
+    "observed_voyage_mean": "observed_voyage_mean",
+    "observed_complete_voyage_distance_mean": "observed_voyage_mean",
     "haversine": "haversine_fallback",
     "haversine_fallback": "haversine_fallback",
     "fallback": "haversine_fallback",
@@ -56,6 +58,8 @@ def maritime_distance_source_type(
     text = (_clean_text(source) or "").casefold()
     if "haversine" in text or "fallback" in text:
         return "haversine_fallback"
+    if "observed_complete_voyage_distance_mean" in text:
+        return "observed_voyage_mean"
     if is_override:
         if any(token in text for token in ("antaq", "costa", "reference", "external")):
             return "external_reference"

@@ -27,6 +27,7 @@ from modules.multimodal.distance_provenance import maritime_distance_source_type
 
 _SOURCE_TYPE_LABELS = {
     "seamatrix": "SeaMatrix distance",
+    "observed_voyage_mean": "Observed-voyage distance mean",
     "haversine_fallback": "Fallback estimate",
     "manual_override": "Manual override",
     "external_reference": "External reference",
@@ -41,6 +42,12 @@ _CORRIDOR_SELECTION_LABELS = {
     ),
     "shortest_distance_km": "Shortest observed maritime distance (km)",
     "shortest_distance": "Shortest observed maritime distance",
+}
+
+_SCENARIO_DISTANCE_METHOD_LABELS = {
+    "arithmetic_mean_complete_observed_voyage_distances": (
+        "Arithmetic mean of complete observed voyage distances"
+    ),
 }
 
 _INTENSITY_SOURCE_LABELS = {
@@ -209,51 +216,102 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
         return []
 
     rows: list[tuple[str, str, str]] = []
-    path = _corridor_path_text(
+    scenario_distance_method = _readable_code(
         _first_value(
             sea,
-            ("route_corridor_port_path", "corridor_port_path", "selected_corridor_port_path"),
+            ("scenario_distance_method",),
             inputs,
-            ("sea_route_corridor_port_path",),
-        )
-    )
-    corridor_id = _clean_text(
-        _first_value(
-            sea,
-            ("selected_corridor_id",),
-            inputs,
-            ("sea_route_selected_corridor_id",),
-        )
-    )
-    if path:
-        selected_value = path
-        if corridor_id:
-            selected_value = f"{selected_value}; record: {corridor_id}"
-        rows.append(
-            (
-                "Selected distance corridor",
-                "Observed ANTAQ port sequence used for path and distance; it does not restrict the same-OD intensity sample.",
-                selected_value,
-            )
-        )
-
-    criterion = _readable_code(
-        _first_value(
-            sea,
-            ("selection_criterion", "route_selection_criterion", "corridor_selection_criterion"),
-            inputs,
-            ("sea_route_selection_criterion",),
+            ("sea_scenario_distance_method",),
         ),
-        _CORRIDOR_SELECTION_LABELS,
+        _SCENARIO_DISTANCE_METHOD_LABELS,
     )
-    if criterion:
-        rows.append(
-            (
-                "Corridor selection criterion",
-                "Rule used to choose path and distance among observed direct and multistop corridors.",
-                criterion,
+    if scenario_distance_method:
+        distance_parts: list[str] = []
+        raw_distance_km = _first_value(
+            sea,
+            ("scenario_distance_km", "distance_km"),
+            inputs,
+            ("sea_scenario_distance_km",),
+        )
+        try:
+            distance_km = float(raw_distance_km)
+        except (TypeError, ValueError):
+            distance_km = None
+        if distance_km is not None and distance_km > 0.0:
+            distance_parts.append(f"{distance_km:.3f} km")
+        observation_count = _count_or_none(
+            _first_value(
+                sea,
+                ("scenario_distance_observation_count",),
+                inputs,
+                ("sea_scenario_distance_observation_count",),
             )
         )
+        if observation_count is not None:
+            distance_parts.append(f"complete voyages: {observation_count}")
+        corridor_count = _count_or_none(
+            _first_value(
+                sea,
+                ("scenario_distance_corridor_count", "corridor_count"),
+                inputs,
+                ("sea_scenario_distance_corridor_count", "sea_route_corridor_count"),
+            )
+        )
+        if corridor_count is not None:
+            distance_parts.append(f"observed corridors: {corridor_count}")
+        rows.append(
+            (
+                "Maritime scenario distance",
+                "Mean distance across complete observed ANTAQ voyages. Each voyage counts once; no single corridor is used as the scenario path.",
+                "; ".join([scenario_distance_method, *distance_parts]),
+            )
+        )
+    else:
+        path = _corridor_path_text(
+            _first_value(
+                sea,
+                ("route_corridor_port_path", "corridor_port_path", "selected_corridor_port_path"),
+                inputs,
+                ("sea_route_corridor_port_path",),
+            )
+        )
+        corridor_id = _clean_text(
+            _first_value(
+                sea,
+                ("selected_corridor_id",),
+                inputs,
+                ("sea_route_selected_corridor_id",),
+            )
+        )
+        if path:
+            selected_value = path
+            if corridor_id:
+                selected_value = f"{selected_value}; record: {corridor_id}"
+            rows.append(
+                (
+                    "Selected distance corridor",
+                    "Observed ANTAQ port sequence used for path and distance; it does not restrict the same-OD intensity sample.",
+                    selected_value,
+                )
+            )
+
+        criterion = _readable_code(
+            _first_value(
+                sea,
+                ("selection_criterion", "route_selection_criterion", "corridor_selection_criterion"),
+                inputs,
+                ("sea_route_selection_criterion",),
+            ),
+            _CORRIDOR_SELECTION_LABELS,
+        )
+        if criterion:
+            rows.append(
+                (
+                    "Corridor selection criterion",
+                    "Rule used to choose path and distance among observed direct and multistop corridors.",
+                    criterion,
+                )
+            )
 
     route_count_fields = (
         (
@@ -444,7 +502,7 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
         rows.append(
             (
                 "OD representative maritime intensity",
-                "Intensity applied to the selected path, estimated from all "
+                "Intensity applied to the maritime scenario, estimated from all "
                 "resolved same-OD voyage observations.",
                 f"{pair_intensity:.6f} g/(t·nm)",
             )
@@ -491,21 +549,38 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
             )
         )
 
+    scenario_distance_counts = _first_value(
+        sea,
+        ("scenario_distance_source_counts",),
+        inputs,
+        ("sea_scenario_distance_source_counts",),
+    )
     selected_distance_counts = _first_value(
         sea,
         ("selected_corridor_distance_source_counts",),
         inputs,
         ("sea_route_selected_corridor_distance_source_counts",),
     )
-    selected_distance_counts_text = _distance_source_counts_text(
-        selected_distance_counts
+    distance_counts_text = _distance_source_counts_text(
+        scenario_distance_counts
+        if scenario_distance_method
+        else selected_distance_counts
     )
-    if selected_distance_counts_text:
+    if distance_counts_text:
         rows.append(
             (
-                "Selected-corridor distance sources",
-                "Distance provenance for the sublegs used in the maritime result.",
-                selected_distance_counts_text,
+                (
+                    "Observed-voyage distance sources"
+                    if scenario_distance_method
+                    else "Selected-corridor distance sources"
+                ),
+                (
+                    "Distance provenance across the sublegs that form the complete "
+                    "voyage observations used in the mean."
+                    if scenario_distance_method
+                    else "Distance provenance for the sublegs used in the maritime result."
+                ),
+                distance_counts_text,
             )
         )
 
