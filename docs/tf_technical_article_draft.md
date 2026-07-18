@@ -14,7 +14,7 @@
 
 A escolha entre transporte rodoviário direto e transporte com cabotagem não depende apenas da distância percorrida. No Brasil, uma rota com cabotagem pode reduzir parte das emissões no trecho principal, mas também inclui deslocamentos rodoviários até os portos, operações portuárias, espera, movimentação de carga e o percurso real realizado pelo navio. Quando esses elementos são ignorados, a comparação entre os modais fica incompleta e pode levar a conclusões pouco confiáveis.
 
-Este trabalho apresenta o CabotageLens, uma ferramenta desenvolvida para comparar, de forma mais assertiva, duas alternativas para a mesma origem, destino e carga: uma viagem totalmente rodoviária e uma cadeia logística formada por rodovia, cabotagem e rodovia. A ferramenta utiliza dados públicos de instituições públicas e privadas, combinando informações de rotas terrestres, movimentação portuária, viagens marítimas, consumo energético, emissões e custos modelados.
+Este trabalho apresenta o CabotageLens, uma ferramenta desenvolvida para comparar, de forma mais assertiva, duas alternativas para a mesma origem, destino e carga: uma viagem totalmente rodoviária e uma cadeia logística formada por rodovia, cabotagem e rodovia. A ferramenta utiliza dados públicos de instituições públicas e privadas, combinando informações de rotas terrestres, movimentação portuária, viagens marítimas, consumo de combustível, emissões e custos modelados.
 
 A principal contribuição do sistema é tratar a operação logística como uma cadeia completa, e não como trechos isolados. Na perna marítima, o sistema reconstrói o percurso observado dos navios, considera cargas transportadas ao longo dos subtrechos e evita assumir previamente um corredor fixo. Na comparação ambiental, inclui pontos de emissão que normalmente ficam fora de análises simplificadas, como acessos terrestres aos portos e emissões associadas às etapas portuárias quando há dados disponíveis.
 
@@ -315,7 +315,7 @@ $$
 \bar D_{o,d}=\frac{1}{n}\sum_{v=1}^{n}D_{v,o,d}.
 $$
 
-Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média. Em Santos–Manaus, os 89 recortes completos observados em 22 sequências de portos resultam em $6.115{,}349\ \mathrm{km}$, ou $3.302{,}024\ \mathrm{nm}$. As distâncias dos subtrechos são obtidas primeiro na matriz marítima; quando uma delas não está disponível, o sistema aplica o método de haversine e registra a aproximação.
+Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média. Em Santos–Manaus, os 89 recortes completos observados em 22 sequências de portos resultam em $6.115{,}349\ \mathrm{km}$, ou $3.302{,}024\ \mathrm{nm}$.
 
 #### 3.3.5 Consolidação de emissões e custos
 
@@ -327,9 +327,9 @@ Ao fim das etapas anteriores, o sistema já estimou o combustível de cada parte
 | :-- | :-- | :-- | :-- |
 | Rodovia direta, *first mile* e *last mile* | Distância da rota, número de viagens do caminhão e rendimento definido pela tabela oficial da ANTT. | Preço do diesel S10 por Unidade da Federação (UF), processado a partir da [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). O cenário usa a média entre as UFs de origem e de destino. | Litros de diesel $\times 2{,}68\ \mathrm{kgCO_2e/L}$, fator operacional TTW registrado pelo modelo. |
 | Navegação | Intensidade da ligação ANTAQ–EU MRV $\times$ massa da remessa $\times$ distância marítima média observada, conforme a Seção 3.3.4. | Preço em Santos do VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre), publicado pela [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), convertido para R$/t e registrado na execução. | Massa de VLSFO $\times 3{,}114\ \mathrm{kgCO_2e/kg}$, fator operacional TTW registrado pelo modelo. |
-| Operações portuárias | Movimentos de contêineres e fatores de consumo dos equipamentos do terminal, conforme a Seção 3.3.3. | O diesel dos equipamentos usa o mesmo preço de diesel do cenário. | Massa de diesel $\times 3{,}15\ \mathrm{kgCO_2e/kg}$. Um componente elétrico só é somado quando há fator de emissão e tarifa registrados. |
+| Operações portuárias | Movimentos de contêineres e fatores de consumo dos equipamentos do terminal, conforme a Seção 3.3.3. | O diesel dos equipamentos usa o mesmo preço de diesel do cenário. | Massa de diesel $\times 3{,}15\ \mathrm{kgCO_2e/kg}$, fator operacional TTW registrado pelo modelo. |
 
-O preço do diesel vem da tabela da **Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)**, agência federal que divulga pesquisas semanais de preços de combustíveis. A execução tenta atualizar essa tabela e o preço de VLSFO antes do cálculo; se uma consulta não estiver disponível, conserva o último valor válido registrado. Por isso, cada resultado informa o preço e a fonte efetivamente usados. Os fatores de emissão também ficam registrados como parâmetros operacionais do modelo: eles não são medidos em cada viagem.
+O preço do diesel vem da tabela da **Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)**, agência federal que divulga pesquisas semanais de preços de combustíveis. Os fatores de emissão também ficam registrados como parâmetros operacionais do modelo: eles não são medidos em cada viagem.
 
 Para um trecho rodoviário $i$, em que $F_{\mathrm{rod},i}$ é o consumo em litros, $p_{\mathrm{diesel}}$ é o preço em R$/L e $f_{\mathrm{diesel}}$ é o fator de emissão em kgCO$_2$e/L, o custo e a emissão são:
 
@@ -347,7 +347,7 @@ C_{\mathrm{nav}}=\frac{F_{\mathrm{nav}}}{1000}\,p_{\mathrm{VLSFO}},
 E_{\mathrm{nav}}=F_{\mathrm{nav}}\,f_{\mathrm{VLSFO}}.
 $$
 
-No cenário atual de operações portuárias, os equipamentos com fator disponível são movidos a diesel. Portanto, o custo é a soma dos litros desses equipamentos multiplicados pelo preço do diesel, e a emissão é a soma da massa de diesel multiplicada pelo respectivo fator de emissão. Quando houver energia elétrica com dados suficientes, ela entra como uma parcela adicional de custo e emissões.
+No cenário atual de operações portuárias, os equipamentos quantificados são movidos a diesel. Portanto, o custo é a soma dos litros desses equipamentos multiplicados pelo preço do diesel, e a emissão é a soma da massa de diesel multiplicada pelo respectivo fator de emissão. Equipamentos sem parâmetro de consumo de combustível disponível são identificados como indisponíveis e não entram na soma.
 
 Por fim, a alternativa multimodal reúne as quatro parcelas:
 
@@ -392,9 +392,9 @@ $$
 
 Portanto, o custo multimodal arredondado é R$ 1.494,41 e as emissões são 1.476,518 kgCO$_2$e. O total rodoviário, calculado de forma independente, é R$ 16.347,22 e 6.937,536 kgCO$_2$e.
 
-As operações portuárias desse exemplo usam o cenário documentado de Santos para as duas chamadas e, por isso, são identificadas como uma referência documentada, não como uma medição específica dos terminais de Santos e Manaus. O guindaste de cais (STS) teve movimentos previstos, mas não possuía fator de energia disponível. Ele é marcado como indisponível e não como consumo zero. Portanto, R$ 1.494,41 e 1.476,518 kgCO$_2$e são a soma dos componentes que puderam ser quantificados; o resultado portuário, e consequentemente o total multimodal, permanece parcial.
+As operações portuárias desse exemplo usam o cenário documentado de Santos para as duas chamadas e, por isso, são identificadas como uma referência documentada, não como uma medição específica dos terminais de Santos e Manaus. O guindaste de cais (STS) teve movimentos previstos, mas não possuía parâmetro de consumo de combustível disponível. Ele é marcado como indisponível e não como consumo zero. Portanto, R$ 1.494,41 e 1.476,518 kgCO$_2$e são a soma dos componentes que puderam ser quantificados; o resultado portuário, e consequentemente o total multimodal, permanece parcial.
 
-O sistema também evita contar duas vezes o consumo do navio atracado. Quando a intensidade por trabalho de transporte do EU MRV é aplicada à navegação, não acrescenta uma estimativa separada de *hoteling*, isto é, de combustível consumido pelo navio enquanto está no porto. Os equipamentos do terminal permanecem em uma linha própria, porque seu consumo não faz parte dessa intensidade [berth2009; shipops2022]. O custo apresentado é um custo operacional de energia modelado; não é uma cotação de frete comercial.
+O sistema também evita contar duas vezes o consumo do navio atracado. Quando a intensidade por trabalho de transporte do EU MRV é aplicada à navegação, não acrescenta uma estimativa separada de *hoteling*, isto é, de combustível consumido pelo navio enquanto está no porto. Os equipamentos do terminal permanecem em uma linha própria, porque seu consumo não faz parte dessa intensidade [berth2009; shipops2022]. O custo apresentado é um custo operacional de combustível modelado; não é uma cotação de frete comercial.
 
 ## 4. Implementação computacional
 
