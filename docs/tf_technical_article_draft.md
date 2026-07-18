@@ -71,7 +71,7 @@ A massa informada pelo usuário representa a remessa do cenário. Ela não é a 
 
 ### 3.2 Alternativa rodoviária
 
-O cálculo rodoviário começa pela distância total entre a origem e o destino. O sistema obtém uma rota rodoviária em quilômetros e utiliza essa distância para representar o percurso do caminhão. 
+O cálculo rodoviário começa pela distância total entre a origem e o destino. O sistema obtém uma rota rodoviária em quilômetros e utiliza essa distância para representar o percurso do caminhão.
 
 #### 3.2.1 Escolha do veículo e consumo de diesel
 
@@ -411,7 +411,7 @@ O sistema também busca a cotação mais recente do VLSFO em Santos na [Ship & B
 | Rodovia direta | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: São Paulo, R\$ 6,960/L; Acre, R\$ 9,270/L. | R\$ 8,115/L — média entre São Paulo e Acre. |
 | *First mile* | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: São Paulo, R\$ 6,960/L; Porto de Santos (SP), R\$ 6,960/L. | R\$ 6,960/L — média SP–SP. |
 | Operações portuárias | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel: Porto de Santos (SP), R\$ 6,960/L; Porto de Manaus (AM), R\$ 7,250/L. | R\$ 6,960/L em Santos e R\$ 7,250/L em Manaus. |
-| Navegação | VLSFO: [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), Santos; taxa USD/BRL: BCE, via [CurrencyConverter](https://pypi.org/project/CurrencyConverter/). | VLSFO: US\$ 741,50/mt; USD/BRL: R\$ 5,141345 por US\$. | R\$ 3,812/kg de VLSFO. |
+| Navegação | VLSFO: [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), Santos; <br/> Taxa USD/BRL: BCE, via [CurrencyConverter](https://pypi.org/project/CurrencyConverter/). | VLSFO: US\$ 741,50/mt; USD/BRL: R\$ 5,141345 por US\$. | R\$ 3,812/kg de VLSFO. |
 | *Last mile* | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: Porto de Manaus (AM), R\$ 7,250/L; Acre, R\$ 9,270/L. | R\$ 8,260/L — média AM–AC. |
 
 #### 3.3.7 Resultado consolidado da alternativa multimodal do exemplo São Paulo–Rio Branco
@@ -423,7 +423,7 @@ Para a remessa de 14 t entre São Paulo (SP) e Rio Branco (AC), a Tabela 9 reú
 | Etapa | Percurso | Distância | Combustível estimado | Custo modelado | Emissões operacionais TTW |
 | :-- | :-- | --: | --: | --: | --: |
 | *First mile* | São Paulo–Porto de Santos | 86,170 km | 37,465 L de diesel | R\$ 260,76 | 100,41 kg CO₂e |
-| Navegação | Porto de Santos–Porto de Manaus | 6.115,349 km (3.302,024 milhas náuticas) | 416,509 kg de VLSFO | R\$ 1.587,86 | 1.297,01 kg CO₂e |
+| Navegação | Porto de Santos–Porto de Manaus | 6.115,349 km<br/>(3.302,024 milhas náuticas) | 416,509 kg de VLSFO | R\$ 1.587,86 | 1.297,01 kg CO₂e |
 | Operações portuárias | Santos e Manaus | — | 4,097 kg de diesel | R\$ 34,25 | 12,91 kg CO₂e |
 | *Last mile* | Porto de Manaus–Rio Branco | 1.403,691 km | 610,300 L de diesel | R\$ 5.041,08 | 1.635,60 kg CO₂e |
 | **Total** | — | **7.605,210 km** | — | **R\$ 6.923,95** | **3.045,93 kg CO₂e** |
@@ -552,14 +552,14 @@ Para calcular o custo, a rotina Python busca os preços mais recentes de Diesel 
 
 Depois de confirmar que o XLSX baixado gerou uma tabela válida de preços por Unidade da Federação (UF), a rotina também salva os dois arquivos no Supabase Storage, o espaço de armazenamento de arquivos do projeto, para garantir rastreabilidade e uma alternativa caso o site da ANP esteja indisponível.
 
-**Tabela 12 — Exemplo de dados da planilha semanal da ANP e sua associação à UF para Diesel S10.**
+**Tabela 12 — Recorte bruto da planilha semanal da ANP para `OLEO DIESEL S10`.**
 
-| UF após o tratamento | Estado na planilha | Postos pesquisados | Preço médio de revenda | Preço mínimo | Preço máximo |
-| :-- | :-- | --: | --: | --: | --: |
-| SP | São Paulo | 865 | R$ 6,96/L | R$ 5,99/L | R$ 9,99/L |
-| AC | Acre | 1 | R$ 9,27/L | R$ 9,27/L | R$ 9,27/L |
-| AM | Amazonas | 35 | R$ 7,25/L | R$ 6,99/L | R$ 8,99/L |
-| PE | Pernambuco | 162 | R$ 6,88/L | R$ 6,49/L | R$ 7,99/L |
+| DATA INICIAL | DATA FINAL | REGIÃO | ESTADO | PRODUTO | NÚMERO DE POSTOS PESQUISADOS | UNIDADE DE MEDIDA | PREÇO MÉDIO REVENDA | PREÇO MÍNIMO REVENDA | PREÇO MÁXIMO REVENDA |
+| :-- | :-- | :-- | :-- | :-- | --: | :-- | --: | --: | --: |
+| 07-12-26 | 07-18-26 | SUDESTE | SAO PAULO | OLEO DIESEL S10 | 865 | R$/l | 6.96 | 5.99 | 9.99 |
+| 07-12-26 | 07-18-26 | NORTE | ACRE | OLEO DIESEL S10 | 1 | R$/l | 9.27 | 9.27 | 9.27 |
+| 07-12-26 | 07-18-26 | NORTE | AMAZONAS | OLEO DIESEL S10 | 35 | R$/l | 7.25 | 6.99 | 8.99 |
+| 07-12-26 | 07-18-26 | NORDESTE | PERNAMBUCO | OLEO DIESEL S10 | 162 | R$/l | 6.88 | 6.49 | 7.99 |
 
 *Fonte: planilha semanal de preços de revenda por estado da ANP, aba `ESTADOS - DESDE 30.12.2012`, produto `OLEO DIESEL S10`, período de 12 a 18 de julho de 2026. Valores reproduzidos do arquivo `SEMANAL_ESTADOS-DESDE_2013.xlsx` usado para conferir a rotina de leitura.*
 
@@ -600,7 +600,18 @@ O pipeline executa a função uma vez para as coordenadas da origem, definindo o
 
 Essa sequência reduz consultas desnecessárias aos provedores de rota. Em vez de solicitar uma rota rodoviária para cada porto candidato de uma coordenada, o sistema faz uma única consulta para o acesso do porto já selecionado. Assim, a distância usada no cálculo continua sendo rodoviária, enquanto a distância de Haversine é usada apenas como um filtro rápido para definir qual porto consultar.
 
-No exemplo São Paulo–Rio Branco, o sistema selecionou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque.
+No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque. A Tabela 13 compara a distância de Haversine usada na seleção com a distância rodoviária calculada depois que cada porto foi escolhido.
+
+**Tabela 13 — Distâncias de seleção e de acesso rodoviário no exemplo São Paulo–Rio Branco.**
+
+| Acesso | Ponto geocodificado | Referência do porto | Haversine: seleção | Distância rodoviária: cálculo |
+| :-- | :-- | :-- | --: | --: |
+| *First mile*: São Paulo → Porto de Santos | São Paulo: −23,550520°; −46,633308° | Ponta da Praia, Santos: −23,987012°; −46,293383° | 59,601 km | 86,170 km |
+| *Last mile*: Porto de Manaus → Rio Branco | Rio Branco: −9,989637°; −67,822462° | Centro do Porto de Manaus: −3,156700°; −60,007900° | 1.149,569 km | 1.403,691 km |
+
+*Fonte: elaboração própria com a base de portos do sistema e as rotas rodoviárias obtidas no cenário.*
+
+A diferença entre as duas colunas é esperada: Haversine mede a separação geométrica entre os pontos, enquanto a distância rodoviária acompanha o caminho percorrido pela malha viária. Apenas a última é usada nos cálculos da alternativa multimodal.
 
 #### 4.4.2 Formação dos trechos da cadeia
 
@@ -616,7 +627,7 @@ flowchart LR
     F --> G["Rio Branco, AC"]
 ```
 
-**Tabela 13 — Cadeia multimodal montada pelo pipeline no exemplo São Paulo–Rio Branco.**
+**Tabela 14 — Cadeia multimodal montada pelo pipeline no exemplo São Paulo–Rio Branco.**
 
 | Etapa | Resultado montado na execução | Como o sistema obtém o dado |
 | :-- | :-- | :-- |
@@ -627,9 +638,7 @@ flowchart LR
 
 #### 4.4.3 Operações portuárias
 
-A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas. Ela converte a massa para TEU quando necessário, identifica os movimentos de equipamentos que podem ser quantificados e calcula uma parcela separada do consumo de combustível dessas operações. No exemplo, as 14 t correspondem a 1 TEU, processado uma vez no embarque e uma vez no desembarque.
-
-O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,91 kg CO₂e. Como não havia atividade observada compatível para os dois terminais, foram usados parâmetros documentados; a saída identifica essa procedência. Além disso, um equipamento de cais possui atividade prevista, mas não tem fator energético disponível. Ele é marcado como indisponível, e a parcela portuária — assim como o total multimodal que a contém — é apresentada como parcial, e não como consumo igual a zero.
+A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,91 kg CO₂e.
 
 ### 4.5 Preparação e consulta da matriz marítima
 
@@ -657,9 +666,9 @@ flowchart LR
 
 #### 4.5.3 Consulta da ligação marítima no cenário
 
-No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos–Manaus. A Tabela 14 mostra o que a matriz devolve para esse par. Um recorte é a parte de uma viagem observada compreendida entre os dois portos da ligação; ele pode ser direto ou conter escalas intermediárias.
+No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos–Manaus. A Tabela 15 mostra o que a matriz devolve para esse par. Um recorte é a parte de uma viagem observada compreendida entre os dois portos da ligação; ele pode ser direto ou conter escalas intermediárias.
 
-**Tabela 14 — Informações devolvidas pela matriz marítima para a ligação Santos–Manaus.**
+**Tabela 15 — Informações devolvidas pela matriz marítima para a ligação Santos–Manaus.**
 
 | Informação | Valor retornado na execução | Como deve ser lido |
 | :-- | :-- | :-- |
@@ -697,7 +706,7 @@ flowchart LR
 
 Quando a intensidade marítima do EU MRV já representa o consumo por trabalho de transporte, o avaliador não acrescenta uma parcela separada para o combustível do navio durante a atracação. Essa decisão evita dupla contagem. Os equipamentos portuários permanecem como parcela própria, pois representam uma atividade diferente.
 
-**Tabela 15 — Parcelas geradas pelo avaliador no exemplo São Paulo–Rio Branco.**
+**Tabela 16 — Parcelas geradas pelo avaliador no exemplo São Paulo–Rio Branco.**
 
 | Parcela | Custo modelado | Emissões TTW | Situação registrada |
 | :-- | --: | --: | :-- |
@@ -711,9 +720,9 @@ O total acima é o mesmo apresentado na Seção 3.3.7. A comparação final com
 
 ### 4.7 Rastreabilidade e auditoria
 
-O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 16 exemplifica esse registro no cenário São Paulo–Rio Branco.
+O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 17 exemplifica esse registro no cenário São Paulo–Rio Branco.
 
-**Tabela 16 — Informações de rastreabilidade registradas no exemplo São Paulo–Rio Branco.**
+**Tabela 17 — Informações de rastreabilidade registradas no exemplo São Paulo–Rio Branco.**
 
 | Informação registrada | Exemplo no cenário | Finalidade |
 | :-- | :-- | :-- |
@@ -750,9 +759,9 @@ flowchart LR
     E --> F
 ```
 
-A Tabela 17 mostra quatro formas de medir a cobertura do cruzamento entre a Agência Nacional de Transportes Aquaviários (ANTAQ) e o sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV): por navio, por viagem, pela massa e por contêiner equivalente. Cada proporção responde a uma pergunta diferente; por isso, elas não devem ser somadas nem interpretadas como uma única taxa de qualidade.
+A Tabela 18 mostra quatro formas de medir a cobertura do cruzamento entre a Agência Nacional de Transportes Aquaviários (ANTAQ) e o sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV): por navio, por viagem, pela massa e por contêiner equivalente. Cada proporção responde a uma pergunta diferente; por isso, elas não devem ser somadas nem interpretadas como uma única taxa de qualidade.
 
-**Tabela 17 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
+**Tabela 18 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
 | Indicador                                |                              Valor | Cobertura |
 | :--------------------------------------- | ---------------------------------: | --------: |
@@ -761,9 +770,9 @@ A Tabela 17 mostra quatro formas de medir a cobertura do cruzamento entre a Agê
 | Carga em massa com correspondência exata | 15.959.761,561 de 30.191.845,948 t |     52,9% |
 | Carga em TEU com correspondência exata   |   1.454.351,75 de 2.872.715,00 TEU |     50,6% |
 
-Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 18 separa essas situações e também mostra a procedência das distâncias marítimas.
+Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 19 separa essas situações e também mostra a procedência das distâncias marítimas.
 
-**Tabela 18 — Reconstrução e procedência dos dados na base processada.**
+**Tabela 19 — Reconstrução e procedência dos dados na base processada.**
 
 | Resultado do processamento | Quantidade | Leitura para o cálculo |
 | :-- | --: | :-- |
@@ -796,7 +805,7 @@ flowchart LR
 
 O fluxograma não representa uma rota única criada pelo sistema. Ele mostra exemplos de sequências observadas na Agência Nacional de Transportes Aquaviários (ANTAQ). A ligação é calculada com todos os recortes aceitos no mesmo sentido, inclusive os que não passam por Suape.
 
-**Tabela 19 — Formação do indicador marítimo Santos–Manaus.**
+**Tabela 20 — Formação do indicador marítimo Santos–Manaus.**
 
 | Informação | Valor observado ou calculado | Papel no indicador |
 | :-- | :-- | :-- |
@@ -811,7 +820,7 @@ O fluxograma não representa uma rota única criada pelo sistema. Ele mostra exe
 
 Como verificação da dispersão do conjunto de navios do tipo *container ship*, a média aritmética sem tratamento dos 243 valores seria 21,661852 g/(t·nm), enquanto a mediana seria 4,620000 g/(t·nm). Esses números não substituem a regra aplicada: eles mostram por que a média aparada é usada como referência quando não há intensidade individual utilizável.
 
-Os valores da Tabela 19 não são a carga nem o combustível de uma nova remessa. Eles formam a intensidade e a distância que serão aplicadas à carga informada pelo usuário. Portanto, a média representa a ligação Santos–Manaus sem se transformar em uma viagem física única.
+Os valores da Tabela 20 não são a carga nem o combustível de uma nova remessa. Eles formam a intensidade e a distância que serão aplicadas à carga informada pelo usuário. Portanto, a média representa a ligação Santos–Manaus sem se transformar em uma viagem física única.
 
 #### 5.2.2 Conferência de uma viagem histórica
 
