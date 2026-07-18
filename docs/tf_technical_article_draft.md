@@ -128,6 +128,12 @@ C_{\mathrm{rod}}
 =12.318{,}68\ \text{R\$}.
 $$
 
+#### 3.2.3 Emissões operacionais da perna rodoviária
+
+As emissões da alternativa rodoviária são calculadas a partir do diesel consumido na Seção 3.2.1. A fronteira adotada é *tank-to-wheel* (TTW, do tanque à roda): ela considera somente as emissões geradas pela queima do combustível durante o transporte. O sistema aplica o fator de 2,68 kg CO₂e por litro de diesel, baseado nas Diretrizes de 2006 do Painel Intergovernamental sobre Mudanças Climáticas (IPCC) [ipcc2006]. Costa et al. [competitiveness2024] é a referência brasileira usada para manter essa estimativa na fronteira TTW, sem incluir a produção, o refino ou a distribuição do combustível.
+
+Em termos práticos, as emissões são o volume de diesel consumido multiplicado por esse fator. No exemplo São Paulo–Rio Branco, os 1.518,014 L estimados na Seção 3.2.1 resultam em 4.068,28 kg CO₂e. A mesma regra é aplicada aos acessos rodoviários da alternativa multimodal, apresentados na Seção 3.3.2.
+
 ### 3.3 Alternativa multimodal
 
 A alternativa multimodal também precisa levar a remessa do ponto inicial ao ponto final. Ela é formada por três partes: o acesso rodoviário até o porto de embarque, a navegação entre os portos e o acesso rodoviário depois do desembarque. Portanto, o combustível é consumido não só pelo navio, em cada subtrecho marítimo, mas também nos deslocamentos da origem até o porto de embarque e do porto de desembarque até o destino final. Além disso, o sistema calcula separadamente o consumo das operações nos terminais portuários.
@@ -140,7 +146,7 @@ O sistema associa a origem ao porto mais próximo disponível na base portuária
 
 #### 3.3.2 Acessos rodoviários: *first mile* e *last mile*
 
-O primeiro acesso, chamado de *first mile*, leva a carga da origem até o porto de embarque. O segundo, chamado de *last mile*, leva a carga do porto de desembarque até o destino final. Para cada um deles, o sistema obtém uma distância rodoviária e aplica a mesma regra de veículo, eficiência e consumo de diesel descrita na Seção 3.2.
+O primeiro acesso, chamado de *first mile*, leva a carga da origem até o porto de embarque. O segundo, chamado de *last mile*, leva a carga do porto de desembarque até o destino final. Para cada um deles, o sistema obtém uma distância rodoviária, aplica a regra de veículo, eficiência e consumo de diesel da Seção 3.2.1 e converte o consumo em emissões conforme a Seção 3.2.3.
 
 #### 3.3.3 Operações portuárias
 
@@ -351,19 +357,16 @@ $$
 
 Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média. Em Santos–Manaus, os 89 recortes completos observados resultam em $6.115{,}349\ \mathrm{km}$, ou $3.302{,}024\ \mathrm{nm}$.
 
-#### 3.3.5 Emissões operacionais (TTW)
+#### 3.3.5 Emissões operacionais da alternativa multimodal
 
-Depois de calcular o combustível consumido em cada etapa, o sistema o converte em emissões operacionais de dióxido de carbono equivalente (CO₂e). A fronteira adotada é *tank-to-wheel* (TTW, do tanque à roda): ela considera somente a emissão gerada pela queima do diesel ou do óleo combustível durante o transporte, sem incluir a extração, a produção, o refino ou a distribuição do combustível. Para o diesel, o fator de combustão direta vem das Diretrizes de 2006 do Painel Intergovernamental sobre Mudanças Climáticas (IPCC) [ipcc2006]; Costa et al. [competitiveness2024] é a referência brasileira usada para separar a fronteira TTW da fronteira *well-to-wheel* (WTW, do poço à roda). Para o VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre), o sistema utiliza apenas o componente TTW dos parâmetros apresentados por Costa et al. [competitiveness2024] a partir da Resolução MEPC.391(81) da Organização Marítima Internacional (IMO). A Tabela 6 identifica a fonte e o valor de cada fator.
+Os trechos de *first mile* e *last mile* usam a mesma conversão de diesel em emissões descrita na Seção 3.2.3. Nesta etapa, são acrescentadas as emissões específicas das operações portuárias e da navegação. Nas operações portuárias, o consumo de diesel é registrado em massa; por isso, o fator é expresso em kg CO₂e por kg de diesel. Na navegação, o consumo de VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre) é multiplicado pelo fator operacional correspondente. Em ambos os casos, a fronteira continua sendo TTW: considera-se apenas o combustível queimado durante a operação.
 
-**Tabela 6 — Fatores de emissão operacionais adotados.**
+**Tabela 6 — Fatores de emissão específicos da alternativa multimodal.**
 
 | Etapa do transporte | Fonte do fator | Fator de emissão |
 | :-- | :-- | :-- |
-| Rodovia direta | IPCC (2006) [ipcc2006], para a combustão direta do diesel; Costa et al. [competitiveness2024], como referência brasileira para a fronteira TTW. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
-| *First mile* | Mesma base do IPCC (2006) [ipcc2006]. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
-| Operações portuárias | Mesma base do IPCC (2006) [ipcc2006], expresso por massa. | $3{,}15\ \mathrm{kgCO_2e/kg}$ de diesel |
-| Navegação | Costa et al. [competitiveness2024], Apêndice A, Tabela 13: componente TTW dos parâmetros da Resolução IMO MEPC.391(81). | $3{,}114\ \mathrm{kgCO_2e/kg}$ de VLSFO |
-| *Last mile* | Mesma base do IPCC (2006) [ipcc2006]. | $2{,}68\ \mathrm{kgCO_2e/L}$ de diesel |
+| Operações portuárias | Mesma base do IPCC (2006) [ipcc2006], expresso por massa. | 3,15 kg CO₂e/kg de diesel |
+| Navegação | Costa et al. [competitiveness2024], Apêndice A, Tabela 13: componente TTW dos parâmetros da Resolução IMO MEPC.391(81). | 3,114 kg CO₂e/kg de VLSFO |
 
 #### 3.3.6 Custo modelado do combustível
 
@@ -381,7 +384,7 @@ O sistema também busca a cotação mais recente do VLSFO em Santos na [Ship & B
 | Navegação | VLSFO: [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), Santos; taxa USD/BRL: BCE, via [CurrencyConverter](https://pypi.org/project/CurrencyConverter/). | VLSFO: US\$ 741,50/mt; USD/BRL: R\$ 5,141345 por US\$. | R\$ 3,812/kg de VLSFO. |
 | *Last mile* | [ANP](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas) | Diesel S10: Porto de Manaus (AM), R\$ 7,250/L; Acre, R\$ 9,270/L. | R\$ 8,260/L — média AM–AC. |
 
-#### 3.3.7 Resultado consolidado da alternativa multimodal
+#### 3.3.7 Resultado consolidado da alternativa multimodal do exemplo São Paulo–Rio Branco
 
 Para a remessa de 14 t entre São Paulo (SP) e Rio Branco (AC), a Tabela 8 reúne os resultados das etapas que compõem a alternativa multimodal. Os cálculos e as fontes de cada etapa estão descritos nas Seções 3.3.1 a 3.3.6.
 
@@ -397,9 +400,9 @@ Para a remessa de 14 t entre São Paulo (SP) e Rio Branco (AC), a Tabela 8 reú
 
 Os valores das operações portuárias seguem o escopo e a disponibilidade de dados indicados na Seção 3.3.3.
 
-### 3.4 Resultado consolidado do exemplo São Paulo–Rio Branco
+### 3.4 Resultado final do exemplo São Paulo–Rio Branco
 
-Esta seção compara, para a mesma remessa de 14 t, os resultados totais da alternativa A, rodoviária direta, e da alternativa B, multimodal. Os valores da alternativa A vêm das Seções 3.2.1 e 3.2.2; os da alternativa B foram consolidados na Seção 3.3.7.
+Esta seção compara, para a mesma remessa de 14 t, os resultados totais da alternativa A, rodoviária direta, e da alternativa B, multimodal. Os valores da alternativa A vêm das Seções 3.2.1 a 3.2.3; os da alternativa B foram consolidados na Seção 3.3.7.
 
 **Tabela 9 — Comparação dos resultados totais no exemplo São Paulo–Rio Branco, para uma remessa de 14 t.**
 
@@ -484,7 +487,7 @@ Na interface atual, a geometria é solicitada com o perfil técnico `driving-car
 
 #### 4.4.2 Consumo, custo e emissões rodoviárias
 
-Com a distância disponível, o avaliador aplica as regras da Seção 3.2. Ele seleciona a configuração rodoviária representativa a partir da massa da remessa, calcula os litros de diesel de cada perna e converte esse consumo em custo e emissões. A mesma conta é feita separadamente para a rota direta, o *first mile* e o *last mile*.
+Com a distância disponível, o avaliador aplica as regras das Seções 3.2.1 a 3.2.3. Ele seleciona a configuração rodoviária representativa a partir da massa da remessa, calcula os litros de diesel de cada perna e converte esse consumo em custo e emissões. A mesma conta é feita separadamente para a rota direta, o *first mile* e o *last mile*.
 
 Cada perna guarda, além do valor calculado, a distância, o tipo de veículo, o preço de diesel, o fator de emissão e a origem desses insumos. Dessa forma, o total rodoviário pode ser conferido sem misturá-lo com as parcelas portuárias ou marítimas.
 
@@ -532,7 +535,7 @@ Antes de avaliar as pernas, a aplicação tenta atualizar os dois preços que va
 
 #### 4.6.2 Avaliação dos quatro componentes multimodais
 
-O avaliador recebe a geometria das pernas, a massa, os parâmetros do cenário, os preços e os fatores de emissão. Ele executa a conta rodoviária no *first mile* e no *last mile*, aplica a intensidade marítima à carga e à distância entre os portos e soma o consumo dos equipamentos portuários que puderam ser quantificados. Em seguida, converte cada combustível em custo modelado e em emissões operacionais com os fatores apresentados na Seção 3.3.5.
+O avaliador recebe a geometria das pernas, a massa, os parâmetros do cenário, os preços e os fatores de emissão. Ele executa a conta rodoviária no *first mile* e no *last mile*, aplica a intensidade marítima à carga e à distância entre os portos e soma o consumo dos equipamentos portuários que puderam ser quantificados. Em seguida, converte cada combustível em custo modelado e em emissões operacionais com os fatores apresentados nas Seções 3.2.3 e 3.3.5.
 
 Quando a intensidade marítima por trabalho de transporte do EU MRV é aplicada, o avaliador não acrescenta uma estimativa separada do combustível consumido pelo navio atracado, chamado de *hoteling*. Essa regra impede a dupla contagem entre a intensidade marítima e uma parcela adicional de consumo a bordo. Os equipamentos do terminal permanecem separados porque representam outra atividade.
 
