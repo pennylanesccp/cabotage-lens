@@ -321,15 +321,27 @@ Essa média não monta uma rota artificial com trechos de navios diferentes. Cad
 
 Ao fim das etapas anteriores, o sistema já estimou o combustível de cada parte da viagem. Nesta etapa, ele transforma esse consumo em duas saídas comparáveis: emissões operacionais de dióxido de carbono equivalente (CO$_2$e) e custo modelado do combustível. A conversão é feita primeiro para cada parte da rota. Só depois os resultados são somados. Dessa forma, é possível ver separadamente quanto o acesso inicial, a navegação, as operações no terminal e o acesso final acrescentam à alternativa multimodal.
 
-**Tabela 6 — Dados e contas usados para converter combustível em emissões e custo.**
+**Tabela 6 — Conversão do combustível estimado em custo modelado.**
 
-| Componente | Como o combustível é obtido | Preço usado no custo | Conversão em emissões |
-| :-- | :-- | :-- | :-- |
-| Rodovia direta, *first mile* e *last mile* | Distância da rota, número de viagens do caminhão e rendimento definido pela tabela oficial da ANTT. | Preço do diesel S10 por Unidade da Federação (UF), processado a partir da [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). O cenário usa a média entre as UFs de origem e de destino. | Litros de diesel $\times 2{,}68\ \mathrm{kgCO_2e/L}$, fator operacional TTW registrado pelo modelo. |
-| Navegação | Intensidade da ligação ANTAQ–EU MRV $\times$ massa da remessa $\times$ distância marítima média observada, conforme a Seção 3.3.4. | Preço em Santos do VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre), publicado pela [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), convertido para R$/t e registrado na execução. | Massa de VLSFO $\times 3{,}114\ \mathrm{kgCO_2e/kg}$, fator operacional TTW registrado pelo modelo. |
-| Operações portuárias | Movimentos de contêineres e fatores de consumo dos equipamentos do terminal, conforme a Seção 3.3.3. | O diesel dos equipamentos usa o mesmo preço de diesel do cenário. | Massa de diesel $\times 3{,}15\ \mathrm{kgCO_2e/kg}$, fator operacional TTW registrado pelo modelo. |
+| Etapa do pipeline | Combustível e preço usado | Cálculo do custo |
+| :-- | :-- | :-- |
+| Rodovia direta | Diesel S10; preço em R$/L por Unidade da Federação (UF), processado a partir da [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas). O cenário usa a média entre as UFs de origem e de destino. | $C_{\mathrm{rod,direta}}=F_{\mathrm{rod,direta}}\,p_{\mathrm{diesel}}$. |
+| *First mile* | Diesel S10; mesmo preço de diesel do cenário. | $C_{\mathrm{first}}=F_{\mathrm{first}}\,p_{\mathrm{diesel}}$. |
+| Operações portuárias | Diesel; mesmo preço de diesel do cenário. | $C_{\mathrm{porto}}=F_{\mathrm{porto}}\,p_{\mathrm{diesel}}$. |
+| Navegação | VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre); preço em Santos, publicado pela [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), convertido para R$/t e registrado na execução. | $C_{\mathrm{nav}}=\frac{F_{\mathrm{nav}}}{1000}\,p_{\mathrm{VLSFO}}$. |
+| *Last mile* | Diesel S10; mesmo preço de diesel do cenário. | $C_{\mathrm{last}}=F_{\mathrm{last}}\,p_{\mathrm{diesel}}$. |
 
-O preço do diesel vem da tabela da **Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)**, agência federal que divulga pesquisas semanais de preços de combustíveis. Os fatores de emissão também ficam registrados como parâmetros operacionais do modelo: eles não são medidos em cada viagem.
+**Tabela 7 — Conversão do combustível estimado em emissões operacionais.**
+
+| Etapa do pipeline | Conversão em emissões e origem do fator |
+| :-- | :-- |
+| Rodovia direta | $E_{\mathrm{rod,direta}}=F_{\mathrm{rod,direta}}\times2{,}68\ \mathrm{kgCO_2e/L}$. O IPCC (2006) [ipcc2006] é a base da combustão direta de diesel. Costa et al. [competitiveness2024] é uma referência metodológica de comparação rodoviária, mas o fator WTW do artigo não é usado no modelo. |
+| *First mile* | $E_{\mathrm{first}}=F_{\mathrm{first}}\times2{,}68\ \mathrm{kgCO_2e/L}$, com a mesma base de combustão direta de diesel do IPCC (2006) [ipcc2006]. |
+| Operações portuárias | $E_{\mathrm{porto}}=F_{\mathrm{porto}}\times3{,}15\ \mathrm{kgCO_2e/kg}$. A base é o IPCC (2006) [ipcc2006], expressa por massa. |
+| Navegação | $E_{\mathrm{nav}}=F_{\mathrm{nav}}\times3{,}114\ \mathrm{kgCO_2e/kg}$. A fonte é Costa et al. [competitiveness2024], Apêndice A, Tabela 13, que reproduz parâmetros da Resolução IMO MEPC.391(81). O modelo usa somente a parcela de combustão. |
+| *Last mile* | $E_{\mathrm{last}}=F_{\mathrm{last}}\times2{,}68\ \mathrm{kgCO_2e/L}$, com a mesma base de combustão direta de diesel do IPCC (2006) [ipcc2006]. |
+
+O preço do diesel vem da tabela da **Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)**, agência federal que divulga pesquisas semanais de preços de combustíveis. Os dois fatores de diesel expressam a mesma emissão de combustão em unidades diferentes: $3{,}15\ \mathrm{kgCO_2e/kg}$ quando o consumo é registrado em massa e $2{,}68\ \mathrm{kgCO_2e/L}$ quando é registrado em volume. Para o VLSFO, a conversão usa somente a parcela de combustão da fonte marítima; os valores que incluem produção e distribuição do combustível não entram na conta. Todos os preços e fatores ficam registrados como parâmetros operacionais do modelo.
 
 Para um trecho rodoviário $i$, em que $F_{\mathrm{rod},i}$ é o consumo em litros, $p_{\mathrm{diesel}}$ é o preço em R$/L e $f_{\mathrm{diesel}}$ é o fator de emissão em kgCO$_2$e/L, o custo e a emissão são:
 
@@ -347,7 +359,7 @@ C_{\mathrm{nav}}=\frac{F_{\mathrm{nav}}}{1000}\,p_{\mathrm{VLSFO}},
 E_{\mathrm{nav}}=F_{\mathrm{nav}}\,f_{\mathrm{VLSFO}}.
 $$
 
-No cenário atual de operações portuárias, os equipamentos quantificados são movidos a diesel. Portanto, o custo é a soma dos litros desses equipamentos multiplicados pelo preço do diesel, e a emissão é a soma da massa de diesel multiplicada pelo respectivo fator de emissão. Equipamentos sem parâmetro de consumo de combustível disponível são identificados como indisponíveis e não entram na soma.
+No cenário atual de operações portuárias, os equipamentos quantificados são movidos a diesel. Portanto, o custo é a soma dos litros desses equipamentos multiplicados pelo preço do diesel, e a emissão é a soma da massa de diesel multiplicada pelo respectivo fator de emissão.
 
 Por fim, a alternativa multimodal reúne as quatro parcelas:
 
