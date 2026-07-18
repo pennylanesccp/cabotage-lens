@@ -525,10 +525,10 @@ Essa comparação confirma a consistência da localização em escala de endere�
 
 Depois das geocodificações e em posse das coordenadas da origem e do destino., o sistema envia esse par de coordenadas primeiro ao OpenRouteService (ORS). Se o ORS não devolver uma rota utilizável, envia o mesmo par ao LocationIQ. O provedor que responder devolve a distância rodoviária e sua identificação, que ficam associadas ao cenário.
 
-No exemplo São Paulo–Rio Branco, com coordenadas já resolvidas como em 4.2, o ORS recebeu as coordenadas de São Paulo (latitude −23,550520°; longitude −46,633308°) e de Rio Branco (latitude −9,989637°; longitude −67,822462°). A distância rodoviária devolvida foi 3.491,431 km.
+No exemplo São Paulo–Rio Branco, com após geocodificação como em 4.2, o ORS recebeu as coordenadas de São Paulo (Latitude −23,550520°; Longitude −46,633308°) e de Rio Branco (Latitude −9,989637°; Longitude −67,822462°). A distância rodoviária devolvida foi 3.491,431 km.
 
 ```mermaid
-flowchart LR
+flowchart TB
     A["Origem: ''São Paulo, SP''"] --> R["Geocodificação"]
     B["Destino: ''Rio Branco, AC''"] --> S["Geocodificação"]
     R --> C["Latitude: −23,550520°<br/>Longitude: −46,633308°"] --> T["Consulta de rota<br/>ORS/LocationIQ"]
@@ -548,13 +548,32 @@ Essa proximidade mostra que a distância usada no cálculo representa uma rota p
 
 #### 4.3.2 Consumo, custo e emissões rodoviárias
 
-Com a distância disponível, o avaliador aplica as regras das Seções 3.2.1 a 3.2.3. Ele seleciona a configuração rodoviária representativa a partir da massa da remessa, calcula os litros de diesel de cada perna e converte esse consumo em custo e emissões. A mesma conta é feita separadamente para a rota direta, o *first mile* e o *last mile*.
+Com a distância disponível, o avaliador aplica as regras das Seções 3.2.1 a 3.2.3. Ele seleciona a configuração rodoviária representativa a partir da massa da remessa, calcula os litros de diesel de cada perna e converte esse consumo em custo e emissões.
 
-Cada perna guarda, além do valor calculado, a distância, o tipo de veículo, o preço de diesel, o fator de emissão e a origem desses insumos. Dessa forma, o total rodoviário pode ser conferido sem misturá-lo com as parcelas portuárias ou marítimas.
+Cada perna guarda, além do valor calculado, a distância, o tipo de veículo, o preço de diesel, o fator de emissão e a origem desses insumos. Dessa forma, o total rodoviário pode ser auditado sem misturá-lo com as parcelas portuárias ou marítimas.
+
+#### 4.3.3 Consulta do preço do diesel
+
+#### 4.3.4 Resumo do pipeline da alternativa direta
+
+A alternativa direta é calculada de forma independente da alternativa multimodal. O pipeline recebe origem, destino e carga; transforma os locais em coordenadas; obtém a distância pela malha rodoviária; seleciona o veículo representativo; estima o consumo de diesel; e, por fim, converte esse consumo em custo modelado e emissões operacionais. O resultado serve como referência para a comparação, sem incluir portos ou navegação.
+
+No exemplo São Paulo–Rio Branco, uma remessa de 14 t percorre 3.491,431 km. O sistema seleciona uma carreta de cinco eixos, com eficiência de 2,3 km/L, e estima 1.518,014 L de Diesel S10. Com o preço e o fator de emissão definidos nas Seções 3.2.2 e 3.2.3, o resultado é R$ 12.318,68 de custo modelado do combustível e 4.068,28 kg CO₂e de emissões operacionais TTW.
+
+```mermaid
+flowchart LR
+    P["Preço do diesel"] --> F["Custo modelado<br/>R$ 12.318,68"]
+    A["Carga, Origem e Destino<br/>14t de São Paulo até Rio Branco"] --> B["Geocodificação"]
+    B --> C["Distância rodoviária<br/>3.491,431 km"]
+    C --> D["Rendimento do veículo<br/>2,3 km/L de Diesel"]
+    D --> E["Consumo de Diesel S10<br/>1.518,014 L"] --> F
+    E --> G
+    M["Fator de emissão"] --> G["Emissões TTW<br/>4.068,28 kg CO₂e"]
+```
 
 ### 4.4 Montagem da alternativa multimodal
 
-Depois de calcular a rota rodoviária direta, o pipeline usa as mesmas coordenadas de origem e destino para construir uma segunda alternativa. Ele recebe a carga, identifica um porto para o embarque, outro para o desembarque e forma os acessos terrestres que conectam a remessa a esses portos. A sequência resultante representa uma alternativa geográfica de transporte; ela não afirma que os portos escolhidos formam a melhor solução comercial ou que existe serviço disponível para aquela data.
+Depois de calcular a rota rodoviária direta, começa a construção da alternativa multimodal.
 
 #### 4.4.1 Escolha dos portos
 
