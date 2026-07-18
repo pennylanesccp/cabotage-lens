@@ -15,7 +15,11 @@ from modules.costs.ship_fuel_prices import (
     get_bunker_price,
     write_prices_txt,
 )
-from modules.infra.data_assets import resolve_data_asset_path
+from modules.infra.data_assets import (
+    build_data_assets_client,
+    load_data_assets_settings,
+    resolve_data_asset_path,
+)
 from modules.infra.log_manager import get_logger
 
 _log = get_logger(__name__)
@@ -23,6 +27,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _RUNTIME_DIR = _REPO_ROOT / ".cache" / "runtime_fuel_prices"
 _RUNTIME_DIESEL_CSV = _RUNTIME_DIR / "latest_diesel_prices.csv"
 _RUNTIME_BUNKER_TXT = _RUNTIME_DIR / "santos_bunker_brl.txt"
+_ANP_WORKBOOK_OBJECT_PATH = "data/raw/road_data/semanal-estados-desde-2013.xlsx"
+_DIESEL_PRICES_OBJECT_PATH = "data/processed/road_data/latest_diesel_prices.csv"
+_ANP_WORKBOOK_CONTENT_TYPE = (
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+_DIESEL_PRICES_CONTENT_TYPE = "text/csv; charset=utf-8"
 _REFRESH_LOCK = threading.Lock()
 
 
@@ -33,6 +43,7 @@ class FuelPriceRefreshResult:
     diesel_updated: bool
     bunker_updated: bool
     prices_changed: bool
+    diesel_price_assets_archived: bool = False
     warnings: tuple[str, ...] = ()
 
 
@@ -55,30 +66,90 @@ def _files_differ(left: Path, right: Path) -> bool:
     return left.read_bytes() != right.read_bytes()
 
 
+def _archive_anp_price_assets(
+    workbook_path: Path,
+    diesel_prices_path: Path,
+    *,
+    timeout_s: float,
+) -> tuple[bool, str | None]:
+    """Store the validated ANP workbook and normalized price table in Storage."""
+    try:
+        settings = load_data_assets_settings()
+        if settings is None:
+            return (
+                False,
+                "ANP price files were refreshed locally but could not be archived: "
+                "Supabase Storage data assets are not configured.",
+            )
+
+        workbook_payload = workbook_path.read_bytes()
+        diesel_prices_payload = diesel_prices_path.read_bytes()
+        if not workbook_payload:
+            return False, "ANP workbook archive skipped because the downloaded file is empty."
+        if not diesel_prices_payload:
+            return False, "ANP price-table archive skipped because the normalized CSV is empty."
+
+        client = build_data_assets_client(settings)
+        client.upload_bytes(
+            bucket=settings.data_bucket,
+            object_path=_ANP_WORKBOOK_OBJECT_PATH,
+            payload=workbook_payload,
+            content_type=_ANP_WORKBOOK_CONTENT_TYPE,
+            upsert=True,
+            timeout_s=timeout_s,
+        )
+        client.upload_bytes(
+            bucket=settings.data_bucket,
+            object_path=_DIESEL_PRICES_OBJECT_PATH,
+            payload=diesel_prices_payload,
+            content_type=_DIESEL_PRICES_CONTENT_TYPE,
+            upsert=True,
+            timeout_s=timeout_s,
+        )
+        _log.info(
+            "Archived ANP price files to Supabase Storage bucket=%s workbook=%s workbook_bytes=%d "
+            "prices=%s prices_bytes=%d.",
+            settings.data_bucket,
+            _ANP_WORKBOOK_OBJECT_PATH,
+            len(workbook_payload),
+            _DIESEL_PRICES_OBJECT_PATH,
+            len(diesel_prices_payload),
+        )
+        return True, None
+    except Exception as exc:
+        return False, f"ANP price-file archive failed; local diesel prices remain active ({exc})."
+
+
 def _refresh_diesel(
     baseline_path: Path,
     *,
     timeout_s: float,
-) -> tuple[Path, bool, bool, str | None]:
+) -> tuple[Path, bool, bool, bool, str | None]:
     token = uuid.uuid4().hex
     raw_tmp = _RUNTIME_DIR / f"anp-{token}.xlsx"
     diesel_tmp = _RUNTIME_DIR / f"diesel-{token}.csv"
     try:
         if not download_anp_file(ANP_URL, raw_tmp, timeout=timeout_s):
-            return baseline_path, False, False, "ANP diesel refresh failed; using the previous price table."
+            return baseline_path, False, False, False, "ANP diesel refresh failed; using the previous price table."
         process_anp_excel(raw_tmp, diesel_tmp)
         if not diesel_tmp.is_file() or diesel_tmp.stat().st_size <= 0:
             return (
                 baseline_path,
                 False,
                 False,
+                False,
                 "ANP diesel refresh produced no usable price table; using the previous table.",
             )
         changed = _files_differ(diesel_tmp, baseline_path)
         diesel_tmp.replace(_RUNTIME_DIESEL_CSV)
-        return _RUNTIME_DIESEL_CSV.resolve(), True, changed, None
+        archived, archive_warning = _archive_anp_price_assets(
+            raw_tmp,
+            _RUNTIME_DIESEL_CSV,
+            timeout_s=timeout_s,
+        )
+        return _RUNTIME_DIESEL_CSV.resolve(), True, changed, archived, archive_warning
     except Exception as exc:
-        return baseline_path, False, False, f"ANP diesel refresh failed; using the previous price table ({exc})."
+        return baseline_path, False, False, False, f"ANP diesel refresh failed; using the previous price table ({exc})."
     finally:
         for path in (raw_tmp, diesel_tmp):
             try:
@@ -124,7 +195,13 @@ def refresh_fuel_prices(*, timeout_s: float = 30.0) -> FuelPriceRefreshResult:
         with ThreadPoolExecutor(max_workers=2, thread_name_prefix="fuel-price-refresh") as executor:
             diesel_future = executor.submit(_refresh_diesel, baseline_diesel_path, timeout_s=timeout_s)
             bunker_future = executor.submit(_refresh_bunker, baseline_bunker_price, timeout_s=timeout_s)
-            diesel_path, diesel_updated, diesel_changed, diesel_warning = diesel_future.result()
+            (
+                diesel_path,
+                diesel_updated,
+                diesel_changed,
+                diesel_price_assets_archived,
+                diesel_warning,
+            ) = diesel_future.result()
             bunker_price, bunker_updated, bunker_changed, bunker_warning = bunker_future.result()
 
         warnings = [warning for warning in (diesel_warning, bunker_warning) if warning]
@@ -133,10 +210,11 @@ def refresh_fuel_prices(*, timeout_s: float = 30.0) -> FuelPriceRefreshResult:
             _log.warning(warning)
         _log.info(
             (
-                "Fuel price refresh complete diesel_updated=%s bunker_updated=%s "
-                "prices_changed=%s diesel_csv=%s bunker_price_brl_mt=%.2f"
+                "Fuel price refresh complete diesel_updated=%s diesel_price_assets_archived=%s "
+                "bunker_updated=%s prices_changed=%s diesel_csv=%s bunker_price_brl_mt=%.2f"
             ),
             diesel_updated,
+            diesel_price_assets_archived,
             bunker_updated,
             bool(diesel_changed or bunker_changed),
             diesel_path,
@@ -148,5 +226,6 @@ def refresh_fuel_prices(*, timeout_s: float = 30.0) -> FuelPriceRefreshResult:
             diesel_updated=diesel_updated,
             bunker_updated=bunker_updated,
             prices_changed=bool(diesel_changed or bunker_changed),
+            diesel_price_assets_archived=diesel_price_assets_archived,
             warnings=tuple(warnings),
         )

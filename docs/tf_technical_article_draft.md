@@ -546,13 +546,30 @@ A Figura 5 apresenta uma consulta independente no Google Maps para a mesma liga�
 
 Essa proximidade mostra que a distância usada no cálculo representa uma rota pela malha rodoviária, e não a distância geográfica em linha reta entre as cidades. Usar a distância em linha reta reduziria artificialmente os quilômetros percorridos e poderia distorcer as estimativas de consumo, custo e emissões. A comparação é uma conferência de consistência entre motores de rota; ela não substitui o registro de uma viagem realizada em campo.
 
-#### 4.3.2 Consumo, custo e emissões rodoviárias
+#### 4.3.2 Consulta do preço do diesel
+
+Para calcular o custo, a rotina Python busca os preços mais recentes de Diesel S10. Ela baixa a planilha semanal de preços de revenda por estado da Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP), disponibilizada no site oficial da agência.
+
+Depois de confirmar que o XLSX baixado gerou uma tabela válida de preços por Unidade da Federação (UF), a rotina envia os dois arquivos ao Supabase Storage, o espaço de armazenamento de arquivos do projeto. O XLSX substitui o objeto anterior em `data/raw/road_data/semanal-estados-desde-2013.xlsx`, preservando a fonte bruta. O CSV normalizado substitui `data/processed/road_data/latest_diesel_prices.csv`, que é o insumo consultado pelo sistema. Se a consulta à ANP ou o envio ao armazenamento falhar, o cálculo mantém a última tabela válida disponível e registra um aviso, em vez de usar preço zero.
+
+**Tabela 12 — Exemplo de dados da planilha semanal da ANP e sua associação à UF para Diesel S10.**
+
+| UF após o tratamento | Estado na planilha | Postos pesquisados | Preço médio de revenda | Preço mínimo | Preço máximo |
+| :-- | :-- | --: | --: | --: | --: |
+| SP | São Paulo | 744 | R$ 6,12/L | R$ 5,39/L | R$ 8,99/L |
+| AC | Acre | 8 | R$ 7,61/L | R$ 7,30/L | R$ 8,17/L |
+| AM | Amazonas | 33 | R$ 6,51/L | R$ 6,49/L | R$ 6,78/L |
+| PE | Pernambuco | 129 | R$ 5,82/L | R$ 5,49/L | R$ 6,99/L |
+
+*Fonte: planilha semanal de preços de revenda por estado da ANP, aba `ESTADOS - DESDE 30.12.2012`, produto `OLEO DIESEL S10`, período de 9 a 15 de novembro de 2025. Valores reproduzidos do arquivo `semanal-estados-desde-2013.xlsx` usado para conferir a rotina de leitura.*
+
+Esse arquivo de conferência tem dados até novembro de 2025; portanto, os valores da Tabela 12 ilustram a estrutura da fonte e não substituem os preços atualizados empregados no exemplo São Paulo–Rio Branco. Os valores dessa execução, obtidos na atualização de julho de 2026, estão identificados na Seção 3.2.2. Depois de obter a tabela por UF, a regra de precificação é a mesma apresentada naquela seção: em uma rota entre dois estados, o avaliador calcula a média entre os preços da UF de origem e da UF de destino; em uma rota dentro do mesmo estado, utiliza o preço dessa própria UF.
+
+#### 4.3.3 Consumo, custo e emissões rodoviárias
 
 Com a distância disponível, o avaliador aplica as regras das Seções 3.2.1 a 3.2.3. Ele seleciona a configuração rodoviária representativa a partir da massa da remessa, calcula os litros de diesel de cada perna e converte esse consumo em custo e emissões.
 
 Cada perna guarda, além do valor calculado, a distância, o tipo de veículo, o preço de diesel, o fator de emissão e a origem desses insumos. Dessa forma, o total rodoviário pode ser auditado sem misturá-lo com as parcelas portuárias ou marítimas.
-
-#### 4.3.3 Consulta do preço do diesel
 
 #### 4.3.4 Resumo do pipeline da alternativa direta
 
@@ -562,24 +579,26 @@ No exemplo São Paulo–Rio Branco, uma remessa de 14 t percorre 3.491,431 km.
 
 ```mermaid
 flowchart LR
-    P["Preço do diesel"] --> F["Custo modelado<br/>R$ 12.318,68"]
+    P["Preço do Diesel<br/>R$ 8,115/L"] --> F["Custo modelado<br/>R$ 12.318,68"]
     A["Carga, Origem e Destino<br/>14t de São Paulo até Rio Branco"] --> B["Geocodificação"]
     B --> C["Distância rodoviária<br/>3.491,431 km"]
     C --> D["Rendimento do veículo<br/>2,3 km/L de Diesel"]
     D --> E["Consumo de Diesel S10<br/>1.518,014 L"] --> F
     E --> G
-    M["Fator de emissão"] --> G["Emissões TTW<br/>4.068,28 kg CO₂e"]
+    M["Fator de emissão do Diesel<br/>2,68 kg CO₂e/L"] --> G["Emissões TTW<br/>4.068,28 kg CO₂e"]
 ```
 
 ### 4.4 Montagem da alternativa multimodal
 
-Depois de calcular a rota rodoviária direta, começa a construção da alternativa multimodal.
+Depois de calcular a rota rodoviária direta, começa a construção da alternativa multimodal. É aproveitado da etapa anterior: o(s) veículo(s) para transporte rodoviário; os endereços geocodificados; e os preços do diesel por UF.
 
 #### 4.4.1 Escolha dos portos
 
-Para cada extremidade da remessa, o sistema compara a distância geográfica até os portos disponíveis. Quando a base possui a localização de um portão, esse ponto é usado como referência; caso contrário, usa-se o centro do porto. O porto mais próximo por esse critério é associado à origem ou ao destino, e as rotas por estrada são calculadas até esses pontos conforme o procedimento da Seção 4.3.1.
+A definição dos portos de embarque e desembarque da carga é feita pela função `find_nearest_port`. A partir de uma coordenada (latitude e longitude), a distância de Haversine é calculada até cada porto disponível. Ao final, a função retorna o porto cuja distância é a menor entre todas as alternativas avaliadas.
 
-No exemplo São Paulo–Rio Branco, o sistema selecionou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque. Em Santos, a referência foi o acesso de Ponta da Praia; em Manaus, cuja base não contém portão cadastrado, foi usado o centro do porto. A seleção é registrada junto com o cenário para que a alternativa montada possa ser conferida posteriormente.
+O pipeline chama essa função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque. Em seguida, as rotas por estrada são calculadas até esses pontos, conforme o procedimento da Seção 4.3.1.
+
+No exemplo São Paulo–Rio Branco, o sistema selecionou o Porto de Santos para o embarque e o Porto de Manaus para o desembarque.
 
 #### 4.4.2 Formação dos trechos da cadeia
 
@@ -595,7 +614,7 @@ flowchart LR
     F --> G["Rio Branco, AC"]
 ```
 
-**Tabela 12 — Cadeia multimodal montada pelo pipeline no exemplo São Paulo–Rio Branco.**
+**Tabela 13 — Cadeia multimodal montada pelo pipeline no exemplo São Paulo–Rio Branco.**
 
 | Etapa | Resultado montado na execução | Como o sistema obtém o dado |
 | :-- | :-- | :-- |
@@ -636,9 +655,9 @@ flowchart LR
 
 #### 4.5.3 Consulta da ligação marítima no cenário
 
-No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos–Manaus. A Tabela 13 mostra o que a matriz devolve para esse par. Um recorte é a parte de uma viagem observada compreendida entre os dois portos da ligação; ele pode ser direto ou conter escalas intermediárias.
+No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos–Manaus. A Tabela 14 mostra o que a matriz devolve para esse par. Um recorte é a parte de uma viagem observada compreendida entre os dois portos da ligação; ele pode ser direto ou conter escalas intermediárias.
 
-**Tabela 13 — Informações devolvidas pela matriz marítima para a ligação Santos–Manaus.**
+**Tabela 14 — Informações devolvidas pela matriz marítima para a ligação Santos–Manaus.**
 
 | Informação | Valor retornado na execução | Como deve ser lido |
 | :-- | :-- | :-- |
@@ -676,7 +695,7 @@ flowchart LR
 
 Quando a intensidade marítima do EU MRV já representa o consumo por trabalho de transporte, o avaliador não acrescenta uma parcela separada para o combustível do navio durante a atracação. Essa decisão evita dupla contagem. Os equipamentos portuários permanecem como parcela própria, pois representam uma atividade diferente.
 
-**Tabela 14 — Parcelas geradas pelo avaliador no exemplo São Paulo–Rio Branco.**
+**Tabela 15 — Parcelas geradas pelo avaliador no exemplo São Paulo–Rio Branco.**
 
 | Parcela | Custo modelado | Emissões TTW | Situação registrada |
 | :-- | --: | --: | :-- |
@@ -690,9 +709,9 @@ O total acima é o mesmo apresentado na Seção 3.3.7. A comparação final com
 
 ### 4.7 Rastreabilidade e auditoria
 
-O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 15 exemplifica esse registro no cenário São Paulo–Rio Branco.
+O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 16 exemplifica esse registro no cenário São Paulo–Rio Branco.
 
-**Tabela 15 — Informações de rastreabilidade registradas no exemplo São Paulo–Rio Branco.**
+**Tabela 16 — Informações de rastreabilidade registradas no exemplo São Paulo–Rio Branco.**
 
 | Informação registrada | Exemplo no cenário | Finalidade |
 | :-- | :-- | :-- |
@@ -729,9 +748,9 @@ flowchart LR
     E --> F
 ```
 
-A Tabela 16 mostra quatro formas de medir a cobertura do cruzamento entre a Agência Nacional de Transportes Aquaviários (ANTAQ) e o sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV): por navio, por viagem, pela massa e por contêiner equivalente. Cada proporção responde a uma pergunta diferente; por isso, elas não devem ser somadas nem interpretadas como uma única taxa de qualidade.
+A Tabela 17 mostra quatro formas de medir a cobertura do cruzamento entre a Agência Nacional de Transportes Aquaviários (ANTAQ) e o sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV): por navio, por viagem, pela massa e por contêiner equivalente. Cada proporção responde a uma pergunta diferente; por isso, elas não devem ser somadas nem interpretadas como uma única taxa de qualidade.
 
-**Tabela 16 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
+**Tabela 17 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
 | Indicador                                |                              Valor | Cobertura |
 | :--------------------------------------- | ---------------------------------: | --------: |
@@ -740,9 +759,9 @@ A Tabela 16 mostra quatro formas de medir a cobertura do cruzamento entre a Agê
 | Carga em massa com correspondência exata | 15.959.761,561 de 30.191.845,948 t |     52,9% |
 | Carga em TEU com correspondência exata   |   1.454.351,75 de 2.872.715,00 TEU |     50,6% |
 
-Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 17 separa essas situações e também mostra a procedência das distâncias marítimas.
+Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 18 separa essas situações e também mostra a procedência das distâncias marítimas.
 
-**Tabela 17 — Reconstrução e procedência dos dados na base processada.**
+**Tabela 18 — Reconstrução e procedência dos dados na base processada.**
 
 | Resultado do processamento | Quantidade | Leitura para o cálculo |
 | :-- | --: | :-- |
@@ -775,7 +794,7 @@ flowchart LR
 
 O fluxograma não representa uma rota única criada pelo sistema. Ele mostra exemplos de sequências observadas na Agência Nacional de Transportes Aquaviários (ANTAQ). A ligação é calculada com todos os recortes aceitos no mesmo sentido, inclusive os que não passam por Suape.
 
-**Tabela 18 — Formação do indicador marítimo Santos–Manaus.**
+**Tabela 19 — Formação do indicador marítimo Santos–Manaus.**
 
 | Informação | Valor observado ou calculado | Papel no indicador |
 | :-- | :-- | :-- |
@@ -790,7 +809,7 @@ O fluxograma não representa uma rota única criada pelo sistema. Ele mostra exe
 
 Como verificação da dispersão do conjunto de navios do tipo *container ship*, a média aritmética sem tratamento dos 243 valores seria 21,661852 g/(t·nm), enquanto a mediana seria 4,620000 g/(t·nm). Esses números não substituem a regra aplicada: eles mostram por que a média aparada é usada como referência quando não há intensidade individual utilizável.
 
-Os valores da Tabela 18 não são a carga nem o combustível de uma nova remessa. Eles formam a intensidade e a distância que serão aplicadas à carga informada pelo usuário. Portanto, a média representa a ligação Santos–Manaus sem se transformar em uma viagem física única.
+Os valores da Tabela 19 não são a carga nem o combustível de uma nova remessa. Eles formam a intensidade e a distância que serão aplicadas à carga informada pelo usuário. Portanto, a média representa a ligação Santos–Manaus sem se transformar em uma viagem física única.
 
 #### 5.2.2 Conferência de uma viagem histórica
 
