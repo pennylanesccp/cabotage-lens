@@ -501,6 +501,20 @@ flowchart TB
 
 Depois que um local é resolvido, suas coordenadas são armazenadas no banco de dados Supabase/PostgreSQL. Se o mesmo ponto for usado novamente, o sistema reutiliza esse resultado em vez de realizar outra geocodificação.
 
+##### 4.3.1.1 Conferência das coordenadas
+
+A Figura 3 apresenta uma consulta independente no Google Maps para o endereço "Avenida Professor Luciano Gualberto, São Paulo, SP", retornando as coordenadas [-23,56001707352062; -46,7277688677682]. A diferença da  é de [X] m.
+
+![Rota rodoviária entre São Paulo e Rio Branco no Google Maps.](images/Screenshot%202026-07-18%20143636.png)
+
+*Figura 3 — Consulta no Google Maps para São Paulo–Rio Branco: rota selecionada de 3.497 km. Fonte: captura de tela do Google Maps realizada em 15 de julho de 2026.*
+
+A Figura 3 apresenta uma consulta independente no Google Maps para o endereço "Avenida Professor Luciano Gualberto, São Paulo, SP", retornando as coordenadas [-23,56001707352062; -46,7277688677682]. A diferença da  é de [X] m.
+
+![Rota rodoviária entre São Paulo e Rio Branco no Google Maps.](images/Screenshot%202026-07-18%20145249.png)
+
+*Figura 3 — Consulta no Google Maps para São Paulo–Rio Branco: rota selecionada de 3.497 km. Fonte: captura de tela do Google Maps realizada em 15 de julho de 2026.*
+
 ### 4.3 Implementação da alternativa rodoviária
 
 #### 4.3.1 Consulta de rota rodoviária
@@ -517,11 +531,11 @@ flowchart LR
 
 ##### 4.3.1.1 Conferência da distância rodoviária
 
-A Figura 3 apresenta uma consulta independente no Google Maps para a mesma ligação entre São Paulo e Rio Branco. A rota selecionada pelo Google Maps tem 3.497 km, enquanto o motor do sistema retornou 3.491,431 km. A diferença é de 5,569 km, ou 0,16% da distância exibida no Google Maps.
+A Figura 5 apresenta uma consulta independente no Google Maps para a mesma ligação entre São Paulo e Rio Branco. A rota selecionada pelo Google Maps tem 3.497 km, enquanto o motor do sistema retornou 3.491,431 km. A diferença é de 5,569 km, ou 0,16% da distância exibida no Google Maps.
 
 ![Rota rodoviária entre São Paulo e Rio Branco no Google Maps.](images/Screenshot%202026-07-15%20144749.png)
 
-*Figura 3 — Consulta no Google Maps para São Paulo–Rio Branco: rota selecionada de 3.497 km. Fonte: captura de tela do Google Maps realizada em 15 de julho de 2026.*
+*Figura 5 — Consulta no Google Maps para São Paulo–Rio Branco: rota selecionada de 3.497 km. Fonte: captura de tela do Google Maps realizada em 15 de julho de 2026.*
 
 Essa proximidade mostra que a distância usada no cálculo representa uma rota pela malha rodoviária, e não a distância geográfica em linha reta entre as cidades. Usar a distância em linha reta reduziria artificialmente os quilômetros percorridos e poderia distorcer as estimativas de consumo, custo e emissões. A comparação é uma conferência de consistência entre motores de rota; ela não substitui o registro de uma viagem realizada em campo.
 
@@ -674,13 +688,22 @@ Para reproduzir uma execução, não basta registrar origem, destino e carga. Ta
 
 ## 5. Evidência empírica e resultados
 
-Esta seção verifica como o método se comporta com os dados disponíveis. Primeiro, apresenta a cobertura do cruzamento entre ANTAQ e EU MRV. Em seguida, acompanha uma execução demonstrativa do cálculo marítimo entre Santos e Manaus e, por último, compara a direção dos resultados com uma referência externa.
+As Seções 3 e 4 explicaram como o cálculo é construído. Esta seção mostra o que os dados processados permitem observar na prática. A leitura segue quatro etapas: primeiro, verifica a cobertura da base; depois, examina a ligação marítima Santos–Manaus; em seguida, reúne o resultado completo de São Paulo–Rio Branco; por fim, confronta a direção desse resultado com uma referência externa ao sistema.
 
-### 5.1 Cobertura da base ANTAQ–EU MRV
+### 5.1 Cobertura dos dados observados
 
-A base processada contém 1.324 viagens de cabotagem conteinerizada registradas em 2025. Nessas viagens, o sistema identificou 6.797 paradas e 7.103 chamadas portuárias. Uma chamada é um registro original de atracação ou atendimento do navio; chamadas consecutivas que representam o mesmo local são reunidas em uma parada. O trecho navegado entre duas paradas consecutivas é um subtrecho. Um recorte entre dois portos pode conter um ou vários desses subtrechos. A base também contém 389 navios diferentes por número IMO.
+A base processada reúne 1.324 viagens de cabotagem conteinerizada registradas em 2025, 7.103 chamadas portuárias e 6.797 paradas consolidadas. Ela também contém 389 navios identificados pelo número da Organização Marítima Internacional (IMO). A Figura do fluxo abaixo mostra como esses registros se transformam em ligações marítimas que podem ser consultadas pelo cenário.
 
-O sistema procurou esses 389 números no EU MRV e encontrou 243 correspondências exatas. Esses 243 navios aparecem em 788 das 1.324 viagens. Nas outras 536 viagens, a execução atual usou uma estimativa baseada no tipo de navio. Nenhuma viagem desta execução precisou de uma estimativa pela classe; essa regra permanece disponível para uma base que forneça esse metadado.
+```mermaid
+flowchart LR
+    A["ANTAQ<br/>1.324 viagens e 7.103 chamadas"] --> B["Reconstrução<br/>6.797 paradas e 5.438 subtrechos"]
+    B --> C["Recortes entre portos<br/>12.025 recortes e 177 ligações direcionais"]
+    D["EU MRV<br/>389 IMOs observados"] --> E["243 IMOs com correspondência<br/>em 788 viagens"]
+    C --> F["Matriz marítima<br/>distância e intensidade com procedência"]
+    E --> F
+```
+
+A Tabela 16 mostra quatro formas de medir a cobertura do cruzamento entre a Agência Nacional de Transportes Aquaviários (ANTAQ) e o sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV): por navio, por viagem, pela massa e por contêiner equivalente. Cada proporção responde a uma pergunta diferente; por isso, elas não devem ser somadas nem interpretadas como uma única taxa de qualidade.
 
 **Tabela 16 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
@@ -691,47 +714,73 @@ O sistema procurou esses 389 números no EU MRV e encontrou 243 correspondência
 | Carga em massa com correspondência exata | 15.959.761,561 de 30.191.845,948 t |     52,9% |
 | Carga em TEU com correspondência exata   |   1.454.351,75 de 2.872.715,00 TEU |     50,6% |
 
-Esses percentuais precisam ser lidos com cuidado. Uma correspondência exata significa que o mesmo número IMO apareceu na ANTAQ e no MRV. Quando isso não ocorre, o sistema ainda pode usar a intensidade calculada para um grupo de navios semelhantes. A saída identifica esse valor como estimativa do grupo. Ela não o apresenta como dado medido para aquele navio.
+Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 17 separa essas situações e também mostra a procedência das distâncias marítimas.
 
-O sistema encontrou 177 ligações portuárias quando preservou o sentido da navegação. Santos–Manaus e Manaus–Santos, por exemplo, contam como duas ligações diferentes porque representam sentidos opostos. Ao ler cada viagem, o sistema gerou 12.025 recortes históricos viagem–OD. Esse total é maior que as 1.324 viagens porque uma viagem com várias escalas pode servir para diferentes combinações de partida e chegada. Dentro da viagem `voyage_9612791_00011`, o prefixo Santos–Suape–Pecém–Manaus fornece seis recortes: Santos–Suape, Santos–Pecém, Santos–Manaus, Suape–Pecém, Suape–Manaus e Pecém–Manaus. A viagem completa ainda retorna de Manaus a Santos e, por isso, pode fornecer outras ligações. Cada recorte mantém o número da viagem e somente os subtrechos entre os dois portos que definem aquela ligação.
+**Tabela 17 — Reconstrução e procedência dos dados na base processada.**
 
-Os 12.025 recortes reutilizam 5.438 subtrechos navegados entre paradas consecutivas. Um mesmo subtrecho pode fazer parte de mais de um recorte da mesma viagem. A distância de 5.023 subtrechos veio da matriz marítima. Nos outros 415, o sistema precisou usar a aproximação de haversine. Todos os subtrechos que entram no cálculo possuem uma intensidade identificada; ela pode vir do IMO, da classe ou do tipo do navio. A proveniência mantém essas situações separadas, inclusive quando um valor individual do MRV é substituído pela regra de valores anômalos.
+| Resultado do processamento | Quantidade | Leitura para o cálculo |
+| :-- | --: | :-- |
+| Ligações portuárias direcionais | 177 | Santos → Manaus e Manaus → Santos são ligações diferentes |
+| Recortes históricos entre origem e destino | 12.025 | Uma viagem com várias escalas pode gerar mais de um recorte |
+| Subtrechos entre paradas consecutivas | 5.438 | Um mesmo subtrecho pode participar de recortes diferentes |
+| Distâncias vindas da matriz marítima | 5.023 subtrechos | Distâncias disponíveis para a navegação observada |
+| Distâncias aproximadas por haversine | 415 subtrechos | Aproximações mantidas com aviso de procedência |
+| Intensidade individual por IMO efetivamente usada | 730 viagens | Indicador individual disponível e aceito pela regra de valores atípicos |
+| Referência robusta do tipo de navio | 594 viagens | 536 sem IMO utilizável e 58 com IMO cujo valor foi substituído por ser atípico |
 
-### 5.2 Execução demonstrativa: Santos–Manaus
+Assim, a ausência de um indicador individual não exclui automaticamente uma viagem da matriz. A saída diferencia o valor individual do valor estimado para um grupo de navios semelhantes, mantendo essa informação disponível para a interpretação do resultado.
 
-Esta subseção mostra como os dados e as regras se combinam em uma execução concreta.
+### 5.2 Evidência da ligação Santos–Manaus
 
-**Preparação do indicador:** o sistema encontrou 89 viagens nas quais o navio saiu de Santos e chegou a Manaus em uma escala posterior da mesma viagem. De cada viagem, foi aproveitado o recorte entre a saída de Santos e a chegada a Manaus. Todos os 89 recortes realizaram trabalho de transporte maior que zero.
+#### 5.2.1 Corredores observados
 
-Os 89 recortes não seguiram uma única sequência. O sistema encontrou 22 listas diferentes de portos entre Santos e Manaus. Um recorte foi direto. Os demais contêm uma ou mais escalas intermediárias. Cada lista completa é um corredor observado, e um corredor pode reunir vários recortes de viagens diferentes. A viagem `voyage_9852365_00011`, por exemplo, fornece Santos–Navegantes–Pecém–Manaus, um corredor que não passa por Suape.
+Santos–Manaus é uma ligação útil para evidenciar a diferença entre um corredor fixo e uma ligação reconstruída com dados reais. A matriz identificou 89 recortes de viagem em que Santos aparece antes de Manaus. Esses recortes formam 22 sequências de portos diferentes. O fluxograma apresenta três delas; as demais permanecem na matriz e participam do mesmo indicador.
 
-Em 40 recortes, o sistema encontrou o IMO no EU MRV. Desses, 19 permaneceram com a intensidade individual. Em 21, a intensidade do IMO ultrapassou o percentil 95 do tipo *container ship* e foi substituída pela estimativa robusta do tipo. Nos outros 49, não havia correspondência individual e também foi usada a estimativa do tipo. A fonte de cada recorte fica registrada, de modo que uma estimativa de grupo não é confundida com uma medição individual.
+```mermaid
+flowchart LR
+    A["Santos"] --> B["Manaus<br/>direto: voyage_9612789_00004"]
+    A --> C["Suape"] --> D["Pecém"] --> E["Manaus<br/>voyage_9612791_00011"]
+    A --> F["Navegantes"] --> G["Pecém"] --> H["Manaus<br/>voyage_9852365_00011"]
+    B --> I["89 recortes<br/>22 corredores observados"]
+    E --> I
+    H --> I
+    I --> J["Distância média e intensidade<br/>ponderada pelo trabalho"]
+```
 
-**O que o sistema faz:** para cada um dos 89 recortes, multiplica a intensidade pelo trabalho de transporte. Em seguida, soma esses produtos e divide pelo trabalho total. O resultado é $9{,}009824\ \mathrm{g/(t\cdot nm)}$, que representa Santos–Manaus. Os recortes dos 22 corredores participam dessa conta. O navio não precisa passar por Suape nem por qualquer outro porto predeterminado.
+O fluxograma não representa uma rota única criada pelo sistema. Ele mostra exemplos de sequências observadas na Agência Nacional de Transportes Aquaviários (ANTAQ). A ligação é calculada com todos os recortes aceitos no mesmo sentido, inclusive os que não passam por Suape.
 
-A estimativa do tipo *container ship* é calculada a partir de 243 valores positivos, um por IMO. Depois de ordenar a lista, o sistema retira os dois menores e os dois maiores e calcula a média dos 239 valores restantes. O resultado é $9{,}322050\ \mathrm{g/(t\cdot nm)}$. Ele é usado nos recortes sem IMO correspondente e nos recortes cujo indicador individual ultrapassa o limiar de anomalia.
+**Tabela 18 — Formação do indicador marítimo Santos–Manaus.**
 
-Sem retirar os extremos, a média dos 243 valores seria 21,661852 g/(t$\cdot$nm). A mediana simples da mesma lista seria 4,620000 g/(t$\cdot$nm). Esses dois números ajudam a entender a dispersão dos dados. O sistema não os usa no lugar da regra registrada para Santos–Manaus.
+| Informação | Valor observado ou calculado | Papel no indicador |
+| :-- | :-- | :-- |
+| Recortes com trabalho de transporte positivo | 89 | Observações que participam da média ponderada |
+| Corredores observados | 22 | Sequências de portos preservadas na reconstrução |
+| Forma dos recortes | 1 direto e 88 com escalas | Demonstra que não há corredor obrigatório |
+| Trabalho de transporte acumulado | 3.153.328.821,755 t·nm | Peso usado para combinar as intensidades das viagens |
+| Distância marítima representativa | 6.115,349 km, ou 3.302,024 nm | Média aritmética da distância total das 89 viagens completas |
+| Intensidade da ligação | 9,009824 g/(t·nm) | Média ponderada pelo trabalho de transporte |
+| Fonte da intensidade | 19 IMO individual; 49 tipo sem IMO utilizável; 21 tipo após valor atípico | Proveniência mantida em cada recorte |
+| Referência robusta do tipo *container ship* | 9,322050 g/(t·nm) | Média aparada de 239 valores, após retirar dois extremos de cada lado entre 243 IMOs |
 
-**Execução da nova remessa:** os 89 recortes históricos definem a intensidade de $9{,}009824\ \mathrm{g/(t\cdot nm)}$. As cargas históricas servem apenas para calcular os pesos. Elas não são somadas à carga informada pelo usuário, e o combustível das 89 viagens históricas não é somado ao novo cenário. A execução aplica essa intensidade à carga informada pelo usuário e à distância marítima média observada.
+Como verificação da dispersão do conjunto de navios do tipo *container ship*, a média aritmética sem tratamento dos 243 valores seria 21,661852 g/(t·nm), enquanto a mediana seria 4,620000 g/(t·nm). Esses números não substituem a regra aplicada: eles mostram por que a média aparada é usada como referência quando não há intensidade individual utilizável.
 
-Para calcular essa distância, o sistema soma os subtrechos de cada um dos 89 recortes completos e calcula a média aritmética dos totais. O resultado Santos–Manaus é 6.115,349 quilômetros (km), equivalentes a 3.302,024 nm. O recorte direto e os recortes com escalas participam dessa média, cada um uma vez. O valor representa a distância típica observada; não representa uma nova rota formada pela combinação de trechos de viagens diferentes.
+Os valores da Tabela 18 não são a carga nem o combustível de uma nova remessa. Eles formam a intensidade e a distância que serão aplicadas à carga informada pelo usuário. Portanto, a média representa a ligação Santos–Manaus sem se transformar em uma viagem física única.
 
-É possível conferir a reconstrução histórica com o recorte direto observado em `voyage_9612789_00004`. O navio de IMO 9612789 saiu de Santos com 11.584,165 t e chegou a Manaus na escala seguinte. A matriz marítima atribuiu 3.300,216 nm ao subtrecho. Como não há correspondência individual aplicável para esse IMO, a intensidade reconstruída da viagem é $9{,}322050\ \mathrm{g/(t\cdot nm)}$, obtida pela média aparada em 1% do tipo-padrão documentado *container ship*:
+#### 5.2.2 Conferência de uma viagem histórica
+
+A viagem direta `voyage_9612789_00004` permite conferir um caso simples dentro do conjunto. O navio de IMO 9612789 saiu de Santos com 11.584,165 t a bordo e chegou a Manaus na escala seguinte. A distância do subtrecho foi 3.300,216 nm, ou 6.112 km. Como não havia intensidade individual aplicável para esse IMO, a rotina usou a referência robusta do tipo *container ship*, de 9,322050 g/(t·nm).
 
 $$
-\begin{split}
-F_{\mathrm{Santos,Manaus}}
+\begin{aligned}
+F_{\mathrm{hist}}
 &=\frac{9{,}322050\times11.584{,}165\times3.300{,}216}{1000}\\
-&\simeq356.384{,}277~\text{kg de combustível}.
-\end{split}
+&=356.384{,}277\ \mathrm{kg\ de\ combustível}.
+\end{aligned}
 $$
 
-**O que sai:** a reconstrução dessa viagem histórica resulta em 356.384,277 kg de combustível e 38.230.246,479 t$\cdot$nm de trabalho de transporte. Em um novo cenário, as 11.584,165 t observadas nessa viagem são substituídas pela carga informada pelo usuário; elas não são usadas como carga padrão.
+Esse resultado reconstrói 38.230.246,479 t·nm de trabalho de transporte e 356.384,277 kg de combustível para a viagem histórica sob a intensidade aplicada. Não é uma medição direta de abastecimento do navio e não é somado ao cenário novo. Na comparação São Paulo–Rio Branco, a carga observada nessa viagem é substituída pela remessa de 14 t, e os acessos terrestres e as operações portuárias são calculados separadamente.
 
-Esse número não é o total da alternativa multimodal. Ele não inclui o acesso rodoviário da origem até Santos, o acesso rodoviário de Manaus até o destino final, nem as operações portuárias. Esses componentes são calculados e apresentados separadamente quando o cenário completo é executado.
-
-### 5.3 Benchmark externo
+### 5.3 Resultado do cenário São Paulo–Rio Branco
 
 Depois da análise detalhada de Santos–Manaus, a planilha associada aos estudos de Gustavo Costa fornece uma comparação externa [workbookdados]. Ela contém 21 ligações entre seis cidades. Em todas, a carga de referência é um contêiner de 14 t.
 
