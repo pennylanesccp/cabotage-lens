@@ -450,6 +450,8 @@ A Seção 3 descreve o que é calculado: duas alternativas que prestam o mesmo s
 
 O CabotageLens separa a preparação dos dados históricos da execução de uma comparação. Assim, uma pessoa que informa uma origem, um destino e uma carga não precisa reconstruir toda a base da Agência Nacional de Transportes Aquaviários (ANTAQ) nem consultar novamente a base de Monitoramento, Reporte e Verificação da União Europeia (EU MRV), por exemplo. A aplicação utiliza os artefatos marítimos já preparados e concentra a execução na montagem do cenário porta a porta.
 
+As ferramentas e os serviços empregados são utilizados em suas modalidades gratuitas. Os limites de consulta, armazenamento e processamento dessas modalidades são compatíveis com o escopo acadêmico, o volume de dados e a quantidade de cenários avaliados neste estudo. Dessa forma, a execução do sistema não depende de infraestrutura ou licenças pagas para cumprir o propósito da comparação proposta.
+
 ### 4.1 Arquitetura do sistema e tecnologias utilizadas
 
 O sistema é desenvolvido em Python. A interface, os cálculos, a organização dos dados e as integrações externas ficam em componentes separados. Essa divisão permite, por exemplo, testar uma regra de combustível sem abrir a interface ou atualizar a base marítima sem executar uma comparação completa.
@@ -496,40 +498,45 @@ flowchart TB
     B["''av prof Luciano Gualberto, SP''"] --> O
     C["''05508-010''"] --> O
     D["''av prof luciano galberto''"] --> O
-    O -->R["Ponto resolvido:<br/>Latitude: -23,558808<br/>Longitude: -46,730357"]
+    O -->R["Ponto resolvido:<br/>Latitude: -23,558808°<br/>Longitude: -46,730357°"]
 ```
 
 Depois que um local é resolvido, suas coordenadas são armazenadas no banco de dados Supabase/PostgreSQL. Se o mesmo ponto for usado novamente, o sistema reutiliza esse resultado em vez de realizar outra geocodificação.
 
-##### 4.3.1.1 Conferência das coordenadas
+#### 4.2.5 Validação das coordenadas
 
-A Figura 3 apresenta uma consulta independente no Google Maps para o endereço "Avenida Professor Luciano Gualberto, São Paulo, SP", retornando as coordenadas [-23,56001707352062; -46,7277688677682]. A diferença da  é de [X] m.
+Antes de calcular uma rota, é preciso verificar se o endereço foi associado à região correta. Para isso, foi usado o endereço de referência `Avenida Professor Luciano Gualberto, São Paulo, SP`. A consulta independente no Google Maps retornou as coordenadas latitude igual a −23,560017° e longitude igual a −46,727769°, apresentadas na Figura 3. Para o mesmo endereço, o motor de geocodificação retornou as coordenadas (−23,558808°; −46,730357°). A distância em linha reta entre os dois pontos é aproximadamente 296 m.
 
-![Rota rodoviária entre São Paulo e Rio Branco no Google Maps.](images/Screenshot%202026-07-18%20143636.png)
+![Consulta do endereço Avenida Professor Luciano Gualberto no Google Maps.](images/Screenshot%202026-07-18%20143636.png)
 
-*Figura 3 — Consulta no Google Maps para São Paulo–Rio Branco: rota selecionada de 3.497 km. Fonte: captura de tela do Google Maps realizada em 15 de julho de 2026.*
+*Figura 3 — Consulta independente do endereço Avenida Professor Luciano Gualberto, São Paulo, SP, no Google Maps. Fonte: captura de tela do Google Maps realizada em 18 de julho de 2026.*
 
-A Figura 3 apresenta uma consulta independente no Google Maps para o endereço "Avenida Professor Luciano Gualberto, São Paulo, SP", retornando as coordenadas [-23,56001707352062; -46,7277688677682]. A diferença da  é de [X] m.
+A Figura 4 mostra a consulta, no Google Maps, das coordenadas devolvidas pelo motor; os dois pontos permanecem na Avenida Professor Luciano Gualberto, na região da Universidade de São Paulo (USP).
 
-![Rota rodoviária entre São Paulo e Rio Branco no Google Maps.](images/Screenshot%202026-07-18%20145249.png)
+![Consulta no Google Maps das coordenadas retornadas pelo motor de geocodificação.](images/Screenshot%202026-07-18%20145249.png)
 
-*Figura 3 — Consulta no Google Maps para São Paulo–Rio Branco: rota selecionada de 3.497 km. Fonte: captura de tela do Google Maps realizada em 15 de julho de 2026.*
+*Figura 4 — Consulta no Google Maps das coordenadas retornadas pelo motor de geocodificação para a Avenida Professor Luciano Gualberto. Fonte: captura de tela do Google Maps realizada em 18 de julho de 2026.*
+
+Essa comparação confirma a consistência da localização em escala de endereço. Ela não comprova uma coordenada de precisão cadastral, como a posição de um portão ou de um número específico do imóvel, mas servem o propósito desse estudo.
 
 ### 4.3 Implementação da alternativa rodoviária
 
 #### 4.3.1 Consulta de rota rodoviária
 
-Depois da geocodificação, o pipeline possui a latitude e a longitude da origem e do destino. Ele envia esse par de coordenadas primeiro ao OpenRouteService (ORS). Se o ORS não devolver uma rota utilizável, envia o mesmo par ao LocationIQ. O provedor que responder devolve a distância rodoviária e sua identificação, que ficam associadas ao cenário.
+Depois das geocodificações e em posse das coordenadas da origem e do destino., o sistema envia esse par de coordenadas primeiro ao OpenRouteService (ORS). Se o ORS não devolver uma rota utilizável, envia o mesmo par ao LocationIQ. O provedor que responder devolve a distância rodoviária e sua identificação, que ficam associadas ao cenário.
 
-No exemplo São Paulo–Rio Branco, com coordenadas já resolvidas como em 4.2, o ORS recebeu as coordenadas de São Paulo (latitude -23,550520; longitude -46,633308) e de Rio Branco (latitude -9,989637; longitude -67,822462). A distância rodoviária devolvida foi 3.491,431 km.
+No exemplo São Paulo–Rio Branco, com coordenadas já resolvidas como em 4.2, o ORS recebeu as coordenadas de São Paulo (latitude −23,550520°; longitude −46,633308°) e de Rio Branco (latitude −9,989637°; longitude −67,822462°). A distância rodoviária devolvida foi 3.491,431 km.
 
 ```mermaid
 flowchart LR
-    A["Origem: São Paulo, SP<br/>(lat.: -23,550520; lon.: -46,633308)<br/>Destino: Rio Branco<br/>(lat.: -9,989637; lon.: -67,822462)"] --> R["Consulta de rota<br/>ORS/LocationIQ"]
-    R --> D["Distância rodoviária devolvida<br/>3.491,431 km"]
+    A["Origem: ''São Paulo, SP''"] --> R["Geocodificação"]
+    B["Destino: ''Rio Branco, AC''"] --> S["Geocodificação"]
+    R --> C["Latitude: −23,550520°<br/>Longitude: −46,633308°"] --> T["Consulta de rota<br/>ORS/LocationIQ"]
+    S --> D["Latitude.: −9,989637°<br/>Longitude.: −67,822462°"]  --> T
+    T --> E["Distância rodoviária:<br/>3.491,431 km"]
 ```
 
-##### 4.3.1.1 Conferência da distância rodoviária
+##### 4.3.1.1 Validação da distância rodoviária
 
 A Figura 5 apresenta uma consulta independente no Google Maps para a mesma ligação entre São Paulo e Rio Branco. A rota selecionada pelo Google Maps tem 3.497 km, enquanto o motor do sistema retornou 3.491,431 km. A diferença é de 5,569 km, ou 0,16% da distância exibida no Google Maps.
 
