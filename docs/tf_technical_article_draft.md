@@ -590,13 +590,61 @@ flowchart LR
 
 Depois de calcular a rota rodoviária direta, começa a construção da alternativa multimodal. É aproveitado da etapa anterior: o(s) veículo(s) para transporte rodoviário; os endereços geocodificados; e os preços do diesel por UF.
 
-#### 4.4.1 Escolha dos portos
+#### 4.4.1 Reconstrução das viagens e matriz marítima
+
+Antes de definir os portos de um novo cenário, o sistema prepara a referência marítima com viagens de cabotagem que realmente ocorreram. Essa preparação é feita quando a base é atualizada, e não a cada consulta. Assim, a comparação não precisa reprocessar os arquivos brutos para cada rota: ela consulta uma matriz marítima já construída com dados observados.
+
+A função de reconstrução lê as tabelas de Carga e Atracação da Agência Nacional de Transportes Aquaviários (ANTAQ). A Atracação identifica o navio, o porto, a data da escala e o número IMO; a Carga informa os embarques e os desembarques realizados nessa escala. A função reúne os registros da mesma viagem, ordena as escalas no tempo e atualiza a carga a bordo após cada movimentação. Com isso, transforma linhas isoladas das tabelas em subtrechos consecutivos percorridos pelo navio.
+
+Quando um porto aparece antes de outro na mesma viagem, o sistema forma um recorte completo entre eles. Esse recorte pode ser direto ou incluir escalas intermediárias. Por exemplo, uma sequência Santos–Suape–Pecém–Manaus contribui para a ligação Santos–Manaus com os três subtrechos observados; uma sequência Manaus–Suape–Santos não contribui, pois está no sentido contrário. Portanto, a reconstrução usa os corredores que aparecem nos dados, sem impor uma rota fixa.
+
+Na etapa seguinte, cada recorte recebe a distância de seus subtrechos e a intensidade de combustível do navio. A busca começa pelo número IMO no sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV). Quando não há um indicador individual utilizável, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem, conforme o método apresentado na Seção 3.3.4.
+
+Esses resultados são reunidos na estrutura \`SeaMatrix\`. Para cada par ordenado de portos, ela mantém a distância média dos recortes completos observados, a intensidade média ponderada pelo trabalho de transporte, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois podem reunir viagens e distâncias observadas diferentes.
+
+\`\`\`mermaid
+flowchart LR
+    A["Carga e Atracação<br/>ANTAQ"] --> B["Reconstrução das viagens<br/>e da carga a bordo"]
+    B --> C["Recortes completos<br/>entre portos ordenados"]
+    D["EU MRV<br/>intensidade por IMO"] --> E["Intensidade individual<br/>ou referência robusta"]
+    C --> F["SeaMatrix<br/>distância, intensidade e cobertura"]
+    E --> F
+    F --> G["Consulta posterior<br/>do par de portos selecionado"]
+\`\`\`
+
+As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A distância é a média das viagens completas observadas para cada sentido. A contagem representa um recorte completo elegível por viagem e por par ordenado; ela não corresponde ao número de escalas nem apenas a ligações diretas. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
+
+**Tabela 13 — Distância média dos recortes completos observados na matriz marítima (km).**
+
+| Origem \ Destino | Santos | Salvador | Suape | Pecém | Manaus |
+| :-- | --: | --: | --: | --: | --: |
+| Santos | — | 2.459,033 | 3.051,949 | 3.696,619 | 6.115,349 |
+| Salvador | 3.066,008 | — | 3.119,115 | 2.676,181 | 3.848,299 |
+| Suape | 4.145,624 | 3.304,192 | — | 1.215,622 | 3.270,634 |
+| Pecém | 4.652,111 | 2.948,479 | 5.709,531 | — | 2.195,720 |
+| Manaus | 6.060,656 | 6.842,213 | 5.954,992 | 6.152,417 | — |
+
+*Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
+
+**Tabela 14 — Quantidade de recortes completos observados na matriz marítima.**
+
+| Origem \ Destino | Santos | Salvador | Suape | Pecém | Manaus |
+| :-- | --: | --: | --: | --: | --: |
+| Santos | — | 165 | 270 | 167 | 89 |
+| Salvador | 195 | — | 119 | 101 | 53 |
+| Suape | 285 | 113 | — | 233 | 146 |
+| Pecém | 217 | 124 | 161 | — | 142 |
+| Manaus | 136 | 35 | 126 | 82 | — |
+
+*Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
+
+#### 4.4.2 Escolha dos portos
 
 A definição dos portos de embarque e desembarque começa pela função `find_nearest_port`. Ela usa a distância de Haversine, um cálculo geométrico feito a partir da latitude e da longitude que estima a menor distância sobre a superfície da Terra entre dois pontos. Esse cálculo é rápido, executado localmente e não representa uma rota por estrada. A função mede essa distancia entre um ponto para cada porto disponível para, então, selecionar porto com a menor distância.
 
 A distância de Haversine, porém, é utilizada somente para essa escolha inicial não entrando nos cálculos consumo, no custo ou nas emissões.
 
-O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque. Depois de escolher os dois portos e suas respectivas coordenadas, calcula a distância real de ambos acessos rodoviários (origem->porto embarque; porto desembarque->destino) pelo mesmo procedimento da Seção 4.3.1.
+O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque. Depois de escolher os dois portos e suas respectivas coordenadas, calcula a distância real de ambos acessos rodoviários (origem → porto de embarque; porto de desembarque → destino) pelo mesmo procedimento da Seção 4.3.1.
 
 Essa sequência reduz consultas desnecessárias aos provedores de rota. Em vez de solicitar uma rota rodoviária para cada porto candidato de uma coordenada, o sistema faz uma única consulta para o acesso do porto já selecionado. Assim, a distância usada no cálculo continua sendo rodoviária, enquanto a distância de Haversine é usada apenas como um filtro rápido para definir qual porto consultar.
 
@@ -606,14 +654,14 @@ No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de S
 
 | Acesso | Ponto geocodificado | Referência do porto | Haversine: seleção | Distância rodoviária: cálculo |
 | :-- | :-- | :-- | --: | --: |
-| *First mile*: São Paulo → Porto de Santos | São Paulo: −23,550520°; −46,633308° | Ponta da Praia, Santos: −23,987012°; −46,293383° | 59,601 km | 86,170 km |
-| *Last mile*: Porto de Manaus → Rio Branco | Rio Branco: −9,989637°; −67,822462° | Centro do Porto de Manaus: −3,156700°; −60,007900° | 1.149,569 km | 1.403,691 km |
+| *First mile*:<br/>São Paulo → Porto de Santos | São Paulo:<br/>[−23,550520°; −46,633308°] | Ponta da Praia, Santos:<br/>[−23,987012°; −46,293383°] | 59,601 km | 86,170 km |
+| *Last mile*:<br/>Porto de Manaus → Rio Branco | Rio Branco:<br/>[−9,989637°; −67,822462°] | Porto de Manaus:<br/>[−3,156700°; −60,007900°] | 1.149,569 km | 1.403,691 km |
 
 *Fonte: elaboração própria com a base de portos do sistema e as rotas rodoviárias obtidas no cenário.*
 
 A diferença entre as duas colunas é esperada: Haversine mede a separação geométrica entre os pontos, enquanto a distância rodoviária acompanha o caminho percorrido pela malha viária. Apenas a última é usada nos cálculos da alternativa multimodal.
 
-#### 4.4.2 Formação dos trechos da cadeia
+#### 4.4.3 Formação dos trechos da cadeia
 
 Com os portos definidos, o pipeline organiza quatro parcelas: o acesso inicial por rodovia, as operações nos dois terminais, a navegação entre os portos e o acesso final por rodovia. O fluxo abaixo mostra os trechos efetivamente montados para a remessa de 14 t entre São Paulo e Rio Branco.
 
@@ -636,7 +684,7 @@ flowchart LR
 | Navegação | Porto de Santos → Porto de Manaus: 6.115,349 km | Consulta da matriz marítima preparada com viagens observadas |
 | *Last mile* | Porto de Manaus → Rio Branco: 1.403,691 km | Consulta de rota rodoviária descrita na Seção 4.3.1 |
 
-#### 4.4.3 Operações portuárias
+#### 4.4.4 Operações portuárias
 
 A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,91 kg CO₂e.
 
