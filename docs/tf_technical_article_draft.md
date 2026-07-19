@@ -2,7 +2,7 @@
 
 > **Documento de validação textual.**
 >
-> Durante esta etapa, este Markdown concentra o conteúdo editável do artigo técnico. As revisões de texto devem ser feitas aqui. O [arquivo LaTeX](article/cabotagelens_technical_article.tex) e o [PDF](article/cabotagelens_technical_article.pdf) serão sincronizados e compilados somente após a aprovação do conteúdo.
+> Durante esta etapa, este Markdown concentra o conteúdo editável do artigo técnico. As revisões de texto devem ser feitas aqui. O [arquivo LaTeX](tf_technical_article.tex) será sincronizado e compilado somente após a aprovação do conteúdo.
 
 **Autor:** Felipe de Sá Proença
 

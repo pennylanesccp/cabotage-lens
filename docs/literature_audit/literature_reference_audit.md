@@ -1,13 +1,11 @@
 # Literature Reference Audit
 
-This audit records the final citation pass for the LaTeX report and companion technical article. It uses the local sources in `docs/references/`, the existing bibliography in `docs/references.bib`, and the audit notes in `docs/literature_audit/` plus `docs/tf_support/writing/tf_literature_citation_map.md`.
+This audit records the citation review that supports the technical article. It uses the local sources in `docs/references/`, the existing bibliography in `docs/references.bib`, and the audit notes in `docs/literature_audit/` plus `docs/tf_support/writing/tf_literature_citation_map.md`. The active article sources are `docs/tf_technical_article_draft.md` and `docs/tf_technical_article.tex`; older report references below are retained only as audit history.
 
 Scope reviewed:
 
-- `docs/report/main.tex`
-- `docs/report/chapters/`
-- `docs/report/appendices/`
-- `docs/article/cabotagelens_technical_article.tex`
+- `docs/tf_technical_article_draft.md`
+- `docs/tf_technical_article.tex`
 - `docs/references.bib`
 - `docs/references/`
 - `docs/literature_audit/`

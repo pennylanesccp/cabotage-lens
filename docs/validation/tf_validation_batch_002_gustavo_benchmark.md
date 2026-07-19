@@ -243,14 +243,14 @@ Claims that must not be made:
 - Do not treat city labels as proof of identical port/service assumptions.
 - Do not use the larger CabotageLens savings percentages as validated headline conclusions.
 
-## 8. Handoff to TF final report
+## 8. Handoff to the technical article
 
-Batch 002 should update the final TF writing, but the update should be conservative.
+Batch 002 should inform the technical article, but the update should be conservative.
 
 Recommended next edits:
 
 - `docs/validation/tf_final_result_synthesis.md`: add Batch 002 as a new external-benchmark evidence layer. The synthesis should say Batch 002 supports direction but not calibrated magnitude.
-- `docs/tf_final_report_draft.md`: update any broad Gustavo/Costa benchmark wording so it does not imply exact reproduction or strong order-of-magnitude validation for all pairs.
+- `docs/tf_technical_article_draft.md`: update any broad Gustavo/Costa benchmark wording so it does not imply exact reproduction or strong order-of-magnitude validation for all pairs.
 - Future section-by-section writing plan: add a specific Results/Discussion subsection for "External workbook benchmark" with the allowed claim: directionally aligned, boundary-limited, not ground truth.
 
-This issue intentionally does not rewrite those files. The safest sequence is to review this Batch 002 artifact first, then make small TF-writing updates that cite it alongside Batch 001, Batch 001B, and the issue #16 sensitivity analysis.
+This issue intentionally does not rewrite those files. The safest sequence is to review this Batch 002 artifact first, then make small article-text updates that cite it alongside Batch 001, Batch 001B, and the issue #16 sensitivity analysis.

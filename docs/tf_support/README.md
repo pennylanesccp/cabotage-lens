@@ -1,14 +1,14 @@
-# TF Support Documents
+# Documentos de apoio
 
-The main final report draft is `docs/tf_final_report_draft.md`.
+O texto ativo do projeto está em `docs/tf_technical_article_draft.md`, com a fonte de futura compilação em `docs/tf_technical_article.tex`.
 
-`docs/tf_support/` stores supporting planning, methodology, validation, writing, and audit notes used while preparing the TF report. These files preserve rationale, assumptions, validation planning, citation boundaries, and writing guidance, but they are not themselves the final report text.
+`docs/tf_support/` reúne notas de metodologia, validação, escrita e auditoria usadas para fundamentar o artigo. Esses arquivos preservam decisões, premissas, limites de interpretação e orientações de rastreabilidade, mas não substituem o texto ativo do artigo.
 
-Support docs should be treated as source material only after their relevant content has been explicitly consolidated into `docs/tf_final_report_draft.md`. For report-writing work, the main draft remains the source of truth.
+Use um documento de apoio somente quando sua informação tiver sido conferida e consolidada no Markdown ativo. Caso haja divergência, prevalece `docs/tf_technical_article_draft.md`.
 
 ## Folders
 
 - `methodology/` - system boundary, assumptions, and data-reliability notes.
-- `writing/` - document-structure, writing-plan, writing-brief, and citation-map support.
+- `writing/` - estrutura documental e mapa de citações.
 - `validation/` - validation, sensitivity, and result-classification planning notes.
 - `audit/` - methodology and literature-audit planning notes.
