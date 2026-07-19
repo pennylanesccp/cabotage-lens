@@ -413,7 +413,7 @@ $$
 
 Esse resultado não é a intensidade de um navio escolhido como representante. É a média das 89 viagens, em que cada uma contribui conforme a carga efetivamente transportada e a distância percorrida.
 
-##### 3.3.4.4 Distância marítima média entre os portos
+##### 3.3.4.4 Distância marítima representativa entre os portos
 
 Para calcular o consumo de uma nova remessa, o sistema usa a distância média das viagens completas observadas entre o porto de origem e o porto de destino. Em cada viagem, soma as distâncias de todos os subtrechos entre os dois portos. Em seguida, calcula a média aritmética desses totais. Cada viagem conta uma vez: entram tanto viagens diretas quanto viagens com escalas intermediárias.
 
@@ -423,7 +423,7 @@ $$
 \bar D_{o,d}=\frac{1}{n}\sum_{v=1}^{n}D_{v,o,d}.
 $$
 
-Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média. Em Santos–Manaus, os 89 recortes completos observados resultam em $6.115{,}349\ \mathrm{km}$, ou $3.302{,}024\ \mathrm{nm}$.
+Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média, e nenhum corredor único é escolhido para representar o cenário. Em Santos–Manaus, os 89 recortes completos têm trabalho positivo e resultam em $6.174{,}638\ \mathrm{km}$, ou $3.334{,}038\ \mathrm{nm}$.
 
 #### 3.3.5 Emissões operacionais da alternativa multimodal
 
@@ -463,10 +463,10 @@ Para a remessa de 14 t entre São Paulo (SP) e Rio Branco (AC), a Tabela 9 reú
 | Etapa | Percurso | Distância | Combustível estimado | Custo modelado | Emissões operacionais TTW |
 | :-- | :-- | --: | --: | --: | --: |
 | *First mile* | São Paulo–Porto de Santos | 86,170 km | 37,465 L de diesel | R\$ 260,76 | 100,41 kg CO₂e |
-| Navegação | Porto de Santos–Porto de Manaus | 6.115,349 km<br/>(3.302,024 milhas náuticas) | 416,509 kg de VLSFO | R\$ 1.587,86 | 1.297,01 kg CO₂e |
+| Navegação | Porto de Santos–Porto de Manaus | 6.174,638 km<br/>(3.334,038 milhas náuticas) | 420,547 kg de VLSFO | R\$ 1.603,26 | 1.309,58 kg CO₂e |
 | Operações portuárias | Santos e Manaus | — | 4,820 L de diesel | R\$ 34,25 | 12,92 kg CO₂e |
 | *Last mile* | Porto de Manaus–Rio Branco | 1.403,691 km | 610,300 L de diesel | R\$ 5.041,08 | 1.635,60 kg CO₂e |
-| **Total** | — | **7.605,210 km** | — | **R\$ 6.923,95** | **3.045,94 kg CO₂e** |
+| **Total** | — | **7.664,499 km** | — | **R\$ 6.939,34** | **3.058,51 kg CO₂e** |
 
 ### 3.4 Resultado final do exemplo São Paulo–Rio Branco
 
@@ -476,9 +476,9 @@ Esta seção compara, para a mesma remessa de 14 t, os resultados totais da alt
 
 | Indicador | Alternativa A: rodovia direta | Alternativa B: multimodal | Resultado da alternativa B em relação à A |
 | :-- | --: | --: | :-- |
-| Distância percorrida | 3.491,431 km | 7.605,210 km | 4.113,779 km a mais (117,82%). |
-| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.045,94 kg CO₂e | 1.022,34 kg CO₂e a menos (25,13%). |
-| Custo modelado do combustível | R\$ 12.318,68 | R\$ 6.923,95 | R\$ 5.394,73 a menos (43,79%). |
+| Distância percorrida | 3.491,431 km | 7.664,499 km | 4.173,068 km a mais (119,52%). |
+| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.058,51 kg CO₂e | 1.009,76 kg CO₂e a menos (24,82%). |
+| Custo modelado do combustível | R\$ 12.318,68 | R\$ 6.939,34 | R\$ 5.379,34 a menos (43,67%). |
 
 Embora a alternativa multimodal percorra uma distância total maior, ela apresenta menor custo modelado de combustível e menores emissões operacionais TTW no cenário analisado.
 
@@ -500,11 +500,11 @@ A Tabela 11 apresenta as tecnologias e os serviços essenciais para entender a e
 
 | Tecnologia ou serviço | Função no sistema | Papel na execução |
 | :-- | :-- | :-- |
-| Python | Linguagem principal do projeto. | Executa o tratamento de dados, a reconstrução marítima, os cálculos e os scripts de atualização. |
-| Streamlit | Ferramenta para construir a interface web em Python. | Recebe o cenário informado pelo usuário e apresenta mapas, totais, detalhamentos e avisos. |
-| Supabase | Serviço de banco de dados PostgreSQL, também chamado de Postgres, e de armazenamento remoto opcional. | Guarda pontos geocodificados, rotas reutilizáveis, execuções em lote e resultados que precisam permanecer disponíveis. |
-| OpenRouteService (ORS) | Serviço externo de localização e roteamento. | É o provedor principal para transformar um local em coordenadas e obter a geometria das rotas rodoviárias. |
-| LocationIQ | Serviço externo alternativo de localização e roteamento. | É consultado somente quando o ORS não entrega uma resposta utilizável e há credencial configurada. |
+| [Python](https://www.python.org/) | Linguagem principal do projeto. | Executa o tratamento de dados, a reconstrução marítima, os cálculos e os scripts de atualização. |
+| [Streamlit](https://streamlit.io/) | Ferramenta para construir a interface web em Python. | Recebe o cenário informado pelo usuário e apresenta mapas, totais, detalhamentos e avisos. |
+| [Supabase](https://supabase.com/) | Serviço de banco de dados PostgreSQL, também chamado de Postgres, e de armazenamento remoto opcional. | Guarda pontos geocodificados, rotas reutilizáveis, execuções em lote e resultados que precisam permanecer disponíveis. |
+| [OpenRouteService (ORS)](https://openrouteservice.org/) | Serviço externo de localização e roteamento. | É o provedor principal para transformar um local em coordenadas e obter a geometria das rotas rodoviárias. |
+| [LocationIQ](https://locationiq.com/) | Serviço externo alternativo de localização e roteamento. | É consultado somente quando o ORS não entrega uma resposta utilizável. |
 | `requests` e Beautiful Soup | `requests` realiza consultas pela internet; Beautiful Soup lê a estrutura de páginas em HyperText Markup Language (HTML). | Ajudam a buscar serviços externos e, no fluxo de preparação marítima, a localizar no portal da ANTAQ os arquivos públicos a serem baixados. |
 | `CurrencyConverter` | Biblioteca de conversão de moedas. | Converte para reais a referência internacional de preço do combustível marítimo quando ela está em dólar por tonelada. |
 
@@ -582,7 +582,7 @@ A Figura 5 apresenta uma consulta independente no Google Maps para a mesma liga�
 
 *Figura 5 — Consulta no Google Maps para São Paulo–Rio Branco: rota selecionada de 3.497 km. Fonte: captura de tela do Google Maps realizada em 15 de julho de 2026.*
 
-Essa proximidade mostra que a distância usada no cálculo representa uma rota pela malha rodoviária, e não a distância geográfica em linha reta entre as cidades. Usar a distância em linha reta reduziria artificialmente os quilômetros percorridos e poderia distorcer as estimativas de consumo, custo e emissões. A comparação é uma conferência de consistência entre motores de rota; ela não substitui o registro de uma viagem realizada em campo.
+Essa proximidade mostra que a distância usada no cálculo representa uma rota pela malha rodoviária, e não a distância geográfica em linha reta entre as cidades. Usar a distância em linha reta reduziria artificialmente os quilômetros percorridos e poderia distorcer as estimativas de consumo, custo e emissões.
 
 #### 4.3.2 Consulta do preço do diesel
 
@@ -675,7 +675,7 @@ Com essa base de intensidades, o sistema procura primeiro o IMO do navio observa
 
 ##### 4.4.2.5 Compilação na estrutura matricial
 
-Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância média dos recortes completos observados, a intensidade média ponderada pelo trabalho de transporte, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem viagens e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
+Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância representativa dos recortes completos, ponderada pelo trabalho de transporte, a intensidade calculada com a mesma lógica de ponderação, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem viagens e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
 
 ```mermaid
 flowchart LR
@@ -686,17 +686,17 @@ flowchart LR
     E --> F
 ```
 
-As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A Tabela 13 apresenta a distância média das viagens completas observadas para cada sentido. Por isso, a distância de ida pode ser ligeiramente diferente da distância de volta. Essa diferença é normal, pois cada sentido reúne seu próprio conjunto de viagens observadas. A Tabela 14 apresenta a intensidade média ponderada pelo trabalho de transporte. Nessa média, uma viagem recebe mais peso quando transporta mais carga ou realiza mais trabalho de transporte, calculado pela carga a bordo multiplicada pela distância. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
+As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A Tabela 13 apresenta a distância representativa, ponderada pelo trabalho de transporte das viagens completas observadas, para cada sentido. Por isso, a distância de ida pode ser diferente da distância de volta. Essa diferença é normal, pois cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias observadas. A Tabela 14 apresenta a intensidade média ponderada pelo trabalho de transporte. Nas duas tabelas, uma viagem recebe mais peso quando realiza mais trabalho de transporte, calculado pela carga a bordo multiplicada pela distância. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
 
-**Tabela 13 — Distância média dos recortes completos observados na matriz marítima (km).**
+**Tabela 13 — Distância marítima representativa, ponderada pelo trabalho de transporte, na matriz marítima (km).**
 
 | Origem / destino | Santos | Salvador | Suape | Pecém | Manaus |
 | :-- | --: | --: | --: | --: | --: |
-| Santos | — | 2.459,033 | 3.051,949 | 3.696,619 | 6.115,349 |
-| Salvador | 3.066,008 | — | 3.119,115 | 2.676,181 | 3.848,299 |
-| Suape | 4.145,624 | 3.304,192 | — | 1.215,622 | 3.270,634 |
-| Pecém | 4.652,111 | 2.948,479 | 5.709,531 | — | 2.195,720 |
-| Manaus | 6.060,656 | 6.842,213 | 5.954,992 | 6.152,417 | — |
+| Santos | — | 4.474,639 | 3.776,639 | 3.866,847 | 6.174,638 |
+| Salvador | 6.002,897 | — | 6.056,266 | 5.689,013 | 3.842,991 |
+| Suape | 5.523,477 | 4.487,569 | — | 1.790,973 | 3.359,679 |
+| Pecém | 5.103,585 | 4.448,916 | 7.848,462 | — | 2.195,720 |
+| Manaus | 5.973,784 | 7.891,195 | 7.419,453 | 9.174,761 | — |
 
 *Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
 
