@@ -699,19 +699,19 @@ flowchart LR
     E --> F
 ```
 
-As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A Tabela 13 apresenta a distância representativa, ponderada pelo trabalho de transporte das viagens completas observadas, para cada sentido. Por isso, a distância de ida pode ser diferente da distância de volta. Essa diferença é normal, pois cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias observadas. A Tabela 14 apresenta a intensidade média ponderada pelo trabalho de transporte. Nas duas tabelas, uma viagem recebe mais peso quando realiza mais trabalho de transporte, calculado pela carga a bordo multiplicada pela distância. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
+As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino. A Tabela 13 apresenta a distância representativa de cada sentido. Nela, cada recorte completo é ponderado pela carga média mantida a bordo durante o percurso. A Tabela 14 apresenta a intensidade média, ponderada pelo trabalho de transporte. Por isso, a distância de ida pode ser diferente da distância de volta: cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias observadas. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
 
-**Tabela 13 — Distância marítima representativa, ponderada pelo trabalho de transporte, na matriz marítima (km).**
+**Tabela 13 — Distância marítima representativa, ponderada pela carga média a bordo, na matriz marítima (km).**
 
 | Origem / destino | Santos | Salvador | Suape | Pecém | Manaus |
 | :-- | --: | --: | --: | --: | --: |
-| Santos | — | 4.474,639 | 3.776,639 | 3.866,847 | 6.174,638 |
-| Salvador | 6.002,897 | — | 6.056,266 | 5.689,013 | 3.842,991 |
-| Suape | 5.523,477 | 4.487,569 | — | 1.790,973 | 3.359,679 |
-| Pecém | 5.103,585 | 4.448,916 | 7.848,462 | — | 2.195,720 |
-| Manaus | 5.973,784 | 7.891,195 | 7.419,453 | 9.174,761 | — |
+| Santos | — | 3.092,510 | 3.035,287 | 3.730,892 | 6.142,461 |
+| Salvador | 3.246,911 | — | 4.312,202 | 3.831,370 | 3.839,071 |
+| Suape | 4.086,744 | 3.023,760 | — | 1.070,363 | 3.256,185 |
+| Pecém | 4.161,942 | 2.660,713 | 5.519,085 | — | 2.195,720 |
+| Manaus | 5.931,919 | 7.095,857 | 5.900,540 | 6.341,446 | — |
 
-*Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
+*Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 19 de julho de 2026.*
 
 **Tabela 14 — Intensidade média da ligação marítima, ponderada pelo trabalho de transporte [g/(t·nm)].**
 
@@ -723,7 +723,35 @@ As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. 
 | Pecém | 9,643543 | 9,716983 | 8,681143 | — | 9,092814 |
 | Manaus | 9,098669 | 9,322050 | 9,178646 | 9,055626 | — |
 
-*Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 18 de julho de 2026.*
+*Fonte: elaboração própria a partir de viagens de cabotagem observadas pela ANTAQ e das intensidades do EU MRV, consolidadas na matriz marítima direcional atualizada em 19 de julho de 2026.*
+
+O trecho abaixo representa, de forma simplificada, como a matriz pode ser consultada. O porto de origem contém os portos de destino e, para cada ligação, ficam disponíveis a distância representativa e a intensidade média. Foram exibidos apenas três destinos de Santos para manter a visualização curta; o arquivo real também guarda a procedência e os indicadores de cobertura apresentados nas seções anteriores.
+
+**Bloco de código 1 — Representação simplificada do arquivo `sea_matrix.json`.**
+
+```json
+{
+    "Porto de Santos": {
+        "Porto de Salvador": {
+            "distancia_km": 3092.510,
+            "intensidade_g_por_t_nm": 9.605744,
+            ...
+        },
+    "Porto de Suape": {
+        "distancia_km": 3035.287,
+        "intensidade_g_por_t_nm": 8.729368,
+        ...
+    },
+    "Porto de Manaus": {
+      "distancia_km": 6142.461,
+      "intensidade_g_por_t_nm": 9.009824,
+      ...
+    },
+    ...
+  },
+...
+}
+```
 
 #### 4.4.3 Escolha dos portos e acessos rodoviários
 
@@ -745,10 +773,10 @@ No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de S
 
 **Tabela 15 — Distâncias de seleção e de acesso rodoviário no exemplo São Paulo–Rio Branco.**
 
-A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas para realizar o procedimento descrito na Seção 3.3.3. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,92 kg CO₂e.
+| Acesso | Ponto geocodificado | Referência do porto | Haversine: seleção | Distância rodoviária: cálculo |
 | :-- | :-- | :-- | --: | --: |
 | *First mile*:<br/>São Paulo → Porto de Santos | São Paulo:<br/>[−23,550520°; −46,633308°] | Porto de Santos (embarque):<br/>[−23,987012°; −46,293383°] | 59,601 km | 86,170 km |
-| *Last mile*:<br/>Porto de Manaus → Rio Branco | Rio Branco (desembarque):<br/>[−9,989637°; −67,822462°] | Porto de Manaus:<br/>[−3,156700°; −60,007900°] | 1.149,569 km | 1.403,691 km |
+| *Last mile*:<br/>Porto de Manaus → Rio Branco | Rio Branco (destino):<br/>[−9,989637°; −67,822462°] | Porto de Manaus:<br/>[−3,156700°; −60,007900°] | 1.149,569 km | 1.403,691 km |
 
 *Fonte: elaboração própria com a base de portos do sistema e as rotas rodoviárias obtidas no cenário.*
 
@@ -756,7 +784,7 @@ A diferença entre as duas colunas é esperada: Haversine mede a separação geo
 
 #### 4.4.4 Operações portuárias
 
-A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas para realizar o procedimento descrito na Seção 3.3.3. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,91 kg CO₂e.
+A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas para realizar o procedimento descrito na Seção 3.3.3. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,92 kg CO₂e.
 
 ### 4.5 Consulta da ligação marítima
 
@@ -764,38 +792,36 @@ Com os portos de embarque e desembarque já definidos, o avaliador consulta a ma
 
 #### 4.5.1 Consulta da ligação marítima no cenário
 
-No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos–Manaus. A Tabela 17 mostra o que a matriz devolve para esse par. Um recorte é a parte de uma viagem observada compreendida entre os dois portos da ligação; ele pode ser direto ou conter escalas intermediárias.
+No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos–Manaus na `SeaMatrix`. A Tabela 16 mostra o que a matriz devolve para esse par. Um recorte é a parte de uma viagem observada compreendida entre os dois portos da ligação; ele pode ser direto ou conter escalas intermediárias.
 
-**Tabela 17 — Informações devolvidas pela matriz marítima para a ligação Santos–Manaus.**
+**Tabela 16 — Informações devolvidas pela matriz marítima para a ligação Santos–Manaus.**
 
 | Informação | Valor retornado na execução | Como deve ser lido |
 | :-- | :-- | :-- |
 | Cobertura observada | 89 recortes em 22 corredores | Todas as viagens em que Santos aparece antes de Manaus são consideradas no mesmo sentido |
 | Forma dos recortes | 1 direto e 88 com escalas intermediárias | Não há corredor obrigatório nem seleção do percurso mais curto |
-| Distância marítima | 6.115,349 km, ou 3.302,024 nm | Média aritmética da distância total das 89 viagens completas |
+| Distância marítima | 6.142,461 km, ou 3.316,664 nm | Média da distância total, ponderada pela carga média a bordo das 89 viagens completas |
 | Intensidade marítima | 9,009824 g/(t·nm) | Média ponderada pelo trabalho de transporte dos 89 recortes |
 | Origem das intensidades | 19 por IMO; 49 por tipo sem IMO utilizável; 21 por tipo após tratamento de valor atípico | A fonte permanece identificada para cada recorte |
-| Aviso de distância | 1 subtrecho aproximado por haversine entre 402 subtrechos | A distância do cenário continua sendo a média observada, mas o aviso é preservado |
-
-Os 89 recortes não são somados como se fossem a carga do novo cenário. Eles servem para estimar a intensidade e a distância representativas de Santos–Manaus. Na etapa seguinte, esses dois valores são aplicados à remessa informada pelo usuário — 14 t neste exemplo. Dessa forma, a aplicação usa todos os corredores observados sem transformar a média em uma rota física única.
+| Aviso de distância | 1 subtrecho aproximado por haversine entre 402 subtrechos | A distância do cenário continua sendo uma média ponderada de percursos observados, mas o aviso é preservado |
 
 ### 4.6 Resultado final do cenário
 
-Depois de executar as etapas descritas nas seções anteriores, o pipeline reúne os totais das duas alternativas para a mesma remessa. A Tabela 18 apresenta o resultado final do exemplo São Paulo–Rio Branco, com 14 t de carga.
+Depois de executar as etapas descritas nas seções anteriores, o pipeline reúne os totais das duas alternativas para a mesma remessa. A Tabela 17 apresenta o resultado final do exemplo São Paulo–Rio Branco, com 14 t de carga.
 
-**Tabela 18 — Resultado final do cenário São Paulo–Rio Branco.**
+**Tabela 17 — Resultado final do cenário São Paulo–Rio Branco.**
 
 | Indicador | Rodovia direta | Alternativa multimodal | Diferença da alternativa multimodal |
 | :-- | --: | --: | :-- |
-| Distância percorrida | 3.491,431 km | 7.605,210 km | 4.113,779 km a mais (117,82%) |
-| Custo modelado do combustível | R$ 12.318,68 | R$ 6.923,95 | R$ 5.394,73 a menos (43,79%) |
-| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.045,93 kg CO₂e | 1.022,35 kg CO₂e a menos (25,13%) |
+| Distância percorrida | 3.491,431 km | 7.632,322 km | 4.140,891 km a mais (118,60%) |
+| Custo modelado do combustível | R$ 12.318,68 | R$ 6.930,99 | R$ 5.387,69 a menos (43,74%) |
+| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.051,69 kg CO₂e | 1.016,59 kg CO₂e a menos (24,99%) |
 
 ### 4.7 Rastreabilidade, auditoria e versionamento
 
-O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 19 exemplifica esse registro no cenário São Paulo–Rio Branco.
+O resultado não guarda apenas os totais de custo e emissão. A cada execução, o pipeline registra os dados que formaram a rota, as fontes utilizadas e os avisos que afetam a leitura do resultado. A Tabela 18 exemplifica esse registro no cenário São Paulo–Rio Branco.
 
-**Tabela 19 — Informações de rastreabilidade registradas no exemplo São Paulo–Rio Branco.**
+**Tabela 18 — Informações de rastreabilidade registradas no exemplo São Paulo–Rio Branco.**
 
 | Informação registrada | Exemplo no cenário | Finalidade |
 | :-- | :-- | :-- |
@@ -806,6 +832,8 @@ O resultado não guarda apenas os totais de custo e emissão. A cada execução,
 | Operações portuárias | RTG e caminhão interno do terminal | Identifica os equipamentos considerados no cálculo |
 | Preços de combustível | Diesel S10 da ANP e VLSFO da Ship & Bunker, com data e valor usados | Permite atualizar ou repetir o componente de custo |
 | Avisos de qualidade | Um subtrecho marítimo aproximado por haversine | Sinaliza a aproximação sem ocultá-la no total |
+
+*Esses são os mesmos dados consolidados na Tabela 9 da Sessão 3.3.7*
 
 #### 4.7.1 Versionamento e reprodução do cálculo
 
@@ -830,7 +858,7 @@ flowchart LR
 
 A Tabela 20 mostra quatro formas de medir a cobertura do cruzamento entre a Agência Nacional de Transportes Aquaviários (ANTAQ) e o sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV): por navio, por viagem, pela massa e por contêiner equivalente. Cada proporção responde a uma pergunta diferente; por isso, elas não devem ser somadas nem interpretadas como uma única taxa de qualidade.
 
-**Tabela 20 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
+**Tabela 19 — Cobertura do cruzamento entre viagens ANTAQ e intensidade EU MRV.**
 
 | Indicador                                |                              Valor | Cobertura |
 | :--------------------------------------- | ---------------------------------: | --------: |
@@ -839,9 +867,9 @@ A Tabela 20 mostra quatro formas de medir a cobertura do cruzamento entre a Agê
 | Carga em massa com correspondência exata | 15.959.761,561 de 30.191.845,948 t |     52,9% |
 | Carga em TEU com correspondência exata   |   1.454.351,75 de 2.872.715,00 TEU |     50,6% |
 
-Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 21 separa essas situações e também mostra a procedência das distâncias marítimas.
+Uma correspondência exata significa que o mesmo IMO aparece nas duas bases. Ainda assim, uma viagem com IMO encontrado pode não usar a intensidade individual: se o valor for identificado como atípico, a rotina mantém a viagem e substitui apenas a intensidade pela referência robusta do grupo. A Tabela 20 separa essas situações e também mostra a procedência das distâncias marítimas.
 
-**Tabela 21 — Reconstrução e procedência dos dados na base processada.**
+**Tabela 20 — Reconstrução e procedência dos dados na base processada.**
 
 | Resultado do processamento | Quantidade | Leitura para o cálculo |
 | :-- | --: | :-- |
