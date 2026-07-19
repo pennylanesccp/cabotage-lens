@@ -1318,48 +1318,47 @@ Em conjunto, as tabelas desta subseção mostram exatamente o que pode ser compa
 
 ### 5.2 Comparação com ferramentas externas
 
-As ferramentas externas permitem apresentar os resultados do CabotageLens ao lado de estimativas já disponíveis ao público. Cada comparação usa o cenário que pode ser identificado na respectiva ferramenta. Quando a rota, o porto ou outro parâmetro não coincide, essa diferença é informada; os resultados não são ajustados para forçar equivalência.
+As ferramentas externas permitem confrontar o resultado do CabotageLens com estimativas já disponíveis ao público. Em cada caso, são apresentadas as distâncias e as emissões de cada etapa que a ferramenta externa torna disponível. Quando a rota, o porto ou outro parâmetro difere, a diferença permanece explícita; os resultados não são ajustados para produzir uma equivalência artificial.
 
-#### 5.2.1 SeaRates Carbon Emissions Calculator
+#### 5.2.1 [Calculadora de emissões da Aliança](https://www.alianca.com.br/calculadora-de-co2)
 
-Na [consulta Santos–Pecém](https://www.searates.com/pt/carbon-emissions-calculator/?latFrom=-23.973773&lngFrom=-46.320786&latTo=-3.571472&lngTo=-38.845232&transportType=containerVessel&shippingType=sea&containerType=st20&from=Santos%252C%2520S%25C3%25A3o%2520Paulo%252C%2520BR&to=Pec%25C3%25A9m%2520Pt%2520%252F%2520S%25C3%25A3o%2520Gon%25C3%25A7alo%2520do%2520Amarante%252C%2520Cear%25C3%25A1%252C%2520BR), realizada em 19 de julho de 2026, o SeaRates foi configurado para navio porta-contêiner e contêiner padrão de 20 pés (`st20`). O mesmo par foi executado no CabotageLens com 1 TEU e 14 t.
+Na calculadora da Aliança, o cenário informado foi São Paulo–Abaetetuba, com um contêiner seco de 40 pés e 20 t de carga. O mesmo cenário foi executado no CabotageLens com 20 t e 2 TEU, equivalentes a um contêiner de 40 pés. As duas alternativas multimodais utilizam Santos como porto de embarque e Vila do Conde como porto de desembarque.
 
-**Tabela 35 — Emissões no cenário Santos–Pecém.**
+A tabela separa as etapas da alternativa multimodal e compara somente as emissões operacionais TTW. Assim, é possível identificar onde os resultados se aproximam ou se afastam, em vez de comparar apenas os totais.
 
-| Alternativa | SeaRates | CabotageLens |
-| :-- | --: | --: |
-| Perna marítima Santos–Pecém | 305 kg CO₂ | 855,912 kg CO₂e TTW |
-| Rodovia direta Santos–Pecém | 10.754 kg CO₂ | 3.761,826 kg CO₂e TTW |
+![Resultado da calculadora da Aliança para São Paulo–Abaetetuba.](comparacao_externa/calculo-co2_86072221.png)
 
-O resultado multimodal completo do CabotageLens foi 893,379 kg CO₂e TTW. A consulta da SeaRates não apresenta um equivalente para esse total e não informa as escalas, a carga a bordo, a intensidade do navio nem o fator de emissão empregado.
+*Figura 10 — Resultado da calculadora da Aliança para São Paulo–Abaetetuba. Fonte: resultado exportado pela ferramenta, fornecido pelo autor.*
 
-#### 5.2.2 Calculadora de emissões da Aliança
+**Tabela 35 — Emissões TTW por etapa no cenário São Paulo–Abaetetuba, com 20 t de carga.**
 
-Na calculadora da Aliança, o cenário informado foi São Paulo–Santana, com um contêiner seco de 40 pés e 20 t de carga. O mesmo par foi executado no CabotageLens com 20 t e 2 TEU.
-
-![Resultado da calculadora da Aliança para São Paulo–Santana.](comparacao_externa/calculo-co2_83399848.png)
-
-*Figura 10 — Resultado da calculadora da Aliança para São Paulo–Santana. Fonte: resultado exportado pela ferramenta, fornecido pelo autor.*
-
-**Tabela 36 — Emissões no cenário São Paulo–Santana, com 20 t de carga.**
-
-| Alternativa | Aliança: distância | Aliança: CO₂ TTW | CabotageLens: distância | CabotageLens: CO₂e TTW |
+| Etapa | Aliança: distância | Aliança: CO₂ TTW | CabotageLens: distância | CabotageLens: CO₂e TTW |
 | :-- | --: | --: | --: | --: |
-| Rodovia direta | 6.891 km | 9,974 t | 3.977,979 km | 5,330 t |
-| Multimodal | 11.005 km | 9,267 t | 2.824,797 km | 0,716 t |
-| Redução em relação à rodovia | — | 0,707 t | — | 4,614 t |
+| Rodovia direta | 2.807 km | 4,065 t | 2.835,762 km | 3,800 t |
+| Acesso rodoviário inicial: São Paulo–Santos | 68 km | 0,104 t | 86,170 km | 0,115 t |
+| Navegação: Santos–Vila do Conde | 4.869 km | 0,694 t | 2.509,709 km* | 0,512 t |
+| Operações portuárias: Santos e Vila do Conde | — | Não discriminadas | — | 0,026 t |
+| Acesso rodoviário final: Vila do Conde–Abaetetuba | 125 km | 0,177 t | 33,950 km | 0,045 t |
+| **Total multimodal** | **5.062 km** | **0,975 t** | **2.629,829 km** | **0,699 t** |
+| **Redução em relação à rodovia direta** | — | **3,090 t (76,0%)** | — | **3,101 t (81,6%)** |
 
-A Aliança apresenta também os resultados WTW, de 12,556 t na rodovia e 11,596 t no multimodal. A tabela compara somente TTW, que é o escopo adotado pelo CabotageLens. As rotas também diferem: a ferramenta externa usa Santos–Vila do Conde–Santana, enquanto o sistema seleciona Santos–Santana.
+\* No CabotageLens, não há viagem observada na Agência Nacional de Transportes Aquaviários (ANTAQ) entre Santos e Vila do Conde para compor a matriz marítima. Por isso, a distância dessa etapa usa a aproximação costeira de Haversine, e a intensidade de 6,07 g/(t·nm) vem da classe de navio `container_feeder`.
 
-#### 5.2.3 Calculadora de emissões da Log-In
+Na rodovia direta, as distâncias são próximas: 2.807 km na Aliança e 2.835,762 km no CabotageLens. A principal diferença está na cadeia multimodal. A Aliança informa 4.869 km para a navegação e 125 km para o acesso final, enquanto o CabotageLens calcula 2.509,709 km e 33,950 km, respectivamente. Essa diferença de percurso explica a maior parte da distância multimodal total apresentada pela ferramenta externa. O CabotageLens registra a aproximação usada na perna marítima, em vez de apresentá-la como uma viagem observada.
 
-A captura da calculadora da Log-In mostra uma alternativa rodoviária de 3.032 km e uma alternativa por cabotagem composta por três trechos de 89,9 km, 6.112 km e 1.394 km. Essa sequência é compatível com a estrutura São Paulo–Santos–Manaus–Rio Branco; por isso, ela foi apresentada ao lado do cenário São Paulo–Rio Branco executado no CabotageLens com 14 t e 1 TEU.
+A distância total multimodal soma apenas os dois acessos rodoviários e a etapa marítima; as operações portuárias não acrescentam distância. A Aliança não as separa: os três trechos exibidos pela ferramenta somam exatamente o total multimodal de 0,975 t. No CabotageLens, essas operações aparecem como uma etapa própria, com 0,026 t de CO₂e TTW, e são incluídas no total. A tabela compara apenas TTW, que é o escopo adotado pelo CabotageLens; a calculadora da Aliança também exibe valores WTW, mas eles não são usados nesta comparação.
+
+Há uma inconsistência de sinal no quadro de economia exibido pela Aliança: a diferença entre seus próprios totais TTW é aproximadamente 4,065 − 0,975 = 3,090 t de redução, mas a tela apresenta −3,089 t. Por esse motivo, a última linha da tabela é calculada diretamente a partir dos totais de cada alternativa. O CabotageLens apresenta a redução com sinal coerente com as emissões totais mostradas.
+
+#### 5.2.2 [Calculadora de emissões da Log-In](https://www.loginlogistica.com.br/calculadora-co2/)
+
+A captura da calculadora da Log-In refere-se ao cenário São Paulo–Rio Branco e mostra uma alternativa rodoviária de 3.032 km. A alternativa por cabotagem é composta por três trechos de 89,9 km, 6.112 km e 1.394 km, compatíveis com a estrutura São Paulo–Santos–Manaus–Rio Branco. O mesmo cenário foi executado no CabotageLens com 14 t e 1 TEU.
 
 ![Resultado da calculadora de emissões da Log-In.](comparacao_externa/loginlogistica.png)
 
 *Figura 11 — Resultado da calculadora de emissões da Log-In. Fonte: captura de tela fornecida pelo autor.*
 
-**Tabela 37 — Emissões no cenário de referência São Paulo–Rio Branco.**
+**Tabela 36 — Emissões no cenário de referência São Paulo–Rio Branco.**
 
 | Alternativa | Log-In: distância | Log-In: emissões de GEE | CabotageLens: distância | CabotageLens: CO₂e TTW |
 | :-- | --: | --: | --: | --: |
@@ -1367,9 +1366,11 @@ A captura da calculadora da Log-In mostra uma alternativa rodoviária de 3.032 k
 | Multimodal | 7.595,9 km | 2,9 t | 7.632,322 km | 3,052 t |
 | Redução em relação à rodovia | — | 0,2 t | — | 1,017 t |
 
-Os campos de origem, destino e carga não aparecem na captura da Log-In. Portanto, a comparação é indicativa e se baseia na sequência dos três trechos exibidos pela própria ferramenta.
+No resultado multimodal, as duas ferramentas estão próximas. A distância da Log-In é 36,422 km menor, uma diferença de 0,48%, e a emissão de GEE informada é 0,152 t menor, ou 5,0% em relação ao CabotageLens. Essa proximidade é positiva porque os valores divulgados pelas duas ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
 
-#### 5.2.4 Calculadora de piso mínimo de frete da ANTT
+Na alternativa rodoviária, porém, a distância da Log-In não corresponde à rota porta a porta São Paulo–Rio Branco previamente calculada. A ferramenta informa 3.032 km, enquanto o CabotageLens obteve 3.491,431 km e a conferência independente no Google Maps indicou 3.497 km, como apresentado na Seção 4.3.1.1. Essa diferença de 459,431 km, ou 13,2%, contribui para que a emissão rodoviária informada pela Log-In seja menor. Por isso, a comparação rodoviária não deve ser interpretada como uma equivalência direta entre os dois sistemas.
+
+#### 5.2.3 [Calculadora de piso mínimo de frete da ANTT](https://calculadorafrete.antt.gov.br/)
 
 Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário foi informado como carga conteinerizada, cinco eixos e 3.491 km. O resultado oficial exibido foi R$ 21.308,12. Para a mesma ligação São Paulo–Rio Branco, o CabotageLens calculou 3.491,431 km, selecionou cinco eixos para a carga de 14 t e estimou R$ 12.318,68 de custo de combustível.
 
@@ -1377,7 +1378,7 @@ Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário
 
 *Figura 12 — Resultado da calculadora de piso mínimo de frete da ANTT para a distância de 3.491 km. Fonte: captura de tela fornecida pelo autor.*
 
-**Tabela 38 — Valores para a ligação São Paulo–Rio Branco.**
+**Tabela 37 — Valores para a ligação São Paulo–Rio Branco.**
 
 | Item | Calculadora da ANTT | CabotageLens |
 | :-- | --: | --: |
@@ -1385,45 +1386,39 @@ Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário
 | Configuração do veículo | 5 eixos | 5 eixos |
 | Valor calculado | R$ 21.308,12 — piso mínimo de frete | R$ 12.318,68 — custo modelado do combustível |
 
-Os dois valores têm finalidades diferentes: o resultado da ANTT é o piso mínimo de frete, enquanto o CabotageLens isola o custo operacional de combustível. Por isso, eles são apresentados lado a lado, sem tratá-los como cotações equivalentes.
+Os dois valores têm finalidades diferentes: o resultado da ANTT é o piso mínimo de frete, enquanto o CabotageLens isola o custo operacional de combustível. Por isso, não se espera que sejam iguais. Ainda assim, o combustível calculado pelo sistema, R$ 12.318,68, representa 57,8% do piso de R$ 21.308,12. Essa proporção é um sinal de coerência de ordem de grandeza, pois o piso mínimo também reúne outras parcelas do frete além do combustível. Assim, os valores são apresentados lado a lado para contextualização, e não como cotações equivalentes.
 
-## 6. Discussão e limitações
+## 6. Conclusões
 
-Os resultados devem ser lidos como uma comparação entre duas alternativas para a mesma carga, a mesma origem e o mesmo destino. No exemplo de 14 t entre São Paulo e Rio Branco, a alternativa multimodal percorre 118,60% mais quilômetros do que a rodoviária direta. Mesmo assim, emite 24,99% menos CO₂e operacional e apresenta custo modelado do combustível 43,74% menor. O exemplo mostra por que a distância total, isoladamente, não é suficiente para comparar os modais: os acessos rodoviários, as operações portuárias e a navegação precisam ser considerados no mesmo cálculo.
-
-A principal diferença da abordagem marítima é usar atividade observada, e não impor uma rota previamente escolhida. Em Santos–Manaus, os 89 recortes completos formam 22 sequências de portos, incluindo uma viagem direta e 88 viagens com escalas. A distância representativa de 6.142,461 km e a intensidade de 9,009824 g/(t·nm) são, portanto, indicadores formados a partir desse conjunto de viagens. Eles não descrevem uma rota única nem o desempenho de um único navio. A procedência da intensidade e das distâncias permanece registrada para que o resultado possa ser conferido.
-
-A comparação com a planilha de Costa et al. fornece apenas uma referência de direção. Nas 21 ligações válidas do cenário Base, a planilha e o CabotageLens apontaram menor emissão para a alternativa com cabotagem. Com a regra automática de veículo aplicada à carga de 14 t, a redução média simples é 46,7% na planilha e 83,1% no CabotageLens. Essa diferença não é uma validação da magnitude nem um motivo para calibrar o modelo, pois as análises usam rotas, acessos, fatores e fronteiras ambientais diferentes. Ela mostra que, no conjunto comparado, as duas abordagens chegam ao mesmo sentido na comparação de emissões [workbookdados; competitiveness2024].
-
-Com essa interpretação, o CabotageLens é uma ferramenta de triagem e comparação auditável. Ele permite identificar como cada alternativa foi calculada e quais dados, estimativas e aproximações participaram do resultado. A decisão logística final ainda exige informações que não são resolvidas pelo modelo, como frequência do serviço, capacidade disponível, prazo, terminais, contratos e fretes comerciais.
-
-As principais limitações que delimitam esse uso são:
-
-- **Janela e cobertura dos dados:** as viagens da ANTAQ representam o período observado em 2025. O cruzamento individual com o EU MRV cobre 243 dos 389 IMOs e 788 das 1.324 viagens; os demais casos dependem de referências de grupos de navios semelhantes.
-
-- **Intensidade marítima:** uma referência de classe ou tipo e a substituição de valores atípicos são estimativas documentadas. Elas preservam a viagem no cálculo, mas não equivalem a uma medição direta do consumo de cada navio.
-
-- **Distância e oferta de serviço:** algumas distâncias marítimas usam a aproximação de haversine, sempre identificada na saída. Além disso, uma viagem registrada demonstra que a sequência ocorreu na janela analisada, mas não garante frequência futura, espaço disponível ou serviço comercial regular.
-
-- **Fronteiras do resultado:** as emissões são operacionais TTW de CO₂e e os valores monetários são custos operacionais modelados. Eles não representam emissões WTW, ciclo de vida completo, tarifa de frete, contrato de armador ou análise comercial completa.
-
-- **Combustíveis alternativos:** os cenários externos com GNV, HVO, LNG e metanol foram mantidos como referência. Eles ainda não podem ser reexecutados pelo modelo sem definir consumo, fator de emissão e preço para cada combustível e cada etapa da cadeia.
-
-Esses limites não anulam a comparação; eles definem a forma correta de utilizá-la. Um resultado favorável à cabotagem em determinado cenário não demonstra superioridade universal, mas oferece uma base explícita e verificável para a análise inicial de alternativas logísticas [competitiveness2024; modalshiftreview2020].
-
-## 7. Conclusão e trabalhos futuros
+### 6.1 Resultados da comparação
 
 Este trabalho apresentou o CabotageLens, uma ferramenta para comparar duas formas de transportar a mesma remessa entre uma origem e um destino: a alternativa rodoviária direta e a alternativa multimodal com acessos rodoviários, operações portuárias e cabotagem. Ao aplicar as duas alternativas à mesma carga, origem e destino, o sistema evita comparar apenas o trecho marítimo com uma viagem rodoviária completa.
 
-A principal contribuição do CabotageLens está na construção da perna marítima com dados observados. Em vez de fixar um corredor entre dois portos, o sistema reconstrói as viagens registradas pela Agência Nacional de Transportes Aquaviários (ANTAQ), preserva as escalas intermediárias e calcula a carga a bordo em cada subtrecho. Sempre que possível, a intensidade vem do mesmo número IMO no sistema europeu de Monitorização, Comunicação e Verificação de emissões (EU MRV). Quando essa correspondência não está disponível ou é considerada atípica, o cálculo usa uma referência estatística de navios semelhantes e informa a fonte adotada.
+No exemplo de uma remessa de 14 t entre São Paulo e Rio Branco, a alternativa multimodal percorre 118,60% mais quilômetros do que a rodoviária direta. Mesmo assim, emite 24,99% menos CO₂e operacional e apresenta custo modelado do combustível 43,74% menor. O resultado mostra que a distância total, isoladamente, não é suficiente para comparar os modais: os acessos rodoviários, as operações portuárias e a navegação precisam ser avaliados na mesma cadeia logística.
 
-A ligação Santos–Manaus demonstra o efeito dessa escolha: viagens diretas e viagens com escalas intermediárias participam da mesma estimativa, sem transformar uma sequência de portos em corredor obrigatório. No exemplo aplicado a uma remessa de 14 t entre São Paulo e Rio Branco, a alternativa multimodal apresentou emissões operacionais de CO₂e 24,99% menores e custo modelado do combustível 43,74% menor que a alternativa rodoviária direta. Esse resultado descreve as condições, os dados e os parâmetros usados na execução; não representa uma regra geral de superioridade da cabotagem.
+A comparação com o cenário Base da planilha de Costa et al. oferece uma referência externa de direção. Nas 21 ligações reexecutadas, tanto a planilha quanto o CabotageLens apontaram menor emissão para a alternativa com cabotagem. Como as fontes adotam rotas, fatores e fronteiras diferentes, essa concordância não valida a magnitude das reduções. Ela mostra apenas que, no conjunto comparado, as duas abordagens chegam ao mesmo sentido na comparação de emissões [workbookdados; competitiveness2024].
 
-A comparação com o cenário Base da planilha de Costa et al. oferece uma referência externa de direção. Nas 21 ligações reexecutadas, tanto a planilha quanto o CabotageLens apontaram menor emissão para a alternativa com cabotagem. Como as fontes adotam rotas, fatores e fronteiras diferentes, essa concordância não valida a magnitude das reduções. Ela mostra apenas que, no conjunto comparado, as duas abordagens chegam ao mesmo sentido na comparação de emissões.
+### 6.2 Contribuição metodológica
 
-O CabotageLens deve, portanto, ser entendido como um instrumento de triagem e de comparação auditável. Ele apoia a análise inicial ao tornar explícitos os dados, as fontes de intensidade, os preços e as aproximações que formam cada resultado. Uma decisão prática continua dependendo de informações adicionais sobre serviço, prazo, capacidade, terminais e condições comerciais.
+A principal contribuição do CabotageLens está na construção da perna marítima com dados observados. Em vez de fixar um corredor entre dois portos, o sistema reconstrói as viagens registradas pela Agência Nacional de Transportes Aquaviários (ANTAQ), preserva as escalas intermediárias e calcula a carga a bordo em cada subtrecho. Sempre que possível, a intensidade vem do mesmo número IMO na base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV). Quando essa correspondência não está disponível ou é considerada atípica, o cálculo usa uma referência estatística de navios semelhantes e informa a fonte adotada.
 
-Como trabalhos futuros, recomenda-se ampliar a série histórica da ANTAQ, aumentar a cobertura individual por IMO, aperfeiçoar as distâncias marítimas e incorporar dados de frequência e disponibilidade dos serviços. Também são relevantes a ampliação das operações portuárias com dados observados, a análise de incerteza, a inclusão de combustíveis alternativos por etapa e, em uma etapa posterior, a expansão da avaliação para fatores WTW e ciclo de vida.
+A ligação Santos–Manaus demonstra o efeito dessa escolha: os 89 recortes completos formam 22 sequências de portos, com viagens diretas e viagens com escalas intermediárias. A distância representativa de 6.142,461 km e a intensidade de 9,009824 g/(t·nm) são formadas a partir desse conjunto de viagens. Portanto, esses indicadores não descrevem uma rota única nem o desempenho de um único navio; sua procedência permanece registrada para conferência.
+
+### 6.3 Alcance e limites de uso
+
+O CabotageLens é um instrumento de triagem e comparação auditável. Ele torna explícitos os dados, as fontes de intensidade, os preços e as aproximações que formam cada resultado. A decisão logística final ainda exige informações sobre serviço, prazo, capacidade, terminais, contratos e fretes comerciais.
+
+Os principais limites de uso são:
+
+- **Dados e intensidade marítima:** as viagens da ANTAQ representam o período observado em 2025. Quando não há intensidade individual utilizável no EU MRV, o sistema usa uma referência documentada de classe ou tipo de navio; ela não equivale a uma medição direta do consumo daquele navio.
+
+- **Distância e oferta de serviço:** algumas distâncias marítimas usam a aproximação de Haversine, identificada na saída. Uma viagem registrada confirma uma sequência observada, mas não garante frequência futura, espaço disponível ou serviço comercial regular.
+
+- **Escopo do resultado:** as emissões são operacionais TTW de CO₂e e os valores monetários representam o custo modelado do combustível. Eles não representam emissões WTW, ciclo de vida completo, tarifa de frete, contrato de armador ou análise comercial completa.
+
+- **Combustíveis alternativos:** os cenários externos com GNV, HVO, LNG e metanol permanecem como referência, pois ainda não possuem parâmetros completos de consumo, emissão e preço para todas as etapas do modelo.
+
+Esses limites não anulam a comparação; eles definem a forma correta de utilizá-la. Um resultado favorável à cabotagem em determinado cenário não demonstra superioridade universal, mas oferece uma base explícita e verificável para a análise inicial de alternativas logísticas [competitiveness2024; modalshiftreview2020].
 
 ## Referências
 
