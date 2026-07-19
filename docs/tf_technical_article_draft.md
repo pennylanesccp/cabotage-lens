@@ -234,7 +234,7 @@ Na rodovia, um serviço público de roteamento pode receber dois pontos e devolv
 
 O sistema não reconstrói apenas a ligação que será comparada. Primeiro, ele percorre todas as viagens de cabotagem registradas na base e reconstitui, em cada uma delas, a ordem das escalas e a carga a bordo. Depois, sempre que um porto aparece antes de outro na mesma viagem, essa sequência passa a ser uma observação válida para a ligação entre os dois portos.
 
-Assim, uma viagem observada como Santos → Suape → Pecém → Manaus pode contribuir para as ligações Santos → Suape, Santos → Pecém e Santos → Manaus. Ela também mostra que uma ligação não precisa ser direta: os portos intermediários permanecem no cálculo. 
+Assim, uma viagem observada como Santos → Suape → Pecém → Manaus pode contribuir para as ligações Santos → Suape, Santos → Pecém e Santos → Manaus. Ela também mostra que uma ligação não precisa ser direta: os portos intermediários permanecem no cálculo.
 
 O percurso apresentado a seguir serve apenas para mostrar, com um caso real, como essa reconstrução é feita para todas as viagens da base; ele não é um corredor previamente definido pelo sistema.
 
@@ -242,7 +242,7 @@ O percurso apresentado a seguir serve apenas para mostrar, com um caso real, com
 
 Para executar essa reconstrução, o sistema parte dos arquivos brutos da ANTAQ, que não trazem uma viagem pronta, como “Santos–Manaus”. Cada linha registra apenas um evento: uma escala em um porto e uma movimentação de carga. Ao reunir os registros do mesmo navio, ordenar as escalas e calcular a carga a bordo, o sistema transforma esses eventos isolados em uma viagem observada.
 
-Para reconstruir uma viagem, o sistema combina duas tabelas que cumprem papéis diferentes. A tabela de Carga mostra o que entrou e o que saiu do navio em cada escala. A tabela de Atracação mostra onde e quando essa escala ocorreu e qual navio a realizou. O campo `IDAtracacao` aparece nos dois arquivos e faz a ligação entre eles.
+Para reconstruir uma viagem, o sistema combina duas tabelas que cumprem papéis diferentes. A tabela de Carga mostra o que entrou e o que saiu do navio em cada escala. A tabela de Atracação mostra onde e quando essa escala ocorreu e qual navio a realizou. O campo `IDAtracacao` (código único de identificação da atracação) aparece nos dois arquivos e faz a ligação entre eles.
 
 ###### 3.3.4.1.1 Tabela de Carga da ANTAQ
 
