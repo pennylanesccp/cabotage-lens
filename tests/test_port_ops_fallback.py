@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from modules.costs.diesel_prices import DieselPriceLookup
 from modules.fuel import cabotage_fuel_service
+from modules.fuel.emissions import DIESEL_TTW_KG_CO2E_PER_L
 from modules.multimodal import evaluator
 from modules.multimodal.container_efficiency import VesselClassEfficiency
 from modules.multimodal.hoteling import HotelingRateSelection
@@ -244,12 +245,20 @@ class PortOpsFallbackTests(unittest.TestCase):
     def test_default_santos_scenario_total_is_unchanged_with_metadata(self) -> None:
         result = estimate_port_ops(port_calls=2, cargo_teu=1.0)
 
-        expected_fuel_kg = (
+        expected_diesel_liters = (
             (2.0 * 4.0 * 0.35514808238636364)
             + (2.0 * 2.0 * 0.4946705433238636)
+        )
+        expected_fuel_kg = (
+            expected_diesel_liters
         ) * 0.85
 
+        self.assertAlmostEqual(result["totals"]["diesel_liters"], expected_diesel_liters)
         self.assertAlmostEqual(result["totals"]["fuel_kg"], expected_fuel_kg)
+        self.assertAlmostEqual(
+            result["totals"]["co2e_kg"],
+            expected_diesel_liters * DIESEL_TTW_KG_CO2E_PER_L,
+        )
         self.assertEqual(result["source_level"], "literature_default")
         self.assertEqual(result["source_level_counts"], {"literature_default": 2})
         self.assertTrue(result["has_unavailable_port_ops"])
