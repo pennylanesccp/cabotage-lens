@@ -83,86 +83,6 @@ Nos exemplos desta seção, a remessa tem 14 t e segue de São Paulo (SP) para 
 As operações de movimentação de carga nos dois terminais também entram no cálculo. Dessa forma, a comparação considera a cadeia completa, e não apenas o trecho marítimo frente à viagem rodoviária inteira [shortsea2019; competitiveness2024].
 
 Para estimar as operações portuárias, o sistema representa a remessa de 14 t como 1 TEU (*twenty-foot equivalent unit*, unidade equivalente a um contêiner de 20 pés). Essa conversão determina quantos contêineres precisam ser movimentados nos terminais.
-
-### 3.2 Alternativa rodoviária
-
-O cálculo rodoviário começa pela distância terrestre total entre a origem e o destino. O sistema obtém uma rota rodoviária em quilômetros e utiliza essa distância para representar o percurso do caminhão. A forma como essa rota é consultada e transformada em distância está descrita na Seção 4.3.1.
-
-#### 3.2.1 Escolha do veículo e consumo de diesel
-
-A massa transportada define o veículo representativo. O modelo utiliza os rendimentos médios por número de eixos publicados pela **Agência Nacional de Transportes Terrestres (ANTT)**. Esses dados oficiais foram obtidos na tabela da Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas, disponibilizada no [portal de legislação da ANTT (ANTTlegis)](https://anttlegis.antt.gov.br/action/UrlPublicasAction.php?acao=abrirAtoPublico&cod_menu=9230&cod_modulo=623&num_ato=00000001&seq_ato=ATT&sgl_orgao=SUROC%2FANTT%2FMT&sgl_tipo=POR&vlr_ano=2025). A tabela de referência adotada no modelo associa a faixa de carga ao número de eixos e relaciona cada configuração à eficiência básica em quilômetros por litro (km/L). A seleção automática é uma regra de modelagem para estimar consumo; não é uma verificação de limite legal de peso nem substitui o planejamento operacional de uma transportadora.
-
-**Tabela 2 — Regra automática para o veículo rodoviário representativo e eficiência básica adotada.**
-
-| Massa da remessa | Veículo representativo | Eixos | Eficiência básica |
-| :--------------- | :--------------------- | ----: | ----------------: |
-| Até 18 t | Carreta | 5 | 2,3 km/L |
-| Acima de 18 t até 30 t | Carreta | 6 | 2,0 km/L |
-| Acima de 30 t até 40 t | Bitrem | 7 | 2,0 km/L |
-| Acima de 40 t | Rodotrem | 9 | 2,0 km/L |
-
-*Fonte: elaboração do sistema a partir dos rendimentos médios por número de eixos publicados pela Agência Nacional de Transportes Terrestres (ANTT), no portal ANTTlegis.*
-
-
-**Quadro 2 — Principais símbolos usados nas fórmulas do sistema.**
-
-| Grandeza | Símbolo | Unidade usual |
-| :-- | :-- | :-- |
-| Distância | $D$ | km ou milhas náuticas (nm) |
-| Volume de diesel | $V$ | L |
-| Massa de VLSFO (óleo combustível naval de baixo teor de enxofre) | $M$ | kg |
-| Massa da carga | $m$ | t |
-| Preço do combustível | $P$ | R$/L ou R$/kg |
-| Custo modelado do combustível | $C$ | R$ |
-| Emissão operacional | $E$ | kg CO₂e |
-| Fator de emissão | $FE$ | kg CO₂e/L |
-| Eficiência do veículo | $\eta$ | km/L |
-| Intensidade marítima | $I$ | g/(t·nm) |
-| Trabalho de transporte | $W$ | t·nm |
-| Quantidade contável | $N$ | viagens, TEUs ou recortes |
-| Movimentos por TEU | $a$ | movimentos/TEU |
-| Consumo por movimento | $c$ | L/movimento |
-
-*Os subscritos identificam a etapa, o combustível ou o conjunto de dados. Os índices e conjuntos específicos são definidos junto às fórmulas em que aparecem.*
-Com a distância rodoviária $D_{\mathrm{rod}}$, em quilômetros, a eficiência aplicada $\eta_{\mathrm{rod}}$, em km/L, e $N_{\mathrm{viagens}}$ viagens carregadas necessárias para transportar a remessa, o volume de diesel do trecho $V_{\mathrm{diesel,rod}}$ é calculado por:
-
-$$
-V_{\mathrm{diesel,rod}}
-=N_{\mathrm{viagens}}\frac{D_{\mathrm{rod}}}{\eta_{\mathrm{rod}}}.
-$$
-
-Como exemplo, usemos os 3.491,431 km de distância rodoviária entre São Paulo e Rio Branco. Para transportar uma remessa de 14 t nessa ligação, o modelo seleciona uma carreta de cinco eixos, com eficiência de 2,3 km/L. Como a remessa cabe em uma única viagem, $N_{\mathrm{viagens}}=1$ e o consumo estimado é:
-
-$$
-\begin{aligned}
-F_{\mathrm{rod}}
-&=1\times\frac{3.491{,}431\ \mathrm{km}}{2{,}3\ \mathrm{km/L}}\\
-&=1.518{,}014\ \mathrm{L}.
-\end{aligned}
-$$
-
-Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multiplica esse consumo pelo número necessário de viagens carregadas. Os litros calculados são convertidos em custo na Seção 3.2.2 e em emissões operacionais na Seção 3.2.3.
-
-#### 3.2.2 Custo estimado do combustível
-
-$$
-
-Nas rotas interestaduais, o preço adotado é a média aritmética entre o valor registrado na UF de origem e o valor registrado na UF de destino. Em uma rota inteiramente dentro de uma mesma UF, os dois valores são iguais e, portanto, o cálculo mantém o preço desse estado. O preço usado na rota é dado por:
-
-$$
-P_{\mathrm{diesel}}
-=\frac{P_{\mathrm{diesel,origem}}+P_{\mathrm{diesel,destino}}}{2}.
-$$
-
-O custo estimado é o consumo calculado na Seção 3.2.1 multiplicado pelo preço do litro:
-
-C_{\mathrm{rod}}=V_{\mathrm{diesel,rod}}\,P_{\mathrm{diesel}}.
-C_{\mathrm{rod}}=F_{\mathrm{rod}}\,p_{\mathrm{diesel}}.
-$$
-
-Nessas expressões, $F_{\mathrm{rod}}$ é o consumo de diesel, em litros, e $p_{\mathrm{diesel}}$ é o preço adotado, em reais por litro. Na execução São Paulo–Rio Branco, os valores correspondem aos preços médios de revenda do Diesel S10 divulgados pela ANP para a semana de 12 a 18 de julho de 2026. Nesse levantamento, São Paulo registrou R\$ 6,960/L e o Acre, R\$ 9,270/L. Assim, o preço aplicado à rota foi:
-
-$$
 p_{\mathrm{diesel}}
 =\frac{6{,}960+9{,}270}{2}
 =8{,}115\ \text{R\$/L}.
@@ -190,8 +110,10 @@ Nessa expressão, $E_{\mathrm{rod}}$ é a emissão operacional da rota, em kg C
 
 $$
 E_{\mathrm{rod}}
-=1.518{,}014\ \mathrm{L}\times2{,}68\ \text{kg CO₂e/L}
-=4.068{,}28\ \text{kg CO₂e}.
+&=V_{\mathrm{diesel,rod}}\times FE_{\mathrm{diesel}}\\
+&=1.518{,}014\ \mathrm{L}\times2{,}68\ \text{kg CO₂e/L}\\
+&=4.068{,}28\ \text{kg CO₂e}.
+\end{aligned}
 $$
 
 #### 3.2.4 Resultado consolidado da alternativa rodoviária
@@ -212,7 +134,7 @@ A Tabela 3 reúne os resultados da alternativa rodoviária para a mesma remessa 
 | **Custo modelado do combustível** | R\$ 12.318,68 |
 | **Emissões operacionais TTW** | 4.068,28 kg CO₂e |
 
-### 3.3 Alternativa multimodal
+A alternativa multimodal também precisa transportar a remessa do ponto inicial ao ponto final. Ela é formada por três partes: o acesso rodoviário até o porto de embarque, a navegação entre os portos e o acesso rodoviário após o desembarque. Portanto, o combustível é consumido não só pelo navio, em cada subtrecho marítimo, mas também nos deslocamentos da origem até o porto de embarque e do porto de desembarque até o destino final. Além disso, o sistema calcula separadamente o consumo da movimentação de carga nos terminais portuários.
 
 A alternativa multimodal também precisa transportar a remessa do ponto inicial ao ponto final. Ela é formada por três partes: o acesso rodoviário até o porto de embarque, a navegação entre os portos e o acesso rodoviário depois do desembarque. Portanto, o combustível é consumido não só pelo navio, em cada subtrecho marítimo, mas também nos deslocamentos da origem até o porto de embarque e do porto de desembarque até o destino final. Além disso, o sistema calcula separadamente o consumo da movimentação de carga nos terminais portuários.
 
