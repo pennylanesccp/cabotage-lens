@@ -945,11 +945,19 @@ Os resultados detalhados, os avisos, os logs e os demais registros gerados duran
 
 #### 4.8.2 Página Mapa de calor
 
-O Mapa de calor amplia a comparação realizada na página Router. Em vez de avaliar apenas uma ligação entre origem e destino, o usuário informa uma origem e a massa da carga, e o sistema compara esse cenário com 608 municípios brasileiros de população superior a 50 mil habitantes. Para cada município, são calculadas as mesmas duas alternativas descritas na Seção 3: a rodovia direta e a cadeia rodoviária–cabotagem–rodoviária.
+O Mapa de calor amplia a comparação realizada na página Router. Em vez de avaliar apenas uma ligação entre origem e destino, o usuário informa uma origem e a massa da carga, e o sistema compara esse cenário com 608 municípios brasileiros de população superior a 50 mil habitantes. Para cada município, são calculadas as mesmas duas alternativas descritas na Seção 3: a rodovia direta e a cadeia rodoviária–cabotagem–rodoviária. A Figura 8 mostra os campos usados para definir o cenário. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, e considera uma carga de 14 t.
+
+![Campos de origem e carga da página Mapa de calor.](images/heatmap-scenario.png)
+
+*Figura 8 — Campos de definição do cenário na página Mapa de calor. Fonte: elaboração própria.*
 
 O resultado permite visualizar, em diferentes partes do país, onde a alternativa multimodal com cabotagem apresenta vantagem em relação à rodovia direta. O usuário pode escolher se o mapa representa custo modelado do combustível ou emissões operacionais. Em cada destino, um valor positivo indica que a alternativa multimodal teve menor custo ou menor emissão; um valor negativo indica que a rodovia direta apresentou o menor resultado para o indicador selecionado.
 
-As cores e a altura da superfície facilitam a leitura espacial dessas diferenças. Os resultados são calculados para os municípios do conjunto de destinos; as áreas entre eles são uma interpolação visual para tornar o padrão mais legível no mapa. Portanto, cada área colorida não representa uma nova rota calculada, mas a visualização dos resultados obtidos para os destinos próximos. No exemplo que será apresentado, o cenário parte da Avenida Professor Luciano Gualberto, em São Paulo, e considera uma carga de 14 t.
+As cores e a altura da superfície facilitam a leitura espacial dessas diferenças. Os resultados são calculados para os municípios do conjunto de destinos; as áreas entre eles são uma interpolação visual para tornar o padrão mais legível no mapa. Portanto, cada área colorida não representa uma nova rota calculada, mas a visualização dos resultados obtidos para os destinos próximos. A Figura 9 ilustra essa representação para o cenário informado.
+
+![Mapa de calor produzido para o cenário de origem em São Paulo e carga de 14 t.](images/heatmap-map.png)
+
+*Figura 9 — Representação espacial dos resultados calculados na página Mapa de calor. Fonte: elaboração própria.*
 
 ## 5. Comparações com referências externas
 
@@ -1331,7 +1339,7 @@ Na calculadora da Aliança, o cenário informado foi São Paulo–Santana, com u
 
 ![Resultado da calculadora da Aliança para São Paulo–Santana.](comparacao_externa/calculo-co2_83399848.png)
 
-*Figura 8 — Resultado da calculadora da Aliança para São Paulo–Santana. Fonte: resultado exportado pela ferramenta, fornecido pelo autor.*
+*Figura 10 — Resultado da calculadora da Aliança para São Paulo–Santana. Fonte: resultado exportado pela ferramenta, fornecido pelo autor.*
 
 **Tabela 36 — Emissões no cenário São Paulo–Santana, com 20 t de carga.**
 
@@ -1349,7 +1357,7 @@ A captura da calculadora da Log-In mostra uma alternativa rodoviária de 3.032 k
 
 ![Resultado da calculadora de emissões da Log-In.](comparacao_externa/loginlogistica.png)
 
-*Figura 9 — Resultado da calculadora de emissões da Log-In. Fonte: captura de tela fornecida pelo autor.*
+*Figura 11 — Resultado da calculadora de emissões da Log-In. Fonte: captura de tela fornecida pelo autor.*
 
 **Tabela 37 — Emissões no cenário de referência São Paulo–Rio Branco.**
 
@@ -1367,7 +1375,7 @@ Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário
 
 ![Resultado da calculadora de piso mínimo de frete da ANTT.](comparacao_externa/calculadorafreteantt.png)
 
-*Figura 10 — Resultado da calculadora de piso mínimo de frete da ANTT para a distância de 3.491 km. Fonte: captura de tela fornecida pelo autor.*
+*Figura 12 — Resultado da calculadora de piso mínimo de frete da ANTT para a distância de 3.491 km. Fonte: captura de tela fornecida pelo autor.*
 
 **Tabela 38 — Valores para a ligação São Paulo–Rio Branco.**
 
