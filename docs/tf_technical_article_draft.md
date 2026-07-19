@@ -44,7 +44,17 @@ Estudos de *short sea shipping* (navegação marítima de curta distância) tamb
 
 Um princípio metodológico do estudo é dar preferência a dados públicos, oficiais, observados e auditáveis. A Agência Nacional de Transportes Aquaviários (ANTAQ), órgão federal que regula e acompanha o transporte aquaviário brasileiro, fornece os registros de escalas e de movimentação de carga. A base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) publica indicadores anuais de consumo e atividade dos navios. Essas fontes permitem relacionar uma operação registrada no Brasil ao desempenho do navio identificado pelo número da Organização Marítima Internacional (IMO), uma identificação permanente da embarcação. Os campos utilizados, os arquivos de origem e a forma de reconstruir as viagens são apresentados na Seção 3.3 [antaq2025; eumrv2025].
 
-A fronteira ambiental adotada é a de emissões operacionais *tank-to-wheel* (TTW, "do tanque à roda") de dióxido de carbono equivalente (CO₂e). Ela contabiliza o combustível queimado durante a operação do caminhão, do navio e dos equipamentos portuários. Não inclui a produção, o refino, o transporte ou a distribuição dos combustíveis. Essa delimitação não equivale a uma avaliação do ciclo de vida (*life-cycle assessment*, LCA), que também abrange etapas como a fabricação, a operação e o fim de vida dos equipamentos. Ela também se diferencia de uma avaliação *well-to-wheel* (WTW, do poço à roda), que inclui a cadeia do combustível anterior ao uso [decarb2024; maritimelca2024].
+O cálculo de emissões adota a fronteira operacional *tank-to-wheel* (TTW, do tanque à roda), pois o objetivo é comparar as emissões diretamente associadas ao transporte da mesma remessa. Em um caminhão a diesel, por exemplo, isso corresponde às emissões liberadas pelo escapamento durante a viagem. As fronteiras *well-to-wheel* (WTW, do poço à roda) e de avaliação de ciclo de vida (*life-cycle assessment*, LCA) ampliariam a análise para etapas que ocorrem antes ou além do deslocamento [decarb2024; maritimelca2024], mas não foram adotadas no presente estudo.
+
+**Quadro 1 — Fronteiras de emissão e aplicação ao caminhão a diesel.**
+
+| Fronteira | Conceito | Aplicação prática ao caminhão |
+| :-- | :-- | :-- |
+| TTW (*tank-to-wheel*) | Considera somente a queima do combustível durante o transporte. | Emissões do escapamento ao longo da viagem. |
+| WTW (*well-to-wheel*) | Inclui a queima e as etapas anteriores da cadeia do combustível. | Também inclui extração, refino, transporte e distribuição do diesel. |
+| LCA (*life-cycle assessment*) | Avalia um escopo mais amplo do sistema de transporte. | Pode incluir a fabricação, a manutenção e o fim de vida do caminhão e da infraestrutura. |
+
+*Fonte: elaboração própria com base em [decarb2024; maritimelca2024].*
 
 Além das emissões, o estudo delimita o custo e o serviço que serão comparados. O custo apresentado é uma estimativa do custo do combustível consumido nas etapas calculadas. Ele não representa frete comercial, tarifa contratada, negociação, seguro, estoque ou multas por permanência. O serviço comparado é o transporte da mesma remessa entre a mesma origem e o mesmo destino. As viagens observadas permitem reconstruir os percursos marítimos, mas não garantem frequência, espaço no navio ou disponibilidade comercial futura.
 
@@ -93,13 +103,35 @@ A massa transportada define o veículo representativo. O modelo utiliza os rendi
 
 *Fonte: elaboração do sistema a partir dos rendimentos médios por número de eixos publicados pela Agência Nacional de Transportes Terrestres (ANTT), no portal ANTTlegis.*
 
-Com a distância rodoviária $D_{\mathrm{rod}}$, em quilômetros, a eficiência aplicada $\eta_{\mathrm{rod}}$, em km/L, e $N$ viagens carregadas necessárias para transportar a remessa, o consumo de diesel do trecho $F_{\mathrm{rod}}$ é calculado por:
+
+**Quadro 2 — Principais símbolos usados nas fórmulas do sistema.**
+
+| Grandeza | Símbolo | Unidade usual |
+| :-- | :-- | :-- |
+| Distância | $D$ | km ou milhas náuticas (nm) |
+| Volume de diesel | $V$ | L |
+| Massa de VLSFO (óleo combustível naval de baixo teor de enxofre) | $M$ | kg |
+| Massa da carga | $m$ | t |
+| Preço do combustível | $P$ | R$/L ou R$/kg |
+| Custo modelado do combustível | $C$ | R$ |
+| Emissão operacional | $E$ | kg CO₂e |
+| Fator de emissão | $FE$ | kg CO₂e/L |
+| Eficiência do veículo | $\eta$ | km/L |
+| Intensidade marítima | $I$ | g/(t·nm) |
+| Trabalho de transporte | $W$ | t·nm |
+| Quantidade contável | $N$ | viagens, TEUs ou recortes |
+| Movimentos por TEU | $a$ | movimentos/TEU |
+| Consumo por movimento | $c$ | L/movimento |
+
+*Os subscritos identificam a etapa, o combustível ou o conjunto de dados. Os índices e conjuntos específicos são definidos junto às fórmulas em que aparecem.*
+Com a distância rodoviária $D_{\mathrm{rod}}$, em quilômetros, a eficiência aplicada $\eta_{\mathrm{rod}}$, em km/L, e $N_{\mathrm{viagens}}$ viagens carregadas necessárias para transportar a remessa, o volume de diesel do trecho $V_{\mathrm{diesel,rod}}$ é calculado por:
 
 $$
-F_{\mathrm{rod}}=N\frac{D_{\mathrm{rod}}}{\eta_{\mathrm{rod}}}.
+V_{\mathrm{diesel,rod}}
+=N_{\mathrm{viagens}}\frac{D_{\mathrm{rod}}}{\eta_{\mathrm{rod}}}.
 $$
 
-Como exemplo, usemos os 3.491,431 km de distância rodoviária entre São Paulo e Rio Branco. Para transportar uma remessa de 14 t nessa ligação, o modelo seleciona uma carreta de cinco eixos, com eficiência de 2,3 km/L. Como a remessa cabe em uma única viagem, $N=1$ e o consumo estimado é:
+Como exemplo, usemos os 3.491,431 km de distância rodoviária entre São Paulo e Rio Branco. Para transportar uma remessa de 14 t nessa ligação, o modelo seleciona uma carreta de cinco eixos, com eficiência de 2,3 km/L. Como a remessa cabe em uma única viagem, $N_{\mathrm{viagens}}=1$ e o consumo estimado é:
 
 $$
 \begin{aligned}
@@ -113,17 +145,18 @@ Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multipl
 
 #### 3.2.2 Custo estimado do combustível
 
-Depois de estimar o consumo em litros, o sistema calcula o custo do diesel da rota rodoviária. O preço do Diesel S10 vem do levantamento semanal da [Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)](https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas), agência federal que publica preços médios de combustíveis por Unidade da Federação (UF). O sistema sempre busca os dados mais recentes para a comparação.
+$$
 
 Nas rotas interestaduais, o preço adotado é a média aritmética entre o valor registrado na UF de origem e o valor registrado na UF de destino. Em uma rota inteiramente dentro de uma mesma UF, os dois valores são iguais e, portanto, o cálculo mantém o preço desse estado. O preço usado na rota é dado por:
 
 $$
-p_{\mathrm{diesel}}=\frac{p_{\mathrm{origem}}+p_{\mathrm{destino}}}{2}.
+P_{\mathrm{diesel}}
+=\frac{P_{\mathrm{diesel,origem}}+P_{\mathrm{diesel,destino}}}{2}.
 $$
 
 O custo estimado é o consumo calculado na Seção 3.2.1 multiplicado pelo preço do litro:
 
-$$
+C_{\mathrm{rod}}=V_{\mathrm{diesel,rod}}\,P_{\mathrm{diesel}}.
 C_{\mathrm{rod}}=F_{\mathrm{rod}}\,p_{\mathrm{diesel}}.
 $$
 
