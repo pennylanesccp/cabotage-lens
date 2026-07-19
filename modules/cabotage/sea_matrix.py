@@ -27,7 +27,7 @@ __all__ = ["OBSERVED_VOYAGE_CORRIDORS_MODE", "SeaMatrix"]
 
 _log = get_logger(__name__)
 OBSERVED_VOYAGE_CORRIDORS_MODE = "observed_voyage_corridors"
-MARITIME_INTENSITY_SCHEMA_VERSION = 5
+MARITIME_INTENSITY_SCHEMA_VERSION = 7
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -455,6 +455,9 @@ class SeaMatrix:
             "pair_intensity_candidate_voyage_count",
             "scenario_distance_method",
             "scenario_distance_scope",
+            "scenario_distance_weight",
+            "scenario_distance_mean_onboard_cargo_t_total",
+            "scenario_distance_transport_work_tnm",
             "scenario_distance_observation_count",
         )
         return bool(directional_stats) and all(

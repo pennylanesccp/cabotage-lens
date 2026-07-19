@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, Mapping, Tuple
 
 from modules.infra.log_manager import get_logger
 from modules.costs.fuel_price_refresh import refresh_fuel_prices
+from modules.fuel.truck_specs import AUTO_BY_WEIGHT_TRUCK_KEY
 from modules.multimodal import build_path_geometry, evaluate_path
 
 from app.main.utils.state import resolve_runtime_db_target
@@ -39,7 +40,7 @@ def build_scenario_payload(session_state: Mapping[str, Any]) -> Dict[str, Any]:
         "t_per_teu_default": t_per_teu_default,
         "allocation_mode": None if allocation_mode == "auto" else allocation_mode,
         "allocation_load_factor": allocation_load_factor,
-        "truck_key": str(session_state.get("truck_key", "")),
+        "truck_key": AUTO_BY_WEIGHT_TRUCK_KEY,
         "ors_profile": "driving-car",
         "overwrite_road": bool(session_state.get("overwrite_road", False)),
         "vessel_class": str(session_state.get("vessel_class", "")),
@@ -79,6 +80,7 @@ def run_analysis(
 ) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None, str | None, str]:
     payload = dict(payload)
     payload["include_port_ops"] = True
+    payload["truck_key"] = AUTO_BY_WEIGHT_TRUCK_KEY
     total_steps = 3
 
     def _emit_progress(message: str, *, current: int, phase: str = "working") -> None:

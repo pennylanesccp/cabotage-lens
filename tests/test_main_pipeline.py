@@ -21,6 +21,7 @@ class MainPipelineTests(unittest.TestCase):
         )
 
         self.assertEqual(payload["ors_profile"], "driving-car")
+        self.assertEqual(payload["truck_key"], "auto_by_weight")
         self.assertTrue(payload["include_port_ops"])
         self.assertNotIn("port_ops_observed_ports", payload)
 
@@ -116,6 +117,7 @@ class MainPipelineTests(unittest.TestCase):
         self.assertTrue(geometry_mock.call_args.kwargs["debug_trace"])
         self.assertTrue(evaluate_mock.call_args.kwargs["debug_trace"])
         self.assertIs(evaluate_mock.call_args.kwargs["port_ops_observed_ports"], observed)
+        self.assertEqual(evaluate_mock.call_args.kwargs["truck_key"], "auto_by_weight")
         self.assertEqual(evaluate_mock.call_args.kwargs["diesel_csv_path"], Path("runtime-diesel.csv"))
         self.assertEqual(evaluate_mock.call_args.kwargs["bunker_price_override_brl_mt"], 3210.0)
         trace_text = "\n".join(captured.output)

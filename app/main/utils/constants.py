@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict
 
-from modules.fuel.truck_specs import list_truck_keys
+from modules.fuel.truck_specs import AUTO_BY_WEIGHT_TRUCK_KEY
 from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO
 
@@ -31,7 +31,7 @@ DEFAULTS: Dict[str, Any] = {
     "cargo_teu_input": 1.0,
     "profile": "driving-car",
     "overwrite_road": False,
-    "truck_key": sorted(list_truck_keys())[0] if list_truck_keys() else "semi_27t",
+    "truck_key": AUTO_BY_WEIGHT_TRUCK_KEY,
     "vessel_class": DEFAULT_VESSEL_CLASS,
     "include_hoteling": True,
     "hoteling_hours_per_call": 14.0,

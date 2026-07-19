@@ -45,6 +45,12 @@ _CORRIDOR_SELECTION_LABELS = {
 }
 
 _SCENARIO_DISTANCE_METHOD_LABELS = {
+    "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances": (
+        "Mean-onboard-cargo-weighted mean of complete observed voyage distances"
+    ),
+    "arithmetic_mean_complete_observed_voyage_distances_zero_mean_onboard_cargo": (
+        "Arithmetic mean of complete observed voyage distances (all mean onboard cargo zero)"
+    ),
     "arithmetic_mean_complete_observed_voyage_distances": (
         "Arithmetic mean of complete observed voyage distances"
     ),
@@ -262,7 +268,7 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
         rows.append(
             (
                 "Maritime scenario distance",
-                "Mean distance across complete observed ANTAQ voyages. Each voyage counts once; no single corridor is used as the scenario path.",
+                "Representative distance across complete observed ANTAQ voyages. The method shown indicates whether mean cargo aboard or the zero-cargo exception was used; no single corridor is used as the scenario path.",
                 "; ".join([scenario_distance_method, *distance_parts]),
             )
         )
@@ -776,6 +782,18 @@ def _hoteling_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str]]:
 
 def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -> pd.DataFrame:
     inputs = results.get("inputs", {})
+    road_vehicle = inputs.get("road_vehicle", {})
+    road_vehicle_label = ""
+    road_vehicle_axles = 0
+    if isinstance(road_vehicle, Mapping):
+        road_vehicle_label = str(road_vehicle.get("label") or "").strip()
+        road_vehicle_axles = int(road_vehicle.get("axles") or 0)
+    road_vehicle_value = "Automatic by cargo mass"
+    if road_vehicle_label and road_vehicle_axles > 0:
+        road_vehicle_value = (
+            f"Automatic by cargo mass: {road_vehicle_label} "
+            f"({road_vehicle_axles} axles)"
+        )
     hoteling_reason = str(inputs.get("hoteling_exclusion_reason") or "").strip()
     hoteling_requested = bool(inputs.get("hoteling_requested"))
     hoteling_included = bool(inputs.get("hoteling_included") or inputs.get("include_hoteling"))
@@ -794,9 +812,9 @@ def _assumptions_table(results: Mapping[str, Any], payload: Mapping[str, Any]) -
 
     rows = [
         (
-            "Truck preset",
-            "Road vehicle configuration used for the road-only route and the road legs in multimodal routing.",
-            str(payload.get("truck_key") or "n/a"),
+            "Road vehicle selection",
+            "The representative road vehicle is selected automatically from the cargo mass for the road-only route and the road legs in multimodal routing.",
+            road_vehicle_value,
         ),
         (
             "Vessel class",

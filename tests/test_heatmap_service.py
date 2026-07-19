@@ -260,7 +260,8 @@ class HeatmapServiceTests(unittest.TestCase):
 
         self.assertIsNotNone(dataset)
         assert dataset is not None
-        self.assertEqual(dataset.scenario, scenario)
+        self.assertEqual(dataset.scenario.truck_key, "auto_by_weight")
+        self.assertTrue(dataset.scenario.include_port_ops)
         self.assertEqual(dataset.run.run_id, "run-123")
         self.assertEqual(len(dataset.points), 2)
         self.assertAlmostEqual(dataset.max_abs_cost_delta, 4000.0)
@@ -554,6 +555,7 @@ class HeatmapServiceTests(unittest.TestCase):
         self.assertFalse(run_bulk_mock.call_args.kwargs["overwrite_road"])
         self.assertEqual(run_bulk_mock.call_args.kwargs["max_geocode_workers"], 1)
         self.assertEqual(run_bulk_mock.call_args.kwargs["max_route_workers"], 2)
+        self.assertEqual(run_bulk_mock.call_args.kwargs["truck_key"], "auto_by_weight")
         self.assertEqual(run_bulk_mock.call_args.kwargs["diesel_csv_path"], "runtime-diesel.csv")
         self.assertEqual(run_bulk_mock.call_args.kwargs["bunker_price_override_brl_mt"], 3210.0)
 

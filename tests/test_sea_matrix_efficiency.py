@@ -13,6 +13,10 @@ from modules.cabotage.sea_matrix_efficiency import (
     PAIR_INTENSITY_SCOPE,
     PAIR_INTENSITY_ZERO_WORK_SOURCE,
     ROUTE_OBSERVATION_MODE,
+    SCENARIO_DISTANCE_METHOD,
+    SCENARIO_DISTANCE_WEIGHT,
+    SCENARIO_DISTANCE_ZERO_CARGO_METHOD,
+    SCENARIO_DISTANCE_ZERO_CARGO_SOURCE,
     _build_port_lookup,
     _collapse_consecutive_canonical_stops,
     _robust_fallback_statistic,
@@ -57,7 +61,10 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertEqual(stats["imo_intensity_voyage_count"], 1)
         self.assertEqual(
             stats["scenario_distance_method"],
-            "arithmetic_mean_complete_observed_voyage_distances",
+            SCENARIO_DISTANCE_METHOD,
+        )
+        self.assertEqual(
+            stats["scenario_distance_weight"], SCENARIO_DISTANCE_WEIGHT
         )
         self.assertEqual(stats["scenario_distance_observation_count"], 1)
         self.assertEqual(stats["distance_km"], 185.2)
@@ -428,7 +435,9 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertEqual(stats["observed_transport_work_tnm"], 5000.0)
         self.assertEqual(stats["observed_fuel_kg"], 50.0)
 
-    def test_scenario_distance_averages_complete_voyages_without_synthetic_path(self) -> None:
+    def test_scenario_distance_uses_mean_onboard_cargo_without_synthetic_path(
+        self,
+    ) -> None:
         ports = ["Port A", "Port Suape", "Port Recife", "Port X", "Port B"]
         matrix = self._symmetric_matrix(
             {
@@ -469,6 +478,9 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
         self.assertEqual(stats["corridor_count"], 2)
         self.assertEqual(stats["scenario_distance_observation_count"], 2)
+        # Each complete voyage has the same reconstructed mean cargo (100 t).
+        # The representative distance is therefore the mean of 370.4 and
+        # 222.24 km, rather than a transport-work-weighted value of 314.84 km.
         self.assertEqual(stats["distance_km"], 296.32)
         self.assertEqual(
             stats["scenario_distance_method"], CORRIDOR_SELECTION_CRITERION
@@ -478,7 +490,9 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertIn(["Port A", "Port Recife", "Port B"], option_paths)
         self.assertNotIn(["Port A", "Port X", "Port B"], option_paths)
 
-    def test_scenario_distance_averages_direct_and_multistop_voyages(self) -> None:
+    def test_scenario_distance_weights_by_mean_onboard_cargo_not_transport_work(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             payload, _ = self._run_enrichment(
                 Path(tmpdir),
@@ -508,7 +522,18 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertEqual(stats["corridor_count"], 2)
         self.assertEqual(stats["direct_voyage_count"], 1)
         self.assertEqual(stats["multistop_voyage_count"], 1)
-        self.assertEqual(stats["distance_km"], 388.92)
+        # Both observations have 100 t aboard on average. Their transport work
+        # differs because one voyage is longer, but distance must not inherit
+        # that additional distance factor.
+        self.assertAlmostEqual(stats["distance_km"], 388.92, places=3)
+        self.assertNotAlmostEqual(stats["distance_km"], 460.354, places=3)
+        self.assertEqual(
+            stats["scenario_distance_mean_onboard_cargo_t_total"], 200.0
+        )
+        self.assertEqual(
+            stats["scenario_distance_transport_work_tnm"], 42000.0
+        )
+        self.assertEqual(stats["scenario_distance_positive_weight_voyage_count"], 2)
 
     def test_pair_intensity_and_distance_use_all_complete_voyages(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -540,7 +565,12 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
             )
 
         stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
-        self.assertEqual(stats["distance_km"], 463.0)
+        # Distance uses 10 t and 100 t as the complete-voyage weights, while
+        # intensity below remains weighted by 3,000 and 20,000 t.nm.
+        self.assertAlmostEqual(stats["distance_km"], 387.236, places=3)
+        self.assertEqual(
+            stats["scenario_distance_mean_onboard_cargo_t_total"], 110.0
+        )
         self.assertEqual(stats["scenario_distance_observation_count"], 2)
         self.assertAlmostEqual(stats["pair_intensity_g_per_tnm"], 8.26087)
         self.assertAlmostEqual(stats["fuel_g_per_tnm_weighted_mean"], 8.26087)
@@ -576,7 +606,10 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
         self.assertEqual(stats["corridor_count"], 2)
         self.assertEqual(stats["candidate_voyage_count"], 2)
-        self.assertEqual(stats["distance_km"], 350.0)
+        self.assertEqual(stats["distance_km"], 200.0)
+        self.assertEqual(stats["scenario_distance_method"], SCENARIO_DISTANCE_METHOD)
+        self.assertEqual(stats["scenario_distance_positive_weight_voyage_count"], 1)
+        self.assertEqual(stats["scenario_distance_zero_weight_voyage_count"], 1)
         self.assertEqual(stats["fuel_g_per_tnm_weighted_mean"], 10.0)
         self.assertGreater(stats["observed_fuel_kg"], 0.0)
         self.assertEqual(
@@ -614,6 +647,17 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
 
         stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
         self.assertEqual(stats["pair_intensity_g_per_tnm"], 8.0)
+        self.assertEqual(
+            stats["scenario_distance_method"],
+            SCENARIO_DISTANCE_ZERO_CARGO_METHOD,
+        )
+        self.assertEqual(
+            stats["scenario_distance_weight"], "none_all_mean_onboard_cargo_zero"
+        )
+        self.assertEqual(stats["scenario_distance_mean_onboard_cargo_t_total"], 0.0)
+        self.assertEqual(stats["scenario_distance_transport_work_tnm"], 0.0)
+        self.assertEqual(stats["scenario_distance_positive_weight_voyage_count"], 0)
+        self.assertEqual(stats["scenario_distance_zero_weight_voyage_count"], 2)
         self.assertEqual(stats["pair_intensity_positive_weight_voyage_count"], 0)
         self.assertEqual(stats["pair_intensity_zero_weight_voyage_count"], 2)
         self.assertEqual(
@@ -638,6 +682,48 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
             validation["required_route"]["pair_intensity_method"],
             "unweighted_mean_resolved_same_od_voyages_zero_transport_work",
         )
+
+    def test_scenario_distance_uses_arithmetic_mean_only_when_all_mean_cargo_is_zero(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port X", "Port B"],
+                matrix=self._symmetric_matrix(
+                    {
+                        ("Port A", "Port B"): 500.0,
+                        ("Port A", "Port X"): 100.0,
+                        ("Port X", "Port B"): 100.0,
+                    }
+                ),
+                voyages=[
+                    {"voyage_id": "zero-direct", "imo": "1111111"},
+                    {"voyage_id": "zero-multistop", "imo": "1111111"},
+                ],
+                stops=[
+                    self._stop("zero-direct", 0, "Port A", 0.0, 0.0),
+                    self._stop("zero-direct", 1, "Port B", 0.0, 0.0),
+                    *[
+                        self._stop("zero-multistop", 0, "Port A", 0.0, 0.0),
+                        self._stop("zero-multistop", 1, "Port X", 0.0, 0.0),
+                        self._stop("zero-multistop", 2, "Port B", 0.0, 0.0),
+                    ],
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(stats["distance_km"], 350.0)
+        self.assertEqual(
+            stats["scenario_distance_method"], SCENARIO_DISTANCE_ZERO_CARGO_METHOD
+        )
+        self.assertEqual(
+            stats["distance_source"], SCENARIO_DISTANCE_ZERO_CARGO_SOURCE
+        )
+        self.assertEqual(stats["scenario_distance_effective_voyage_count"], 2)
+        self.assertEqual(stats["scenario_distance_mean_onboard_cargo_t_total"], 0.0)
+        self.assertEqual(stats["scenario_distance_transport_work_tnm"], 0.0)
 
     def test_pair_intensity_uses_weighted_mean_for_equal_work(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

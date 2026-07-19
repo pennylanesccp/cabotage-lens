@@ -4,8 +4,6 @@ from typing import Iterable
 
 import streamlit as st
 
-from modules.fuel.truck_specs import list_truck_keys
-
 from app.main.utils.antaq import antaq_refresh_label
 
 
@@ -18,9 +16,6 @@ def render_advanced(class_options: Iterable[str], port_ops_scenarios: Iterable[s
     st.session_state["profile"] = "driving-car"
     st.caption("Road routing is locked to `driving-car` with 5s provider timeouts and no HTTP retries.")
     st.checkbox("Overwrite road cache", key="overwrite_road")
-
-    _section_label("Road")
-    st.selectbox("Truck", options=sorted(list_truck_keys()), key="truck_key")
 
     _section_label("Maritime")
     st.selectbox("Vessel class", options=list(class_options), key="vessel_class")

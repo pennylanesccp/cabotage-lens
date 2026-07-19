@@ -14,6 +14,18 @@ _SOURCE_TYPE_ALIASES = {
     "directional_corridor": "seamatrix",
     "observed_voyage_mean": "observed_voyage_mean",
     "observed_complete_voyage_distance_mean": "observed_voyage_mean",
+    "observed_complete_voyage_distance_transport_work_weighted_mean": (
+        "observed_voyage_mean"
+    ),
+    "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean": (
+        "observed_voyage_mean"
+    ),
+    "observed_complete_voyage_distance_unweighted_mean_zero_transport_work": (
+        "observed_voyage_mean"
+    ),
+    "observed_complete_voyage_distance_unweighted_mean_zero_mean_onboard_cargo": (
+        "observed_voyage_mean"
+    ),
     "haversine": "haversine_fallback",
     "haversine_fallback": "haversine_fallback",
     "fallback": "haversine_fallback",
@@ -58,7 +70,7 @@ def maritime_distance_source_type(
     text = (_clean_text(source) or "").casefold()
     if "haversine" in text or "fallback" in text:
         return "haversine_fallback"
-    if "observed_complete_voyage_distance_mean" in text:
+    if "observed_complete_voyage_distance" in text:
         return "observed_voyage_mean"
     if is_override:
         if any(token in text for token in ("antaq", "costa", "reference", "external")):

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from modules.addressing.text import ascii_place_key, ascii_place_text
 from modules.costs.diesel_prices import normalize_uf
 from modules.costs.fuel_price_refresh import refresh_fuel_prices
+from modules.fuel.truck_specs import AUTO_BY_WEIGHT_TRUCK_KEY
 from modules.infra.database_manager import (
     BulkRunSelector,
     db_session,
@@ -227,6 +228,15 @@ def _require_postgres() -> None:
             "SUPABASE_DB_HOST, SUPABASE_DB_PORT, SUPABASE_DB_NAME, SUPABASE_DB_USER, SUPABASE_DB_PASSWORD, "
             "and SUPABASE_DB_SSLMODE."
         )
+
+
+def _normalize_app_scenario(scenario: HeatmapScenario) -> HeatmapScenario:
+    """Apply the fixed application-wide modeling choices to a Heatmap scenario."""
+    return replace(
+        scenario,
+        truck_key=AUTO_BY_WEIGHT_TRUCK_KEY,
+        include_port_ops=True,
+    )
 
 
 def _max_abs(values: List[float]) -> float:
@@ -726,6 +736,7 @@ def get_heatmap_status(
     destination_set_id: str | None = None,
 ) -> HeatmapRunInfo:
     _require_postgres()
+    scenario = _normalize_app_scenario(scenario)
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     with bind_log_context(origin=scenario.origin_name, destination_set_id=resolved_destination_set_id, ors_profile=scenario.ors_profile, entrypoint="heatmap"):
         _log.info(
@@ -789,6 +800,7 @@ def pending_destinations(
     *,
     destination_set_id: str | None = None,
 ) -> List[str]:
+    scenario = _normalize_app_scenario(scenario)
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     with db_session() as conn:
         selector = _build_selector_for_origin_location(
@@ -910,6 +922,7 @@ def load_cached_surface_dataset(
     progress_callback: Optional[Any] = None,
 ) -> Optional[HeatmapDataset]:
     _require_postgres()
+    scenario = _normalize_app_scenario(scenario)
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     selected_destinations = list(_heatmap_destinations(resolved_destination_set_id))
     with bind_log_context(
@@ -1278,6 +1291,7 @@ def list_failed_destinations(
     run_id: str | None = None,
 ) -> List[HeatmapFailureRecord]:
     _require_postgres()
+    scenario = _normalize_app_scenario(scenario)
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     selected_run_id = str(run_id or "").strip() or None
     with db_session() as conn:
@@ -1303,6 +1317,7 @@ def load_current_dataset(
     status: HeatmapRunInfo | None = None,
     destination_set_id: str | None = None,
 ) -> Optional[HeatmapDataset]:
+    scenario = _normalize_app_scenario(scenario)
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     status = status or get_heatmap_status(scenario, destination_set_id=resolved_destination_set_id)
     if status.found_count <= 0:
@@ -1475,7 +1490,7 @@ def run_heatmap(
     destination_set_id: str | None = None,
 ) -> HeatmapDataset:
     _require_postgres()
-    scenario = replace(scenario, include_port_ops=True)
+    scenario = _normalize_app_scenario(scenario)
     fuel_prices = refresh_fuel_prices()
     resolved_destination_set_id = _resolve_destination_set_id(destination_set_id)
     destination_label = _destination_label(resolved_destination_set_id)
@@ -1605,4 +1620,4 @@ def describe_hidden_defaults() -> Dict[str, Any]:
 
 
 def scenario_to_dict(scenario: HeatmapScenario) -> Dict[str, Any]:
-    return asdict(scenario)
+    return asdict(_normalize_app_scenario(scenario))

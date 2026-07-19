@@ -27,7 +27,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             },
             "voyage_fuel_g_per_tnm_directional_meta": {
                 "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
-                "maritime_intensity_schema_version": 5,
+                "maritime_intensity_schema_version": 7,
                 "pair_intensity_method": "transport_work_weighted_mean",
                 "generated_at": "2026-07-16T12:00:00+00:00",
             },
@@ -40,11 +40,14 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "multistop_voyage_count": 4,
                         "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                         "scenario_distance_method": (
-                            "arithmetic_mean_complete_observed_voyage_distances"
+                            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
                         ),
                         "scenario_distance_scope": (
                             "one_complete_ordered_od_observation_per_voyage"
                         ),
+                        "scenario_distance_weight": "mean_onboard_cargo_t",
+                        "scenario_distance_mean_onboard_cargo_t_total": 375.0,
+                        "scenario_distance_transport_work_tnm": 75000.0,
                         "scenario_distance_observation_count": 4,
                         "scenario_distance_corridor_count": 3,
                         "scenario_distance_km": 400.0,
@@ -52,7 +55,9 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "scenario_distance_min_km": 185.2,
                         "scenario_distance_max_km": 555.6,
                         "scenario_distance_stddev_km": 120.0,
-                        "distance_source": "observed_complete_voyage_distance_mean",
+                        "distance_source": (
+                            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+                        ),
                         "resolved_voyage_count": 3,
                         "imo_intensity_voyage_count": 2,
                         "class_fallback_voyage_count": 1,
@@ -105,15 +110,20 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                     "Port X": {
                         "distance_km": 92.6,
                         "distance_nm": 50.0,
-                        "distance_source": "observed_complete_voyage_distance_mean",
+                        "distance_source": (
+                            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+                        ),
                         "fuel_g_per_tnm_weighted_mean": 8.0,
                         "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                         "scenario_distance_method": (
-                            "arithmetic_mean_complete_observed_voyage_distances"
+                            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
                         ),
                         "scenario_distance_scope": (
                             "one_complete_ordered_od_observation_per_voyage"
                         ),
+                        "scenario_distance_weight": "mean_onboard_cargo_t",
+                        "scenario_distance_mean_onboard_cargo_t_total": 100.0,
+                        "scenario_distance_transport_work_tnm": 5000.0,
                         "scenario_distance_observation_count": 1,
                         "scenario_distance_corridor_count": 1,
                         "pair_intensity_g_per_tnm": 8.0,
@@ -131,15 +141,20 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                     "Port B": {
                         "distance_km": 92.6,
                         "distance_nm": 50.0,
-                        "distance_source": "observed_complete_voyage_distance_mean",
+                        "distance_source": (
+                            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+                        ),
                         "fuel_g_per_tnm_weighted_mean": 8.0,
                         "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                         "scenario_distance_method": (
-                            "arithmetic_mean_complete_observed_voyage_distances"
+                            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
                         ),
                         "scenario_distance_scope": (
                             "one_complete_ordered_od_observation_per_voyage"
                         ),
+                        "scenario_distance_weight": "mean_onboard_cargo_t",
+                        "scenario_distance_mean_onboard_cargo_t_total": 100.0,
+                        "scenario_distance_transport_work_tnm": 5000.0,
                         "scenario_distance_observation_count": 1,
                         "scenario_distance_corridor_count": 1,
                         "pair_intensity_g_per_tnm": 8.0,
@@ -235,7 +250,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         assert stats is not None
         self.assertEqual(
             stats["scenario_distance_method"],
-            "arithmetic_mean_complete_observed_voyage_distances",
+            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
         )
 
     def test_observed_remote_without_pair_intensity_yields_to_tracked_schema(self) -> None:
@@ -424,7 +439,8 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
 
         sea_leg = geometry["sea_leg"]
         self.assertEqual(
-            sea_leg["source"], "observed_complete_voyage_distance_mean"
+            sea_leg["source"],
+            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean",
         )
         self.assertEqual(
             sea_leg["fuel_g_per_tnm_source"],
@@ -440,7 +456,11 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(sea_leg["scenario_distance_observation_count"], 4)
         self.assertEqual(
             sea_leg["scenario_distance_method"],
-            "arithmetic_mean_complete_observed_voyage_distances",
+            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
+        )
+        self.assertEqual(
+            sea_leg["distance_provenance"]["source_type"],
+            "observed_voyage_mean",
         )
         self.assertEqual(sea_leg["fallback_voyage_count"], 1)
         self.assertEqual(sea_leg["candidate_observed_fuel_kg"], 720.0)
@@ -462,7 +482,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             payload["voyage_fuel_g_per_tnm_directional_meta"][
                 "maritime_intensity_schema_version"
             ],
-            5,
+            7,
         )
 
         validation = validate_enriched_sea_matrix_payload(
@@ -474,7 +494,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertGreater(route["distance_km"], 0.0)
         self.assertEqual(
             route["scenario_distance_method"],
-            "arithmetic_mean_complete_observed_voyage_distances",
+            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
         )
         self.assertEqual(route["scenario_distance_observation_count"], 89)
         self.assertGreater(route["fuel_g_per_tnm_weighted_mean"], 0.0)
@@ -531,12 +551,25 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         )
         self.assertEqual(
             stats["scenario_distance_method"],
-            "arithmetic_mean_complete_observed_voyage_distances",
+            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
         )
         self.assertEqual(stats["scenario_distance_observation_count"], 89)
         self.assertEqual(stats["scenario_distance_corridor_count"], 22)
-        self.assertAlmostEqual(stats["distance_km"], 6115.349, places=3)
-        self.assertAlmostEqual(stats["distance_nm"], 3302.024, places=3)
+        self.assertAlmostEqual(stats["distance_km"], 6142.461, places=3)
+        self.assertAlmostEqual(stats["distance_nm"], 3316.664, places=3)
+        self.assertEqual(
+            stats["scenario_distance_weight"], "mean_onboard_cargo_t"
+        )
+        self.assertAlmostEqual(
+            stats["scenario_distance_mean_onboard_cargo_t_total"],
+            950753.295,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            stats["scenario_distance_transport_work_tnm"],
+            3153328821.755,
+            places=3,
+        )
         self.assertNotIn("selected_corridor_sublegs", stats)
         direct_option = next(
             option
@@ -583,7 +616,8 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         sea_leg = geometry["sea_leg"]
         assert expected is not None
         self.assertEqual(
-            sea_leg["source"], "observed_complete_voyage_distance_mean"
+            sea_leg["source"],
+            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean",
         )
         self.assertEqual(
             sea_leg["fuel_g_per_tnm_source"],
@@ -605,7 +639,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(sea_leg["scenario_distance_corridor_count"], 22)
         self.assertNotIn("selected_corridor_sublegs", sea_leg)
 
-    def test_tracked_matrix_keeps_one_voyage_per_od_and_mean_distance_rule(
+    def test_tracked_matrix_keeps_one_voyage_per_od_and_cargo_weighted_distance_rule(
         self,
     ) -> None:
         matrix_path = Path(__file__).resolve().parents[1] / "data" / "sea_matrix.json"
@@ -634,14 +668,35 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                             option["corridor_port_path"][-1], destination
                         )
 
-                    expected_mean_km = sum(
-                        float(option["distance_km"])
-                        * len(option["candidate_voyage_ids"])
-                        for option in options
-                    ) / len(candidate_ids)
+                    weighted_options = []
+                    for option in options:
+                        distance_nm = float(option["distance_km"]) / 1.852
+                        transport_work_tnm = float(
+                            option["observed_transport_work_tnm"]
+                        )
+                        mean_onboard_cargo_t = (
+                            transport_work_tnm / distance_nm
+                            if distance_nm > 0.0
+                            else 0.0
+                        )
+                        if mean_onboard_cargo_t > 0.0:
+                            weighted_options.append((option, mean_onboard_cargo_t))
+                    if weighted_options:
+                        total_mean_onboard_cargo_t = sum(
+                            weight for _, weight in weighted_options
+                        )
+                        expected_distance_km = sum(
+                            float(option["distance_km"]) * weight
+                            for option, weight in weighted_options
+                        ) / total_mean_onboard_cargo_t
+                    else:
+                        expected_distance_km = sum(
+                            float(option["distance_km"]) * len(option["candidate_voyage_ids"])
+                            for option in options
+                        ) / len(candidate_ids)
                     self.assertAlmostEqual(
                         stats["distance_km"],
-                        round(expected_mean_km, 3),
+                        round(expected_distance_km, 3),
                         delta=0.002,
                     )
                     self.assertEqual(

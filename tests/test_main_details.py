@@ -199,15 +199,19 @@ class MainDetailsTests(unittest.TestCase):
         self.assertIn("Sea-matrix distance: 1", distance_sources)
         self.assertIn("Coordinate haversine fallback: 1", distance_sources)
 
-    def test_assumptions_show_mean_observed_voyage_distance(self) -> None:
+    def test_assumptions_show_mean_onboard_cargo_weighted_observed_voyage_distance(
+        self,
+    ) -> None:
         results = {
             "inputs": {},
             "multimodal": {
                 "sea": {
                     "route_observation_mode": "observed_voyage_corridors",
                     "scenario_distance_method": (
-                        "arithmetic_mean_complete_observed_voyage_distances"
+                        "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
                     ),
+                    "scenario_distance_weight": "mean_onboard_cargo_t",
+                    "scenario_distance_mean_onboard_cargo_t_total": 375.0,
                     "scenario_distance_observation_count": 4,
                     "scenario_distance_corridor_count": 3,
                     "scenario_distance_km": 400.0,
@@ -232,7 +236,10 @@ class MainDetailsTests(unittest.TestCase):
 
         self.assertIn("Maritime scenario distance", rows)
         value = rows["Maritime scenario distance"]["Value"]
-        self.assertIn("Arithmetic mean of complete observed voyage distances", value)
+        self.assertIn(
+            "Mean-onboard-cargo-weighted mean of complete observed voyage distances",
+            value,
+        )
         self.assertIn("400.000 km", value)
         self.assertIn("complete voyages: 4", value)
         self.assertNotIn("Selected distance corridor", rows)

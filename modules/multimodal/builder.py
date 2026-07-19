@@ -80,6 +80,7 @@ class LegResult(TypedDict, total=False):
 
 class SeaResult(TypedDict, total=False):
     distance_km: float
+    distance_nm: float
     source: str
     distance_provenance: Dict[str, Any]
     base_distance_provenance: Dict[str, Any]
@@ -101,6 +102,12 @@ class SeaResult(TypedDict, total=False):
     route_observation_mode: str
     scenario_distance_method: str
     scenario_distance_scope: str
+    scenario_distance_weight: str
+    scenario_distance_mean_onboard_cargo_t_total: float
+    scenario_distance_transport_work_tnm: float
+    scenario_distance_positive_weight_voyage_count: int
+    scenario_distance_zero_weight_voyage_count: int
+    scenario_distance_effective_voyage_count: int
     scenario_distance_observation_count: int
     scenario_distance_corridor_count: int
     scenario_distance_km: float
@@ -108,6 +115,7 @@ class SeaResult(TypedDict, total=False):
     scenario_distance_min_km: float
     scenario_distance_max_km: float
     scenario_distance_stddev_km: float
+    scenario_distance_stddev_method: str
     scenario_distance_source_counts: Dict[str, int]
     corridor_count: int
     candidate_voyage_count: int
@@ -519,6 +527,9 @@ def build_path_geometry_from_resolved(
             directional_stats.get("scenario_distance_method") or ""
         ).strip()
         uses_mean_observed_distance = bool(scenario_distance_method)
+        zero_mean_onboard_cargo_distance = scenario_distance_method.endswith(
+            "_zero_mean_onboard_cargo"
+        )
         route_distance_km = directional_stats.get("distance_km")
         if isinstance(route_distance_km, (int, float)) and float(route_distance_km) > 0.0:
             directional_source = str(directional_stats.get("distance_source") or sea_src)
@@ -536,8 +547,15 @@ def build_path_geometry_from_resolved(
                     else "seamatrix"
                 ),
                 notes=(
-                    "Arithmetic mean of total distances across complete observed "
-                    "same-OD voyages; individual subleg sources are retained."
+                    (
+                        "Arithmetic mean of total distances across complete observed "
+                        "same-OD voyages because their mean onboard cargo is zero; "
+                        "individual subleg sources are retained."
+                        if zero_mean_onboard_cargo_distance
+                        else "Mean-onboard-cargo-weighted mean of total distances across "
+                        "complete observed same-OD voyages; individual subleg sources "
+                        "are retained."
+                    )
                     if uses_mean_observed_distance
                     else (
                         "SeaMatrix directional/corridor distance replaced the base "
@@ -602,6 +620,8 @@ def build_path_geometry_from_resolved(
             "route_observation_mode",
             "scenario_distance_method",
             "scenario_distance_scope",
+            "scenario_distance_weight",
+            "scenario_distance_stddev_method",
             "selection_criterion",
             "selected_corridor_id",
             "pair_intensity_method",
@@ -619,6 +639,9 @@ def build_path_geometry_from_resolved(
             "candidate_voyage_observation_count",
             "scenario_distance_observation_count",
             "scenario_distance_corridor_count",
+            "scenario_distance_positive_weight_voyage_count",
+            "scenario_distance_zero_weight_voyage_count",
+            "scenario_distance_effective_voyage_count",
             "selected_corridor_candidate_voyage_count",
             "direct_voyage_count",
             "multistop_voyage_count",
@@ -687,6 +710,8 @@ def build_path_geometry_from_resolved(
             "pair_intensity_transport_work_weighted_mean_g_per_tnm",
             "scenario_distance_km",
             "scenario_distance_nm",
+            "scenario_distance_mean_onboard_cargo_t_total",
+            "scenario_distance_transport_work_tnm",
             "scenario_distance_min_km",
             "scenario_distance_max_km",
             "scenario_distance_stddev_km",

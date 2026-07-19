@@ -10,6 +10,7 @@ except Exception:  # pragma: no cover - Streamlit internals may move between rel
     get_script_run_ctx = None
 
 from modules.core.secrets import get_secret
+from modules.fuel.truck_specs import AUTO_BY_WEIGHT_TRUCK_KEY
 from modules.infra.db.settings import load_database_settings
 from modules.infra.log_manager import (
     detect_runtime_environment,
@@ -119,6 +120,11 @@ def ensure_port_ops_enabled(session_state: Any) -> None:
     session_state["include_port_ops"] = True
 
 
+def ensure_auto_truck_by_weight(session_state: Any) -> None:
+    """Keep road-vehicle selection tied to the cargo mass in every session."""
+    session_state["truck_key"] = AUTO_BY_WEIGHT_TRUCK_KEY
+
+
 def init_state(defaults: Mapping[str, Any] | None = None) -> None:
     runtime_defaults: dict[str, Any] = dict(defaults or DEFAULTS)
     runtime_environment = detect_runtime_environment(secret_value("APP_ENV", None))
@@ -154,6 +160,7 @@ def init_state(defaults: Mapping[str, Any] | None = None) -> None:
         st.session_state.setdefault(key, value)
 
     ensure_port_ops_enabled(st.session_state)
+    ensure_auto_truck_by_weight(st.session_state)
 
     # An old or partially restored Streamlit widget state can leave every
     # route layer disabled. That combination produces a valid but useless map

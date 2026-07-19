@@ -14,6 +14,13 @@ class StreamlitStateTests(unittest.TestCase):
 
         self.assertTrue(session_state["include_port_ops"])
 
+    def test_ensure_auto_truck_by_weight_overrides_restored_manual_state(self) -> None:
+        session_state = {"truck_key": "semi_27t"}
+
+        state.ensure_auto_truck_by_weight(session_state)
+
+        self.assertEqual(session_state["truck_key"], "auto_by_weight")
+
     def test_ensure_visible_map_layers_recovers_empty_route_map(self) -> None:
         session_state = {
             "map_show_first_last": False,
@@ -124,6 +131,26 @@ class StreamlitStateTests(unittest.TestCase):
         self.assertEqual(fake_streamlit.session_state["runtime_environment"], "local")
         self.assertTrue(fake_streamlit.session_state["write_local_logs"])
         self.assertFalse(fake_streamlit.session_state["archive_logs"])
+
+    def test_init_state_overrides_a_restored_manual_truck_selection(self) -> None:
+        fake_streamlit = SimpleNamespace(session_state={"truck_key": "semi_27t"})
+
+        with patch.object(state, "st", fake_streamlit), patch.object(
+            state,
+            "resolve_runtime_db_target",
+            return_value="postgresql://postgres:***@example.supabase.co:5432/postgres",
+        ), patch.object(
+            state,
+            "detect_runtime_environment",
+            return_value="local",
+        ), patch.object(
+            state,
+            "secret_value",
+            side_effect=lambda key, default=None: default,
+        ):
+            state.init_state()
+
+        self.assertEqual(fake_streamlit.session_state["truck_key"], "auto_by_weight")
 
     def test_init_state_uses_configured_log_level(self) -> None:
         fake_streamlit = SimpleNamespace(session_state={})

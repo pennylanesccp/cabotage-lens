@@ -82,11 +82,22 @@ TRUCK_SPECS: Dict[str, Dict[str, Any]] = {
     },
 }
 
+AUTO_BY_WEIGHT_TRUCK_KEY = "auto_by_weight"
+
+_AUTO_BY_WEIGHT_PRESET_BY_AXLES: Dict[int, str] = {
+    5: "semi_27t",
+    6: "carreta_6ax_30t",
+    7: "bitrain_7ax_36t",
+    9: "rodotrem_9ax_48t",
+}
+
 __all__ = [
     "TRUCK_SPECS",
+    "AUTO_BY_WEIGHT_TRUCK_KEY",
     "ANTT_KM_PER_L_BY_AXLES",
     "list_truck_keys",
     "get_truck_spec",
+    "resolve_truck_spec_for_cargo",
     "guess_axles_from_payload",
     "baseline_km_per_l_from_axles",
 ]
@@ -117,6 +128,46 @@ def get_truck_spec(truck_key: str) -> Dict[str, Any]:
         "truck_specs: get %s -> %s",
         truck_key,
         {k: spec[k] for k in ["label", "axles", "payload_t", "ref_weight_t"]},
+    )
+    return spec
+
+
+def resolve_truck_spec_for_cargo(
+    cargo_t: float,
+    truck_key: str = AUTO_BY_WEIGHT_TRUCK_KEY,
+) -> Dict[str, Any]:
+    """Return the road-vehicle specification applicable to a cargo mass.
+
+    Explicit presets remain available to reusable domain code.  The
+    ``auto_by_weight`` rule, used by the application, selects the axle range
+    from the total remessa and then uses the corresponding representative
+    vehicle capacity to determine the number of loaded trips.
+
+    The reference weight equals that representative capacity so the fuel model
+    applies the ANTT baseline efficiency associated with the selected axle
+    count.  This keeps the automatic rule aligned with the documented
+    axle-to-km/L table.
+    """
+    requested_key = str(truck_key or AUTO_BY_WEIGHT_TRUCK_KEY).strip()
+    if requested_key != AUTO_BY_WEIGHT_TRUCK_KEY:
+        return get_truck_spec(requested_key)
+
+    axles = guess_axles_from_payload(float(cargo_t))
+    resolved_key = _AUTO_BY_WEIGHT_PRESET_BY_AXLES[axles]
+    spec = get_truck_spec(resolved_key)
+    spec["ref_weight_t"] = float(spec["payload_t"])
+    spec["selection_mode"] = AUTO_BY_WEIGHT_TRUCK_KEY
+    spec["requested_key"] = AUTO_BY_WEIGHT_TRUCK_KEY
+    spec["resolved_key"] = resolved_key
+    _log.info(
+        (
+            "truck_specs: auto_by_weight resolved cargo_t=%.3f to truck=%s "
+            "axles=%s payload_t=%.3f"
+        ),
+        float(cargo_t),
+        resolved_key,
+        axles,
+        float(spec["payload_t"]),
     )
     return spec
 

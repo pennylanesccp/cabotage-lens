@@ -36,7 +36,11 @@ from modules.costs.diesel_prices import (
 from modules.costs.ship_fuel_prices import DEFAULT_OUTPUT_TXT, get_bunker_price
 from modules.fuel.emissions import DIESEL_TTW_KG_CO2E_PER_L, get_ef_kg_per_kg
 from modules.fuel.road_fuel_model import estimate_leg_liters
-from modules.fuel.truck_specs import get_truck_spec
+from modules.fuel.truck_specs import (
+    AUTO_BY_WEIGHT_TRUCK_KEY,
+    get_truck_spec,
+    resolve_truck_spec_for_cargo,
+)
 from modules.infra.log_manager import get_logger
 from modules.multimodal.container_efficiency import (
     DEFAULT_VESSEL_CLASS,
@@ -771,7 +775,10 @@ def evaluate_path(
             "No positive cargo mass or TEU activity was provided; cargo-scaled emissions are treated as zero activity."
         )
 
-    truck_spec = context.truck_spec
+    if str(truck_key).strip() == AUTO_BY_WEIGHT_TRUCK_KEY:
+        truck_spec = resolve_truck_spec_for_cargo(cargo_t, truck_key)
+    else:
+        truck_spec = context.truck_spec
     vessel_eff = context.vessel_eff
     hoteling_sel = context.hoteling_sel
 
@@ -943,7 +950,7 @@ def evaluate_path(
             )
             return result
 
-        liters, _, _, trips, _, _ = estimate_leg_liters(
+        liters, _, _, trips, km_per_liter, _ = estimate_leg_liters(
             distance_km=dist_km,
             cargo_t=cargo_t,
             spec=truck_spec,
@@ -958,6 +965,7 @@ def evaluate_path(
             "distance_km": dist_km,
             "trips": int(trips),
             "liters": liters,
+            "km_per_liter": float(km_per_liter),
             "diesel_price_r_per_l": leg_price_l,
             "diesel_price_meta": dict(diesel_price_meta),
             "cost": float(cost),
@@ -1111,9 +1119,14 @@ def evaluate_path(
                 scenario_distance_source_counts.get("haversine_fallback", 0)
                 or 0
             ) > 0:
+                distance_label = (
+                    "observed maritime distance with zero mean onboard cargo"
+                    if scenario_distance_method.endswith("_zero_mean_onboard_cargo")
+                    else "mean-onboard-cargo-weighted observed maritime distance"
+                )
                 calculation_warnings.append(
-                    "mean observed maritime distance includes subleg distances "
-                    "estimated by coordinate haversine fallback"
+                    f"{distance_label} includes subleg distances estimated by "
+                    "coordinate haversine fallback"
                 )
         elif not selected_corridor_sublegs:
             calculation_warnings.append(
@@ -1205,17 +1218,18 @@ def evaluate_path(
         ) / _KG_PER_TONNE
         if pair_intensity_method == _PAIR_ZERO_WORK_MEAN_METHOD:
             sailing_fuel_mode = (
-                "same_od_unweighted_mean_with_mean_observed_voyage_distance"
+                "same_od_unweighted_mean_with_observed_voyage_distance_"
+                "zero_mean_onboard_cargo"
             )
         elif pair_intensity_method == _PAIR_WEIGHTED_MEAN_METHOD:
             sailing_fuel_mode = (
                 "same_od_transport_work_weighted_mean_with_"
-                "mean_observed_voyage_distance"
+                "mean_onboard_cargo_weighted_observed_voyage_distance"
             )
         else:
             sailing_fuel_mode = (
                 "same_od_representative_intensity_with_"
-                "mean_observed_voyage_distance"
+                "observed_voyage_distance"
             )
     elif selected_corridor_sublegs_complete:
         sea_fuel_sailing_kg = sum(
@@ -1475,6 +1489,22 @@ def evaluate_path(
         "distance_provenance": sea_leg_data.get("distance_provenance"),
         "scenario_distance_method": scenario_distance_method,
         "scenario_distance_scope": sea_leg_data.get("scenario_distance_scope"),
+        "scenario_distance_weight": sea_leg_data.get("scenario_distance_weight"),
+        "scenario_distance_mean_onboard_cargo_t_total": _nonnegative_float_or_none(
+            sea_leg_data.get("scenario_distance_mean_onboard_cargo_t_total")
+        ),
+        "scenario_distance_transport_work_tnm": _nonnegative_float_or_none(
+            sea_leg_data.get("scenario_distance_transport_work_tnm")
+        ),
+        "scenario_distance_positive_weight_voyage_count": int(
+            sea_leg_data.get("scenario_distance_positive_weight_voyage_count") or 0
+        ),
+        "scenario_distance_zero_weight_voyage_count": int(
+            sea_leg_data.get("scenario_distance_zero_weight_voyage_count") or 0
+        ),
+        "scenario_distance_effective_voyage_count": int(
+            sea_leg_data.get("scenario_distance_effective_voyage_count") or 0
+        ),
         "scenario_distance_observation_count": int(
             sea_leg_data.get("scenario_distance_observation_count") or 0
         ),
@@ -1495,6 +1525,9 @@ def evaluate_path(
         ),
         "scenario_distance_stddev_km": _nonnegative_float_or_none(
             sea_leg_data.get("scenario_distance_stddev_km")
+        ),
+        "scenario_distance_stddev_method": sea_leg_data.get(
+            "scenario_distance_stddev_method"
         ),
         "scenario_distance_source_counts": scenario_distance_source_counts,
         "vessel_class": vessel_eff.vessel_class,
@@ -1718,6 +1751,19 @@ def evaluate_path(
         "inputs": {
             "cargo_t": cargo_t,
             "truck": truck_key,
+            "road_vehicle": {
+                "selection_mode": (
+                    AUTO_BY_WEIGHT_TRUCK_KEY
+                    if str(truck_key).strip() == AUTO_BY_WEIGHT_TRUCK_KEY
+                    else "explicit_preset"
+                ),
+                "label": str(truck_spec.get("label") or ""),
+                "axles": int(truck_spec.get("axles") or 0),
+                "payload_t": float(truck_spec.get("payload_t") or 0.0),
+                "resolved_key": str(
+                    truck_spec.get("resolved_key") or str(truck_key)
+                ),
+            },
             "diesel_price": price_l,
             "diesel_price_source": diesel_source,
             "diesel_price_meta": diesel_meta,
@@ -1739,6 +1785,22 @@ def evaluate_path(
             "sea_scenario_distance_method": scenario_distance_method,
             "sea_scenario_distance_scope": sea_leg_data.get(
                 "scenario_distance_scope"
+            ),
+            "sea_scenario_distance_weight": sea_leg_data.get(
+                "scenario_distance_weight"
+            ),
+            "sea_scenario_distance_mean_onboard_cargo_t_total": (
+                _nonnegative_float_or_none(
+                    sea_leg_data.get(
+                        "scenario_distance_mean_onboard_cargo_t_total"
+                    )
+                )
+            ),
+            "sea_scenario_distance_transport_work_tnm": _nonnegative_float_or_none(
+                sea_leg_data.get("scenario_distance_transport_work_tnm")
+            ),
+            "sea_scenario_distance_stddev_method": sea_leg_data.get(
+                "scenario_distance_stddev_method"
             ),
             "sea_scenario_distance_observation_count": int(
                 sea_leg_data.get("scenario_distance_observation_count") or 0

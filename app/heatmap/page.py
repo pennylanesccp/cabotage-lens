@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from modules.infra.log_manager import get_logger
+from modules.fuel.truck_specs import AUTO_BY_WEIGHT_TRUCK_KEY
 from modules.multimodal.container_efficiency import DEFAULT_VESSEL_CLASS
 from modules.multimodal.port_ops import DEFAULT_PORT_OPS_SCENARIO
 
@@ -73,7 +74,7 @@ def _current_scenario() -> HeatmapScenario:
     return HeatmapScenario(
         origin_name=str(st.session_state.get(_HEATMAP_ORIGIN_FIELD, "")).strip(),
         cargo_t=float(st.session_state.get("heatmap_cargo", float(DEFAULTS["cargo_t"]))),
-        truck_key=str(DEFAULTS["truck_key"]),
+        truck_key=AUTO_BY_WEIGHT_TRUCK_KEY,
         ors_profile="driving-car",
         vessel_class=DEFAULT_VESSEL_CLASS,
         include_hoteling=bool(DEFAULTS["include_hoteling"]),

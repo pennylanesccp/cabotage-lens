@@ -60,6 +60,10 @@ class SidebarAdvancedTests(unittest.TestCase):
             if call.args and call.args[0] == "Include port ops"
         )
         self.assertTrue(include_port_ops_call.kwargs["disabled"])
+        self.assertNotIn(
+            "Truck",
+            [call.args[0] for call in fake_streamlit.selectbox.call_args_list],
+        )
 
     def test_heatmap_sidebar_has_no_advanced_controls(self) -> None:
         fake_streamlit = SimpleNamespace(

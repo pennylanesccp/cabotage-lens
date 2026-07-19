@@ -27,14 +27,25 @@ DEFAULT_CLASS_EFFICIENCY_JSON_PATH = Path(
     "data/processed/cabotage_data/container_ship_efficiency_classes.json"
 )
 DEFAULT_SHIP_TYPE = "Container ship"
-PARSER_VERSION = "sea_matrix_efficiency_v4"
-MARITIME_INTENSITY_SCHEMA_VERSION = 5
+PARSER_VERSION = "sea_matrix_efficiency_v6"
+MARITIME_INTENSITY_SCHEMA_VERSION = 7
 _KM_PER_NAUTICAL_MILE = 1.852
 DEPLOYMENT_REQUIRED_ROUTE = ("Porto de Santos", "Porto de Manaus")
 ROUTE_OBSERVATION_MODE = "observed_voyage_corridors"
-SCENARIO_DISTANCE_METHOD = "arithmetic_mean_complete_observed_voyage_distances"
+SCENARIO_DISTANCE_METHOD = (
+    "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
+)
 SCENARIO_DISTANCE_SCOPE = "one_complete_ordered_od_observation_per_voyage"
-SCENARIO_DISTANCE_SOURCE = "observed_complete_voyage_distance_mean"
+SCENARIO_DISTANCE_SOURCE = (
+    "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+)
+SCENARIO_DISTANCE_WEIGHT = "mean_onboard_cargo_t"
+SCENARIO_DISTANCE_ZERO_CARGO_METHOD = (
+    "arithmetic_mean_complete_observed_voyage_distances_zero_mean_onboard_cargo"
+)
+SCENARIO_DISTANCE_ZERO_CARGO_SOURCE = (
+    "observed_complete_voyage_distance_unweighted_mean_zero_mean_onboard_cargo"
+)
 # Compatibility alias for callers that imported the former name. It no longer
 # denotes a selected corridor; it identifies the scenario-distance rule.
 CORRIDOR_SELECTION_CRITERION = SCENARIO_DISTANCE_METHOD
@@ -103,6 +114,21 @@ class VoyageSubroute:
     @property
     def transport_work_tnm(self) -> float:
         return sum(segment.tonne_nm for segment in self.segments)
+
+    @property
+    def mean_onboard_cargo_t(self) -> float:
+        """Return the distance-weighted mean cargo aboard this complete recorte.
+
+        The result is measured in tonnes.  It uses the cargo reconstructed for
+        every subleg, but it is not transport work: dividing the observed
+        tonne-nautical-mile work by the route distance prevents the complete
+        route distance from entering the scenario-distance weight twice.
+        """
+
+        distance_nm = self.distance_nm
+        if distance_nm <= 0.0:
+            return 0.0
+        return self.transport_work_tnm / distance_nm
 
     @property
     def fuel_consumption_g(self) -> float | None:
@@ -235,12 +261,25 @@ def enrich_sea_matrix_with_efficiency(
         "source": (
             "ANTAQ observed same-voyage corridors + EU MRV latest IMO intensity with "
             "explicit IMO outlier replacement and robust vessel-class and ship-type "
-            "estimates; same-OD transport-work-weighted intensity and arithmetic "
-            "mean distance across complete observed voyages"
+            "estimates; same-OD transport-work-weighted intensity and mean-onboard-"
+            "cargo-weighted distance across complete observed voyages"
         ),
         "route_observation_mode": ROUTE_OBSERVATION_MODE,
         "scenario_distance_method": SCENARIO_DISTANCE_METHOD,
         "scenario_distance_scope": SCENARIO_DISTANCE_SCOPE,
+        "scenario_distance_weight": SCENARIO_DISTANCE_WEIGHT,
+        "scenario_distance_positive_weight_rule": (
+            "sum(distance_km * mean_onboard_cargo_t) / "
+            "sum(mean_onboard_cargo_t)"
+        ),
+        "scenario_distance_weight_definition": (
+            "mean_onboard_cargo_t = sum(cargo_onboard_t * segment_distance_nm) / "
+            "sum(segment_distance_nm) = transport_work_tnm / route_distance_nm"
+        ),
+        "scenario_distance_zero_weight_rule": (
+            "exclude_zero_mean_onboard_cargo_when_positive_cargo_exists; otherwise use "
+            "arithmetic_mean_of_complete_same_od_voyages"
+        ),
         "weighting": "tonne_nm",
         "pair_intensity_method": PAIR_INTENSITY_METHOD,
         "pair_intensity_scope": PAIR_INTENSITY_SCOPE,
@@ -1519,31 +1558,96 @@ def _aggregate_subroute_stats(
         distance_nm_values = [
             float(subroute.distance_nm) for subroute in pair_observations
         ]
-        mean_distance_km = statistics.fmean(distance_km_values)
-        mean_distance_nm = statistics.fmean(distance_nm_values)
+        positive_weight_observations = [
+            (subroute, float(subroute.mean_onboard_cargo_t))
+            for subroute in pair_observations
+            if float(subroute.mean_onboard_cargo_t) > 0.0
+        ]
+        zero_weight_observations = [
+            subroute
+            for subroute in pair_observations
+            if float(subroute.mean_onboard_cargo_t) <= 0.0
+        ]
+        scenario_distance_mean_onboard_cargo_t_total = sum(
+            weight for _, weight in positive_weight_observations
+        )
+        scenario_distance_transport_work_tnm = sum(
+            float(subroute.transport_work_tnm)
+            for subroute, _ in positive_weight_observations
+        )
+        if scenario_distance_mean_onboard_cargo_t_total > 0.0:
+            mean_distance_km = sum(
+                float(subroute.distance_km) * weight
+                for subroute, weight in positive_weight_observations
+            ) / scenario_distance_mean_onboard_cargo_t_total
+            mean_distance_nm = sum(
+                float(subroute.distance_nm) * weight
+                for subroute, weight in positive_weight_observations
+            ) / scenario_distance_mean_onboard_cargo_t_total
+            variance_km = sum(
+                weight * (float(subroute.distance_km) - mean_distance_km) ** 2
+                for subroute, weight in positive_weight_observations
+            ) / scenario_distance_mean_onboard_cargo_t_total
+            scenario_distance_method = SCENARIO_DISTANCE_METHOD
+            scenario_distance_source = SCENARIO_DISTANCE_SOURCE
+            scenario_distance_weight = SCENARIO_DISTANCE_WEIGHT
+            scenario_distance_stddev_method = "mean_onboard_cargo_weighted_population"
+            scenario_distance_effective_voyage_count = len(positive_weight_observations)
+        else:
+            # A distance can still be reported when every reconstructed recorte
+            # has zero mean cargo on board. This is explicitly marked so it cannot
+            # be mistaken for the normal cargo-weighted calculation.
+            mean_distance_km = statistics.fmean(distance_km_values)
+            mean_distance_nm = statistics.fmean(distance_nm_values)
+            variance_km = (
+                statistics.pvariance(distance_km_values)
+                if len(distance_km_values) > 1
+                else 0.0
+            )
+            scenario_distance_method = SCENARIO_DISTANCE_ZERO_CARGO_METHOD
+            scenario_distance_source = SCENARIO_DISTANCE_ZERO_CARGO_SOURCE
+            scenario_distance_weight = "none_all_mean_onboard_cargo_zero"
+            scenario_distance_stddev_method = (
+                "unweighted_population_zero_mean_onboard_cargo"
+            )
+            scenario_distance_effective_voyage_count = len(pair_observations)
 
-        # The scenario distance is an arithmetic mean over complete voyage
-        # observations. A corridor repeated by several voyages therefore has
-        # the same weight as that number of voyages, not one weight per unique
-        # port sequence. This is intentionally separate from the transport-work
-        # weighting used for the pair intensity below.
+        # Each complete, ordered OD recorte is retained. Its influence on the
+        # representative scenario distance is its mean cargo aboard in tonnes,
+        # reconstructed from every subleg. Transport work remains an audit metric
+        # and the weight for intensity, but does not weight distance a second time.
         stats: dict[str, Any] = {
             "distance_km": round(mean_distance_km, 3),
             "distance_nm": round(mean_distance_nm, 3),
-            "distance_source": SCENARIO_DISTANCE_SOURCE,
+            "distance_source": scenario_distance_source,
             "scenario_distance_km": round(mean_distance_km, 3),
             "scenario_distance_nm": round(mean_distance_nm, 3),
-            "scenario_distance_method": SCENARIO_DISTANCE_METHOD,
+            "scenario_distance_method": scenario_distance_method,
             "scenario_distance_scope": SCENARIO_DISTANCE_SCOPE,
+            "scenario_distance_weight": scenario_distance_weight,
+            "scenario_distance_mean_onboard_cargo_t_total": round(
+                scenario_distance_mean_onboard_cargo_t_total,
+                3,
+            ),
+            "scenario_distance_transport_work_tnm": round(
+                scenario_distance_transport_work_tnm,
+                3,
+            ),
+            "scenario_distance_positive_weight_voyage_count": len(
+                positive_weight_observations
+            ),
+            "scenario_distance_zero_weight_voyage_count": len(
+                zero_weight_observations
+            ),
+            "scenario_distance_effective_voyage_count": (
+                scenario_distance_effective_voyage_count
+            ),
             "scenario_distance_observation_count": len(pair_observations),
             "scenario_distance_corridor_count": len(ordered_options),
             "scenario_distance_min_km": round(min(distance_km_values), 3),
             "scenario_distance_max_km": round(max(distance_km_values), 3),
-            "scenario_distance_stddev_km": round(
-                statistics.pstdev(distance_km_values), 3
-            )
-            if len(distance_km_values) > 1
-            else 0.0,
+            "scenario_distance_stddev_km": round(math.sqrt(variance_km), 3),
+            "scenario_distance_stddev_method": scenario_distance_stddev_method,
             "route_observation_mode": ROUTE_OBSERVATION_MODE,
             "corridor_count": len(ordered_options),
             "candidate_voyage_count": len(pair_observations),

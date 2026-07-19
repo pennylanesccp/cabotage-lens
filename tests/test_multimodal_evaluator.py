@@ -290,6 +290,53 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         self.assertIn("stage=calculate_port_ops status=complete source=disabled_by_user", trace_text)
         self.assertIn("stage=evaluation status=complete source=calculated_single_eval_outputs", trace_text)
 
+    def test_auto_by_weight_resolves_the_road_vehicle_from_cargo(self) -> None:
+        context = evaluator.PreparedEvaluationContext(
+            truck_spec={
+                "axles": 5,
+                "payload_t": 27.0,
+                "ref_weight_t": 27.0,
+                "empty_efficiency_gain": 0.18,
+            },
+            diesel_lookup=DieselPriceLookup(
+                source_csv="diesel.csv",
+                default_price_r_per_l=6.0,
+                uf_to_price={"SP": 6.12, "RJ": 6.15},
+                row_count=2,
+            ),
+            diesel_price_override=None,
+            bunker_price_ton=2572.34,
+            vessel_eff=self._fake_vessel(),
+            hoteling_sel=None,
+            port_ops_selection=None,
+        )
+        captured_specs: list[dict] = []
+
+        def capture_estimate_leg_liters(*, distance_km, spec, **kwargs):
+            captured_specs.append(dict(spec))
+            return self._estimate_leg_liters(distance_km=distance_km, **kwargs)
+
+        with patch.object(
+            evaluator,
+            "estimate_leg_liters",
+            side_effect=capture_estimate_leg_liters,
+        ):
+            result = evaluator.evaluate_path(
+                self._path_data(),
+                cargo_t=30.1,
+                truck_key="auto_by_weight",
+                include_hoteling=False,
+                include_port_ops=False,
+                prepared_context=context,
+            )
+
+        self.assertEqual(len(captured_specs), 3)
+        self.assertTrue(all(spec["axles"] == 7 for spec in captured_specs))
+        self.assertTrue(all(spec["payload_t"] == 36.0 for spec in captured_specs))
+        self.assertEqual(result["inputs"]["road_vehicle"]["selection_mode"], "auto_by_weight")
+        self.assertEqual(result["inputs"]["road_vehicle"]["axles"], 7)
+        self.assertEqual(result["inputs"]["road_vehicle"]["resolved_key"], "bitrain_7ax_36t")
+
     def test_diesel_prices_follow_each_road_leg_and_port_uf(self) -> None:
         context = evaluator.PreparedEvaluationContext(
             truck_spec={
@@ -675,7 +722,9 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
             any("haversine fallback" in item for item in result["calculation_warnings"])
         )
 
-    def test_pair_intensity_uses_mean_complete_observed_voyage_distance(self) -> None:
+    def test_pair_intensity_uses_mean_onboard_cargo_weighted_observed_distance(
+        self,
+    ) -> None:
         context = evaluator.PreparedEvaluationContext(
             truck_spec={
                 "axles": 5,
@@ -699,14 +748,19 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         path_data["sea_leg"] = {
             "distance_km": 370.4,
             "distance_nm": 200.0,
-            "source": "observed_complete_voyage_distance_mean",
+            "source": (
+                "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+            ),
             "route_observation_mode": "observed_voyage_corridors",
             "scenario_distance_method": (
-                "arithmetic_mean_complete_observed_voyage_distances"
+                "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
             ),
             "scenario_distance_scope": (
                 "one_complete_ordered_od_observation_per_voyage"
             ),
+            "scenario_distance_weight": "mean_onboard_cargo_t",
+            "scenario_distance_mean_onboard_cargo_t_total": 375.0,
+            "scenario_distance_transport_work_tnm": 75000.0,
             "scenario_distance_observation_count": 4,
             "scenario_distance_corridor_count": 3,
             "scenario_distance_km": 370.4,
@@ -750,14 +804,17 @@ class MultimodalEvaluatorContextTests(unittest.TestCase):
         self.assertEqual(
             sea["sailing_fuel_calc_mode"],
             "same_od_transport_work_weighted_mean_with_"
-            "mean_observed_voyage_distance",
+            "mean_onboard_cargo_weighted_observed_voyage_distance",
         )
         self.assertAlmostEqual(sea["fuel_kg_sailing"], 36.0)
         self.assertEqual(sea["scenario_distance_observation_count"], 4)
         self.assertEqual(sea["scenario_distance_corridor_count"], 3)
         self.assertEqual(sea["selected_corridor_sublegs"], [])
         self.assertTrue(
-            any("mean observed maritime distance" in item for item in result["calculation_warnings"])
+            any(
+                "mean-onboard-cargo-weighted observed maritime distance" in item
+                for item in result["calculation_warnings"]
+            )
         )
 
     def test_zero_work_pair_mean_has_explicit_source_and_mode(self) -> None:
