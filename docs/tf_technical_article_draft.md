@@ -415,12 +415,25 @@ Esse resultado não é a intensidade de um navio escolhido como representante. �
 
 ##### 3.3.4.4 Distância marítima representativa entre os portos
 
-Para calcular o consumo de uma nova remessa, o sistema usa a distância média das viagens completas observadas entre o porto de origem e o porto de destino. Em cada viagem, soma as distâncias de todos os subtrechos entre os dois portos. Em seguida, calcula a média aritmética desses totais. Cada viagem conta uma vez: entram tanto viagens diretas quanto viagens com escalas intermediárias.
+Para calcular o consumo de uma nova remessa, o sistema usa uma distância marítima representativa entre o porto de origem e o porto de destino. Essa distância é calculada separadamente da intensidade. A intensidade usa o trabalho de transporte como peso; para a distância, o peso da média é a carga média que permaneceu a bordo em cada recorte completo. Assim, a distância de uma viagem mais longa não é usada duas vezes no peso da média.
 
-Se $D_{v,o,d}$ é a distância total observada na viagem $v$ entre a origem $o$ e o destino $d$, e $n$ é o número de viagens completas aceitas, a distância usada no cenário é:
+Em cada recorte, o sistema primeiro soma as distâncias de seus subtrechos e calcula a carga média a bordo ponderada pela distância. Se $D_{v,o,d}^{\mathrm{nm}}$ é a distância total do recorte, essa carga média é:
 
 $$
-\bar D_{o,d}=\frac{1}{n}\sum_{v=1}^{n}D_{v,o,d}.
+\bar q_{v,o,d}=
+\frac{\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\,d_{v,s}}
+{\sum_{s\in\mathcal{S}_{v,o,d}}d_{v,s}}
+=\frac{W_{v,o,d}}{D_{v,o,d}^{\mathrm{nm}}}.
+$$
+
+Na fórmula, $m_{v,s}$ é a carga a bordo no subtrecho $s$, $d_{v,s}$ é a distância desse subtrecho e $D_{v,o,d}^{\mathrm{nm}}$ é a soma das distâncias do recorte em milhas náuticas. Assim, $\bar q_{v,o,d}$ é a carga média a bordo do recorte, em toneladas. Na viagem `voyage_9612791_00011`, por exemplo, o trabalho de transporte de $39.294.668{,}494\ \mathrm{t\cdot nm}$ é dividido pela distância total de $2.952{,}579\ \mathrm{nm}$, resultando em $13.308{,}592\ \mathrm{t}$. Esse é o peso dessa viagem na média de distância; não é a carga de uma nova remessa simulada.
+
+Depois, a distância representativa é a média das distâncias completas dos recortes, ponderada por essa carga média:
+
+$$
+\bar D_{o,d}^{\mathrm{rep}}=
+\frac{\sum_{v=1}^{n}D_{v,o,d}^{\mathrm{km}}\,\bar q_{v,o,d}}
+{\sum_{v=1}^{n}\bar q_{v,o,d}}.
 $$
 
 Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média, e nenhum corredor único é escolhido para representar o cenário. Em Santos–Manaus, os 89 recortes completos têm trabalho positivo e resultam em $6.174{,}638\ \mathrm{km}$, ou $3.334{,}038\ \mathrm{nm}$.
@@ -463,7 +476,7 @@ Para a remessa de 14 t entre São Paulo (SP) e Rio Branco (AC), a Tabela 9 reú
 | Etapa | Percurso | Distância | Combustível estimado | Custo modelado | Emissões operacionais TTW |
 | :-- | :-- | --: | --: | --: | --: |
 | *First mile* | São Paulo–Porto de Santos | 86,170 km | 37,465 L de diesel | R\$ 260,76 | 100,41 kg CO₂e |
-| Navegação | Porto de Santos–Porto de Manaus | 6.174,638 km<br/>(3.334,038 milhas náuticas) | 420,547 kg de VLSFO | R\$ 1.603,26 | 1.309,58 kg CO₂e |
+| Navegação | Porto de Santos–Porto de Manaus | 6.142,461 km<br/>(3.316,664 milhas náuticas) | 418,356 kg de VLSFO | R\$ 1.594,90 | 1.302,76 kg CO₂e |
 | Operações portuárias | Santos e Manaus | — | 4,820 L de diesel | R\$ 34,25 | 12,92 kg CO₂e |
 | *Last mile* | Porto de Manaus–Rio Branco | 1.403,691 km | 610,300 L de diesel | R\$ 5.041,08 | 1.635,60 kg CO₂e |
 | **Total** | — | **7.664,499 km** | — | **R\$ 6.939,34** | **3.058,51 kg CO₂e** |
@@ -476,9 +489,9 @@ Esta seção compara, para a mesma remessa de 14 t, os resultados totais da alt
 
 | Indicador | Alternativa A: rodovia direta | Alternativa B: multimodal | Resultado da alternativa B em relação à A |
 | :-- | --: | --: | :-- |
-| Distância percorrida | 3.491,431 km | 7.664,499 km | 4.173,068 km a mais (119,52%). |
-| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.058,51 kg CO₂e | 1.009,76 kg CO₂e a menos (24,82%). |
-| Custo modelado do combustível | R\$ 12.318,68 | R\$ 6.939,34 | R\$ 5.379,34 a menos (43,67%). |
+| Distância percorrida | 3.491,431 km | 7.632,322 km | 4.140,891 km a mais (118,60%). |
+| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.051,69 kg CO₂e | 1.016,59 kg CO₂e a menos (24,99%). |
+| Custo modelado do combustível | R\$ 12.318,68 | R\$ 6.930,99 | R\$ 5.387,69 a menos (43,74%). |
 
 Embora a alternativa multimodal percorra uma distância total maior, ela apresenta menor custo modelado de combustível e menores emissões operacionais TTW no cenário analisado.
 
@@ -505,8 +518,8 @@ A Tabela 11 apresenta as tecnologias e os serviços essenciais para entender a e
 | [Supabase](https://supabase.com/) | Serviço de banco de dados PostgreSQL, também chamado de Postgres, e de armazenamento remoto opcional. | Guarda pontos geocodificados, rotas reutilizáveis, execuções em lote e resultados que precisam permanecer disponíveis. |
 | [OpenRouteService (ORS)](https://openrouteservice.org/) | Serviço externo de localização e roteamento. | É o provedor principal para transformar um local em coordenadas e obter a geometria das rotas rodoviárias. |
 | [LocationIQ](https://locationiq.com/) | Serviço externo alternativo de localização e roteamento. | É consultado somente quando o ORS não entrega uma resposta utilizável. |
-| `requests` e Beautiful Soup | `requests` realiza consultas pela internet; Beautiful Soup lê a estrutura de páginas em HyperText Markup Language (HTML). | Ajudam a buscar serviços externos e, no fluxo de preparação marítima, a localizar no portal da ANTAQ os arquivos públicos a serem baixados. |
-| `CurrencyConverter` | Biblioteca de conversão de moedas. | Converte para reais a referência internacional de preço do combustível marítimo quando ela está em dólar por tonelada. |
+| [`requests`](https://requests.readthedocs.io/en/stable/) e [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) | `requests` realiza consultas pela internet; Beautiful Soup lê a estrutura de páginas em HyperText Markup Language (HTML). | Ajudam a buscar serviços externos e, no fluxo de preparação marítima, a localizar no portal da ANTAQ os arquivos públicos a serem baixados. |
+| [`CurrencyConverter`](https://pypi.org/project/CurrencyConverter/) | Biblioteca de conversão de moedas. | Converte para reais a referência internacional de preço do combustível marítimo quando ela está em dólar por tonelada. |
 
 *Fonte: elaboração própria a partir da arquitetura versionada do CabotageLens.*
 
@@ -521,10 +534,10 @@ Cada execução do pipeline recebe três dados: a origem, o destino e a massa da
 Origem e destino precisam ser convertidos em latitude e longitude antes de uma rota ser calculada. Esse procedimento é chamado de geocodificação. A entrada pode ser o nome de uma cidade, um endereço completo, coordenadas já conhecidas ou um Código de Endereçamento Postal (CEP).
 
 Quando o provedor encontra uma correspondência suficiente, o motor de geocodificação também pode reconhecer abreviações e pequenos erros de digitação. Por exemplo, `av prof luciano galberto` é interpretado corretamente como "Avenida Professor Luciano Gualberto, São Paulo, SP".
-
-#### 4.2.3 Consulta aos serviços de localização
-
-O pipeline envia o texto de origem ou destino primeiro ao OpenRouteService (ORS). Se o ORS devolver uma localização válida, recebe o rótulo do local, a latitude, a longitude e a identificação do provedor. Quando o ORS não devolve uma resposta utilizável, o pipeline envia a mesma consulta ao LocationIQ. A saída desta etapa é um ponto identificado por coordenadas (latitude e longitude).
+    A["Avenida Professor Luciano Gualberto, São Paulo, SP"] --> O["Consulta ao ORS/LocationIQ"]
+    B["av prof Luciano Gualberto, SP"] --> O
+    C["05508-010"] --> O
+    D["av prof luciano galberto"] --> O
 
 #### 4.2.4 Fluxograma explicativo
 
@@ -567,8 +580,8 @@ No exemplo São Paulo–Rio Branco, após a geocodificação descrita na Seção
 
 ```mermaid
 flowchart TB
-    A["Origem: ''São Paulo, SP''"] --> R["Geocodificação"]
-    B["Destino: ''Rio Branco, AC''"] --> S["Geocodificação"]
+    A["Origem: São Paulo, SP"] --> R["Geocodificação"]
+    B["Destino: Rio Branco, AC"] --> S["Geocodificação"]
     R --> C["Latitude: −23,550520°<br/>Longitude: −46,633308°"] --> T["Consulta de rota<br/>ORS/LocationIQ"]
     S --> D["Latitude: −9,989637°<br/>Longitude: −67,822462°"] --> T
     T --> E["Distância rodoviária:<br/>3.491,431 km"]
@@ -630,7 +643,7 @@ Depois de calcular a rota rodoviária direta, o sistema monta a alternativa mult
 
 #### 4.4.1 Consulta e conversão do preço do VLSFO
 
-Antes de avaliar a alternativa multimodal, o pipeline busca atualizar a cotação do VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre) no Porto de Santos. A biblioteca `requests` acessa a página brasileira da [Ship & Bunker](https://shipandbunker.com/prices/br-brazil), localiza a linha de Santos e obtém o preço do VLSFO em dólares por tonelada métrica (US$/mt).
+Antes de avaliar a alternativa multimodal, o pipeline busca a cotação mais recente disponível do VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre) na [Ship & Bunker](https://shipandbunker.com/prices/br-brazil). A biblioteca `requests` acessa a página brasileira do serviço e obtém o preço do VLSFO em dólares por tonelada métrica (US$/mt).
 
 A cotação internacional precisa ser convertida antes de entrar no cálculo de custo. A biblioteca [CurrencyConverter](https://pypi.org/project/CurrencyConverter/) obtém a taxa USD/BRL a partir das referências do Banco Central Europeu (BCE). No exemplo São Paulo–Rio Branco, a conversão é:
 
@@ -660,22 +673,22 @@ A atualização também sincroniza os dados necessários e os artefatos gerados 
 ##### 4.4.2.2 Reconstrução das viagens
 
 Com esses arquivos, a função de reconstrução reúne os registros de cabotagem conteinerizada e relaciona cada movimentação de carga à escala correspondente. A Atracação fornece o porto, a data e o número da Organização Marítima Internacional (IMO) do navio; a Carga informa o que foi embarcado e desembarcado.
-
+Como explicado na Seção 3.3.4.2, o sistema procura primeiro o IMO do navio observado na ANTAQ. Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem.
 Em seguida, a função reúne as escalas do mesmo navio em ordem cronológica. A carga a bordo também é reconstruída em cada escala. O sistema calcula o saldo entre o que entrou e o que saiu do navio e aplica esse saldo ao subtrecho seguinte. Quando o recorte de dados começa com o navio já carregado, é calculada a carga inicial mínima necessária para evitar valores negativos. Depois disso, em cada viagem, o sistema identifica os pares de portos em que o navio atracou primeiro na origem e, posteriormente, no destino. A parte da viagem entre essas duas escalas forma um recorte completo, direto ou com escalas intermediárias. Por exemplo, Santos–Suape–Pecém–Manaus contribui para Santos–Manaus com seus três subtrechos; Manaus–Suape–Santos não contribui, pois está no sentido contrário.
 
 O resultado da reconstrução também é gravado em tabelas do Supabase PostgreSQL. A tabela `antaq_voyages` registra cada viagem reconstruída; `antaq_voyage_stops` armazena suas paradas em ordem; e `antaq_voyage_stop_calls` preserva as escalas que formaram cada parada. Isso permite consultar as viagens já reconstruídas sem repetir o processamento dos arquivos brutos.
-
+Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância representativa dos recortes completos, ponderada pela carga média a bordo, e a intensidade, ponderada pelo trabalho de transporte. Também registra a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem viagens, cargas e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
 ##### 4.4.2.3 Dados da EU MRV
 
 Os arquivos anuais da base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) são obtidos no [THETIS-MRV, da Agência Europeia de Segurança Marítima](https://mrv.emsa.europa.eu/) e armazenados no Supabase Storage. Os campos e o exemplo de correspondência por IMO estão apresentados na Seção 3.3.4.2 e na Tabela 6.
 
 ##### 4.4.2.4 Cálculo do trabalho de transporte
 
-Com essa base de intensidades, o sistema procura primeiro o IMO do navio observado na ANTAQ. Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem. A regra de composição dessa intensidade para uma ligação entre portos está detalhada na Seção 3.3.4.3.
+Como explicado na Seção 3.3.4.2, o sistema procura primeiro o IMO do navio observado na ANTAQ. Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem.
 
 ##### 4.4.2.5 Compilação na estrutura matricial
 
-Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância representativa dos recortes completos, ponderada pelo trabalho de transporte, a intensidade calculada com a mesma lógica de ponderação, a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem viagens e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
+Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância representativa dos recortes completos, ponderada pela carga média a bordo, e a intensidade, ponderada pelo trabalho de transporte. Também registra a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem viagens, cargas e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
 
 ```mermaid
 flowchart LR
@@ -732,7 +745,7 @@ No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de S
 
 **Tabela 15 — Distâncias de seleção e de acesso rodoviário no exemplo São Paulo–Rio Branco.**
 
-| Acesso | Ponto geocodificado | Referência do porto | Haversine: seleção | Distância rodoviária: cálculo |
+A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas para realizar o procedimento descrito na Seção 3.3.3. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,92 kg CO₂e.
 | :-- | :-- | :-- | --: | --: |
 | *First mile*:<br/>São Paulo → Porto de Santos | São Paulo:<br/>[−23,550520°; −46,633308°] | Porto de Santos (embarque):<br/>[−23,987012°; −46,293383°] | 59,601 km | 86,170 km |
 | *Last mile*:<br/>Porto de Manaus → Rio Branco | Rio Branco (desembarque):<br/>[−9,989637°; −67,822462°] | Porto de Manaus:<br/>[−3,156700°; −60,007900°] | 1.149,569 km | 1.403,691 km |
