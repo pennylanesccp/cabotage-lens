@@ -54,15 +54,16 @@ For each equipment class `e`:
 For each equipment class `e`:
 
 - `diesel_liters_e = equipment_moves_total_e * diesel_l_per_move_e`
-- `fuel_kg_e = diesel_liters_e * diesel_density_kg_per_l`
 - `electricity_kwh_e = equipment_moves_total_e * electricity_kwh_per_move_e`
 
 ### 4) Emissions and costs
 
-- Diesel CO2e uses shared runtime logic via `modules.fuel.emissions.estimate_fuel_emissions(...)` with `fuel_type=diesel`.
+- Diesel CO2e uses the shared operational factor of `2.68 kg CO2e/L`, applied directly to `diesel_liters_e`.
 - Electricity CO2e uses `electricity_kg_co2e_per_kwh` from params (currently 0.0 placeholder due missing local factor in provided references).
 - Fuel cost uses route diesel price (`R$/L`) already used by road legs.
 - Electricity cost uses `electricity_price_brl_per_kwh` from params (currently 0.0 placeholder).
+
+The payload also retains `fuel_kg_e = diesel_liters_e * diesel_density_kg_per_l` for compatibility with the maritime aggregate and with legacy observed records expressed by mass. This derived field is not used to calculate the standard scenario's diesel cost or emissions.
 
 ### 5) Missing port-specific data fallback
 
@@ -92,7 +93,7 @@ Default runtime scenario: `santos_diesel_heavy`.
 
 - Default `port_calls`: 2
 - Default `port_moves_per_call`: p10=26.0, median=156.0, p90=510.6
-- `diesel_density_kg_per_l`: 0.85
+- `diesel_density_kg_per_l`: 0.85, retained only for the derived mass field and legacy mass-based observed records
 
 `Diesel-heavy` median equipment factors:
 

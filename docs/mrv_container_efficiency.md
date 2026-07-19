@@ -97,11 +97,10 @@ The preferred runtime metric for cargo allocation is:
 
 - `fuel_g_per_tnm` (`g/(t*nm)`) from MRV transport-work intensity
 
-For a selected observed voyage corridor, runtime sailing fuel uses the
-same-OD transport-work-weighted median and the sum of the selected path's
-subleg distances:
+For a same-origin/destination observation, runtime sailing fuel uses the
+transport-work-weighted pair intensity and the representative same-OD distance:
 
-- `fuel_kg_sailing = sum(pair_intensity_g_per_tnm * cargo_t * subleg_distance_nm) / 1000`
+- `fuel_kg_sailing = pair_intensity_g_per_tnm * cargo_t * scenario_distance_nm / 1000`
 
 The offline corridor calculation separately derives voyage fuel for observed
 activity by summing transport work over the actual sublegs for each ordered
@@ -129,12 +128,28 @@ calls create multiple eligible slices inside the same voyage, direct is
 preferred and otherwise the shortest complete slice is retained only to avoid
 counting that same voyage twice.
 
-Scenario distance is calculated separately. For every complete voyage
-observation, the pipeline sums the distances of its own sublegs between the
-ordered origin and destination. It then uses the arithmetic mean of those
-complete-voyage totals. Direct and multistop voyages therefore contribute one
-distance each, and the result does not form a synthetic route from different
-voyages.
+Scenario distance is calculated separately from pair intensity. For each
+complete voyage observation, the pipeline first sums the distance of its own
+sublegs and calculates the distance-weighted mean cargo aboard for that
+observation:
+
+- `mean_onboard_cargo_v_t = transport_work_v_tnm / distance_v_nm`
+- `mean_onboard_cargo_v_t = sum(cargo_onboard_s_t * distance_s_nm) / sum(distance_s_nm)`
+
+This quantity has units of tonnes. It represents the cargo that was typically
+aboard while that complete origin/destination slice was sailed, without using
+the voyage distance a second time as an aggregation weight. The representative
+scenario distance is then:
+
+- `scenario_distance_km = sum(distance_v_km * mean_onboard_cargo_v_t) / sum(mean_onboard_cargo_v_t)`
+
+Direct and multistop voyages therefore contribute their own complete distance.
+For the distance statistic, a voyage has more influence when its mean cargo
+aboard is greater; transport work remains the weight used exclusively for pair
+intensity. The result does not form a synthetic route from different voyages.
+Observations with zero mean cargo aboard are excluded whenever positive values
+exist; only when all observations have zero mean cargo aboard does the pipeline
+use an explicitly labeled arithmetic-mean contingency.
 
 Terminal aliases in the ANTAQ tables are resolved to canonical port complexes.
 Adjacent calls that resolve to the same canonical port are collapsed after
@@ -143,29 +158,32 @@ For distinct ports, each subleg uses a positive sea-matrix distance when
 available. Missing or nonpositive values use a coordinate-based haversine
 fallback; `scenario_distance_source_counts` retains that provenance because
 the fallback is an approximation included in the observed-voyage distance
-mean.
+weighted by mean cargo aboard.
 
 The normalized stop sequence is limited to ANTAQ calls represented in the
 containerized-cargo pipeline; physical calls with no observed container
 movement may be absent. If all derived transport work for a resolved subleg or
 corridor is zero, the diagnostic fuel attributed to the observed activity stays
 zero and corridor diagnostics retain their explicitly labeled arithmetic
-behavior. At pair level, zero-work observations are excluded whenever positive
-work exists; the all-zero case uses the labeled ordinary mean of the resolved
-intensities.
+behavior. At pair-intensity level, zero-work observations are excluded whenever
+positive work exists; the all-zero case uses the labeled ordinary mean of the
+resolved intensities. At scenario-distance level, the equivalent condition is
+zero mean cargo aboard, as stated above.
 
 For routes backed by directional ANTAQ+MRV observations, the single-evaluation
 pipeline JSON records `pair_intensity_*` fields for the intensity estimator and
-`scenario_distance_*` fields for the observed-voyage distance mean. The latter
-include the method, scope, number of complete voyage observations, number of
-observed corridors, minimum and maximum distance, and source counts. No
-selected-corridor sublegs are used to calculate a mean-distance scenario.
+`scenario_distance_*` fields for the observed-voyage distance calculation. The
+latter include the method, the total mean-onboard-cargo weight, the retained
+transport-work audit total, the number of complete voyage observations, the
+number of observed corridors, minimum and maximum distance, and source counts.
+No selected-corridor sublegs are used to calculate the representative scenario
+distance.
 
 The explicit `pair_intensity_*` fields are canonical for scenario intensity;
 `scenario_distance_*` fields are canonical for scenario distance. The legacy
 `fuel_g_per_tnm_weighted_mean` field carries the pair intensity for the current
 contract. The directional metadata declares
-`maritime_intensity_schema_version=5` and a generation timestamp so a complete
+`maritime_intensity_schema_version=7` and a generation timestamp so a complete
 newer tracked contract can replace an older or partially upgraded cache.
 
 The usual pair source is
