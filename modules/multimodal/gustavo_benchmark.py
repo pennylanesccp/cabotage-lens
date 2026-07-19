@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 import pandas as pd
 
+from modules.fuel.truck_specs import AUTO_BY_WEIGHT_TRUCK_KEY
 from modules.infra.log_manager import get_logger
 from modules.multimodal.builder import (
     build_path_geometry_from_resolved,
@@ -132,6 +133,7 @@ def compare_gustavo_pairs_with_model(
     ors, ports, sea_matrix, db_path = load_routing_assets()
     point_cache: dict[str, dict[str, Any]] = {}
     prepared_context = prepare_evaluation_context(
+        truck_key=AUTO_BY_WEIGHT_TRUCK_KEY,
         vessel_class=vessel_class,
         include_hoteling=include_hoteling,
         hoteling_hours_per_call=hoteling_hours_per_call,
@@ -311,6 +313,7 @@ def _evaluate_pair(
     result = evaluate_path(
         geometry,
         cargo_t=cargo_t,
+        truck_key=AUTO_BY_WEIGHT_TRUCK_KEY,
         cargo_teu=cargo_teu,
         t_per_teu_default=t_per_teu_default,
         allocation_load_factor=allocation_load_factor,
@@ -332,9 +335,12 @@ def _evaluate_pair(
     model_savings_pct = ((1.0 - (cabotage_model_kg / road_model_kg)) * 100.0) if road_model_kg > 0.0 else None
     sea_inputs = result.get("inputs", {})
     multimodal = result.get("multimodal", {})
+    road_only = result.get("road_only", {})
     first_mile = multimodal.get("first_mile", {})
     last_mile = multimodal.get("last_mile", {})
     sea_result = result.get("multimodal", {}).get("sea", {})
+    road_vehicle = sea_inputs.get("road_vehicle", {})
+    port_ops_totals = (sea_result.get("port_ops") or {}).get("totals") or {}
     component_payload = _component_payload_from_result(result)
     workbook_winner = _emissions_winner(
         pair.workbook_road_kg_co2e_per_container,
@@ -353,7 +359,38 @@ def _evaluate_pair(
         "port_origin_name": geometry["port_origin"]["name"],
         "port_destiny_name": geometry["port_destiny"]["name"],
         "road_distance_km": float(geometry["road_direct"].get("distance_km") or 0.0),
+        "road_direct_trips": int(road_only.get("trips") or 0),
+        "road_direct_liters": float(road_only.get("liters") or 0.0),
+        "road_direct_km_per_liter": _float_or_none(road_only.get("km_per_liter")),
+        "first_mile_distance_km": float(first_mile.get("distance_km") or 0.0),
+        "first_mile_trips": int(first_mile.get("trips") or 0),
+        "first_mile_liters": float(first_mile.get("liters") or 0.0),
+        "first_mile_km_per_liter": _float_or_none(first_mile.get("km_per_liter")),
+        "last_mile_distance_km": float(last_mile.get("distance_km") or 0.0),
+        "last_mile_trips": int(last_mile.get("trips") or 0),
+        "last_mile_liters": float(last_mile.get("liters") or 0.0),
+        "last_mile_km_per_liter": _float_or_none(last_mile.get("km_per_liter")),
+        "access_distance_km": float(first_mile.get("distance_km") or 0.0)
+        + float(last_mile.get("distance_km") or 0.0),
+        "access_road_liters": float(first_mile.get("liters") or 0.0)
+        + float(last_mile.get("liters") or 0.0),
+        "road_vehicle_selection_mode": road_vehicle.get("selection_mode"),
+        "road_vehicle_resolved_key": road_vehicle.get("resolved_key"),
+        "road_vehicle_axles": _float_or_none(road_vehicle.get("axles")),
+        "road_vehicle_payload_t": _float_or_none(road_vehicle.get("payload_t")),
         "sea_distance_km": float(geometry["sea_leg"].get("distance_km") or 0.0),
+        "sea_distance_source": geometry["sea_leg"].get("source"),
+        "sea_distance_provenance": geometry["sea_leg"].get("distance_provenance"),
+        "sea_distance_observation_count": sea_inputs.get(
+            "sea_scenario_distance_observation_count"
+        ),
+        "sea_distance_corridor_count": sea_inputs.get(
+            "sea_scenario_distance_corridor_count"
+        ),
+        "sea_distance_weight": sea_inputs.get("sea_scenario_distance_weight"),
+        "sea_distance_source_counts": sea_inputs.get(
+            "sea_scenario_distance_source_counts"
+        ),
         "model_road_kg_co2e_per_container": road_model_kg,
         "model_cabotage_kg_co2e_per_container": cabotage_model_kg,
         "road_pct_diff": _pct_diff(road_model_kg, pair.workbook_road_kg_co2e_per_container),
@@ -372,7 +409,15 @@ def _evaluate_pair(
         "pre_carriage_emissions_kgco2e": _float_or_none(first_mile.get("co2e")),
         "on_carriage_emissions_kgco2e": _float_or_none(last_mile.get("co2e")),
         "sea_sailing_fuel_kg": float(sea_result.get("fuel_kg_sailing") or 0.0),
+        "sea_hoteling_fuel_kg": float(sea_result.get("hoteling_fuel_kg") or 0.0),
+        "sea_marine_fuel_kg": float(sea_result.get("fuel_kg_marine") or 0.0),
+        "sea_port_ops_fuel_kg": float(sea_result.get("port_ops_fuel_kg") or 0.0),
+        "sea_port_ops_diesel_liters": _float_or_none(port_ops_totals.get("diesel_liters")),
         "sea_total_fuel_kg": float(sea_result.get("fuel_kg") or 0.0),
+        "sea_cargo_allocation_share": _float_or_none(
+            sea_result.get("cargo_allocation_share")
+        ),
+        "sea_teu_loaded": _float_or_none(sea_result.get("teu_loaded")),
         **component_payload,
     }
 
