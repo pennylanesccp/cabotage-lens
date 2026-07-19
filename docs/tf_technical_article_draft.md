@@ -239,7 +239,7 @@ As operações portuárias são as movimentações realizadas dentro do terminal
 
 O modelo representa esse consumo pelos equipamentos para os quais há fatores de atividade no cenário adotado: o guindaste sobre pneus do pátio (*rubber-tyred gantry*, RTG) e o caminhão que circula internamente no terminal. Estudos sobre carga e descarga em portos e sobre o uso energético de RTGs fundamentam a representação da operação por equipamento a seguir [shipops2022; rtg2017].
 
-O cálculo segue uma sequência simples: a carga informada é convertida em contêineres equivalentes a 20 pés (TEU); cada TEU gera uma quantidade definida de movimentos por equipamento; e cada movimento é convertido em litros de diesel. Os movimentos por contêiner e os consumos por movimento vêm do cenário de referência parametrizado com dados de Santos no estudo de Costa et al [workbookdados].
+O cálculo segue uma sequência simples: a carga informada é convertida em contêineres equivalentes a 20 pés (TEU); cada TEU gera uma quantidade definida de movimentos por equipamento; e cada movimento é convertido em litros de diesel. Os movimentos por contêiner e os consumos por movimento vêm do cenário de referência parametrizado com dados de Santos no estudo de Costa et al. [workbookdados].
 
 O cenário sempre considera duas operações portuárias: uma no porto de embarque e outra no porto de desembarque. Como a mesma remessa passa pelos dois terminais, a fórmula já usa a multiplicação por 2:
 
@@ -961,17 +961,17 @@ As cores e a altura da superfície facilitam a leitura espacial dessas diferenç
 
 ## 5. Comparações com referências externas
 
-Esta seção compara os resultados do CabotageLens com referências externas de duas naturezas: os cenários acadêmicos de Gustavo Costa e ferramentas públicas de cálculo de emissões. As comparações situam os resultados e tornam explícitas as diferenças de rota, carga, combustível e fronteira de emissão. Elas não são utilizadas para ajustar os parâmetros do sistema.
+Esta seção compara os resultados do CabotageLens com referências externas de duas naturezas: os cenários acadêmicos publicados pelo Prof. Dr. Gustavo Adolfo Alves da Costa e coautores, citados nesta seção como Costa et al., e ferramentas públicas de cálculo de emissões. As comparações situam os resultados e tornam explícitas as diferenças de rota, carga, combustível e fronteira de emissão. Elas não são utilizadas para ajustar os parâmetros do sistema.
 
-### 5.1 Comparação com os cenários de Gustavo Costa
+### 5.1 Comparação com os cenários de Costa et al.
 
-Esta subseção confronta o CabotageLens com os dados e cenários publicados por Gustavo Costa e coautores. A intenção não é tratar as fontes como se fossem a mesma simulação, mas mostrar, item a item, onde as escolhas de rota, consumo, combustível e alocação coincidem ou divergem. Assim, os números permanecem rastreáveis e não são usados para ajustar artificialmente o resultado do sistema.
+Esta subseção confronta o CabotageLens com os dados e cenários publicados por Costa et al. A intenção não é tratar as fontes como se fossem a mesma simulação, mas mostrar, item a item, onde as escolhas de rota, consumo, combustível e alocação coincidem ou divergem. Assim, os números permanecem rastreáveis e não são usados para ajustar artificialmente o resultado do sistema.
 
 #### 5.1.1 Base de comparação e limites de equivalência
 
-A planilha de apoio de Costa fornece 21 ligações direcionais entre Manaus, Fortaleza, Recife, Salvador, Rio de Janeiro e São Paulo. Para confrontar o cenário Base, cada ligação é avaliada no CabotageLens com 1 TEU e uma remessa de 14 t. A planilha apresenta resultados por contêiner, mas não explicita a massa desse contêiner; por isso, suas colunas são mantidas como “por contêiner”, enquanto as do CabotageLens são identificadas como “por 14 t”.
+A planilha de apoio de Costa et al. fornece 21 ligações direcionais entre Manaus, Fortaleza, Recife, Salvador, Rio de Janeiro e São Paulo. Para confrontar o cenário Base, cada ligação é avaliada no CabotageLens com 1 TEU e uma remessa de 14 t. A planilha apresenta resultados por contêiner, mas não explicita a massa desse contêiner; por isso, suas colunas são mantidas como “por contêiner”, enquanto as do CabotageLens são identificadas como “por 14 t”.
 
-**Tabela 19 — Escopo dos dados de Costa e forma de comparação.**
+**Tabela 19 — Escopo dos dados de Costa et al. e forma de comparação.**
 
 | Fonte | Resultado disponível | Uso nesta seção |
 | :-- | --: | --: |
@@ -986,7 +986,7 @@ As emissões do CabotageLens são operacionais TTW, isto é, representam a queim
 
 A Tabela 20 reúne todos os cenários da planilha. O cenário Base é o único que utiliza diesel nas pernas rodoviárias e VLSFO com MDO na navegação, combinação correspondente aos combustíveis atualmente calculados pelo CabotageLens. Os cenários C1 a C4 permanecem como referências externas, pois exigiriam parâmetros específicos de consumo e de emissão para GNV, HVO, LNG e metanol em cada etapa.
 
-**Tabela 20 — Combustíveis adotados nos cenários da planilha de Costa.**
+**Tabela 20 — Combustíveis adotados nos cenários da planilha de Costa et al.**
 
 | Etapa | Base | C1 | C2 | C3 | C4 |
 | :-- | --: | --: | --: | --: | --: |
@@ -1009,7 +1009,7 @@ Antes de comparar as distâncias marítimas, é necessário identificar os porto
 
 **Tabela 21 — Portos associados às cidades nas duas abordagens.**
 
-| Cidade | Planilha de Costa | CabotageLens |
+| Cidade | Planilha de Costa et al. | CabotageLens |
 | :-- | --: | --: |
 | Manaus | Manaus (BRMAO) | Porto de Manaus |
 | Fortaleza | Pecém (BRPEC) | Porto de Fortaleza |
@@ -1024,7 +1024,7 @@ A Tabela 22 compara a distância terrestre usada para a alternativa direta. Nas 
 
 **Tabela 22 — Distância da alternativa direta por ligação.**
 
-| Ligação | Costa: rodovia no arquivo (km) | CabotageLens: rodovia (km) | Diferença (km) |
+| Ligação | Costa et al.: rodovia no arquivo (km) | CabotageLens: rodovia (km) | Diferença (km) |
 | :-- | --: | --: | --: |
 | Manaus → Fortaleza | 1.523 | 5.569,6 | 4.046,6 |
 | Manaus → Recife | 2.042 | 5.558,6 | 3.516,6 |
@@ -1056,7 +1056,7 @@ A planilha soma, em cada extremo, o deslocamento entre a cidade, o terminal de c
 
 **Tabela 23 — Distância dos acessos terrestres da alternativa com cabotagem.**
 
-| Ligação | Costa: acessos logísticos (km) | CabotageLens: acessos viários (km) | Diferença (km) |
+| Ligação | Costa et al.: acessos logísticos (km) | CabotageLens: acessos viários (km) | Diferença (km) |
 | :-- | --: | --: | --: |
 | Manaus → Fortaleza | 142,0 | 16,2 | −125,8 |
 | Manaus → Recife | 140,6 | 9,4 | −131,2 |
@@ -1082,11 +1082,11 @@ A planilha soma, em cada extremo, o deslocamento entre a cidade, o terminal de c
 
 ##### 5.1.3.4 Perna marítima
 
-Na planilha, a navegação segue uma rotação fixa: Santos, Itaguaí, Salvador, Suape, Pecém, Macapá, Manaus, Macapá, Pecém, Suape e Santos. A distância de cada ligação da coluna de Costa foi reconstruída pela soma dos subtrechos dessa rotação no sentido do fluxo de contêineres. Já o CabotageLens usa a distância armazenada na SeaMatrix para o par de portos escolhido. Ela representa a média das viagens observadas quando há dados suficientes; nos demais pares, a matriz preserva a procedência da distância disponível.
+Na planilha, a navegação segue uma rotação fixa: Santos, Itaguaí, Salvador, Suape, Pecém, Macapá, Manaus, Macapá, Pecém, Suape e Santos. A distância de cada ligação da coluna de Costa et al. foi reconstruída pela soma dos subtrechos dessa rotação no sentido do fluxo de contêineres. Já o CabotageLens usa a distância armazenada na SeaMatrix para o par de portos escolhido. Ela representa a média das viagens observadas quando há dados suficientes; nos demais pares, a matriz preserva a procedência da distância disponível.
 
 **Tabela 24 — Distância marítima por ligação e sua procedência no CabotageLens.**
 
-| Ligação | Costa: rotação fixa (km) | CabotageLens: SeaMatrix (km) | Procedência da distância | Diferença (km) |
+| Ligação | Costa et al.: rotação fixa (km) | CabotageLens: SeaMatrix (km) | Procedência da distância | Diferença (km) |
 | :-- | --: | --: | :-- | --: |
 | Manaus → Fortaleza | 2.613,2 | 7.948,3 | Média de viagens observadas | 5.335,2 |
 | Manaus → Recife | 3.411,4 | 2.833,8 | Aproximação por Haversine | −577,6 |
@@ -1118,11 +1118,11 @@ A comparação física por ligação concentra-se no cenário Base. Nele, a plan
 
 ##### 5.1.4.1 Combustível na rodovia direta, nos acessos e na hidrovia
 
-A planilha aplica 3,61 km/L ao diesel rodoviário. Como ela não armazena litros por ligação, os valores da coluna de Costa foram obtidos dividindo a distância pelo rendimento informado. No CabotageLens, a regra automática escolhe, para 14 t, uma carreta de cinco eixos com rendimento de 2,30 km/L. Nas nove ligações que envolvem Manaus, a planilha acrescenta uma etapa hidroviária entre Manaus e Belém. Ela consome IFO: 196,3 kg por carreta no sentido Manaus–Belém e 274,9 kg por carreta no sentido Belém–Manaus. Esse IFO é apresentado separadamente, pois a fonte não o registra na mesma unidade das colunas rodoviárias por contêiner. A Tabela 25 mostra todos os consumos físicos disponíveis; ela não calcula uma diferença percentual porque as distâncias e os limites dos acessos são diferentes.
+A planilha aplica 3,61 km/L ao diesel rodoviário. Como ela não armazena litros por ligação, os valores da coluna de Costa et al. foram obtidos dividindo a distância pelo rendimento informado. No CabotageLens, a regra automática escolhe, para 14 t, uma carreta de cinco eixos com rendimento de 2,30 km/L. Nas nove ligações que envolvem Manaus, a planilha acrescenta uma etapa hidroviária entre Manaus e Belém. Ela consome IFO: 196,3 kg por carreta no sentido Manaus–Belém e 274,9 kg por carreta no sentido Belém–Manaus. Esse IFO é apresentado separadamente, pois a fonte não o registra na mesma unidade das colunas rodoviárias por contêiner. A Tabela 25 mostra todos os consumos físicos disponíveis; ela não calcula uma diferença percentual porque as distâncias e os limites dos acessos são diferentes.
 
 **Tabela 25 — Combustível estimado por ligação na estrada, nos acessos e na hidrovia.**
 
-| Ligação | Costa: direto (L/contêiner) | Costa: IFO hidroviário (kg/carreta) | CabotageLens: direto (L/14 t) | Costa: acessos (L/contêiner) | CabotageLens: acessos (L/14 t) |
+| Ligação | Costa et al.: direto (L/contêiner) | Costa et al.: IFO hidroviário (kg/carreta) | CabotageLens: direto (L/14 t) | Costa et al.: acessos (L/contêiner) | CabotageLens: acessos (L/14 t) |
 | :-- | --: | --: | --: | --: | --: |
 | Manaus → Fortaleza | 421,9 | 196,3 | 2.421,6 | 39,3 | 7,1 |
 | Manaus → Recife | 565,7 | 196,3 | 2.416,8 | 38,9 | 4,1 |
@@ -1154,7 +1154,7 @@ A planilha calcula o consumo do navio em uma rotação fixa e reparte o combust�
 
 **Tabela 26 — Combustível e intensidade da navegação atribuídos a cada ligação.**
 
-| Ligação | Costa: VLSFO (kg/contêiner) | Costa: MDO (kg/contêiner) | Costa: total em viagem (kg/contêiner) | CabotageLens: intensidade [g/(t·nm)] | CabotageLens: VLSFO de navegação (kg/14 t) |
+| Ligação | Costa et al.: VLSFO (kg/contêiner) | Costa et al.: MDO (kg/contêiner) | Costa et al.: total em viagem (kg/contêiner) | CabotageLens: intensidade [g/(t·nm)] | CabotageLens: VLSFO de navegação (kg/14 t) |
 | :-- | --: | --: | --: | --: | --: |
 | Manaus → Fortaleza | 152,9 | 5,0 | 157,9 | 7,588 | 455,9 |
 | Manaus → Recife | 209,9 | 6,8 | 216,6 | 6,070 | 130,0 |
@@ -1198,7 +1198,7 @@ As operações em porto também têm unidades diferentes nas fontes. A planilha 
 
 **Tabela 28 — Consumo associado às operações portuárias.**
 
-| Componente | Planilha de Costa, cenário Base | CabotageLens, cenário de 14 t |
+| Componente | Planilha de Costa et al., cenário Base | CabotageLens, cenário de 14 t |
 | :-- | --: | --: |
 | Depot | 1,0714 L por contêiner | Incluído no cenário de operações portuárias |
 | RTG | 1,4000 L por contêiner | Incluído no cenário de operações portuárias |
@@ -1213,7 +1213,7 @@ A Tabela 29 resume as premissas que explicam os consumos anteriores. A comparaç
 
 **Tabela 29 — Rendimentos e regras utilizados pelas fontes.**
 
-| Elemento | Costa | CabotageLens | Leitura correta |
+| Elemento | Costa et al. | CabotageLens | Leitura correta |
 | :-- | --: | --: | --: |
 | Rendimento do caminhão a diesel | 3,61 km/L na planilha; 0,28 L/km no artigo de competitividade | 2,30 km/L para 14 t, carreta de cinco eixos escolhida automaticamente | Parâmetro comparável, aplicado a redes de rota diferentes |
 | Velocidade marítima | Velocidade projetada de 20 kn; média de 15,660 kn na rotação | Não impõe uma velocidade única; usa a atividade observada e a intensidade da ligação | A velocidade fixa do proforma não é parâmetro do cálculo marítimo atual |
@@ -1224,7 +1224,7 @@ A Tabela 29 resume as premissas que explicam os consumos anteriores. A comparaç
 
 #### 5.1.6 Limites da comparação de custos
 
-A planilha não oferece uma matriz de custo por ligação. Seu proforma traz os custos de uma rotação completa do serviço, incluindo itens que não fazem parte do custo operacional de combustível calculado pelo CabotageLens. O sistema produz custos de combustível por ligação, mas a fonte de Costa não oferece um denominador equivalente para confrontá-los. A Tabela 30 preserva os valores originais para que a diferença de escopo fique clara.
+A planilha não oferece uma matriz de custo por ligação. Seu proforma traz os custos de uma rotação completa do serviço, incluindo itens que não fazem parte do custo operacional de combustível calculado pelo CabotageLens. O sistema produz custos de combustível por ligação, mas a fonte de Costa et al. não oferece um denominador equivalente para confrontá-los. A Tabela 30 preserva os valores originais para que a diferença de escopo fique clara.
 
 **Tabela 30 — Custos da rotação completa no proforma da planilha.**
 
@@ -1245,7 +1245,7 @@ O proforma usa R$ 4.191,20/t para VLSFO e R$ 6.838,00/t para MGO. O CabotageLens
 
 A planilha informa cinco cenários agregados. A Tabela 31 mostra todos eles e separa o que é resultado externo do que pode ser reproduzido com os combustíveis atuais do CabotageLens.
 
-**Tabela 31 — Emissões semanais reportadas pela planilha de Costa.**
+**Tabela 31 — Emissões semanais reportadas pela planilha de Costa et al.**
 
 | Cenário | Rodovia direta (tCO₂e/semana) | Cabotagem (tCO₂e/semana) | Redução da cabotagem |
 | :-- | --: | --: | --: |
@@ -1287,7 +1287,7 @@ A Tabela 32 apresenta o cenário Base ligação a ligação. Os valores do Cabot
 
 Nas 21 ligações, as duas abordagens apontam menor emissão para a alternativa com cabotagem. A redução média simples é de 46,7% na planilha e de 83,1% no CabotageLens. Essa concordância é direcional. Dez resultados marítimos usam distância média de viagens observadas, um usa a distância disponível na SeaMatrix e dez usam a aproximação por Haversine indicada na Tabela 24. As diferenças numéricas acompanham as diferenças já mostradas nas rotas, nos portos, nos rendimentos, nos combustíveis auxiliares e na fronteira ambiental; elas não devem ser usadas para calibrar a intensidade marítima do sistema.
 
-#### 5.1.8 Comparação com os artigos de Costa
+#### 5.1.8 Comparação com os artigos de Costa et al.
 
 O artigo de competitividade avalia uma super-rede que inclui frete, espaço no navio, movimentação em terminal, estoque em trânsito e preço de carbono. Seu resultado é o limiar rodoviário a partir do qual a cabotagem se torna competitiva, e não uma matriz de consumo ou de custo por ligação. A Tabela 33 reproduz todas as sensibilidades publicadas [competitiveness2024].
 
@@ -1393,7 +1393,7 @@ Os resultados devem ser lidos como uma comparação entre duas alternativas para
 
 A principal diferença da abordagem marítima é usar atividade observada, e não impor uma rota previamente escolhida. Em Santos–Manaus, os 89 recortes completos formam 22 sequências de portos, incluindo uma viagem direta e 88 viagens com escalas. A distância representativa de 6.142,461 km e a intensidade de 9,009824 g/(t·nm) são, portanto, indicadores formados a partir desse conjunto de viagens. Eles não descrevem uma rota única nem o desempenho de um único navio. A procedência da intensidade e das distâncias permanece registrada para que o resultado possa ser conferido.
 
-A comparação com a planilha de Gustavo Costa fornece apenas uma referência de direção. Nas 21 ligações válidas do cenário Base, a planilha e o CabotageLens apontaram menor emissão para a alternativa com cabotagem. Com a regra automática de veículo aplicada à carga de 14 t, a redução média simples é 46,7% na planilha e 83,1% no CabotageLens. Essa diferença não é uma validação da magnitude nem um motivo para calibrar o modelo, pois as análises usam rotas, acessos, fatores e fronteiras ambientais diferentes. Ela mostra que, no conjunto comparado, as duas abordagens chegam ao mesmo sentido na comparação de emissões [workbookdados; competitiveness2024].
+A comparação com a planilha de Costa et al. fornece apenas uma referência de direção. Nas 21 ligações válidas do cenário Base, a planilha e o CabotageLens apontaram menor emissão para a alternativa com cabotagem. Com a regra automática de veículo aplicada à carga de 14 t, a redução média simples é 46,7% na planilha e 83,1% no CabotageLens. Essa diferença não é uma validação da magnitude nem um motivo para calibrar o modelo, pois as análises usam rotas, acessos, fatores e fronteiras ambientais diferentes. Ela mostra que, no conjunto comparado, as duas abordagens chegam ao mesmo sentido na comparação de emissões [workbookdados; competitiveness2024].
 
 Com essa interpretação, o CabotageLens é uma ferramenta de triagem e comparação auditável. Ele permite identificar como cada alternativa foi calculada e quais dados, estimativas e aproximações participaram do resultado. A decisão logística final ainda exige informações que não são resolvidas pelo modelo, como frequência do serviço, capacidade disponível, prazo, terminais, contratos e fretes comerciais.
 
@@ -1419,7 +1419,7 @@ A principal contribuição do CabotageLens está na construção da perna marít
 
 A ligação Santos–Manaus demonstra o efeito dessa escolha: viagens diretas e viagens com escalas intermediárias participam da mesma estimativa, sem transformar uma sequência de portos em corredor obrigatório. No exemplo aplicado a uma remessa de 14 t entre São Paulo e Rio Branco, a alternativa multimodal apresentou emissões operacionais de CO₂e 24,99% menores e custo modelado do combustível 43,74% menor que a alternativa rodoviária direta. Esse resultado descreve as condições, os dados e os parâmetros usados na execução; não representa uma regra geral de superioridade da cabotagem.
 
-A comparação com o cenário Base da planilha de Gustavo Costa oferece uma referência externa de direção. Nas 21 ligações reexecutadas, tanto a planilha quanto o CabotageLens apontaram menor emissão para a alternativa com cabotagem. Como as fontes adotam rotas, fatores e fronteiras diferentes, essa concordância não valida a magnitude das reduções. Ela mostra apenas que, no conjunto comparado, as duas abordagens chegam ao mesmo sentido na comparação de emissões.
+A comparação com o cenário Base da planilha de Costa et al. oferece uma referência externa de direção. Nas 21 ligações reexecutadas, tanto a planilha quanto o CabotageLens apontaram menor emissão para a alternativa com cabotagem. Como as fontes adotam rotas, fatores e fronteiras diferentes, essa concordância não valida a magnitude das reduções. Ela mostra apenas que, no conjunto comparado, as duas abordagens chegam ao mesmo sentido na comparação de emissões.
 
 O CabotageLens deve, portanto, ser entendido como um instrumento de triagem e de comparação auditável. Ele apoia a análise inicial ao tornar explícitos os dados, as fontes de intensidade, os preços e as aproximações que formam cada resultado. Uma decisão prática continua dependendo de informações adicionais sobre serviço, prazo, capacidade, terminais e condições comerciais.
 
