@@ -18,7 +18,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from modules.fuel.emissions import estimate_fuel_emissions
+from modules.fuel.emissions import DIESEL_TTW_KG_CO2E_PER_L, get_ef_kg_per_kg
 from modules.infra.data_assets import resolve_data_asset_path
 from modules.infra.log_manager import get_logger
 
@@ -837,16 +837,11 @@ def estimate_port_ops(
         electric_kwh_per_move = _pick_stat(electricity_stats, stat_key)
 
         diesel_liters = equipment_moves_total * diesel_l_per_move
+        # Liters are the canonical unit for terminal diesel consumption. The
+        # fuel mass remains in the payload only for compatibility with the
+        # maritime aggregate and legacy observed port-operation records.
         fuel_kg = diesel_liters * selection.diesel_density_kg_per_l
-
-        if fuel_kg > 0:
-            diesel_emissions = estimate_fuel_emissions(
-                fuel_mass_kg=fuel_kg,
-                fuel_type=selection.diesel_fuel_type,
-            )
-            fuel_co2e_kg = float(diesel_emissions.get("co2e_kg") or 0.0)
-        else:
-            fuel_co2e_kg = 0.0
+        fuel_co2e_kg = diesel_liters * DIESEL_TTW_KG_CO2E_PER_L
 
         electricity_kwh = equipment_moves_total * electric_kwh_per_move
         electricity_co2e_kg = electricity_kwh * selection.electricity_kg_co2e_per_kwh
@@ -880,6 +875,7 @@ def estimate_port_ops(
             "moves_total": float(equipment_moves_total),
             "diesel_l_per_move": float(diesel_l_per_move),
             "diesel_liters": float(diesel_liters),
+            "diesel_emission_factor_kg_co2e_per_l": float(DIESEL_TTW_KG_CO2E_PER_L),
             "fuel_kg": float(fuel_kg),
             "electricity_kwh_per_move": float(electric_kwh_per_move),
             "electricity_kwh": float(electricity_kwh),
@@ -988,19 +984,24 @@ def estimate_port_ops(
             fuel_value = fuel_resolution.get("value")
             co2e_value = co2e_resolution.get("value")
             fuel_kg = 0.0 if fuel_value is None else float(fuel_value)
+            diesel_liters = (
+                fuel_kg / selection.diesel_density_kg_per_l
+                if selection.diesel_density_kg_per_l > 0
+                else 0.0
+            )
 
             if co2e_value is None and fuel_value is not None:
-                co2e_from_fuel = estimate_fuel_emissions(
-                    fuel_mass_kg=fuel_kg,
-                    fuel_type=selection.diesel_fuel_type,
+                co2e_kg = (
+                    diesel_liters * DIESEL_TTW_KG_CO2E_PER_L
+                    if diesel_liters > 0.0
+                    else fuel_kg * get_ef_kg_per_kg(selection.diesel_fuel_type)
                 )
-                co2e_kg = float(co2e_from_fuel.get("co2e_kg") or 0.0)
                 co2e_resolution = {
                     **co2e_resolution,
                     "value": co2e_kg,
                     "unit": "kg_co2e",
                     "source_level": str(fuel_resolution.get("source_level") or _SOURCE_UNAVAILABLE),
-                    "basis": "converted_from_resolved_fuel_kg",
+                    "basis": "calculated_from_resolved_diesel_liters",
                     "warning": fuel_resolution.get("warning"),
                     "available": True,
                     "excluded_from_total": False,
@@ -1008,7 +1009,6 @@ def estimate_port_ops(
             else:
                 co2e_kg = 0.0 if co2e_value is None else float(co2e_value)
 
-            diesel_liters = fuel_kg / selection.diesel_density_kg_per_l if selection.diesel_density_kg_per_l > 0 else 0.0
             diesel_price_for_call = resolved_diesel_prices_per_call[index]
             diesel_cost_brl = (
                 diesel_liters * float(diesel_price_for_call)

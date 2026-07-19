@@ -34,7 +34,7 @@ from modules.costs.diesel_prices import (
     normalize_uf,
 )
 from modules.costs.ship_fuel_prices import DEFAULT_OUTPUT_TXT, get_bunker_price
-from modules.fuel.emissions import get_ef_kg_per_kg
+from modules.fuel.emissions import DIESEL_TTW_KG_CO2E_PER_L, get_ef_kg_per_kg
 from modules.fuel.road_fuel_model import estimate_leg_liters
 from modules.fuel.truck_specs import get_truck_spec
 from modules.infra.log_manager import get_logger
@@ -53,7 +53,6 @@ from modules.multimodal.port_ops import (
 
 _log = get_logger(__name__)
 
-_DIESEL_EF_KG_CO2E_PER_L = 2.68
 _MARINE_FUEL_TYPE = "vlsfo"
 _BUNKER_EF_KG_CO2E_PER_KG = float(get_ef_kg_per_kg(_MARINE_FUEL_TYPE))
 _NM_TO_KM = 1.852
@@ -953,7 +952,7 @@ def evaluate_path(
 
         liters = float(liters)
         cost = liters * leg_price_l
-        co2e = liters * _DIESEL_EF_KG_CO2E_PER_L
+        co2e = liters * DIESEL_TTW_KG_CO2E_PER_L
 
         result = {
             "distance_km": dist_km,
@@ -972,7 +971,7 @@ def evaluate_path(
             trips=int(trips),
             liters=liters,
             diesel_price_r_per_l=leg_price_l,
-            diesel_emission_factor_kg_co2e_per_l=_DIESEL_EF_KG_CO2E_PER_L,
+            diesel_emission_factor_kg_co2e_per_l=DIESEL_TTW_KG_CO2E_PER_L,
             diesel_emission_factor_source="tracked_model_constant",
             cost_brl=float(cost),
             co2e_kg=float(co2e),

@@ -65,6 +65,11 @@ from modules.infra.log_manager import get_logger
 
 log = get_logger(__name__)
 
+# Shared operational diesel factor used by road legs and port equipment.
+# It is expressed per liter because their activity parameters and fuel prices
+# are both expressed in liters.
+DIESEL_TTW_KG_CO2E_PER_L = 2.68
+
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Data structures & defaults
