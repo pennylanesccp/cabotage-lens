@@ -283,7 +283,7 @@ Para que uma viagem contribua para uma ligação, quatro condições precisam se
 - origem e destino não podem ser o mesmo porto; e
 - a viagem pode contribuir apenas uma vez para o mesmo par ordenado de portos. Se o navio repetir esse par na mesma viagem, o sistema usa primeiro o recorte direto; se não houver um recorte direto, usa o recorte completo de menor distância.
 
-Assim, uma viagem observada como Santos → Suape → Pecém → Manaus pode contribuir para as ligações Santos → Suape, Santos → Pecém e Santos → Manaus. Os portos intermediários permanecem no cálculo, pois o consumo é somado ao longo de todos os subtrechos do recorte selecionado. A ausência de correspondência do IMO no EU MRV não elimina essa viagem: o sistema ainda busca uma intensidade representativa pela classe ou pelo tipo de navio. Se nenhuma intensidade puder ser obtida após essas etapas, a viagem permanece como observação de distância, mas não participa da média de intensidade.
+Assim, uma viagem observada como Santos → Suape → Pecém → Manaus pode contribuir para as ligações Santos → Suape, Santos → Pecém e Santos → Manaus. Os portos intermediários permanecem no cálculo, pois o consumo é somado ao longo de todos os subtrechos do recorte selecionado. A ausência de correspondência do IMO no EU MRV não elimina essa viagem: o sistema ainda busca uma intensidade representativa pela classe ou pelo tipo de navio. Se nenhuma intensidade puder ser obtida após essas etapas, a viagem permanece como observação de distância, mas não participa da média de intensidade. A Seção 3.3.4.4 aplica ainda uma verificação de P95 somente à média de distância; ela não remove a viagem da reconstrução nem da média de intensidade.
 
 O percurso apresentado a seguir serve apenas para mostrar, com um caso real, como essa reconstrução é feita para todas as viagens da base; ele não é um corredor previamente definido pelo sistema.
 
@@ -739,6 +739,8 @@ Nas duas linhas, $P_{\mathrm{VLSFO}}$ representa o preço do VLSFO e o sobrescri
 #### 4.4.2 Matriz marítima
 
 Antes de definir os portos de um novo cenário, o sistema prepara a referência marítima com base em viagens de cabotagem que realmente ocorreram. O produto dessa preparação é uma matriz marítima construída com dados observados.
+
+Quando a matriz não apresenta uma distância entre dois portos, a implementação usa como fallback os dados de distância marítima publicados pelo [Geógrafos](https://www.geografos.com.br/).
 
 ##### 4.4.2.1 Dados da ANTAQ
 
