@@ -1044,6 +1044,9 @@ def evaluate_path(
         sea_leg_data.get("scenario_distance_method") or ""
     ).strip() or None
     uses_mean_observed_distance = bool(scenario_distance_method)
+    scenario_distance_outlier_applied = bool(
+        sea_leg_data.get("scenario_distance_outlier_applied")
+    )
     if pair_intensity_g_per_tnm is not None and pair_intensity_source is None:
         pair_intensity_source = (
             _PAIR_ZERO_WORK_MEAN_SOURCE
@@ -1124,6 +1127,8 @@ def evaluate_path(
                     if scenario_distance_method.endswith("_zero_mean_onboard_cargo")
                     else "mean-onboard-cargo-weighted observed maritime distance"
                 )
+                if scenario_distance_outlier_applied:
+                    distance_label = f"P95-screened {distance_label}"
                 calculation_warnings.append(
                     f"{distance_label} includes subleg distances estimated by "
                     "coordinate haversine fallback"
@@ -1224,7 +1229,12 @@ def evaluate_path(
         elif pair_intensity_method == _PAIR_WEIGHTED_MEAN_METHOD:
             sailing_fuel_mode = (
                 "same_od_transport_work_weighted_mean_with_"
-                "mean_onboard_cargo_weighted_observed_voyage_distance"
+                + (
+                    "p95_filtered_mean_onboard_cargo_weighted_"
+                    "observed_voyage_distance"
+                    if scenario_distance_outlier_applied
+                    else "mean_onboard_cargo_weighted_observed_voyage_distance"
+                )
             )
         else:
             sailing_fuel_mode = (
@@ -1490,6 +1500,29 @@ def evaluate_path(
         "scenario_distance_method": scenario_distance_method,
         "scenario_distance_scope": sea_leg_data.get("scenario_distance_scope"),
         "scenario_distance_weight": sea_leg_data.get("scenario_distance_weight"),
+        "scenario_distance_outlier_rule": sea_leg_data.get(
+            "scenario_distance_outlier_rule"
+        ),
+        "scenario_distance_outlier_upper_quantile": _positive_float_or_none(
+            sea_leg_data.get("scenario_distance_outlier_upper_quantile")
+        ),
+        "scenario_distance_outlier_min_sample_size": int(
+            sea_leg_data.get("scenario_distance_outlier_min_sample_size") or 0
+        ),
+        "scenario_distance_outlier_upper_threshold_km": _positive_float_or_none(
+            sea_leg_data.get("scenario_distance_outlier_upper_threshold_km")
+        ),
+        "scenario_distance_outlier_applied": scenario_distance_outlier_applied,
+        "scenario_distance_outlier_excluded_voyage_count": int(
+            sea_leg_data.get("scenario_distance_outlier_excluded_voyage_count")
+            or 0
+        ),
+        "scenario_distance_retained_voyage_count": int(
+            sea_leg_data.get("scenario_distance_retained_voyage_count") or 0
+        ),
+        "scenario_distance_retained_corridor_count": int(
+            sea_leg_data.get("scenario_distance_retained_corridor_count") or 0
+        ),
         "scenario_distance_mean_onboard_cargo_t_total": _nonnegative_float_or_none(
             sea_leg_data.get("scenario_distance_mean_onboard_cargo_t_total")
         ),
@@ -1522,6 +1555,12 @@ def evaluate_path(
         ),
         "scenario_distance_max_km": _positive_float_or_none(
             sea_leg_data.get("scenario_distance_max_km")
+        ),
+        "scenario_distance_retained_min_km": _positive_float_or_none(
+            sea_leg_data.get("scenario_distance_retained_min_km")
+        ),
+        "scenario_distance_retained_max_km": _positive_float_or_none(
+            sea_leg_data.get("scenario_distance_retained_max_km")
         ),
         "scenario_distance_stddev_km": _nonnegative_float_or_none(
             sea_leg_data.get("scenario_distance_stddev_km")
@@ -1789,6 +1828,36 @@ def evaluate_path(
             "sea_scenario_distance_weight": sea_leg_data.get(
                 "scenario_distance_weight"
             ),
+            "sea_scenario_distance_outlier_rule": sea_leg_data.get(
+                "scenario_distance_outlier_rule"
+            ),
+            "sea_scenario_distance_outlier_upper_quantile": (
+                _positive_float_or_none(
+                    sea_leg_data.get("scenario_distance_outlier_upper_quantile")
+                )
+            ),
+            "sea_scenario_distance_outlier_min_sample_size": int(
+                sea_leg_data.get("scenario_distance_outlier_min_sample_size") or 0
+            ),
+            "sea_scenario_distance_outlier_upper_threshold_km": (
+                _positive_float_or_none(
+                    sea_leg_data.get("scenario_distance_outlier_upper_threshold_km")
+                )
+            ),
+            "sea_scenario_distance_outlier_applied": (
+                scenario_distance_outlier_applied
+            ),
+            "sea_scenario_distance_outlier_excluded_voyage_count": int(
+                sea_leg_data.get("scenario_distance_outlier_excluded_voyage_count")
+                or 0
+            ),
+            "sea_scenario_distance_retained_voyage_count": int(
+                sea_leg_data.get("scenario_distance_retained_voyage_count") or 0
+            ),
+            "sea_scenario_distance_retained_corridor_count": int(
+                sea_leg_data.get("scenario_distance_retained_corridor_count")
+                or 0
+            ),
             "sea_scenario_distance_mean_onboard_cargo_t_total": (
                 _nonnegative_float_or_none(
                     sea_leg_data.get(
@@ -1819,6 +1888,12 @@ def evaluate_path(
             ),
             "sea_scenario_distance_max_km": _positive_float_or_none(
                 sea_leg_data.get("scenario_distance_max_km")
+            ),
+            "sea_scenario_distance_retained_min_km": _positive_float_or_none(
+                sea_leg_data.get("scenario_distance_retained_min_km")
+            ),
+            "sea_scenario_distance_retained_max_km": _positive_float_or_none(
+                sea_leg_data.get("scenario_distance_retained_max_km")
             ),
             "sea_scenario_distance_stddev_km": _nonnegative_float_or_none(
                 sea_leg_data.get("scenario_distance_stddev_km")

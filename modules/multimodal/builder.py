@@ -103,6 +103,14 @@ class SeaResult(TypedDict, total=False):
     scenario_distance_method: str
     scenario_distance_scope: str
     scenario_distance_weight: str
+    scenario_distance_outlier_rule: str
+    scenario_distance_outlier_upper_quantile: float
+    scenario_distance_outlier_min_sample_size: int
+    scenario_distance_outlier_upper_threshold_km: float
+    scenario_distance_outlier_applied: bool
+    scenario_distance_outlier_excluded_voyage_count: int
+    scenario_distance_retained_voyage_count: int
+    scenario_distance_retained_corridor_count: int
     scenario_distance_mean_onboard_cargo_t_total: float
     scenario_distance_transport_work_tnm: float
     scenario_distance_positive_weight_voyage_count: int
@@ -114,6 +122,8 @@ class SeaResult(TypedDict, total=False):
     scenario_distance_nm: float
     scenario_distance_min_km: float
     scenario_distance_max_km: float
+    scenario_distance_retained_min_km: float
+    scenario_distance_retained_max_km: float
     scenario_distance_stddev_km: float
     scenario_distance_stddev_method: str
     scenario_distance_source_counts: Dict[str, int]
@@ -498,16 +508,76 @@ def build_path_geometry_from_resolved(
         {"lat": po_data["lat"], "lon": po_data["lon"], "name": po_data["name"]},
         {"lat": pd_data["lat"], "lon": pd_data["lon"], "name": pd_data["name"]},
     )
+    external_reference_lookup = getattr(
+        sea_matrix,
+        "external_distance_reference",
+        None,
+    )
+    external_distance_reference = (
+        external_reference_lookup(po_data["name"], pd_data["name"])
+        if callable(external_reference_lookup)
+        else None
+    )
+    uses_external_distance_reference = bool(
+        isinstance(external_distance_reference, dict)
+        and str(sea_src)
+        == str(external_distance_reference.get("source") or "external_reference")
+    )
+    if uses_external_distance_reference:
+        assert isinstance(external_distance_reference, dict)
+        base_distance_notes = (
+            "Published maritime distance for the exact port pair; it is not an "
+            "observed ANTAQ voyage."
+        )
+        base_distance_source_type = external_distance_reference.get("source_type")
+        base_distance_source_url = external_distance_reference.get("source_url")
+        base_distance_source_catalog_url = external_distance_reference.get(
+            "source_catalog_url"
+        )
+        base_distance_retrieved_at = external_distance_reference.get("retrieved_at")
+        base_distance_source_page_origin_port = external_distance_reference.get(
+            "source_page_origin_port"
+        )
+        base_distance_source_page_destination_port = external_distance_reference.get(
+            "source_page_destination_port"
+        )
+        base_distance_matched_candidate_direction = external_distance_reference.get(
+            "matched_candidate_direction"
+        )
+        base_distance_symmetric = external_distance_reference.get("symmetric")
+        base_distance_reported_nm = external_distance_reference.get(
+            "reported_distance_nm"
+        )
+    else:
+        base_distance_notes = (
+            "SeaMatrix coastline-adjusted haversine fallback; no matrix pair was available."
+            if "haversine" in str(sea_src).casefold()
+            else "SeaMatrix port-pair distance."
+        )
+        base_distance_source_type = None
+        base_distance_source_url = None
+        base_distance_source_catalog_url = None
+        base_distance_retrieved_at = None
+        base_distance_source_page_origin_port = None
+        base_distance_source_page_destination_port = None
+        base_distance_matched_candidate_direction = None
+        base_distance_symmetric = None
+        base_distance_reported_nm = None
 
     base_distance_provenance = build_maritime_distance_provenance(
         distance_km=sea_dist,
         source=sea_src,
         unit="km",
-        notes=(
-            "SeaMatrix coastline-adjusted haversine fallback; no matrix pair was available."
-            if "haversine" in str(sea_src).casefold()
-            else "SeaMatrix port-pair distance."
-        ),
+        source_type=base_distance_source_type,
+        notes=base_distance_notes,
+        source_url=base_distance_source_url,
+        source_catalog_url=base_distance_source_catalog_url,
+        retrieved_at=base_distance_retrieved_at,
+        source_page_origin_port=base_distance_source_page_origin_port,
+        source_page_destination_port=base_distance_source_page_destination_port,
+        matched_candidate_direction=base_distance_matched_candidate_direction,
+        symmetric=base_distance_symmetric,
+        reported_distance_nm=base_distance_reported_nm,
     )
     sea_leg: SeaResult = {
         "distance_km": float(sea_dist),
@@ -530,6 +600,28 @@ def build_path_geometry_from_resolved(
         zero_mean_onboard_cargo_distance = scenario_distance_method.endswith(
             "_zero_mean_onboard_cargo"
         )
+        has_distance_outlier_policy = any(
+            key in directional_stats
+            for key in (
+                "scenario_distance_outlier_rule",
+                "scenario_distance_outlier_applied",
+                "scenario_distance_outlier_min_sample_size",
+            )
+        )
+        distance_outlier_rule_applied = bool(
+            directional_stats.get("scenario_distance_outlier_applied")
+        )
+        if distance_outlier_rule_applied:
+            distance_outlier_note = (
+                " The P95 upper-distance rule was applied before aggregation."
+            )
+        elif has_distance_outlier_policy:
+            distance_outlier_note = (
+                " The P95 upper-distance rule was not applied because the "
+                "complete-voyage sample is smaller than 20."
+            )
+        else:
+            distance_outlier_note = ""
         route_distance_km = directional_stats.get("distance_km")
         if isinstance(route_distance_km, (int, float)) and float(route_distance_km) > 0.0:
             directional_source = str(directional_stats.get("distance_source") or sea_src)
@@ -551,10 +643,14 @@ def build_path_geometry_from_resolved(
                         "Arithmetic mean of total distances across complete observed "
                         "same-OD voyages because their mean onboard cargo is zero; "
                         "individual subleg sources are retained."
+                        + distance_outlier_note
                         if zero_mean_onboard_cargo_distance
-                        else "Mean-onboard-cargo-weighted mean of total distances across "
-                        "complete observed same-OD voyages; individual subleg sources "
-                        "are retained."
+                        else (
+                            "Mean-onboard-cargo-weighted mean of total distances across "
+                            "complete observed same-OD voyages; individual subleg sources "
+                            "are retained."
+                            + distance_outlier_note
+                        )
                     )
                     if uses_mean_observed_distance
                     else (
@@ -562,8 +658,14 @@ def build_path_geometry_from_resolved(
                         "port-pair distance; base provenance is retained."
                     )
                 ),
-                lower_bound_km=directional_stats.get("scenario_distance_min_km"),
-                upper_bound_km=directional_stats.get("scenario_distance_max_km"),
+                lower_bound_km=directional_stats.get(
+                    "scenario_distance_retained_min_km"
+                )
+                or directional_stats.get("scenario_distance_min_km"),
+                upper_bound_km=directional_stats.get(
+                    "scenario_distance_retained_max_km"
+                )
+                or directional_stats.get("scenario_distance_max_km"),
             )
         pair_intensity = directional_stats.get("pair_intensity_g_per_tnm")
         uses_pair_intensity = (
@@ -621,6 +723,7 @@ def build_path_geometry_from_resolved(
             "scenario_distance_method",
             "scenario_distance_scope",
             "scenario_distance_weight",
+            "scenario_distance_outlier_rule",
             "scenario_distance_stddev_method",
             "selection_criterion",
             "selected_corridor_id",
@@ -638,6 +741,10 @@ def build_path_geometry_from_resolved(
             "candidate_voyage_count",
             "candidate_voyage_observation_count",
             "scenario_distance_observation_count",
+            "scenario_distance_retained_voyage_count",
+            "scenario_distance_retained_corridor_count",
+            "scenario_distance_outlier_min_sample_size",
+            "scenario_distance_outlier_excluded_voyage_count",
             "scenario_distance_corridor_count",
             "scenario_distance_positive_weight_voyage_count",
             "scenario_distance_zero_weight_voyage_count",
@@ -714,12 +821,23 @@ def build_path_geometry_from_resolved(
             "scenario_distance_transport_work_tnm",
             "scenario_distance_min_km",
             "scenario_distance_max_km",
+            "scenario_distance_retained_min_km",
+            "scenario_distance_retained_max_km",
+            "scenario_distance_outlier_upper_quantile",
+            "scenario_distance_outlier_upper_threshold_km",
             "scenario_distance_stddev_km",
             "selected_corridor_fuel_g_per_tnm_weighted_mean",
         ):
             value = directional_stats.get(key)
             if isinstance(value, (int, float)):
                 sea_leg[key] = float(value)
+        if isinstance(
+            directional_stats.get("scenario_distance_outlier_applied"),
+            bool,
+        ):
+            sea_leg["scenario_distance_outlier_applied"] = bool(
+                directional_stats["scenario_distance_outlier_applied"]
+            )
         for key in (
             "fuel_g_per_tnm_mean",
             "fuel_g_per_tnm_median",

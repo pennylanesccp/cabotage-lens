@@ -783,70 +783,25 @@ Santos e Manaus totalizam 4,820~L de diesel.
 \subsubsection{3.3.4 Consumo de combustível na perna
 marítima}\label{consumo-de-combustuxedvel-na-perna-maruxedtima}}
 
-A perna marítima é o trecho em que a remessa segue por cabotagem entre o
-porto de embarque e o porto de desembarque. O consumo desse trecho é
-estimado em VLSFO (\emph{very low sulphur fuel oil}, óleo combustível de
-baixíssimo teor de enxofre), combustível naval adotado pelo modelo.
+A perna marítima corresponde ao deslocamento da remessa por cabotagem
+entre o porto de embarque e o porto de desembarque. Nesta etapa, o modelo
+estima o consumo de VLSFO (\emph{very low sulphur fuel oil}, óleo
+combustível de baixíssimo teor de enxofre) associado a esse deslocamento.
 
-Na rodovia, um serviço público de roteamento pode receber dois pontos e
-devolver com precisão a distância percorrida pela malha viária. Para a
-cabotagem, porém, não há um serviço equivalente que informe o itinerário
-efetivamente realizado por cada navio, suas escalas e a carga a bordo em
-cada trecho. Uma rota marítima desenhada apenas entre dois portos não
-mostraria, por exemplo, se o navio passou por Suape ou Pecém antes de
-chegar a Manaus. Por isso, em vez de estimar um corredor teórico, o
-sistema usa os registros reais de escalas e movimentação de carga
-publicados pela Agência Nacional de Transportes Aquaviários (ANTAQ)
-{[}antaq2025{]}.
+A estimativa não parte de um corredor previamente definido. Ela é
+construída com registros observados de escalas e movimentações de carga
+da Agência Nacional de Transportes Aquaviários (ANTAQ) e com indicadores
+de intensidade de combustível do Monitoramento, Reporte e Verificação da
+União Europeia (EU MRV).
 
-Antes da reconstrução, o sistema mantém somente as movimentações
-classificadas pela ANTAQ como cabotagem e carga conteinerizada. Cada
-movimentação também precisa estar vinculada a uma atracação e a um navio
-identificado pelo número IMO. Com esses registros, o sistema percorre
-todas as viagens da base, reconstitui a ordem das escalas e calcula a
-carga a bordo em cada trecho.
-
-Uma viagem não é considerada válida de forma genérica: a validade é
-verificada para cada par de portos e para cada sentido. Para contribuir
-com Santos → Manaus, por exemplo, a mesma viagem precisa conter Santos
-antes de Manaus. Uma sequência Manaus → Santos é uma observação da
-direção oposta e não pode ser usada para representar Santos → Manaus.
-
-Para que uma viagem contribua para uma ligação, quatro condições
-precisam ser atendidas:
-
-\begin{itemize}
-\tightlist
-\item
-  os dois portos devem aparecer na mesma viagem reconstruída, com a
-  origem antes do destino;
-\item
-  todos os subtrechos entre eles devem estar completos, isto é, os
-  portos precisam ser reconhecidos pela matriz marítima e cada distância
-  deve estar disponível na matriz ou ser obtida pela aproximação
-  geográfica de Haversine;
-\item
-  origem e destino não podem ser o mesmo porto; e
-\item
-  a viagem pode contribuir apenas uma vez para o mesmo par ordenado de
-  portos. Se o navio repetir esse par na mesma viagem, o sistema usa
-  primeiro o recorte direto; se não houver um recorte direto, usa o
-  recorte completo de menor distância.
-\end{itemize}
-
-Assim, uma viagem observada como Santos → Suape → Pecém → Manaus pode
-contribuir para as ligações Santos → Suape, Santos → Pecém e Santos →
-Manaus. Os portos intermediários permanecem no cálculo, pois o consumo é
-somado ao longo de todos os subtrechos do recorte selecionado. A
-ausência de correspondência do IMO no EU MRV não elimina essa viagem: o
-sistema ainda busca uma intensidade representativa pela classe ou pelo
-tipo de navio. Se nenhuma intensidade puder ser obtida após essas
-etapas, a viagem permanece como observação de distância, mas não
-participa da média de intensidade.
-
-O percurso apresentado a seguir serve apenas para mostrar, com um caso
-real, como essa reconstrução é feita para todas as viagens da base; ele
-não é um corredor previamente definido pelo sistema.
+A seção está organizada em quatro etapas. Primeiro, apresenta como os
+registros da ANTAQ são reunidos para reconstruir cada viagem e seus
+subtrechos. Em seguida, explica como é definida a intensidade de
+combustível de cada navio. Depois, mostra como as viagens válidas são
+consolidadas para obter a intensidade representativa da ligação. Por
+fim, descreve o cálculo da distância marítima representativa,
+considerando os corredores observados e tratando percursos
+excepcionalmente longos de forma consistente.
 
 \hypertarget{atividade-observada-na-antaq-e-reconstruuxe7uxe3o-das-viagens}{%
 \paragraph{3.3.4.1 Atividade observada na ANTAQ e reconstrução das
@@ -855,9 +810,11 @@ viagens}\label{atividade-observada-na-antaq-e-reconstruuxe7uxe3o-das-viagens}}
 Para executar essa reconstrução, o sistema parte dos arquivos brutos da
 ANTAQ, que não trazem uma viagem pronta, como ``Santos--Manaus''. Cada
 linha registra apenas um evento: uma escala em um porto e uma
-movimentação de carga. Ao reunir os registros do mesmo navio, ordenar as
-escalas e calcular a carga a bordo, o sistema transforma esses eventos
-isolados em uma viagem observada.
+movimentação de carga. Antes de combinar esses registros, o sistema
+mantém apenas as movimentações de cabotagem e carga conteinerizada
+vinculadas a uma atracação e a um navio identificado pelo número IMO. Ao
+reunir os registros do mesmo navio, ordenar as escalas e calcular a carga
+a bordo, transforma esses eventos isolados em uma viagem observada.
 
 Para reconstruir uma viagem, o sistema combina duas tabelas que cumprem
 papéis diferentes. A tabela de Carga mostra o que entrou e o que saiu do
@@ -1237,7 +1194,9 @@ Essas regras evitam que poucos valores extremos definam a estimativa
 coletiva. Elas não foram criadas para escolher um resultado mais baixo:
 a mesma regra é aplicada a todos os grupos e sua aplicação fica
 registrada na saída do cálculo, com a estatística usada, o tamanho da
-amostra e a quantidade de valores retirados.
+amostra e a quantidade de valores retirados. Esse uso do P95 trata
+apenas a intensidade individual do navio; o uso do P95 para a distância
+marítima representativa é descrito separadamente na Seção~3.3.4.4.
 
 \hypertarget{estimativa-quando-nuxe3o-huxe1-valor-individual}{%
 \subparagraph{3.3.4.2.3 Estimativa quando não há valor
@@ -1297,10 +1256,16 @@ Uma ligação entre dois portos não corresponde, necessariamente, a uma
 única viagem nem a uma única sequência de escalas. Para representar
 Santos--Manaus, por exemplo, o sistema aproveita cada recorte histórico
 que começou em Santos e chegou a Manaus na mesma viagem e no mesmo
-sentido, independente do número de paradas. Antes de reunir esses
-recortes em uma única intensidade, ele calcula quanto transporte foi
-realizado em cada um deles. A ideia é ponderar a média das intensidades
-pela quantidade de carga que de fato foi transportada naquele trecho.
+sentido, independentemente do número de paradas. Um recorte só entra
+nessa consolidação quando a origem e o destino são portos distintos da
+mesma viagem, aparecem na ordem do cenário e todos os subtrechos entre
+eles têm distância disponível. Se o navio repete a mesma ligação, o
+sistema usa o recorte direto; se não houver um, usa o recorte completo
+mais curto, evitando que a mesma viagem seja contada duas vezes. Antes de
+reunir esses recortes em uma única intensidade, ele calcula quanto
+transporte foi realizado em cada um deles. A ideia é ponderar a média das
+intensidades pela quantidade de carga que de fato foi transportada
+naquele trecho.
 
 Esse cálculo usa o trabalho de transporte. Em cada subtrecho, a carga a
 bordo é multiplicada pela distância percorrida; em seguida, os
@@ -1475,6 +1440,16 @@ média é a carga que permaneceu a bordo em cada recorte completo. Assim,
 a distância de uma viagem mais longa não é usada duas vezes no cálculo
 da média.
 
+Antes dessa média, o sistema verifica se há recortes excepcionalmente
+longos para a mesma ligação e no mesmo sentido. Quando existem pelo
+menos 20 recortes completos, ele calcula o percentil 95 (P95) das
+distâncias totais observadas, sem ponderação. Os recortes acima desse
+limite continuam registrados na matriz e participam da intensidade
+marítima, mas não entram na média de distância. Com menos de 20
+recortes, o filtro não é aplicado e todos permanecem na média. Portanto,
+o P95 funciona como um limite de triagem para a distância; ele não
+substitui a distância representativa pelo próprio valor do percentil.
+
 Em cada recorte, o sistema primeiro soma as distâncias de seus
 subtrechos e calcula a carga média a bordo ponderada pela distância. Se
 \(D_{v,o,d}^{\mathrm{nm}}\) é a distância total do recorte, essa carga
@@ -1499,26 +1474,35 @@ distância total de \(2.952{,}579\ \mathrm{nm}\), resultando
 de distância; não é a carga de uma nova remessa simulada.
 
 Em seguida, a distância representativa é a média das distâncias
-completas dos recortes, ponderada por essa carga média:
+completas dos recortes que permaneceram até o P95, ponderada por essa
+carga média:
 
 \[
 \bar D_{o,d}^{\mathrm{rep}}=
-\frac{\sum_{v=1}^{N_{\mathrm{recortes}}}D_{v,o,d}^{\mathrm{km}}\,\bar m_{v,o,d}}
-{\sum_{v=1}^{N_{\mathrm{recortes}}}\bar m_{v,o,d}}.
+\frac{\sum_{v\in\mathcal{V}_{o,d}^{\leq P95}}D_{v,o,d}^{\mathrm{km}}\,\bar m_{v,o,d}}
+{\sum_{v\in\mathcal{V}_{o,d}^{\leq P95}}\bar m_{v,o,d}}.
 \]
 
 Nessa expressão, \(\bar D_{o,d}^{\mathrm{rep}}\) é a distância marítima
 representativa da ligação, em quilômetros; \(D_{v,o,d}^{\mathrm{km}}\) é
 a distância total do mesmo recorte, em quilômetros; e
-\(N_{\mathrm{recortes}}\) é o número de recortes aceitos.
+\(\mathcal{V}_{o,d}^{\leq P95}\) reúne os recortes cuja distância é menor
+ou igual ao P95 daquela ligação. Quando a ligação tem menos de 20
+recortes, esse conjunto contém todos os recortes válidos.
 
 Essa média não monta uma rota artificial com trechos de navios
 diferentes. Cada distância é calculada dentro da própria viagem antes de
 entrar na média, e nenhum corredor único é escolhido para representar o
 cenário.
 
-Em Santos--Manaus, os 89 recortes completos resultam
-\(6.142{,}461\ \mathrm{km}\), ou \(3.316{,}664\ \mathrm{nm}\).
+Em Santos--Manaus, foram reconstruídos 89 recortes completos em 22
+corredores. O P95 das distâncias observadas foi
+\(6.975{,}000\ \mathrm{km}\); dois recortes acima desse limite foram
+retirados apenas da média de distância. Os 87 recortes restantes,
+distribuídos em 20 corredores, resultam em
+\(6.094{,}975\ \mathrm{km}\), ou \(3.291{,}023\ \mathrm{nm}\). Os 89
+recortes continuam na média de intensidade apresentada na
+Seção~3.3.4.3.
 
 \hypertarget{emissuxf5es-da-alternativa-multimodal}{%
 \subsubsection{3.3.5 Emissões da alternativa
@@ -1712,13 +1696,13 @@ Navegação\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedright
 Porto de Santos--Porto de Manaus\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6.142,461~km\newline{}(3.316,664 milhas náuticas)\strut
+6.094,975~km\newline{}(3.291,023 milhas náuticas)\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-418,356~kg de VLSFO\strut
+415,122~kg de VLSFO\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-R\$~1.594,90\strut
+R\$~1.582,57\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.302,76~kg~CO₂e\strut
+1.292,69~kg~CO₂e\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.14\columnwidth}\raggedright
 Operações portuárias\strut
@@ -1751,13 +1735,13 @@ R\$~5.041,08\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedright
 ---\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-\textbf{7.632,322~km}\strut
+\textbf{7.584,836~km}\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 ---\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-\textbf{R\$~6.930,99}\strut
+\textbf{R\$~6.918,66}\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-\textbf{3.051,69~kg~CO₂e}\strut
+\textbf{3.041,62~kg~CO₂e}\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
@@ -1792,27 +1776,27 @@ Distância percorrida\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 3.491,431~km\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-7.632,322~km\strut
+7.584,836~km\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-4.140,891~km a mais (118,60\%).\strut
+4.093,405~km a mais (117,24\%).\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Emissões operacionais TTW\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 4.068,28~kg~CO₂e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.051,69~kg~CO₂e\strut
+3.041,62~kg~CO₂e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-1.016,59~kg~CO₂e a menos (24,99\%).\strut
+1.026,66~kg~CO₂e a menos (25,24\%).\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Custo modelado do combustível\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 R\$~12.318,68\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-R\$~6.930,99\strut
+R\$~6.918,66\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-R\$~5.387,69 a menos (43,74\%).\strut
+R\$~5.400,02 a menos (43,84\%).\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
@@ -2315,6 +2299,10 @@ referência marítima com base em viagens de cabotagem que realmente
 ocorreram. O produto dessa preparação é uma matriz marítima construída
 com dados observados.
 
+Quando a matriz não apresenta uma distância entre dois portos, a
+implementação usa como fallback os dados de distância marítima publicados
+pelo \href{https://www.geografos.com.br/}{Geógrafos}.
+
 \hypertarget{dados-da-antaq}{%
 \paragraph{4.4.2.1 Dados da ANTAQ}\label{dados-da-antaq}}
 
@@ -2431,17 +2419,18 @@ As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados
 reais. As linhas indicam o porto de origem e, as colunas, o porto de
 destino.
 
-A Tabela 13 apresenta a distância representativa de cada sentido. Nela,
-cada recorte completo é ponderado pela carga média mantida a bordo
-durante o percurso, conforme explicado na seçao 3.3. . Nota-se que a
-distância de ida pode ser diferente da distância de volta, uma vez que
-cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias
-observadas. As duas tabelas incluem recortes diretos e recortes com
-escalas intermediárias. O travessão indica que origem e destino são o
-mesmo porto, situação que não forma uma perna marítima.
+A Tabela 13 apresenta a distância representativa de cada sentido. Quando
+há 20 ou mais recortes, as distâncias acima do P95 são retiradas antes da
+média ponderada pela carga média a bordo, conforme explicado na
+Seção~3.3.4.4. Nota-se que a distância de ida pode ser diferente da
+distância de volta, uma vez que cada sentido reúne seu próprio conjunto
+de viagens, cargas e distâncias observadas. As duas tabelas incluem
+recortes diretos e recortes com escalas intermediárias. O travessão
+indica que origem e destino são o mesmo porto, situação que não forma
+uma perna marítima.
 
-\textbf{Tabela 13 --- Distância marítima representativa, ponderada pela
-carga média a bordo, na matriz marítima (km).}
+\textbf{Tabela 13 --- Distância marítima representativa após a triagem
+P95, ponderada pela carga média a bordo, na matriz marítima (km).}
 
 \begin{longtable}[]{@{}lrrrrr@{}}
 \toprule
@@ -2449,15 +2438,15 @@ Origem / destino & Santos & Salvador & Suape & Pecém &
 Manaus\tabularnewline
 \midrule
 \endhead
-Santos & --- & 3.092,510 & 3.035,287 & 3.730,892 &
-6.142,461\tabularnewline
-Salvador & 3.246,911 & --- & 4.312,202 & 3.831,370 &
-3.839,071\tabularnewline
-Suape & 4.086,744 & 3.023,760 & --- & 1.070,363 &
-3.256,185\tabularnewline
-Pecém & 4.161,942 & 2.660,713 & 5.519,085 & --- &
+Santos & --- & 2.516,136 & 2.912,073 & 3.578,767 &
+6.094,975\tabularnewline
+Salvador & 2.867,589 & --- & 4.122,437 & 3.475,834 &
+3.819,166\tabularnewline
+Suape & 3.800,410 & 2.801,434 & --- & 940,458 &
+3.214,997\tabularnewline
+Pecém & 4.103,118 & 2.437,283 & 5.301,235 & --- &
 2.195,720\tabularnewline
-Manaus & 5.931,919 & 7.095,857 & 5.900,540 & 6.341,446 &
+Manaus & 5.867,445 & 6.585,233 & 5.560,801 & 5.768,673 &
 ---\tabularnewline
 \bottomrule
 \end{longtable}
@@ -2516,7 +2505,7 @@ e os indicadores de cobertura apresentados nas seções anteriores.
         \ErrorTok{...}
     \FunctionTok{\},}
     \DataTypeTok{"Porto de Manaus"}\FunctionTok{:} \FunctionTok{\{}
-      \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{6142.461}\FunctionTok{,}
+      \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{6094.975}\FunctionTok{,}
       \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{9.009824}\FunctionTok{,}
       \ErrorTok{...}
     \FunctionTok{\},}
@@ -2686,12 +2675,20 @@ Forma dos recortes\strut
 Não há corredor obrigatório nem seleção do percurso mais curto\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
+Amostra da distância\strut
+\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
+87 recortes em 20 corredores; P95 de 6.975,000~km\strut
+\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
+Os 2 recortes acima do P95 permanecem auditáveis, mas não entram na
+média de distância\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.30\columnwidth}\raggedright
 Distância marítima\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-6.142,461~km, ou 3.316,664~nm\strut
+6.094,975~km, ou 3.291,023~nm\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-Média da distância total, ponderada pela carga média a bordo das 89
-viagens completas\strut
+Média da distância total, ponderada pela carga média a bordo dos 87
+recortes até o P95\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Intensidade marítima\strut
@@ -2711,10 +2708,10 @@ A fonte permanece identificada para cada recorte\strut
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Aviso de distância\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-1 subtrecho aproximado por haversine entre 402 subtrechos\strut
+1 subtrecho aproximado por haversine entre 391 subtrechos\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-A distância do cenário continua sendo uma média ponderada de percursos
-observados, mas o aviso é preservado\strut
+A aproximação permanece identificada na amostra de distância usada no
+cenário\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
@@ -2748,27 +2745,27 @@ Distância percorrida\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 3.491,431~km\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-7.632,322~km\strut
+7.584,836~km\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-4.140,891~km a mais (118,60\%)\strut
+4.093,405~km a mais (117,24\%)\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Custo modelado do combustível\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 R\$~12.318,68\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-R\$~6.930,99\strut
+R\$~6.918,66\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-R\$~5.387,69 a menos (43,74\%)\strut
+R\$~5.400,02 a menos (43,84\%)\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Emissões operacionais TTW\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 4.068,28~kg~CO₂e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.051,69~kg~CO₂e\strut
+3.041,62~kg~CO₂e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-1.016,59~kg~CO₂e a menos (24,99\%)\strut
+1.026,66~kg~CO₂e a menos (25,24\%)\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
@@ -2814,7 +2811,8 @@ Mostra onde começam e terminam os acessos marítimos e rodoviários\strut
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Ligação marítima\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-89 viagens completas observadas em 22 corredores\strut
+89 viagens completas em 22 corredores; 87 recortes até o P95 para a
+distância\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Identifica a base da intensidade e da distância marítimas\strut
 \end{minipage}\tabularnewline
@@ -2957,2331 +2955,21 @@ para o cenário informado.
 \emph{Figura 9 --- Representação espacial dos resultados calculados na
 página Mapa de calor. Fonte: elaboração própria.}
 
-\hypertarget{comparauxe7uxf5es-com-referuxeancias-externas}{%
-\section{5. Comparações com referências
-externas}\label{comparauxe7uxf5es-com-referuxeancias-externas}}
-
-Esta seção compara os resultados do CabotageLens com referências
-externas de duas naturezas: os cenários acadêmicos publicados pelo
-Prof.~Dr.~Gustavo Adolfo Alves da Costa e coautores, citados nesta seção
-como Costa et al., e ferramentas públicas de cálculo de emissões. As
-comparações situam os resultados e tornam explícitas as diferenças de
-rota, carga, combustível e fronteira de emissão. Elas não são utilizadas
-para ajustar os parâmetros do sistema.
-
-\hypertarget{comparauxe7uxe3o-com-os-cenuxe1rios-de-costa-et-al.}{%
-\subsection{5.1 Comparação com os cenários de Costa et
-al.}\label{comparauxe7uxe3o-com-os-cenuxe1rios-de-costa-et-al.}}
-
-Esta subseção confronta o CabotageLens com os dados e cenários
-publicados por Costa et al.~A intenção não é tratar as fontes como se
-fossem a mesma simulação, mas mostrar, item a item, onde as escolhas de
-rota, consumo, combustível e alocação coincidem ou divergem. Assim, os
-números permanecem rastreáveis e não são usados para ajustar
-artificialmente o resultado do sistema.
-
-\hypertarget{base-de-comparauxe7uxe3o-e-limites-de-equivaluxeancia}{%
-\subsubsection{5.1.1 Base de comparação e limites de
-equivalência}\label{base-de-comparauxe7uxe3o-e-limites-de-equivaluxeancia}}
-
-A planilha de apoio de Costa et al.~fornece 21 ligações direcionais
-entre Manaus, Fortaleza, Recife, Salvador, Rio de Janeiro e São Paulo.
-Para confrontar o cenário Base, cada ligação é avaliada no CabotageLens
-com 1 TEU e uma remessa de 14 t. A planilha apresenta resultados por
-contêiner, mas não explicita a massa desse contêiner; por isso, suas
-colunas são mantidas como ``por contêiner'', enquanto as do CabotageLens
-são identificadas como ``por 14 t''.
-
-\textbf{Tabela 19 --- Escopo dos dados de Costa et al.~e forma de
-comparação.}
-
-\begin{longtable}[]{@{}lrr@{}}
-\toprule
-\begin{minipage}[b]{0.30\columnwidth}\raggedright
-Fonte\strut
-\end{minipage} & \begin{minipage}[b]{0.30\columnwidth}\raggedleft
-Resultado disponível\strut
-\end{minipage} & \begin{minipage}[b]{0.30\columnwidth}\raggedleft
-Uso nesta seção\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Planilha: cenário Base\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Distâncias, emissões por ligação e rotação fixa do navio\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Comparação por ligação\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Planilha: C1 a C4\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Emissões semanais por combinação de combustíveis\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Comparação de cenários, sem reexecução no sistema\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Artigo de competitividade\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Limiar de competitividade e sensibilidades econômicas\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Comparação de parâmetros e de escopo\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Artigo de descarbonização\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Consumo e emissões da frota nacional em fronteira WTW\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Referência tecnológica e ambiental\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-As emissões do CabotageLens são operacionais TTW, isto é, representam a
-queima do combustível durante o transporte. A planilha não qualifica
-expressamente a fronteira de suas emissões de CO₂e; por isso, seus
-valores são chamados apenas de ``emissões reportadas pela planilha''. Já
-os artigos usam, em partes de suas análises, a fronteira WTW. Essas
-diferenças impedem uma comparação de magnitude como se os valores fossem
-diretamente equivalentes {[}workbookdados; competitiveness2024;
-decarb2024{]}.
-
-\hypertarget{cenuxe1rios-de-combustuxedvel-da-planilha}{%
-\subsubsection{5.1.2 Cenários de combustível da
-planilha}\label{cenuxe1rios-de-combustuxedvel-da-planilha}}
-
-A Tabela 20 reúne todos os cenários da planilha. O cenário Base é o
-único que utiliza diesel nas pernas rodoviárias e VLSFO com MDO na
-navegação, combinação correspondente aos combustíveis atualmente
-calculados pelo CabotageLens. Os cenários C1 a C4 permanecem como
-referências externas, pois exigiriam parâmetros específicos de consumo e
-de emissão para GNV, HVO, LNG e metanol em cada etapa.
-
-\textbf{Tabela 20 --- Combustíveis adotados nos cenários da planilha de
-Costa et al.}
-
-\begin{longtable}[]{@{}lrrrrr@{}}
-\toprule
-Etapa & Base & C1 & C2 & C3 & C4\tabularnewline
-\midrule
-\endhead
-Rodovia direta & Diesel & GNV & HVO & GNV & GNV\tabularnewline
-Hidrovia & IFO & IFO & HVO & HVO & HVO\tabularnewline
-Acessos rodoviários da cabotagem & Diesel & GNV & HVO & GNV &
-GNV\tabularnewline
-Depot & Diesel & Diesel & HVO & HVO & HVO\tabularnewline
-Terminal de contêineres & Diesel & Diesel & HVO & HVO &
-HVO\tabularnewline
-Navio no porto & MDO & MDO & HVO & LNG & Metanol\tabularnewline
-Praticagem e rebocadores & MDO & MDO & HVO & HVO & HVO\tabularnewline
-Navio em viagem & VLSFO + MDO & VLSFO + MDO & VLSFO + HVO & LNG &
-Metanol\tabularnewline
-\bottomrule
-\end{longtable}
-
-\hypertarget{comparauxe7uxe3o-das-distuxe2ncias}{%
-\subsubsection{5.1.3 Comparação das
-distâncias}\label{comparauxe7uxe3o-das-distuxe2ncias}}
-
-As cinco configurações da planilha mantêm as mesmas rotas físicas: C1 a
-C4 alteram combustíveis e fatores de emissão, mas não as distâncias. Por
-isso, as Tabelas 22 a 24 apresentam cada ligação uma única vez; seus
-valores valem para o cenário Base e para C1--C4.
-
-\hypertarget{portos-adotados}{%
-\paragraph{5.1.3.1 Portos adotados}\label{portos-adotados}}
-
-Antes de comparar as distâncias marítimas, é necessário identificar os
-portos associados a cada cidade. A planilha usa uma rede portuária fixa.
-O CabotageLens escolhe o porto mais próximo da origem e do destino
-informados, conforme o procedimento da Seção 4.4.2. Essa diferença
-aparece principalmente em Fortaleza, Recife e Rio de Janeiro.
-
-\textbf{Tabela 21 --- Portos associados às cidades nas duas abordagens.}
-
-\begin{longtable}[]{@{}lrr@{}}
-\toprule
-Cidade & Planilha de Costa et al. & CabotageLens\tabularnewline
-\midrule
-\endhead
-Manaus & Manaus (BRMAO) & Porto de Manaus\tabularnewline
-Fortaleza & Pecém (BRPEC) & Porto de Fortaleza\tabularnewline
-Recife & Suape (BRSUA) & Porto do Recife\tabularnewline
-Salvador & Salvador (BRSSA) & Porto de Salvador\tabularnewline
-Rio de Janeiro & Itaguaí (BRIGI) & Porto do Rio de
-Janeiro\tabularnewline
-São Paulo & Santos (BRSSZ) & Porto de Santos\tabularnewline
-\bottomrule
-\end{longtable}
-
-\hypertarget{rodovia-direta}{%
-\paragraph{5.1.3.2 Rodovia direta}\label{rodovia-direta}}
-
-A Tabela 22 compara a distância terrestre usada para a alternativa
-direta. Nas nove ligações que envolvem Manaus, a planilha registra a
-parcela rodoviária como ``Manaus via Belém'' e inclui uma hidrovia em
-separado. O CabotageLens, por sua vez, consulta uma rota rodoviária
-entre as cidades. Portanto, essas nove linhas descrevem redes diferentes
-e não devem ser interpretadas como uma conferência direta da distância
-por estrada.
-
-\textbf{Tabela 22 --- Distância da alternativa direta por ligação.}
-
-\begin{longtable}[]{@{}lrrr@{}}
-\toprule
-\begin{minipage}[b]{0.22\columnwidth}\raggedright
-Ligação\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Costa et al.: rodovia no arquivo (km)\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-CabotageLens: rodovia (km)\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Diferença (km)\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Manaus → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.523\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-5.569,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.046,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Manaus → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.042\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-5.558,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.516,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Manaus → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.122\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.280,7\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.158,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Manaus → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.906\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.878,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-972,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Fortaleza → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.523\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-5.564,2\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.041,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Fortaleza → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.582\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.697,1\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-115,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Fortaleza → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.085\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.134,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-49,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Recife → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.042\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-5.549,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.507,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Recife → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.320\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.310,3\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−9,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Recife → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.648\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.643,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−5,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Salvador → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.069\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.873,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.804,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Salvador → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.183\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.189,9\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-6,9\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Salvador → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-847\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-807,9\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−39,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rio de Janeiro → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.122\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.269,3\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.147,3\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rio de Janeiro → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.582\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.692,5\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-110,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rio de Janeiro → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.320\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.309,3\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−10,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rio de Janeiro → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.633\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.630,7\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−2,3\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-São Paulo → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.906\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.870,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-964,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-São Paulo → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.085\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.133,9\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-48,9\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-São Paulo → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.648\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2.647,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−1,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-São Paulo → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.929\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1.968,4\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-39,4\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-Para as demais doze ligações, ambas as fontes descrevem exclusivamente o
-deslocamento rodoviário entre as cidades. As diferenças menores decorrem
-da data, do provedor e do traçado da rota, e não de uma conversão de
-unidade.
-
-\hypertarget{acessos-aos-portos}{%
-\paragraph{5.1.3.3 Acessos aos portos}\label{acessos-aos-portos}}
-
-A planilha soma, em cada extremo, o deslocamento entre a cidade, o
-terminal de contêineres, o depot e a transportadora. O CabotageLens
-calcula somente o acesso rodoviário entre o endereço e o porto
-escolhido. A Tabela 23 deixa essa diferença de fronteira explícita.
-
-\textbf{Tabela 23 --- Distância dos acessos terrestres da alternativa
-com cabotagem.}
-
-\begin{longtable}[]{@{}lrrr@{}}
-\toprule
-\begin{minipage}[b]{0.22\columnwidth}\raggedright
-Ligação\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Costa et al.: acessos logísticos (km)\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-CabotageLens: acessos viários (km)\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Diferença (km)\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Manaus → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-142,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-16,2\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−125,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Manaus → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-140,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-9,4\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−131,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Manaus → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-211,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-9,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−202,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Manaus → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-232,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-91,9\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−140,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Fortaleza → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-142,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-14,9\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−127,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Fortaleza → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-293,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-10,4\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−283,4\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Fortaleza → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-314,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-92,5\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−221,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Recife → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-140,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-9,1\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−131,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Recife → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-292,4\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−287,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Recife → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-312,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-86,7\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−225,9\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Salvador → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-64,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-11,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−53,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Salvador → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-146,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-12,9\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−133,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Salvador → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-144,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-6,1\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−138,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rio de Janeiro → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-211,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-8,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−203,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rio de Janeiro → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-293,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-10,7\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−283,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rio de Janeiro → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-292,4\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3,9\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−288,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rio de Janeiro → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-215,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-7,1\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−208,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-São Paulo → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-232,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-92,9\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−139,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-São Paulo → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-314,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-94,8\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−219,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-São Paulo → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-312,6\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-88,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−224,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-São Paulo → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-236,0\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-91,2\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-−144,8\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-\hypertarget{perna-maruxedtima}{%
-\paragraph{5.1.3.4 Perna marítima}\label{perna-maruxedtima}}
-
-Na planilha, a navegação segue uma rotação fixa: Santos, Itaguaí,
-Salvador, Suape, Pecém, Macapá, Manaus, Macapá, Pecém, Suape e Santos. A
-distância de cada ligação da coluna de Costa et al.~foi reconstruída
-pela soma dos subtrechos dessa rotação no sentido do fluxo de
-contêineres. Já o CabotageLens usa a distância armazenada na SeaMatrix
-para o par de portos escolhido. Ela representa a média das viagens
-observadas quando há dados suficientes; nos demais pares, a matriz
-preserva a procedência da distância disponível.
-
-\textbf{Tabela 24 --- Distância marítima por ligação e sua procedência
-no CabotageLens.}
-
-\begin{longtable}[]{@{}lrrlr@{}}
-\toprule
-\begin{minipage}[b]{0.17\columnwidth}\raggedright
-Ligação\strut
-\end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-Costa et al.: rotação fixa (km)\strut
-\end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-CabotageLens: SeaMatrix (km)\strut
-\end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedright
-Procedência da distância\strut
-\end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-Diferença (km)\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Manaus → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.613,2\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-7.948,3\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-5.335,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Manaus → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3.411,4\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.833,8\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−577,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Manaus → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-5.944,9\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-6.946,8\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.001,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Manaus → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-5.681,9\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-5.931,9\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-250,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Fortaleza → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.613,2\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.991,0\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-377,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Fortaleza → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-8.558,1\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.192,7\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−6.365,4\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Fortaleza → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-8.295,1\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3.145,0\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-SeaMatrix\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−5.150,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Recife → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3.411,4\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.833,8\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−577,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Recife → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-9.356,3\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.873,9\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−7.482,4\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Recife → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-9.093,3\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.148,8\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−6.944,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Salvador → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-4.085,5\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3.839,1\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−246,4\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Salvador → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.472,3\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.029,6\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−442,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Salvador → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-674,1\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-676,3\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Rio de Janeiro → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-5.496,7\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-5.263,1\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−233,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Rio de Janeiro → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.883,6\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.192,7\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−690,9\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Rio de Janeiro → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.085,4\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.873,9\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−211,4\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Rio de Janeiro → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.411,2\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.598,3\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-187,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-São Paulo → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-5.759,7\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-6.142,5\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-382,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-São Paulo → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3.146,5\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3.314,5\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-168,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-São Paulo → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.348,3\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.148,8\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Aproximação por Haversine\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-−199,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-São Paulo → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.674,2\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3.092,5\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedright
-Média de viagens observadas\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1.418,3\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-Das 21 distâncias marítimas, dez são médias de viagens observadas, uma
-vem diretamente da SeaMatrix e dez usam a aproximação por Haversine
-porque o par de portos não possui uma distância observada disponível. As
-maiores diferenças da Tabela 24 não são erros de conversão. Elas mostram
-o efeito de comparar uma programação fixa de serviço com uma matriz de
-procedências diferentes, além das diferenças de porto indicadas na
-Tabela 21.
-
-\hypertarget{comparauxe7uxe3o-do-consumo-de-combustuxedvel}{%
-\subsubsection{5.1.4 Comparação do consumo de
-combustível}\label{comparauxe7uxe3o-do-consumo-de-combustuxedvel}}
-
-A comparação física por ligação concentra-se no cenário Base. Nele, a
-planilha informa o rendimento rodoviário e os consumos da rotação
-marítima, o que permite recuperar litros ou quilogramas para cada etapa.
-Nos cenários C1 a C4, os combustíveis mudam, mas a planilha apresenta
-apenas emissões semanais agregadas; por isso, não seriam inventados
-volumes por ligação que a fonte não fornece.
-
-\hypertarget{combustuxedvel-na-rodovia-direta-nos-acessos-e-na-hidrovia}{%
-\paragraph{5.1.4.1 Combustível na rodovia direta, nos acessos e na
-hidrovia}\label{combustuxedvel-na-rodovia-direta-nos-acessos-e-na-hidrovia}}
-
-A planilha aplica 3,61 km/L ao diesel rodoviário. Como ela não armazena
-litros por ligação, os valores da coluna de Costa et al.~foram obtidos
-dividindo a distância pelo rendimento informado. No CabotageLens, a
-regra automática escolhe, para 14 t, uma carreta de cinco eixos com
-rendimento de 2,30 km/L. Nas nove ligações que envolvem Manaus, a
-planilha acrescenta uma etapa hidroviária entre Manaus e Belém. Ela
-consome IFO: 196,3 kg por carreta no sentido Manaus--Belém e 274,9 kg
-por carreta no sentido Belém--Manaus. Esse IFO é apresentado
-separadamente, pois a fonte não o registra na mesma unidade das colunas
-rodoviárias por contêiner. A Tabela 25 mostra todos os consumos físicos
-disponíveis; ela não calcula uma diferença percentual porque as
-distâncias e os limites dos acessos são diferentes.
-
-\textbf{Tabela 25 --- Combustível estimado por ligação na estrada, nos
-acessos e na hidrovia.}
-
-\begin{longtable}[]{@{}lrrrrr@{}}
-\toprule
-\begin{minipage}[b]{0.14\columnwidth}\raggedright
-Ligação\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-Costa et al.: direto (L/contêiner)\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-Costa et al.: IFO hidroviário (kg/carreta)\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-CabotageLens: direto (L/14 t)\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-Costa et al.: acessos (L/contêiner)\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-CabotageLens: acessos (L/14 t)\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Manaus → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-421,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-196,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-2.421,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-39,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-7,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Manaus → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-565,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-196,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-2.416,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-38,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-4,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Manaus → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-864,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-196,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.861,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-58,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-4,3\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Manaus → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-805,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-196,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.686,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-64,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-40,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Fortaleza → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-421,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-274,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-2.419,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-39,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Fortaleza → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-715,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.172,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-81,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-4,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Fortaleza → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-854,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.362,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-87,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-40,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Recife → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-565,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-274,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-2.413,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-38,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-4,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Recife → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-642,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.004,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-81,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-2,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Recife → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-733,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.149,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-86,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-37,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Salvador → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-573,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-274,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-2.118,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-17,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-4,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Salvador → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-327,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-517,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-40,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-5,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Salvador → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-234,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-351,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-40,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-2,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Rio de Janeiro → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-864,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-274,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.856,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-58,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-3,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Rio de Janeiro → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-715,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.170,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-81,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-4,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Rio de Janeiro → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-642,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.004,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-81,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1,7\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Rio de Janeiro → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-452,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-709,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-59,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-3,1\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-São Paulo → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-805,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-274,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.682,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-64,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-40,4\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-São Paulo → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-854,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.362,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-87,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-41,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-São Paulo → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-733,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.150,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-86,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-38,3\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-São Paulo → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-534,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
----\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-855,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-65,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-39,7\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-O IFO decorre de 209,5 L/h de consumo do comboio, 1.067 L/t de
-conversão, 120 carretas por viagem e durações de cinco dias de Manaus a
-Belém ou sete dias no sentido inverso. A alternativa direta do
-CabotageLens não usa essa hidrovia: ela é inteiramente rodoviária.
-Portanto, o IFO não deve ser somado à sua coluna de diesel.
-
-\hypertarget{combustuxedvel-da-navegauxe7uxe3o}{%
-\paragraph{5.1.4.2 Combustível da
-navegação}\label{combustuxedvel-da-navegauxe7uxe3o}}
-
-A planilha calcula o consumo do navio em uma rotação fixa e reparte o
-combustível de cada trecho entre os contêineres a bordo. A Tabela 26
-reproduz essa alocação para as 21 ligações, separando VLSFO e MDO. O
-CabotageLens atribui VLSFO à remessa de 14 t pela intensidade em
-g/(t·nm) e pela distância da SeaMatrix. As duas colunas revelam as
-escolhas de alocação sem forçar uma equivalência percentual entre elas.
-
-\textbf{Tabela 26 --- Combustível e intensidade da navegação atribuídos
-a cada ligação.}
-
-\begin{longtable}[]{@{}lrrrrr@{}}
-\toprule
-\begin{minipage}[b]{0.14\columnwidth}\raggedright
-Ligação\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-Costa et al.: VLSFO (kg/contêiner)\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-Costa et al.: MDO (kg/contêiner)\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-Costa et al.: total em viagem (kg/contêiner)\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-CabotageLens: intensidade {[}g/(t·nm){]}\strut
-\end{minipage} & \begin{minipage}[b]{0.14\columnwidth}\raggedleft
-CabotageLens: VLSFO de navegação (kg/14 t)\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Manaus → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-152,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-5,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-157,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-7,588\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-455,9\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Manaus → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-209,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-216,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-130,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Manaus → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-416,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-13,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-429,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-9,125\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-479,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Manaus → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-394,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-12,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-407,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-9,099\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-408,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Fortaleza → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-212,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-218,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-7,334\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-165,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Fortaleza → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-628,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-19,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-648,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-100,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Fortaleza → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-606,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-19,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-625,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-144,3\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Recife → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-275,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-8,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-283,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-130,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Recife → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-691,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-21,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-713,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-86,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Recife → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-669,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-21,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-690,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-98,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Salvador → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-330,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-10,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-340,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-9,322\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-270,5\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Salvador → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-117,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-3,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-121,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-47,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Salvador → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-54,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-56,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-31,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Rio de Janeiro → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-439,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-13,7\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-453,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-9,168\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-364,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Rio de Janeiro → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-227,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-7,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-234,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-100,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Rio de Janeiro → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-164,3\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-5,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-169,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-86,0\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-Rio de Janeiro → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-109,5\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-3,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-112,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,111\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-73,8\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-São Paulo → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-461,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-14,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-475,6\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-9,010\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-418,4\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-São Paulo → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-248,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-7,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-256,8\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-7,430\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-186,2\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-São Paulo → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-186,0\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-5,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-191,9\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-6,070\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-98,6\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.14\columnwidth}\raggedright
-São Paulo → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-131,2\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-4,1\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-135,4\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-9,606\strut
-\end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-224,6\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-As dez intensidades calculadas com atividade observada aparecem
-individualmente na tabela. Nas outras onze ligações, sem intensidade
-específica para o par de portos, o sistema usa a intensidade de 6,070
-g/(t·nm) representativa da classe do navio. A regra deixa claro quais
-consumos marítimos foram ligados a observações da ANTAQ e do EU MRV e
-quais foram estimados pela classe da embarcação.
-
-Para permitir a conferência do denominador da planilha, a Tabela 27 traz
-o inventário físico da rotação completa. Esses totais pertencem ao
-serviço inteiro, não a uma remessa isolada.
-
-\textbf{Tabela 27 --- Inventário de combustível da rotação fixa da
-planilha, cenário Base.}
-
-\begin{longtable}[]{@{}lrr@{}}
-\toprule
-Etapa & Combustível & Consumo físico\tabularnewline
-\midrule
-\endhead
-Navegação & VLSFO & 1.042,915 t por rotação\tabularnewline
-Navegação & MDO & 32,944 t por rotação\tabularnewline
-Estadia em porto & MDO & 18,640 t por rotação\tabularnewline
-\bottomrule
-\end{longtable}
-
-O MDO de navegação e de estadia pertence à rotação inteira. A planilha
-não o disponibiliza como uma massa física isolada por ligação na mesma
-tabela que resume as emissões. Por isso, esses componentes permanecem no
-inventário do serviço, sem criar uma atribuição por ligação que a fonte
-não registra diretamente.
-
-\hypertarget{operauxe7uxf5es-portuuxe1rias-2}{%
-\paragraph{5.1.4.3 Operações
-portuárias}\label{operauxe7uxf5es-portuuxe1rias-2}}
-
-As operações em porto também têm unidades diferentes nas fontes. A
-planilha registra consumos específicos de equipamentos e de serviços; a
-execução do CabotageLens calcula o diesel das operações nos dois portos
-do cenário. A Tabela 28 apresenta os parâmetros sem somá-los como se
-fossem a mesma atividade.
-
-\textbf{Tabela 28 --- Consumo associado às operações portuárias.}
-
-\begin{longtable}[]{@{}lrr@{}}
-\toprule
-\begin{minipage}[b]{0.30\columnwidth}\raggedright
-Componente\strut
-\end{minipage} & \begin{minipage}[b]{0.30\columnwidth}\raggedleft
-Planilha de Costa et al., cenário Base\strut
-\end{minipage} & \begin{minipage}[b]{0.30\columnwidth}\raggedleft
-CabotageLens, cenário de 14 t\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Depot\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1,0714 L por contêiner\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Incluído no cenário de operações portuárias\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-RTG\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1,4000 L por contêiner\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Incluído no cenário de operações portuárias\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Terminal tractor\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-0,9750 L por contêiner\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Incluído no cenário de operações portuárias\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Lancha de praticagem\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-60 L por operação\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Incluído no cenário de operações portuárias\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Rebocadores\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-3.028 L por operação\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Incluído no cenário de operações portuárias\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Total calculado nos dois portos\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Não há um único valor por ligação\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-4,8199 L de diesel, ou 4,0969 kg de diesel\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-\hypertarget{comparauxe7uxe3o-dos-rendimentos-e-das-regras-de-alocauxe7uxe3o}{%
-\subsubsection{5.1.5 Comparação dos rendimentos e das regras de
-alocação}\label{comparauxe7uxe3o-dos-rendimentos-e-das-regras-de-alocauxe7uxe3o}}
-
-A Tabela 29 resume as premissas que explicam os consumos anteriores. A
-comparação mantém a unidade de cada método. O consumo total do navio por
-dia, por exemplo, não é convertido artificialmente em g/(t·nm), pois
-isso exigiria conhecer a carga efetiva, a ocupação e a massa por
-contêiner de cada viagem da fonte. As intensidades efetivamente usadas
-em cada ligação já estão visíveis na Tabela 26.
-
-\textbf{Tabela 29 --- Rendimentos e regras utilizados pelas fontes.}
-
-\begin{longtable}[]{@{}lrrr@{}}
-\toprule
-\begin{minipage}[b]{0.22\columnwidth}\raggedright
-Elemento\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Costa et al.\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-CabotageLens\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Leitura correta\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Rendimento do caminhão a diesel\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3,61 km/L na planilha; 0,28 L/km no artigo de competitividade\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-2,30 km/L para 14 t, carreta de cinco eixos escolhida
-automaticamente\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Parâmetro comparável, aplicado a redes de rota diferentes\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Velocidade marítima\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Velocidade projetada de 20 kn; média de 15,660 kn na rotação\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Não impõe uma velocidade única; usa a atividade observada e a
-intensidade da ligação\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-A velocidade fixa do proforma não é parâmetro do cálculo marítimo
-atual\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Consumo principal do navio\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-VLSFO: \(F_{\mathrm{dia}}=0{,}006754\times u^3+37{,}23\), em t/dia; a
-planilha usa \(F_{\mathrm{hora}}=F_{\mathrm{dia}}/24\), em t/h, onde
-\(u\) é a velocidade em nós\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Intensidade entre 6,070000 e 9,605744 g/(t·nm), conforme a ligação\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Unidades diferentes; não há conversão direta defensável\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Combustível auxiliar do navio\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Planilha: 2 t/dia em viagem e 3 t/dia no porto, como MDO\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-VLSFO atribuído à carga; operações portuárias calculadas em
-separado\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-As fronteiras de combustível não são idênticas\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Alocação da viagem marítima\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Combustível do trecho dividido pelos contêineres a bordo\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Consumo calculado com carga, distância e intensidade da ligação\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Regra de alocação diferente\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Carga usada no confronto\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Contêiner, sem massa explicitada na planilha\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-1 TEU e 14 t; fator de ocupação de 80\% no benchmark\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-Mesma unidade de contêiner, mas massa explicitada apenas no modelo\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-\hypertarget{limites-da-comparauxe7uxe3o-de-custos}{%
-\subsubsection{5.1.6 Limites da comparação de
-custos}\label{limites-da-comparauxe7uxe3o-de-custos}}
-
-A planilha não oferece uma matriz de custo por ligação. Seu proforma
-traz os custos de uma rotação completa do serviço, incluindo itens que
-não fazem parte do custo operacional de combustível calculado pelo
-CabotageLens. O sistema produz custos de combustível por ligação, mas a
-fonte de Costa et al.~não oferece um denominador equivalente para
-confrontá-los. A Tabela 30 preserva os valores originais para que a
-diferença de escopo fique clara.
-
-\textbf{Tabela 30 --- Custos da rotação completa no proforma da
-planilha.}
-
-\begin{longtable}[]{@{}lr@{}}
-\toprule
-Item & Valor (R\$)\tabularnewline
-\midrule
-\endhead
-Praticagem & 1.092.000,00\tabularnewline
-Rebocadores & 404.000,00\tabularnewline
-Terminal de contêineres & 19.835,73\tabularnewline
-VLSFO & 4.371.065,42\tabularnewline
-MGO & 461.758,11\tabularnewline
-Navio & 3.203.200,00\tabularnewline
-Total & 9.551.859,26\tabularnewline
-Custo por slot & 4.264,22 por TEU\tabularnewline
-\bottomrule
-\end{longtable}
-
-O proforma usa R\$ 4.191,20/t para VLSFO e R\$ 6.838,00/t para MGO. O
-CabotageLens atualiza os preços de diesel e de VLSFO a partir de suas
-fontes operacionais e calcula o custo do combustível das pernas da rota.
-Como a planilha inclui custo do navio, praticagem, rebocadores e
-terminal na rotação inteira, não há uma comparação monetária por ligação
-que seja metodologicamente equivalente.
-
-\hypertarget{comparauxe7uxe3o-das-emissuxf5es}{%
-\subsubsection{5.1.7 Comparação das
-emissões}\label{comparauxe7uxe3o-das-emissuxf5es}}
-
-A planilha informa cinco cenários agregados. A Tabela 31 mostra todos
-eles e separa o que é resultado externo do que pode ser reproduzido com
-os combustíveis atuais do CabotageLens.
-
-\textbf{Tabela 31 --- Emissões semanais reportadas pela planilha de
-Costa et al.}
-
-\begin{longtable}[]{@{}lrrr@{}}
-\toprule
-\begin{minipage}[b]{0.22\columnwidth}\raggedright
-Cenário\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Rodovia direta (tCO₂e/semana)\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Cabotagem (tCO₂e/semana)\strut
-\end{minipage} & \begin{minipage}[b]{0.22\columnwidth}\raggedleft
-Redução da cabotagem\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-Base\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-7.614,971\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.159,789\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-45,374\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-C1\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-6.981,470\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.103,280\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-41,226\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-C2\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-7.185,135\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.121,218\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-42,642\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-C3\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-6.798,985\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.592,099\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-47,167\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.22\columnwidth}\raggedright
-C4\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-6.798,985\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.787,436\strut
-\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-44,294\%\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-A Tabela 32 apresenta o cenário Base ligação a ligação. Os valores do
-CabotageLens usam a regra atual de seleção automática do veículo para 14
-t. Assim, a emissão rodoviária e os acessos são recalculados com 2,30
-km/L; a perna marítima permanece baseada nas intensidades e distâncias
-da SeaMatrix.
-
-\textbf{Tabela 32 --- Emissões por ligação no cenário Base.}
-
-\begin{longtable}[]{@{}lrrrrrr@{}}
-\toprule
-\begin{minipage}[b]{0.12\columnwidth}\raggedright
-Ligação\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedleft
-Planilha: rodovia\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedleft
-Planilha: cabotagem\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedleft
-Redução na planilha\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedleft
-CabotageLens: rodovia TTW\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedleft
-CabotageLens: multimodal TTW\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedleft
-Redução no CabotageLens\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Manaus → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.733,9\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-751,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-56,7\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-6.489,8\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.451,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-77,6\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Manaus → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.113,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-960,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-54,6\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-6.477,0\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-428,8\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-93,4\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Manaus → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.902,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.705,8\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-41,2\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-4.987,9\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.516,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-69,6\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Manaus → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.744,4\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.639,4\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-40,3\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-4.519,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.390,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-69,2\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Fortaleza → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.982,3\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.019,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-48,6\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-6.483,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-546,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-91,6\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Fortaleza → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.886,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.151,8\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-39,0\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-3.142,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-338,3\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-89,2\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Fortaleza → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.254,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.085,3\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-51,9\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-3.652,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-570,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-84,4\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Recife → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.361,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.255,9\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-46,8\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-6.466,8\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-428,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-93,4\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Recife → Rio de Janeiro\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.695,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-943,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-44,3\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.692,0\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-286,0\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-89,4\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Recife → São Paulo\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.934,8\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-877,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-54,7\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-3.079,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-421,0\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-86,3\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Salvador → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.381,3\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.387,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-41,7\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-5.678,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-868,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-84,7\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Salvador → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-864,4\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-567,3\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-34,4\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.386,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-175,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-87,4\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Salvador → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-618,9\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-334,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-45,9\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-941,4\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-116,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-87,6\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Rio de Janeiro → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-3.150,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.863,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-40,9\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-4.974,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.159,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-76,7\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Rio de Janeiro → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.886,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.043,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-44,7\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-3.137,4\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-338,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-89,2\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Rio de Janeiro → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.695,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-810,4\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-52,2\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.690,9\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-285,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-89,4\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-Rio de Janeiro → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.193,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-560,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-53,0\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.900,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-251,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-86,8\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-São Paulo → Manaus\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.992,8\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.959,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-34,5\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-4.509,4\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.424,0\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-68,4\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-São Paulo → Fortaleza\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.254,2\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.138,7\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-49,5\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-3.651,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-703,1\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-80,7\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-São Paulo → Recife\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.934,8\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-905,9\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-53,2\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-3.084,3\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-422,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-86,3\%\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-São Paulo → Salvador\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-1.409,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-656,3\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-53,4\%\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-2.293,6\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-818,5\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-64,3\%\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-\emph{Nota: emissões em kg CO₂e por contêiner na planilha e por remessa
-de 14 t no CabotageLens. A redução é calculada contra a alternativa
-rodoviária da mesma fonte.}
-
-Nas 21 ligações, as duas abordagens apontam menor emissão para a
-alternativa com cabotagem. A redução média simples é de 46,7\% na
-planilha e de 83,1\% no CabotageLens. Essa concordância é direcional.
-Dez resultados marítimos usam distância média de viagens observadas, um
-usa a distância disponível na SeaMatrix e dez usam a aproximação por
-Haversine indicada na Tabela 24. As diferenças numéricas acompanham as
-diferenças já mostradas nas rotas, nos portos, nos rendimentos, nos
-combustíveis auxiliares e na fronteira ambiental; elas não devem ser
-usadas para calibrar a intensidade marítima do sistema.
-
-\hypertarget{comparauxe7uxe3o-com-os-artigos-de-costa-et-al.}{%
-\subsubsection{5.1.8 Comparação com os artigos de Costa et
-al.}\label{comparauxe7uxe3o-com-os-artigos-de-costa-et-al.}}
-
-O artigo de competitividade avalia uma super-rede que inclui frete,
-espaço no navio, movimentação em terminal, estoque em trânsito e preço
-de carbono. Seu resultado é o limiar rodoviário a partir do qual a
-cabotagem se torna competitiva, e não uma matriz de consumo ou de custo
-por ligação. A Tabela 33 reproduz todas as sensibilidades publicadas
-{[}competitiveness2024{]}.
-
-\textbf{Tabela 33 --- Sensibilidades do estudo de competitividade de
-Costa et al.}
-
-\begin{longtable}[]{@{}lrr@{}}
-\toprule
-\begin{minipage}[b]{0.30\columnwidth}\raggedright
-Caso\strut
-\end{minipage} & \begin{minipage}[b]{0.30\columnwidth}\raggedleft
-Alteração em relação ao caso Base\strut
-\end{minipage} & \begin{minipage}[b]{0.30\columnwidth}\raggedleft
-Limiar de competitividade\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-Base\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Parâmetros de referência do artigo\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1.616 km\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-C1\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Preço do slot marítimo 20\% menor\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1.448 km\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-C2\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Fator de emissão do diesel 80\% menor\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1.666 km\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-C3\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Fator de emissão marítimo 80\% menor\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1.568 km\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-C4\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Valor da carga de R\$ 200 mil para R\$ 500 mil\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1.777 km\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-C5\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Juros diários em dobro\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1.724 km\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-C6\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Carbono de R\$ 356,20 para R\$ 100 por tCO₂e\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1.617 km\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-C7\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Tempo de trânsito marítimo de 10,5 para 16 dias\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-1.719 km\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.30\columnwidth}\raggedright
-C8\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-Slot e movimentação no terminal 20\% maiores, com juros em dobro\strut
-\end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedleft
-2.159 km\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-O artigo de descarbonização trabalha com a frota brasileira de cabotagem
-e com emissões WTW. Ele fornece uma referência para combustíveis
-alternativos, mas não permite reproduzir uma ligação de 14 t. A Tabela
-34 mantém o resultado percentual reportado, sem misturá-lo às emissões
-TTW do sistema {[}decarb2024{]}.
-
-\textbf{Tabela 34 --- Cenário de descarbonização apresentado por Costa
-et al.}
-
-\begin{longtable}[]{@{}lrrrr@{}}
-\toprule
-\begin{minipage}[b]{0.17\columnwidth}\raggedright
-Caso\strut
-\end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-Combustível marítimo\strut
-\end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-Escala e fronteira\strut
-\end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-Resultado informado\strut
-\end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-Comparação com o sistema\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Referência\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-VLSFO + MDO\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-Frota nacional; WTW\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-Base de comparação\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-Referência externa\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.17\columnwidth}\raggedright
-Substituição integral\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-HVO\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-Frota nacional; WTW\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-Redução de 75,4\% de CO₂e\strut
-\end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-Exigiria parâmetros de HVO por etapa\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
-
-Em conjunto, as tabelas desta subseção mostram exatamente o que pode ser
-comparado hoje: rotas, consumos, rendimentos e emissões do cenário Base
-por ligação, além das sensibilidades publicadas para outros combustíveis
-e para competitividade. Onde a unidade, a rota ou a fronteira não são
-equivalentes, o dado é mantido como referência de contexto, e não
-apresentado como uma saída reproduzida pelo CabotageLens.
-
-\hypertarget{comparauxe7uxe3o-com-ferramentas-externas}{%
-\subsection{5.2 Comparação com ferramentas
-externas}\label{comparauxe7uxe3o-com-ferramentas-externas}}
+\hypertarget{comparauxe7uxf5es-com-ferramentas-externas}{%
+\section{5. Comparações com ferramentas
+externas}\label{comparauxe7uxf5es-com-ferramentas-externas}}
 
 As ferramentas externas permitem confrontar o resultado do CabotageLens
-com estimativas já disponíveis ao público. Em cada caso, são
-apresentadas as distâncias e as emissões de cada etapa que a ferramenta
-externa torna disponível. Quando a rota, o porto ou outro parâmetro
+com estimativas já disponíveis ao público. Em cada caso, são apresentadas as distâncias, as emissões ou os valores
+de custo disponíveis na respectiva ferramenta. Quando a rota, o porto ou outro parâmetro
 difere, a diferença permanece explícita; os resultados não são ajustados
 para produzir uma equivalência artificial.
 
 \hypertarget{calculadora-de-emissuxf5es-da-alianuxe7a}{%
-\subsubsection{\texorpdfstring{5.2.1
+\subsection{\texorpdfstring{5.1
 \href{https://www.alianca.com.br/calculadora-de-co2}{Calculadora de
 emissões da
-Aliança}}{5.2.1 Calculadora de emissões da Aliança}}\label{calculadora-de-emissuxf5es-da-alianuxe7a}}
+Aliança}}{5.1 Calculadora de emissões da Aliança}}\label{calculadora-de-emissuxf5es-da-alianuxe7a}}
 
 Na calculadora da Aliança, o cenário informado foi São
 Paulo--Abaetetuba, com um contêiner seco de 40 pés e 20 t de carga. O
@@ -5303,7 +2991,7 @@ totais.
 Paulo--Abaetetuba. Fonte: resultado exportado pela ferramenta, fornecido
 pelo autor.}
 
-\textbf{Tabela 35 --- Emissões TTW por etapa no cenário São
+\textbf{Tabela 19 --- Emissões TTW por etapa no cenário São
 Paulo--Abaetetuba, com 20 t de carga.}
 
 \begin{longtable}[]{@{}lrrrr@{}}
@@ -5350,9 +3038,9 @@ Navegação: Santos--Vila do Conde\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 0,694 t\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-2.509,709 km*\strut
+4.495,000 km*\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-0,512 t\strut
+0,918 t\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.17\columnwidth}\raggedright
 Operações portuárias: Santos e Vila do Conde\strut
@@ -5383,9 +3071,9 @@ Acesso rodoviário final: Vila do Conde--Abaetetuba\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 \textbf{0,975 t}\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-\textbf{2.629,829 km}\strut
+\textbf{4.615,120 km}\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-\textbf{0,699 t}\strut
+\textbf{1,104 t}\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.17\columnwidth}\raggedright
 \textbf{Redução em relação à rodovia direta}\strut
@@ -5396,25 +3084,25 @@ Acesso rodoviário final: Vila do Conde--Abaetetuba\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 ---\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-\textbf{3,101 t (81,6\%)}\strut
+\textbf{2,696 t (70,9\%)}\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
 
-* No CabotageLens, não há viagem observada na Agência Nacional de
-Transportes Aquaviários (ANTAQ) entre Santos e Vila do Conde para compor
-a matriz marítima. Por isso, a distância dessa etapa usa a aproximação
-costeira de Haversine, e a intensidade de 6,07 g/(t·nm) vem da classe de
-navio \texttt{container\_feeder}.
+* No recorte atual da Agência Nacional de Transportes Aquaviários
+(ANTAQ), não há uma viagem observada entre Santos e Vila do Conde. A
+distância marítima usada nesta comparação é de 4.495 km, ou 2.427 milhas
+náuticas, conforme os dados publicados pelo
+\href{https://www.geografos.com.br/}{Geógrafos}. A intensidade de 6,07
+g/(t·nm) continua vindo da classe de navio \texttt{container\_feeder}.
 
 Na rodovia direta, as distâncias são próximas: 2.807 km na Aliança e
-2.835,762 km no CabotageLens. A principal diferença está na cadeia
-multimodal. A Aliança informa 4.869 km para a navegação e 125 km para o
-acesso final, enquanto o CabotageLens calcula 2.509,709 km e 33,950 km,
-respectivamente. Essa diferença de percurso explica a maior parte da
-distância multimodal total apresentada pela ferramenta externa. O
-CabotageLens registra a aproximação usada na perna marítima, em vez de
-apresentá-la como uma viagem observada.
+2.835,762 km no CabotageLens. Na cadeia multimodal, a Aliança informa
+4.869 km para a navegação e 125 km para o acesso final, enquanto o
+CabotageLens usa 4.495 km e 33,950 km, respectivamente. A diferença
+restante decorre sobretudo do acesso final e da referência de distância
+adotada para cada porto. O CabotageLens registra que a distância marítima
+é externa e não a apresenta como uma viagem observada.
 
 A distância total multimodal soma apenas os dois acessos rodoviários e a
 etapa marítima; as operações portuárias não acrescentam distância. A
@@ -5433,10 +3121,10 @@ dos totais de cada alternativa. O CabotageLens apresenta a redução com
 sinal coerente com as emissões totais mostradas.
 
 \hypertarget{calculadora-de-emissuxf5es-da-log-in}{%
-\subsubsection{\texorpdfstring{5.2.2
+\subsection{\texorpdfstring{5.2
 \href{https://www.loginlogistica.com.br/calculadora-co2/}{Calculadora de
 emissões da
-Log-In}}{5.2.2 Calculadora de emissões da Log-In}}\label{calculadora-de-emissuxf5es-da-log-in}}
+Log-In}}{5.2 Calculadora de emissões da Log-In}}\label{calculadora-de-emissuxf5es-da-log-in}}
 
 A captura da calculadora da Log-In refere-se ao cenário São Paulo--Rio
 Branco e mostra uma alternativa rodoviária de 3.032 km. A alternativa
@@ -5451,7 +3139,7 @@ mesmo cenário foi executado no CabotageLens com 14 t e 1 TEU.
 \emph{Figura 11 --- Resultado da calculadora de emissões da Log-In.
 Fonte: captura de tela fornecida pelo autor.}
 
-\textbf{Tabela 36 --- Emissões no cenário de referência São Paulo--Rio
+\textbf{Tabela 20 --- Emissões no cenário de referência São Paulo--Rio
 Branco.}
 
 \begin{longtable}[]{@{}lrrrr@{}}
@@ -5487,9 +3175,9 @@ Multimodal\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 2,9 t\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-7.632,322 km\strut
+7.584,836 km\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3,052 t\strut
+3,042 t\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.17\columnwidth}\raggedright
 Redução em relação à rodovia\strut
@@ -5500,14 +3188,14 @@ Redução em relação à rodovia\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 ---\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1,017 t\strut
+1,027 t\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
 
 No resultado multimodal, as duas ferramentas estão próximas. A distância
-da Log-In é 36,422 km menor, uma diferença de 0,48\%, e a emissão de GEE
-informada é 0,152 t menor, ou 5,0\% em relação ao CabotageLens. Essa
+da Log-In é 11,064 km maior, uma diferença de 0,15\%, e a emissão de GEE
+informada é 0,142 t menor, ou 4,7\% em relação ao CabotageLens. Essa
 proximidade é positiva porque os valores divulgados pelas duas
 ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
 
@@ -5521,10 +3209,10 @@ menor. Por isso, a comparação rodoviária não deve ser interpretada como
 uma equivalência direta entre os dois sistemas.
 
 \hypertarget{calculadora-de-piso-muxednimo-de-frete-da-antt}{%
-\subsubsection{\texorpdfstring{5.2.3
+\subsection{\texorpdfstring{5.3
 \href{https://calculadorafrete.antt.gov.br/}{Calculadora de piso mínimo
 de frete da
-ANTT}}{5.2.3 Calculadora de piso mínimo de frete da ANTT}}\label{calculadora-de-piso-muxednimo-de-frete-da-antt}}
+ANTT}}{5.3 Calculadora de piso mínimo de frete da ANTT}}\label{calculadora-de-piso-muxednimo-de-frete-da-antt}}
 
 Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o
 cenário foi informado como carga conteinerizada, cinco eixos e 3.491 km.
@@ -5541,7 +3229,7 @@ combustível.
 ANTT para a distância de 3.491 km. Fonte: captura de tela fornecida pelo
 autor.}
 
-\textbf{Tabela 37 --- Valores para a ligação São Paulo--Rio Branco.}
+\textbf{Tabela 21 --- Valores para a ligação São Paulo--Rio Branco.}
 
 \begin{longtable}[]{@{}lrr@{}}
 \toprule
@@ -5602,21 +3290,12 @@ duas alternativas à mesma carga, origem e destino, o sistema evita
 comparar apenas o trecho marítimo com uma viagem rodoviária completa.
 
 No exemplo de uma remessa de 14~t entre São Paulo e Rio Branco, a
-alternativa multimodal percorre 118,60\% mais quilômetros do que a
-rodoviária direta. Mesmo assim, emite 24,99\% menos CO₂e operacional e
-apresenta custo modelado do combustível 43,74\% menor. O resultado
+alternativa multimodal percorre 117,24\% mais quilômetros do que a
+rodoviária direta. Mesmo assim, emite 25,24\% menos CO₂e operacional e
+apresenta custo modelado do combustível 43,84\% menor. O resultado
 mostra que a distância total, isoladamente, não é suficiente para
 comparar os modais: os acessos rodoviários, as operações portuárias e a
 navegação precisam ser avaliados na mesma cadeia logística.
-
-A comparação com o cenário Base da planilha de Costa et al.~oferece uma
-referência externa de direção. Nas 21 ligações reexecutadas, tanto a
-planilha quanto o CabotageLens apontaram menor emissão para a
-alternativa com cabotagem. Como as fontes adotam rotas, fatores e
-fronteiras diferentes, essa concordância não valida a magnitude das
-reduções. Ela mostra apenas que, no conjunto comparado, as duas
-abordagens chegam ao mesmo sentido na comparação de emissões
-{[}workbookdados; competitiveness2024{]}.
 
 \hypertarget{contribuiuxe7uxe3o-metodoluxf3gica}{%
 \subsection{6.2 Contribuição
@@ -5635,11 +3314,22 @@ fonte adotada.
 
 A ligação Santos--Manaus demonstra o efeito dessa escolha: os 89
 recortes completos formam 22 sequências de portos, com viagens diretas e
-viagens com escalas intermediárias. A distância representativa de
-6.142,461~km e a intensidade de 9,009824~g/(t·nm) são formadas a partir
-desse conjunto de viagens. Portanto, esses indicadores não descrevem uma
-rota única nem o desempenho de um único navio; sua procedência permanece
-registrada para conferência.
+viagens com escalas intermediárias. Para a distância, os 2 recortes acima
+do P95 de 6.975,000~km são retirados da média, resultando em
+6.094,975~km com 87 recortes; a intensidade de 9,009824~g/(t·nm)
+continua usando os 89 recortes. Portanto, esses indicadores não
+descrevem uma rota única nem o desempenho de um único navio; sua
+procedência permanece registrada para conferência.
+
+Além da contribuição metodológica, o CabotageLens constitui uma
+contribuição aplicada e acessível: a
+\href{https://cabotagelens.streamlit.app/}{aplicação está disponível
+publicamente} e seu
+\href{https://github.com/pennylanesccp/cabotage-lens}{código-fonte,
+documentação e regras de cálculo podem ser consultados no repositório
+público do projeto}. Dessa forma, outras pessoas podem executar cenários
+próprios, conferir as premissas adotadas e reproduzir a lógica de cálculo,
+dentro dos limites de dados e escopo descritos neste trabalho.
 
 \hypertarget{alcance-e-limites-de-uso}{%
 \subsection{6.3 Alcance e limites de
@@ -5670,11 +3360,6 @@ Os principais limites de uso são:
   e os valores monetários representam o custo modelado do combustível.
   Eles não representam emissões WTW, ciclo de vida completo, tarifa de
   frete, contrato de armador ou análise comercial completa.
-\item
-  \textbf{Combustíveis alternativos:} os cenários externos com GNV, HVO,
-  LNG e metanol permanecem como referência, pois ainda não possuem
-  parâmetros completos de consumo, emissão e preço para todas as etapas
-  do modelo.
 \end{itemize}
 
 Esses limites não anulam a comparação; eles definem a forma correta de

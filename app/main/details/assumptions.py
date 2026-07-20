@@ -45,6 +45,13 @@ _CORRIDOR_SELECTION_LABELS = {
 }
 
 _SCENARIO_DISTANCE_METHOD_LABELS = {
+    "p95_filtered_mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances": (
+        "P95-screened, mean-onboard-cargo-weighted mean of complete observed voyage distances"
+    ),
+    "p95_filtered_arithmetic_mean_complete_observed_voyage_distances_zero_mean_onboard_cargo": (
+        "P95-screened arithmetic mean of complete observed voyage distances "
+        "(all mean onboard cargo zero)"
+    ),
     "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances": (
         "Mean-onboard-cargo-weighted mean of complete observed voyage distances"
     ),
@@ -53,6 +60,16 @@ _SCENARIO_DISTANCE_METHOD_LABELS = {
     ),
     "arithmetic_mean_complete_observed_voyage_distances": (
         "Arithmetic mean of complete observed voyage distances"
+    ),
+}
+
+_SCENARIO_DISTANCE_SOURCE_LABELS = {
+    "observed_complete_voyage_distance_p95_filtered_mean_onboard_cargo_weighted_mean": (
+        "P95-screened mean of complete observed voyage distances weighted by mean cargo aboard"
+    ),
+    "observed_complete_voyage_distance_p95_filtered_unweighted_mean_zero_mean_onboard_cargo": (
+        "P95-screened arithmetic mean of complete observed voyage distances "
+        "(all mean onboard cargo zero)"
     ),
 }
 
@@ -136,6 +153,18 @@ def _count_or_none(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed >= 0 else None
+
+
+def _bool_or_none(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes"}:
+            return True
+        if normalized in {"false", "0", "no"}:
+            return False
+    return None
 
 
 def _readable_code(value: Any, labels: Mapping[str, str]) -> str | None:
@@ -222,13 +251,14 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
         return []
 
     rows: list[tuple[str, str, str]] = []
+    raw_scenario_distance_method = _first_value(
+        sea,
+        ("scenario_distance_method",),
+        inputs,
+        ("sea_scenario_distance_method",),
+    )
     scenario_distance_method = _readable_code(
-        _first_value(
-            sea,
-            ("scenario_distance_method",),
-            inputs,
-            ("sea_scenario_distance_method",),
-        ),
+        raw_scenario_distance_method,
         _SCENARIO_DISTANCE_METHOD_LABELS,
     )
     if scenario_distance_method:
@@ -265,10 +295,113 @@ def _maritime_route_rows(results: Mapping[str, Any]) -> list[tuple[str, str, str
         )
         if corridor_count is not None:
             distance_parts.append(f"observed corridors: {corridor_count}")
+
+        outlier_rule = _clean_text(
+            _first_value(
+                sea,
+                ("scenario_distance_outlier_rule",),
+                inputs,
+                ("sea_scenario_distance_outlier_rule",),
+            )
+        )
+        p95_quantile = _first_value(
+            sea,
+            ("scenario_distance_outlier_upper_quantile",),
+            inputs,
+            ("sea_scenario_distance_outlier_upper_quantile",),
+        )
+        p95_minimum_sample = _count_or_none(
+            _first_value(
+                sea,
+                ("scenario_distance_outlier_min_sample_size",),
+                inputs,
+                ("sea_scenario_distance_outlier_min_sample_size",),
+            )
+        )
+        raw_p95_threshold_km = _first_value(
+            sea,
+            ("scenario_distance_outlier_upper_threshold_km",),
+            inputs,
+            ("sea_scenario_distance_outlier_upper_threshold_km",),
+        )
+        try:
+            p95_threshold_km = float(raw_p95_threshold_km)
+        except (TypeError, ValueError):
+            p95_threshold_km = None
+        p95_applied = _bool_or_none(
+            _first_value(
+                sea,
+                ("scenario_distance_outlier_applied",),
+                inputs,
+                ("sea_scenario_distance_outlier_applied",),
+            )
+        )
+        retained_voyage_count = _count_or_none(
+            _first_value(
+                sea,
+                ("scenario_distance_retained_voyage_count",),
+                inputs,
+                ("sea_scenario_distance_retained_voyage_count",),
+            )
+        )
+        excluded_voyage_count = _count_or_none(
+            _first_value(
+                sea,
+                ("scenario_distance_outlier_excluded_voyage_count",),
+                inputs,
+                ("sea_scenario_distance_outlier_excluded_voyage_count",),
+            )
+        )
+        p95_metadata_present = any(
+            value is not None
+            for value in (
+                outlier_rule,
+                p95_quantile,
+                p95_minimum_sample,
+                raw_p95_threshold_km,
+                p95_applied,
+                retained_voyage_count,
+                excluded_voyage_count,
+            )
+        ) or str(raw_scenario_distance_method or "").startswith("p95_filtered_")
+        if p95_metadata_present:
+            if p95_minimum_sample:
+                distance_parts.append(
+                    f"P95 eligibility: at least {p95_minimum_sample} complete voyages"
+                )
+            if p95_applied is True:
+                distance_parts.append("P95 upper cutoff: applied")
+            elif p95_applied is False:
+                distance_parts.append("P95 upper cutoff: not applied")
+            if p95_threshold_km is not None and p95_threshold_km > 0.0:
+                distance_parts.append(f"P95 threshold: {p95_threshold_km:.3f} km")
+            if retained_voyage_count is not None:
+                distance_parts.append(f"retained voyages: {retained_voyage_count}")
+            if excluded_voyage_count is not None:
+                distance_parts.append(f"excluded above P95: {excluded_voyage_count}")
+
+        description = (
+            "Representative distance across complete observed ANTAQ voyages. "
+            "The method shown indicates whether mean cargo aboard or the "
+            "zero-cargo exception was used; no single corridor is used as the "
+            "scenario path."
+        )
+        if p95_metadata_present:
+            eligibility = (
+                f"at least {p95_minimum_sample} complete voyages"
+                if p95_minimum_sample
+                else "the configured minimum complete-voyage sample"
+            )
+            description = (
+                "Representative distance across complete observed ANTAQ voyages. "
+                f"With {eligibility}, the P95 upper cutoff screens exceptionally "
+                "long distances before this mean; it does not change the same-OD "
+                "intensity sample. No single corridor is used as the scenario path."
+            )
         rows.append(
             (
                 "Maritime scenario distance",
-                "Representative distance across complete observed ANTAQ voyages. The method shown indicates whether mean cargo aboard or the zero-cargo exception was used; no single corridor is used as the scenario path.",
+                description,
                 "; ".join([scenario_distance_method, *distance_parts]),
             )
         )
@@ -613,12 +746,13 @@ def _maritime_source_rows(results: Mapping[str, Any]) -> list[tuple[str, str, st
         return []
 
     label = _SOURCE_TYPE_LABELS.get(source_type or "", "Maritime distance source")
+    source_value = _SCENARIO_DISTANCE_SOURCE_LABELS.get(source or "", source)
     if source_type and source:
-        value = f"{label} ({source_type}): {source}"
+        value = f"{label} ({source_type}): {source_value}"
     elif source_type:
         value = f"{label} ({source_type})"
     else:
-        value = source or "n/a"
+        value = source_value or "n/a"
 
     rows = [
         (

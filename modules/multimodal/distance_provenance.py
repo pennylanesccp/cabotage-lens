@@ -20,10 +20,16 @@ _SOURCE_TYPE_ALIASES = {
     "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean": (
         "observed_voyage_mean"
     ),
+    "observed_complete_voyage_distance_p95_filtered_mean_onboard_cargo_weighted_mean": (
+        "observed_voyage_mean"
+    ),
     "observed_complete_voyage_distance_unweighted_mean_zero_transport_work": (
         "observed_voyage_mean"
     ),
     "observed_complete_voyage_distance_unweighted_mean_zero_mean_onboard_cargo": (
+        "observed_voyage_mean"
+    ),
+    "observed_complete_voyage_distance_p95_filtered_unweighted_mean_zero_mean_onboard_cargo": (
         "observed_voyage_mean"
     ),
     "haversine": "haversine_fallback",
@@ -35,6 +41,8 @@ _SOURCE_TYPE_ALIASES = {
     "validation_override": "manual_override",
     "external": "external_reference",
     "external_reference": "external_reference",
+    "geografos_reference": "external_reference",
+    "external_distance_reference": "external_reference",
     "reference": "external_reference",
 }
 
@@ -96,6 +104,14 @@ def build_maritime_distance_provenance(
     distance_nm: Any = None,
     source_type: Any = None,
     notes: Any = None,
+    source_url: Any = None,
+    source_catalog_url: Any = None,
+    retrieved_at: Any = None,
+    source_page_origin_port: Any = None,
+    source_page_destination_port: Any = None,
+    matched_candidate_direction: Any = None,
+    symmetric: Any = None,
+    reported_distance_nm: Any = None,
     lower_bound_km: Any = None,
     upper_bound_km: Any = None,
     is_override: bool = False,
@@ -128,6 +144,14 @@ def build_maritime_distance_provenance(
             is_override=is_override,
         ),
         "notes": _clean_text(notes),
+        "source_url": _clean_text(source_url),
+        "source_catalog_url": _clean_text(source_catalog_url),
+        "retrieved_at": _clean_text(retrieved_at),
+        "source_page_origin_port": _clean_text(source_page_origin_port),
+        "source_page_destination_port": _clean_text(source_page_destination_port),
+        "matched_candidate_direction": _clean_text(matched_candidate_direction),
+        "symmetric": symmetric if isinstance(symmetric, bool) else None,
+        "reported_distance_nm": _float_or_none(reported_distance_nm),
         "lower_bound_km": _float_or_none(lower_bound_km),
         "upper_bound_km": _float_or_none(upper_bound_km),
     }

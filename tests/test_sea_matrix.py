@@ -27,7 +27,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             },
             "voyage_fuel_g_per_tnm_directional_meta": {
                 "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
-                "maritime_intensity_schema_version": 7,
+                "maritime_intensity_schema_version": 8,
                 "pair_intensity_method": "transport_work_weighted_mean",
                 "generated_at": "2026-07-16T12:00:00+00:00",
             },
@@ -40,7 +40,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "multistop_voyage_count": 4,
                         "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                         "scenario_distance_method": (
-                            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
+                            "p95_filtered_mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
                         ),
                         "scenario_distance_scope": (
                             "one_complete_ordered_od_observation_per_voyage"
@@ -49,6 +49,15 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "scenario_distance_mean_onboard_cargo_t_total": 375.0,
                         "scenario_distance_transport_work_tnm": 75000.0,
                         "scenario_distance_observation_count": 4,
+                        "scenario_distance_retained_voyage_count": 4,
+                        "scenario_distance_outlier_rule": (
+                            "exclude_complete_observed_voyages_above_unweighted_distance_p95_before_representative_mean"
+                        ),
+                        "scenario_distance_outlier_upper_quantile": 0.95,
+                        "scenario_distance_outlier_min_sample_size": 20,
+                        "scenario_distance_outlier_upper_threshold_km": None,
+                        "scenario_distance_outlier_applied": False,
+                        "scenario_distance_outlier_excluded_voyage_count": 0,
                         "scenario_distance_corridor_count": 3,
                         "scenario_distance_km": 400.0,
                         "scenario_distance_nm": 216.0,
@@ -56,7 +65,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "scenario_distance_max_km": 555.6,
                         "scenario_distance_stddev_km": 120.0,
                         "distance_source": (
-                            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+                            "observed_complete_voyage_distance_p95_filtered_mean_onboard_cargo_weighted_mean"
                         ),
                         "resolved_voyage_count": 3,
                         "imo_intensity_voyage_count": 2,
@@ -111,12 +120,12 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "distance_km": 92.6,
                         "distance_nm": 50.0,
                         "distance_source": (
-                            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+                            "observed_complete_voyage_distance_p95_filtered_mean_onboard_cargo_weighted_mean"
                         ),
                         "fuel_g_per_tnm_weighted_mean": 8.0,
                         "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                         "scenario_distance_method": (
-                            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
+                            "p95_filtered_mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
                         ),
                         "scenario_distance_scope": (
                             "one_complete_ordered_od_observation_per_voyage"
@@ -125,6 +134,15 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "scenario_distance_mean_onboard_cargo_t_total": 100.0,
                         "scenario_distance_transport_work_tnm": 5000.0,
                         "scenario_distance_observation_count": 1,
+                        "scenario_distance_retained_voyage_count": 1,
+                        "scenario_distance_outlier_rule": (
+                            "exclude_complete_observed_voyages_above_unweighted_distance_p95_before_representative_mean"
+                        ),
+                        "scenario_distance_outlier_upper_quantile": 0.95,
+                        "scenario_distance_outlier_min_sample_size": 20,
+                        "scenario_distance_outlier_upper_threshold_km": None,
+                        "scenario_distance_outlier_applied": False,
+                        "scenario_distance_outlier_excluded_voyage_count": 0,
                         "scenario_distance_corridor_count": 1,
                         "pair_intensity_g_per_tnm": 8.0,
                         "pair_intensity_method": "transport_work_weighted_mean",
@@ -142,12 +160,12 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "distance_km": 92.6,
                         "distance_nm": 50.0,
                         "distance_source": (
-                            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+                            "observed_complete_voyage_distance_p95_filtered_mean_onboard_cargo_weighted_mean"
                         ),
                         "fuel_g_per_tnm_weighted_mean": 8.0,
                         "route_observation_mode": OBSERVED_VOYAGE_CORRIDORS_MODE,
                         "scenario_distance_method": (
-                            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
+                            "p95_filtered_mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
                         ),
                         "scenario_distance_scope": (
                             "one_complete_ordered_od_observation_per_voyage"
@@ -156,6 +174,15 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                         "scenario_distance_mean_onboard_cargo_t_total": 100.0,
                         "scenario_distance_transport_work_tnm": 5000.0,
                         "scenario_distance_observation_count": 1,
+                        "scenario_distance_retained_voyage_count": 1,
+                        "scenario_distance_outlier_rule": (
+                            "exclude_complete_observed_voyages_above_unweighted_distance_p95_before_representative_mean"
+                        ),
+                        "scenario_distance_outlier_upper_quantile": 0.95,
+                        "scenario_distance_outlier_min_sample_size": 20,
+                        "scenario_distance_outlier_upper_threshold_km": None,
+                        "scenario_distance_outlier_applied": False,
+                        "scenario_distance_outlier_excluded_voyage_count": 0,
                         "scenario_distance_corridor_count": 1,
                         "pair_intensity_g_per_tnm": 8.0,
                         "pair_intensity_method": "transport_work_weighted_mean",
@@ -250,7 +277,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         assert stats is not None
         self.assertEqual(
             stats["scenario_distance_method"],
-            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
+            "p95_filtered_mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
         )
 
     def test_observed_remote_without_pair_intensity_yields_to_tracked_schema(self) -> None:
@@ -366,6 +393,39 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             9.0,
         )
 
+    def test_remote_missing_tracked_external_reference_yields_to_local_asset(self) -> None:
+        local_payload = self._observed_corridor_payload()
+        local_payload["external_distance_fallbacks"] = {
+            "Port A": {
+                "Port C": {
+                    "distance_km": 4495.0,
+                    "source": "geografos_reference",
+                    "source_type": "external_reference",
+                }
+            }
+        }
+        remote_payload = json.loads(json.dumps(local_payload))
+        remote_payload.pop("external_distance_fallbacks")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            local_path = root / "sea_matrix.json"
+            remote_path = root / "cache" / "sea_matrix.json"
+            remote_path.parent.mkdir()
+            local_path.write_text(json.dumps(local_payload), encoding="utf-8")
+            remote_path.write_text(json.dumps(remote_payload), encoding="utf-8")
+
+            with patch(
+                "modules.cabotage.sea_matrix.resolve_data_asset_path",
+                return_value=remote_path,
+            ):
+                sea_matrix = SeaMatrix.from_json_path(local_path)
+
+        self.assertEqual(
+            sea_matrix.external_distance_reference("Port A", "Port C")["distance_km"],
+            4495.0,
+        )
+
     def test_directional_fuel_prefers_explicit_pair_intensity(self) -> None:
         payload = self._observed_corridor_payload()
         payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"][
@@ -399,6 +459,106 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
 
         self.assertIsNone(sea_matrix.best_directional_stats("Port A", "Port B"))
         self.assertIsNone(sea_matrix.corridor_stats("Port A", "Port B"))
+
+    def test_external_distance_reference_precedes_haversine_and_is_symmetric(self) -> None:
+        source_url = "https://example.test/geografos/santos-vila-do-conde"
+        source_catalog_url = "https://example.test/geografos/catalog"
+        sea_matrix = SeaMatrix.from_json_dict(
+            {
+                "matrix": {"Port A": {"Port C": 100.0}},
+                "external_distance_fallbacks": {
+                    "Port A": {
+                        "Port B": {
+                            "distance_km": 4495.0,
+                            "reported_distance_nm": 2427.0,
+                            "source": "geografos_reference",
+                            "source_type": "external_reference",
+                            "source_url": source_url,
+                            "source_catalog_url": source_catalog_url,
+                            "retrieved_at": "2026-07-19",
+                            "source_page_origin_port": "Santos - SP",
+                            "source_page_destination_port": "Vila do Conde - PA",
+                            "matched_candidate_direction": "forward",
+                            "symmetric": True,
+                        }
+                    }
+                },
+            }
+        )
+        port_a = {"name": "Port A", "lat": -23.0, "lon": -46.0}
+        port_b = {"name": "Port B", "lat": -1.0, "lon": -48.0}
+
+        self.assertEqual(sea_matrix.km_with_source(port_a, port_b), (4495.0, "geografos_reference"))
+        self.assertEqual(sea_matrix.km_with_source(port_b, port_a), (4495.0, "geografos_reference"))
+
+        geometry = build_path_geometry_from_resolved(
+            {"label": "Origin", "lat": -23.0, "lon": -46.0},
+            {"label": "Destination", "lat": -1.0, "lon": -48.0},
+            ors=object(),
+            ports=[],
+            sea_matrix=sea_matrix,
+            port_origin=port_a,
+            port_destiny=port_b,
+            first_mile_leg={"distance_km": 80.0, "source": "test"},
+            route_resolver=lambda _start, _end, _name: {
+                "distance_km": 100.0,
+                "source": "test",
+            },
+        )
+
+        provenance = geometry["sea_leg"]["distance_provenance"]
+        self.assertEqual(provenance["source_type"], "external_reference")
+        self.assertEqual(provenance["source_url"], source_url)
+        self.assertEqual(provenance["source_catalog_url"], source_catalog_url)
+        self.assertEqual(provenance["source_page_origin_port"], "Santos - SP")
+        self.assertEqual(
+            provenance["source_page_destination_port"],
+            "Vila do Conde - PA",
+        )
+        self.assertEqual(provenance["matched_candidate_direction"], "forward")
+        self.assertEqual(provenance["reported_distance_nm"], 2427.0)
+        self.assertNotIn("haversine", provenance["notes"].casefold())
+
+    def test_primary_matrix_distance_precedes_external_reference(self) -> None:
+        sea_matrix = SeaMatrix.from_json_dict(
+            {
+                "matrix": {"Port A": {"Port B": 100.0}},
+                "external_distance_fallbacks": {
+                    "Port A": {
+                        "Port B": {
+                            "distance_km": 4495.0,
+                            "source": "geografos_reference",
+                        }
+                    }
+                },
+            }
+        )
+
+        distance, source = sea_matrix.km_with_source(
+            {"name": "Port A", "lat": 0.0, "lon": 0.0},
+            {"name": "Port B", "lat": 0.0, "lon": 1.0},
+        )
+
+        self.assertEqual(distance, 100.0)
+        self.assertEqual(source, "matrix")
+
+    def test_invalid_external_reference_keeps_haversine_as_last_resort(self) -> None:
+        sea_matrix = SeaMatrix.from_json_dict(
+            {
+                "matrix": {"Port A": {"Port C": 100.0}},
+                "external_distance_fallbacks": {
+                    "Port A": {"Port B": {"distance_km": 0.0}}
+                },
+            }
+        )
+
+        distance, source = sea_matrix.km_with_source(
+            {"name": "Port A", "lat": 0.0, "lon": 0.0},
+            {"name": "Port B", "lat": 0.0, "lon": 1.0},
+        )
+
+        self.assertGreater(distance, 100.0)
+        self.assertEqual(source, "haversine")
 
     def test_legacy_mode_preserves_directional_corridor_compatibility(self) -> None:
         payload = self._observed_corridor_payload()
@@ -440,7 +600,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         sea_leg = geometry["sea_leg"]
         self.assertEqual(
             sea_leg["source"],
-            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean",
+            "observed_complete_voyage_distance_p95_filtered_mean_onboard_cargo_weighted_mean",
         )
         self.assertEqual(
             sea_leg["fuel_g_per_tnm_source"],
@@ -454,9 +614,12 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         )
         self.assertEqual(sea_leg["candidate_voyage_count"], 4)
         self.assertEqual(sea_leg["scenario_distance_observation_count"], 4)
+        self.assertFalse(sea_leg["scenario_distance_outlier_applied"])
+        self.assertEqual(sea_leg["scenario_distance_retained_voyage_count"], 4)
+        self.assertEqual(sea_leg["scenario_distance_outlier_excluded_voyage_count"], 0)
         self.assertEqual(
             sea_leg["scenario_distance_method"],
-            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
+            "p95_filtered_mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
         )
         self.assertEqual(
             sea_leg["distance_provenance"]["source_type"],
@@ -482,7 +645,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             payload["voyage_fuel_g_per_tnm_directional_meta"][
                 "maritime_intensity_schema_version"
             ],
-            7,
+            8,
         )
 
         validation = validate_enriched_sea_matrix_payload(
@@ -494,7 +657,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertGreater(route["distance_km"], 0.0)
         self.assertEqual(
             route["scenario_distance_method"],
-            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
+            "p95_filtered_mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
         )
         self.assertEqual(route["scenario_distance_observation_count"], 89)
         self.assertGreater(route["fuel_g_per_tnm_weighted_mean"], 0.0)
@@ -551,23 +714,32 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         )
         self.assertEqual(
             stats["scenario_distance_method"],
-            "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
+            "p95_filtered_mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances",
         )
         self.assertEqual(stats["scenario_distance_observation_count"], 89)
+        self.assertTrue(stats["scenario_distance_outlier_applied"])
+        self.assertEqual(stats["scenario_distance_retained_voyage_count"], 87)
+        self.assertEqual(stats["scenario_distance_outlier_excluded_voyage_count"], 2)
+        self.assertAlmostEqual(
+            stats["scenario_distance_outlier_upper_threshold_km"],
+            6975.0,
+            places=3,
+        )
         self.assertEqual(stats["scenario_distance_corridor_count"], 22)
-        self.assertAlmostEqual(stats["distance_km"], 6142.461, places=3)
-        self.assertAlmostEqual(stats["distance_nm"], 3316.664, places=3)
+        self.assertEqual(stats["scenario_distance_retained_corridor_count"], 20)
+        self.assertAlmostEqual(stats["distance_km"], 6094.975, places=3)
+        self.assertAlmostEqual(stats["distance_nm"], 3291.023, places=3)
         self.assertEqual(
             stats["scenario_distance_weight"], "mean_onboard_cargo_t"
         )
         self.assertAlmostEqual(
             stats["scenario_distance_mean_onboard_cargo_t_total"],
-            950753.295,
+            915486.636,
             places=3,
         )
         self.assertAlmostEqual(
             stats["scenario_distance_transport_work_tnm"],
-            3153328821.755,
+            3012887569.634,
             places=3,
         )
         self.assertNotIn("selected_corridor_sublegs", stats)
@@ -588,6 +760,80 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
             provenance["raw_arithmetic_mean_g_per_tnm"],
             provenance["intensity_g_per_tnm"],
         )
+
+    def test_tracked_matrix_keeps_geografos_reference_for_santos_vila_do_conde(self) -> None:
+        matrix_path = Path(__file__).resolve().parents[1] / "data" / "sea_matrix.json"
+        payload = json.loads(matrix_path.read_text(encoding="utf-8-sig"))
+        sea_matrix = SeaMatrix.from_json_dict(payload)
+
+        reference = sea_matrix.external_distance_reference(
+            "Porto de Santos",
+            "Porto de Vila do Conde",
+        )
+        self.assertIsNotNone(reference)
+        assert reference is not None
+        self.assertEqual(reference["distance_km"], 4495.0)
+        self.assertEqual(reference["reported_distance_nm"], 2427.0)
+        self.assertEqual(reference["source_type"], "external_reference")
+        self.assertIn("geografos.com.br", reference["source_url"])
+
+        distance, source = sea_matrix.km_with_source(
+            {"name": "Porto de Santos", "lat": -23.9870, "lon": -46.2934},
+            {
+                "name": "Porto de Vila do Conde",
+                "lat": -1.5423,
+                "lon": -48.7502,
+            },
+        )
+        self.assertEqual(distance, 4495.0)
+        self.assertEqual(source, "geografos_reference")
+
+    def test_tracked_geografos_references_cover_missing_matrix_pairs_only(self) -> None:
+        matrix_path = Path(__file__).resolve().parents[1] / "data" / "sea_matrix.json"
+        payload = json.loads(matrix_path.read_text(encoding="utf-8-sig"))
+        sea_matrix = SeaMatrix.from_json_dict(payload)
+        ports = {port["name"]: port for port in payload["ports"]}
+        primary_matrix = payload["matrix"]
+        references = payload["external_distance_fallbacks"]
+
+        raw_references = [
+            (origin, destination, reference)
+            for origin, destinations in references.items()
+            for destination, reference in destinations.items()
+        ]
+        self.assertEqual(len(raw_references), 20)
+
+        for origin, destination, reference in raw_references:
+            self.assertEqual(reference["source"], "geografos_reference")
+            self.assertEqual(reference["source_type"], "external_reference")
+            self.assertGreater(reference["distance_km"], 0.0)
+            self.assertGreater(reference["reported_distance_nm"], 0.0)
+            self.assertIn("geografos.com.br", reference["source_url"])
+            self.assertNotIn(destination, primary_matrix.get(origin, {}))
+            self.assertNotIn(origin, primary_matrix.get(destination, {}))
+            distance, source = sea_matrix.km_with_source(ports[origin], ports[destination])
+            self.assertEqual(distance, reference["distance_km"])
+            self.assertEqual(source, "geografos_reference")
+
+        missing_without_geografos = 0
+        for index, origin in enumerate(ports.values()):
+            for destination in list(ports.values())[index + 1 :]:
+                origin_name = origin["name"]
+                destination_name = destination["name"]
+                has_primary = (
+                    destination_name in primary_matrix.get(origin_name, {})
+                    or origin_name in primary_matrix.get(destination_name, {})
+                )
+                has_reference = sea_matrix.external_distance_reference(
+                    origin_name,
+                    destination_name,
+                ) is not None
+                if not has_primary and not has_reference:
+                    _, source = sea_matrix.km_with_source(origin, destination)
+                    self.assertEqual(source, "haversine")
+                    missing_without_geografos += 1
+
+        self.assertEqual(missing_without_geografos, 12)
 
     def test_santos_manaus_geometry_uses_directional_distance_and_coverage(self) -> None:
         matrix_path = Path(__file__).resolve().parents[1] / "data" / "sea_matrix.json"
@@ -617,7 +863,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         assert expected is not None
         self.assertEqual(
             sea_leg["source"],
-            "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean",
+            "observed_complete_voyage_distance_p95_filtered_mean_onboard_cargo_weighted_mean",
         )
         self.assertEqual(
             sea_leg["fuel_g_per_tnm_source"],
@@ -639,7 +885,7 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
         self.assertEqual(sea_leg["scenario_distance_corridor_count"], 22)
         self.assertNotIn("selected_corridor_sublegs", sea_leg)
 
-    def test_tracked_matrix_keeps_one_voyage_per_od_and_cargo_weighted_distance_rule(
+    def test_tracked_matrix_keeps_one_voyage_per_od_and_p95_screened_distance_rule(
         self,
     ) -> None:
         matrix_path = Path(__file__).resolve().parents[1] / "data" / "sea_matrix.json"
@@ -668,41 +914,46 @@ class SeaMatrixFileLoadingTests(unittest.TestCase):
                             option["corridor_port_path"][-1], destination
                         )
 
-                    weighted_options = []
-                    for option in options:
-                        distance_nm = float(option["distance_km"]) / 1.852
-                        transport_work_tnm = float(
-                            option["observed_transport_work_tnm"]
-                        )
-                        mean_onboard_cargo_t = (
-                            transport_work_tnm / distance_nm
-                            if distance_nm > 0.0
-                            else 0.0
-                        )
-                        if mean_onboard_cargo_t > 0.0:
-                            weighted_options.append((option, mean_onboard_cargo_t))
-                    if weighted_options:
-                        total_mean_onboard_cargo_t = sum(
-                            weight for _, weight in weighted_options
-                        )
-                        expected_distance_km = sum(
-                            float(option["distance_km"]) * weight
-                            for option, weight in weighted_options
-                        ) / total_mean_onboard_cargo_t
-                    else:
-                        expected_distance_km = sum(
-                            float(option["distance_km"]) * len(option["candidate_voyage_ids"])
-                            for option in options
-                        ) / len(candidate_ids)
-                    self.assertAlmostEqual(
-                        stats["distance_km"],
-                        round(expected_distance_km, 3),
-                        delta=0.002,
-                    )
                     self.assertEqual(
                         stats["scenario_distance_observation_count"],
                         len(candidate_ids),
                     )
+                    self.assertEqual(
+                        stats["scenario_distance_retained_voyage_count"]
+                        + stats["scenario_distance_outlier_excluded_voyage_count"],
+                        len(candidate_ids),
+                    )
+                    self.assertEqual(
+                        stats["scenario_distance_outlier_rule"],
+                        "exclude_complete_observed_voyages_above_unweighted_distance_p95_before_representative_mean",
+                    )
+                    self.assertEqual(
+                        stats["scenario_distance_outlier_upper_quantile"],
+                        0.95,
+                    )
+                    self.assertEqual(
+                        stats["scenario_distance_outlier_min_sample_size"],
+                        20,
+                    )
+                    if len(candidate_ids) >= 20:
+                        self.assertTrue(stats["scenario_distance_outlier_applied"])
+                        self.assertIsNotNone(
+                            stats["scenario_distance_outlier_upper_threshold_km"]
+                        )
+                        self.assertLessEqual(
+                            stats["distance_km"],
+                            stats["scenario_distance_outlier_upper_threshold_km"]
+                            + 0.002,
+                        )
+                    else:
+                        self.assertFalse(stats["scenario_distance_outlier_applied"])
+                        self.assertIsNone(
+                            stats["scenario_distance_outlier_upper_threshold_km"]
+                        )
+                        self.assertEqual(
+                            stats["scenario_distance_outlier_excluded_voyage_count"],
+                            0,
+                        )
 
         segment_summary = payload["voyage_fuel_g_per_tnm_directional_meta"][
             "segment_summary"

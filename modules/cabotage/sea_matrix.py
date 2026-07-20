@@ -5,10 +5,12 @@ from __future__ import annotations
 """
 Sea distance matrix with optional directional efficiency metadata.
 
-The matrix keeps deterministic port-to-port sea distances in km, with a
-coastline-adjusted haversine fallback when a pair is missing. When the enriched
-`data/sea_matrix.json` is present, the same loader also exposes route-specific
-fuel-per-transport-work stats under `voyage_fuel_g_per_tnm_directional`.
+The matrix keeps deterministic port-to-port sea distances in km.  An explicit
+external-reference layer can supply a published maritime distance for a pair
+that has no observed ANTAQ corridor; coordinate Haversine remains the last
+fallback only.  When the enriched `data/sea_matrix.json` is present, the same
+loader also exposes route-specific fuel-per-transport-work stats under
+`voyage_fuel_g_per_tnm_directional`.
 """
 
 import json
@@ -27,7 +29,7 @@ __all__ = ["OBSERVED_VOYAGE_CORRIDORS_MODE", "SeaMatrix"]
 
 _log = get_logger(__name__)
 OBSERVED_VOYAGE_CORRIDORS_MODE = "observed_voyage_corridors"
-MARITIME_INTENSITY_SCHEMA_VERSION = 7
+MARITIME_INTENSITY_SCHEMA_VERSION = 8
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -75,6 +77,36 @@ def _clean_directional_payload(payload: Any) -> Dict[str, Dict[str, Dict[str, An
             cleaned_destinations[str(destiny)] = dict(stats)
         if cleaned_destinations:
             cleaned[origin_label] = cleaned_destinations
+    return cleaned
+
+
+def _clean_external_distance_fallbacks(
+    payload: Any,
+) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    """Normalize published port-pair distances retained outside ANTAQ routes."""
+    cleaned: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    if not isinstance(payload, dict):
+        return cleaned
+
+    for origin, destinations in payload.items():
+        if not isinstance(destinations, dict):
+            continue
+        normalized_destinations: Dict[str, Dict[str, Any]] = {}
+        for destiny, raw_reference in destinations.items():
+            reference = (
+                dict(raw_reference)
+                if isinstance(raw_reference, dict)
+                else {"distance_km": raw_reference}
+            )
+            distance_km = _positive_float(reference.get("distance_km"))
+            if distance_km is None:
+                continue
+            reference["distance_km"] = distance_km
+            reference.setdefault("source", "external_reference")
+            reference.setdefault("source_type", "external_reference")
+            normalized_destinations[str(destiny)] = reference
+        if normalized_destinations:
+            cleaned[str(origin)] = normalized_destinations
     return cleaned
 
 
@@ -232,6 +264,7 @@ class SeaMatrix:
     """
 
     matrix: Dict[str, Dict[str, float]]
+    external_distance_fallbacks: Dict[str, Dict[str, Dict[str, Any]]] | None = None
     coastline_factor: float = 1.0
     directional_efficiency: Dict[str, Dict[str, Dict[str, Any]]] | None = None
     directional_meta: Dict[str, Any] | None = None
@@ -250,6 +283,9 @@ class SeaMatrix:
                 cleaned_matrix[origin_label][str(destiny)] = float(distance_km)
 
         self.matrix = cleaned_matrix
+        self.external_distance_fallbacks = _clean_external_distance_fallbacks(
+            self.external_distance_fallbacks
+        )
         self.coastline_factor = float(self.coastline_factor)
         self.directional_efficiency = _clean_directional_payload(self.directional_efficiency)
         self.directional_meta = dict(self.directional_meta or {})
@@ -257,6 +293,10 @@ class SeaMatrix:
 
         self._canon = {}
         for origin, destinations in self.matrix.items():
+            self._canon.setdefault(_norm(origin), origin)
+            for destiny in destinations.keys():
+                self._canon.setdefault(_norm(destiny), destiny)
+        for origin, destinations in self.external_distance_fallbacks.items():
             self._canon.setdefault(_norm(origin), origin)
             for destiny in destinations.keys():
                 self._canon.setdefault(_norm(destiny), destiny)
@@ -270,6 +310,14 @@ class SeaMatrix:
                 self.matrix.setdefault(destiny, {})
                 if origin not in self.matrix[destiny]:
                     self.matrix[destiny][origin] = float(distance_km)
+
+        for origin, destinations in list(self.external_distance_fallbacks.items()):
+            for destiny, reference in list(destinations.items()):
+                self.external_distance_fallbacks.setdefault(destiny, {})
+                self.external_distance_fallbacks[destiny].setdefault(
+                    origin,
+                    dict(reference),
+                )
 
         self._directional_graph = {}
         self._corridor_cache = {}
@@ -288,11 +336,15 @@ class SeaMatrix:
 
         _log.debug(
             (
-                "SeaMatrix initialized labels=%d directed_edges=%d coastline_factor=%.3f "
-                "directional_pairs=%d"
+                "SeaMatrix initialized labels=%d directed_edges=%d external_references=%d "
+                "coastline_factor=%.3f directional_pairs=%d"
             ),
             len(self._canon),
             sum(len(destinations) for destinations in self.matrix.values()),
+            sum(
+                len(destinations)
+                for destinations in self.external_distance_fallbacks.values()
+            ),
             self.coastline_factor,
             sum(len(destinations) for destinations in self.directional_efficiency.values()),
         )
@@ -303,6 +355,7 @@ class SeaMatrix:
             raise TypeError("SeaMatrix.from_json_dict: payload must be a dict.")
 
         matrix = payload.get("matrix") or {}
+        external_distance_fallbacks = payload.get("external_distance_fallbacks") or {}
         coastline_factor = float(payload.get("coastline_factor", 1.0))
         directional_meta = payload.get("voyage_fuel_g_per_tnm_directional_meta") or {}
         route_observation_mode = _clean_route_observation_mode(
@@ -342,6 +395,9 @@ class SeaMatrix:
         }
         return cls(
             matrix=cleaned_matrix,
+            external_distance_fallbacks=_clean_external_distance_fallbacks(
+                external_distance_fallbacks
+            ),
             coastline_factor=coastline_factor,
             directional_efficiency=_clean_directional_payload(directional),
             directional_meta=(
@@ -375,12 +431,17 @@ class SeaMatrix:
             resolved_contract = sea_matrix._has_same_od_pair_intensity_contract()
             local_generated_at = local_matrix._pair_intensity_generated_at()
             resolved_generated_at = sea_matrix._pair_intensity_generated_at()
+            local_external_pairs = local_matrix._external_distance_reference_pairs()
+            resolved_external_pairs = sea_matrix._external_distance_reference_pairs()
             local_contract_is_newer = bool(
                 local_contract
                 and resolved_contract
                 and local_generated_at is not None
                 and resolved_generated_at is not None
                 and local_generated_at > resolved_generated_at
+            )
+            local_has_unavailable_external_reference = bool(
+                local_external_pairs - resolved_external_pairs
             )
             if (
                 local_matrix.route_observation_mode
@@ -390,12 +451,13 @@ class SeaMatrix:
                     != OBSERVED_VOYAGE_CORRIDORS_MODE
                     or (local_contract and not resolved_contract)
                     or local_contract_is_newer
+                    or local_has_unavailable_external_reference
                 )
             ):
                 _log.warning(
                     (
                         "Resolved sea matrix asset=%s uses an older or incomplete "
-                        "maritime intensity contract; using tracked same-OD "
+                        "maritime-distance contract; using tracked same-OD "
                         "pair-intensity asset=%s"
                     ),
                     resolved,
@@ -410,12 +472,19 @@ class SeaMatrix:
             payload = json.load(handle)
         _log.debug("SeaMatrix loaded from %s", resolved)
         sea_matrix = cls.from_json_dict(payload)
-        has_usable_distance = any(
+        has_usable_matrix_distance = any(
             _norm(origin) != _norm(destiny) and _positive_float(distance_km) is not None
             for origin, destinations in sea_matrix.matrix.items()
             for destiny, distance_km in destinations.items()
         )
-        if not has_usable_distance:
+        has_usable_external_reference = any(
+            _norm(origin) != _norm(destiny)
+            and _positive_float(reference.get("distance_km")) is not None
+            for origin, destinations in sea_matrix.external_distance_fallbacks.items()
+            for destiny, reference in destinations.items()
+            if isinstance(reference, dict)
+        )
+        if not has_usable_matrix_distance and not has_usable_external_reference:
             raise ValueError(
                 f"Sea matrix asset contains no usable positive port-pair distances: {resolved}"
             )
@@ -459,6 +528,12 @@ class SeaMatrix:
             "scenario_distance_mean_onboard_cargo_t_total",
             "scenario_distance_transport_work_tnm",
             "scenario_distance_observation_count",
+            "scenario_distance_retained_voyage_count",
+            "scenario_distance_outlier_rule",
+            "scenario_distance_outlier_upper_quantile",
+            "scenario_distance_outlier_min_sample_size",
+            "scenario_distance_outlier_applied",
+            "scenario_distance_outlier_excluded_voyage_count",
         )
         return bool(directional_stats) and all(
             _clean_route_observation_mode(stats.get("route_observation_mode"))
@@ -471,6 +546,15 @@ class SeaMatrix:
         if not self._has_same_od_pair_intensity_contract():
             return None
         return _parse_generated_at(self.directional_meta.get("generated_at"))
+
+    def _external_distance_reference_pairs(self) -> set[tuple[str, str]]:
+        return {
+            (_norm(origin), _norm(destination))
+            for origin, destinations in self.external_distance_fallbacks.items()
+            for destination, reference in destinations.items()
+            if isinstance(reference, dict)
+            and _positive_float(reference.get("distance_km")) is not None
+        }
 
     def _resolve_label(self, label: Optional[str]) -> Optional[str]:
         if label is None:
@@ -486,6 +570,26 @@ class SeaMatrix:
             return 0.0
         value = self.matrix.get(a, {}).get(b)
         return None if value is None else float(value)
+
+    def external_distance_reference(
+        self,
+        a_label: str,
+        b_label: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Return the retained published reference for an otherwise missing pair."""
+        a = self._resolve_label(a_label)
+        b = self._resolve_label(b_label)
+        if not a or not b or a == b:
+            return None
+        reference = self.external_distance_fallbacks.get(a, {}).get(b)
+        if not isinstance(reference, dict):
+            return None
+        distance_km = _positive_float(reference.get("distance_km"))
+        if distance_km is None:
+            return None
+        normalized = dict(reference)
+        normalized["distance_km"] = distance_km
+        return normalized
 
     def directional_stats(self, a_label: str, b_label: str) -> Optional[Dict[str, Any]]:
         a = self._resolve_label(a_label)
@@ -767,6 +871,19 @@ class SeaMatrix:
         matrix_distance = self.get(a_label, b_label)
         if matrix_distance is not None:
             return float(matrix_distance), "matrix"
+
+        external_reference = self.external_distance_reference(a_label, b_label)
+        if external_reference is not None:
+            distance_km = float(external_reference["distance_km"])
+            source = str(external_reference.get("source") or "external_reference")
+            _log.info(
+                "SeaMatrix external distance reference origin=%s destiny=%s distance_km=%.3f source=%s",
+                a_label,
+                b_label,
+                distance_km,
+                source,
+            )
+            return distance_km, source
 
         haversine_km = _haversine_km(
             float(p_from["lat"]),

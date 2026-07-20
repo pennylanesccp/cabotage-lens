@@ -268,28 +268,15 @@ Assim, no exemplo São Paulo–Rio Branco, as operações portuárias em Santos 
 
 #### 3.3.4 Consumo de combustível na perna marítima
 
-A perna marítima é o trecho em que a remessa segue por cabotagem entre o porto de embarque e o porto de desembarque. O consumo desse trecho é estimado em VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre), combustível naval adotado pelo modelo.
+A perna marítima corresponde ao deslocamento da remessa por cabotagem entre o porto de embarque e o porto de desembarque. Nesta etapa, o modelo estima o consumo de VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre) associado a esse deslocamento.
 
-Na rodovia, um serviço público de roteamento pode receber dois pontos e devolver com precisão a distância percorrida pela malha viária. Para a cabotagem, porém, não há um serviço equivalente que informe o itinerário efetivamente realizado por cada navio, suas escalas e a carga a bordo em cada trecho. Uma rota marítima desenhada apenas entre dois portos não mostraria, por exemplo, se o navio passou por Suape ou Pecém antes de chegar a Manaus. Por isso, em vez de estimar um corredor teórico, o sistema usa os registros reais de escalas e movimentação de carga publicados pela Agência Nacional de Transportes Aquaviários (ANTAQ) [antaq2025].
+A estimativa não parte de um corredor previamente definido. Ela é construída com registros observados de escalas e movimentações de carga da Agência Nacional de Transportes Aquaviários (ANTAQ) e com indicadores de intensidade de combustível do Monitoramento, Reporte e Verificação da União Europeia (EU MRV).
 
-Antes da reconstrução, o sistema mantém somente as movimentações classificadas pela ANTAQ como cabotagem e carga conteinerizada. Cada movimentação também precisa estar vinculada a uma atracação e a um navio identificado pelo número IMO. Com esses registros, o sistema percorre todas as viagens da base, reconstitui a ordem das escalas e calcula a carga a bordo em cada trecho.
-
-Uma viagem não é considerada válida de forma genérica: a validade é verificada para cada par de portos e para cada sentido. Para contribuir com Santos → Manaus, por exemplo, a mesma viagem precisa conter Santos antes de Manaus. Uma sequência Manaus → Santos é uma observação da direção oposta e não pode ser usada para representar Santos → Manaus.
-
-Para que uma viagem contribua para uma ligação, quatro condições precisam ser atendidas:
-
-- os dois portos devem aparecer na mesma viagem reconstruída, com a origem antes do destino;
-- todos os subtrechos entre eles devem estar completos, isto é, os portos precisam ser reconhecidos pela matriz marítima e cada distância deve estar disponível na matriz ou ser obtida pela aproximação geográfica de Haversine;
-- origem e destino não podem ser o mesmo porto; e
-- a viagem pode contribuir apenas uma vez para o mesmo par ordenado de portos. Se o navio repetir esse par na mesma viagem, o sistema usa primeiro o recorte direto; se não houver um recorte direto, usa o recorte completo de menor distância.
-
-Assim, uma viagem observada como Santos → Suape → Pecém → Manaus pode contribuir para as ligações Santos → Suape, Santos → Pecém e Santos → Manaus. Os portos intermediários permanecem no cálculo, pois o consumo é somado ao longo de todos os subtrechos do recorte selecionado. A ausência de correspondência do IMO no EU MRV não elimina essa viagem: o sistema ainda busca uma intensidade representativa pela classe ou pelo tipo de navio. Se nenhuma intensidade puder ser obtida após essas etapas, a viagem permanece como observação de distância, mas não participa da média de intensidade. A Seção 3.3.4.4 aplica ainda uma verificação de P95 somente à média de distância; ela não remove a viagem da reconstrução nem da média de intensidade.
-
-O percurso apresentado a seguir serve apenas para mostrar, com um caso real, como essa reconstrução é feita para todas as viagens da base; ele não é um corredor previamente definido pelo sistema.
+A seção está organizada em quatro etapas. Primeiro, apresenta como os registros da ANTAQ são reunidos para reconstruir cada viagem e seus subtrechos. Em seguida, explica como é definida a intensidade de combustível de cada navio. Depois, mostra como as viagens válidas são consolidadas para obter a intensidade representativa da ligação. Por fim, descreve o cálculo da distância marítima representativa, considerando os corredores observados e tratando percursos excepcionalmente longos de forma consistente.
 
 ##### 3.3.4.1 Atividade observada na ANTAQ e reconstrução das viagens
 
-Para executar essa reconstrução, o sistema parte dos arquivos brutos da ANTAQ, que não trazem uma viagem pronta, como “Santos–Manaus”. Cada linha registra apenas um evento: uma escala em um porto e uma movimentação de carga. Ao reunir os registros do mesmo navio, ordenar as escalas e calcular a carga a bordo, o sistema transforma esses eventos isolados em uma viagem observada.
+Para executar essa reconstrução, o sistema parte dos arquivos brutos da ANTAQ, que não trazem uma viagem pronta, como “Santos–Manaus”. Cada linha registra apenas um evento: uma escala em um porto e uma movimentação de carga. Antes de combinar esses registros, o sistema mantém apenas as movimentações de cabotagem e carga conteinerizada vinculadas a uma atracação e a um navio identificado pelo número IMO. Ao reunir os registros do mesmo navio, ordenar as escalas e calcular a carga a bordo, transforma esses eventos isolados em uma viagem observada.
 
 Para reconstruir uma viagem, o sistema combina duas tabelas que cumprem papéis diferentes. A tabela de Carga mostra o que entrou e o que saiu do navio em cada escala. A tabela de Atracação mostra onde e quando essa escala ocorreu e qual navio a realizou. O campo `IDAtracacao` (código único de identificação da atracação) aparece nos dois arquivos e faz a ligação entre eles.
 
@@ -382,7 +369,7 @@ No grupo de 243 navios classificados como *container ship*, o P95 é $24{,}073\ 
 
 O P95 e a estatística robusta têm funções diferentes. Enquanto P95 identifica quando o valor individual é excepcionalmente alto para seu grupo, a estatística robusta produz o valor de grupo que será usado quando o IMO estiver ausente ou quando o valor individual precisar ser substituído. Tanto para a **classe** como para o **tipo** do navio, o sistema usa a **média aparada disponível**, que exclui valores abaixo do percentil 1 e acima do percentil 99 e calcula a média dos valores restantes como intensidade desse grupo.
 
-Essas regras evitam que poucos valores extremos definam a estimativa coletiva. Elas não foram criadas para escolher um resultado mais baixo: a mesma regra é aplicada a todos os grupos e sua aplicação fica registrada na saída do cálculo, com a estatística usada, o tamanho da amostra e a quantidade de valores retirados.
+Essas regras evitam que poucos valores extremos definam a estimativa coletiva. Elas não foram criadas para escolher um resultado mais baixo: a mesma regra é aplicada a todos os grupos e sua aplicação fica registrada na saída do cálculo, com a estatística usada, o tamanho da amostra e a quantidade de valores retirados. Esse uso do P95 trata apenas a intensidade individual do navio; o uso do P95 para a distância marítima representativa é descrito separadamente na Seção 3.3.4.4.
 
 ###### 3.3.4.2.3 Estimativa quando não há valor individual
 
@@ -408,7 +395,7 @@ Portanto, todos os subtrechos dessa viagem recebem a intensidade de $9{,}322050\
 
 ##### 3.3.4.3 Trabalho de transporte e intensidade da ligação
 
-Uma ligação entre dois portos não corresponde, necessariamente, a uma única viagem nem a uma única sequência de escalas. Para representar Santos–Manaus, por exemplo, o sistema aproveita cada recorte histórico que começou em Santos e chegou a Manaus na mesma viagem e no mesmo sentido, independente do número de paradas. Antes de reunir esses recortes em uma única intensidade, ele calcula quanto transporte foi realizado em cada um deles. A ideia é ponderar a média das intensidades pela quantidade de carga que de fato foi transportada naquele trecho.
+Uma ligação entre dois portos não corresponde, necessariamente, a uma única viagem nem a uma única sequência de escalas. Para representar Santos–Manaus, por exemplo, o sistema aproveita cada recorte histórico que começou em Santos e chegou a Manaus na mesma viagem e no mesmo sentido, independentemente do número de paradas. Um recorte só entra nessa consolidação quando a origem e o destino são portos distintos da mesma viagem, aparecem na ordem do cenário e todos os subtrechos entre eles têm distância disponível. Se o navio repete a mesma ligação, o sistema usa o recorte direto; se não houver um, usa o recorte completo mais curto, evitando que a mesma viagem seja contada duas vezes. Antes de reunir esses recortes em uma única intensidade, ele calcula quanto transporte foi realizado em cada um deles. A ideia é ponderar a média das intensidades pela quantidade de carga que de fato foi transportada naquele trecho.
 
 Esse cálculo usa o trabalho de transporte. Em cada subtrecho, a carga a bordo é multiplicada pela distância percorrida; em seguida, os resultados dos subtrechos são somados. Para cada recorte válido $v$, extraído de uma viagem reconstruída, o trabalho entre a origem $o$ e o destino $d$ é:
 
@@ -483,6 +470,8 @@ Esse resultado não é a intensidade de um navio escolhido como representante. �
 
 Para calcular o consumo de uma nova remessa, o sistema usa uma distância marítima representativa entre o porto de origem e o porto de destino. Essa distância é calculada separadamente da intensidade. A intensidade usa o trabalho de transporte como peso; para a distância, o peso da média é a carga que permaneceu a bordo em cada recorte completo. Assim, a distância de uma viagem mais longa não é usada duas vezes no cálculo da média.
 
+Antes dessa média, o sistema verifica se há recortes excepcionalmente longos para a mesma ligação e no mesmo sentido. Quando existem pelo menos 20 recortes completos, ele calcula o percentil 95 (P95) das distâncias totais observadas, sem ponderação. Os recortes acima desse limite continuam registrados na matriz e participam da intensidade marítima, mas não entram na média de distância. Com menos de 20 recortes, o filtro não é aplicado e todos permanecem na média. Portanto, o P95 funciona como um limite de triagem para a distância; ele não substitui a distância representativa pelo próprio valor do percentil.
+
 Em cada recorte, o sistema primeiro soma as distâncias de seus subtrechos e calcula a carga média a bordo ponderada pela distância. Se $D_{v,o,d}^{\mathrm{nm}}$ é a distância total do recorte, essa carga média é:
 
 $$
@@ -496,19 +485,19 @@ Na fórmula, $m_{v,s}$ é a carga a bordo no subtrecho $s$, $d_{v,s}$ é a dist�
 
 Na viagem `voyage_9612791_00011`, por exemplo, o trabalho de transporte de $39.294.668{,}494\ \mathrm{t\cdot nm}$ é dividido pela distância total de $2.952{,}579\ \mathrm{nm}$, resultando $13.308{,}592\ \mathrm{t}$. Esse é o peso da referida viagem na média de distância; não é a carga de uma nova remessa simulada.
 
-Em seguida, a distância representativa é a média das distâncias completas dos recortes, ponderada por essa carga média:
+Em seguida, a distância representativa é a média das distâncias completas dos recortes que permaneceram até o P95, ponderada por essa carga média:
 
 $$
 \bar D_{o,d}^{\mathrm{rep}}=
-\frac{\sum_{v=1}^{N_{\mathrm{recortes}}}D_{v,o,d}^{\mathrm{km}}\,\bar m_{v,o,d}}
-{\sum_{v=1}^{N_{\mathrm{recortes}}}\bar m_{v,o,d}}.
+\frac{\sum_{v\in\mathcal{V}_{o,d}^{\leq P95}}D_{v,o,d}^{\mathrm{km}}\,\bar m_{v,o,d}}
+{\sum_{v\in\mathcal{V}_{o,d}^{\leq P95}}\bar m_{v,o,d}}.
 $$
 
-Nessa expressão, $\bar D_{o,d}^{\mathrm{rep}}$ é a distância marítima representativa da ligação, em quilômetros; $D_{v,o,d}^{\mathrm{km}}$ é a distância total do mesmo recorte, em quilômetros; e $N_{\mathrm{recortes}}$ é o número de recortes aceitos.
+Nessa expressão, $\bar D_{o,d}^{\mathrm{rep}}$ é a distância marítima representativa da ligação, em quilômetros; $D_{v,o,d}^{\mathrm{km}}$ é a distância total do mesmo recorte, em quilômetros; e $\mathcal{V}_{o,d}^{\leq P95}$ reúne os recortes cuja distância é menor ou igual ao P95 daquela ligação. Quando a ligação tem menos de 20 recortes, esse conjunto contém todos os recortes válidos.
 
 Essa média não monta uma rota artificial com trechos de navios diferentes. Cada distância é calculada dentro da própria viagem antes de entrar na média, e nenhum corredor único é escolhido para representar o cenário.
 
-Em Santos–Manaus, os 89 recortes completos resultam $6.142{,}461\ \mathrm{km}$, ou $3.316{,}664\ \mathrm{nm}$.
+Em Santos–Manaus, foram reconstruídos 89 recortes completos em 22 corredores. O P95 das distâncias observadas foi $6.975{,}000\ \mathrm{km}$; dois recortes acima desse limite foram retirados apenas da média de distância. Os 87 recortes restantes, distribuídos em 20 corredores, resultam em $6.094{,}975\ \mathrm{km}$, ou $3.291{,}023\ \mathrm{nm}$. Os 89 recortes continuam na média de intensidade apresentada na Seção 3.3.4.3.
 
 #### 3.3.5 Emissões da alternativa multimodal
 
@@ -548,10 +537,10 @@ Para a remessa de 14 t entre São Paulo (SP) e Rio Branco (AC), a Tabela 9 reú
 | Etapa | Percurso | Distância | Combustível estimado | Custo modelado do combustível | Emissões operacionais TTW |
 | :-- | :-- | --: | --: | --: | --: |
 | *First mile* | São Paulo–Porto de Santos | 86,170 km | 37,465 L de diesel | R\$ 260,76 | 100,41 kg CO₂e |
-| Navegação | Porto de Santos–Porto de Manaus | 6.142,461 km<br/>(3.316,664 milhas náuticas) | 418,356 kg de VLSFO | R\$ 1.594,90 | 1.302,76 kg CO₂e |
+| Navegação | Porto de Santos–Porto de Manaus | 6.094,975 km<br/>(3.291,023 milhas náuticas) | 415,122 kg de VLSFO | R\$ 1.582,57 | 1.292,69 kg CO₂e |
 | Operações portuárias | Santos e Manaus | — | 4,820 L de diesel | R\$ 34,25 | 12,92 kg CO₂e |
 | *Last mile* | Porto de Manaus–Rio Branco | 1.403,691 km | 610,300 L de diesel | R\$ 5.041,08 | 1.635,60 kg CO₂e |
-| **Total** | — | **7.632,322 km** | — | **R\$ 6.930,99** | **3.051,69 kg CO₂e** |
+| **Total** | — | **7.584,836 km** | — | **R\$ 6.918,66** | **3.041,62 kg CO₂e** |
 
 ### 3.4 Resultado final do exemplo São Paulo–Rio Branco
 
@@ -561,9 +550,9 @@ Esta seção compara, para a mesma remessa de 14 t, os resultados totais da alt
 
 | Indicador | Alternativa A: rodovia direta | Alternativa B: multimodal | Resultado da alternativa B em relação à A |
 | :-- | --: | --: | :-- |
-| Distância percorrida | 3.491,431 km | 7.632,322 km | 4.140,891 km a mais (118,60%). |
-| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.051,69 kg CO₂e | 1.016,59 kg CO₂e a menos (24,99%). |
-| Custo modelado do combustível | R\$ 12.318,68 | R\$ 6.930,99 | R\$ 5.387,69 a menos (43,74%). |
+| Distância percorrida | 3.491,431 km | 7.584,836 km | 4.093,405 km a mais (117,24%). |
+| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.041,62 kg CO₂e | 1.026,66 kg CO₂e a menos (25,24%). |
+| Custo modelado do combustível | R\$ 12.318,68 | R\$ 6.918,66 | R\$ 5.400,02 a menos (43,84%). |
 
 Embora a alternativa multimodal percorra uma distância total maior, ela apresenta menor custo modelado do combustível e menores emissões operacionais TTW no cenário analisado.
 
@@ -770,7 +759,7 @@ Como explicado na Seção 3.3.4.2, o sistema procura primeiro o IMO do navio obs
 
 ##### 4.4.2.5 Compilação na estrutura matricial
 
-Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância representativa dos recortes completos, ponderada pela carga média a bordo e, a intensidade, ponderada pelo trabalho de transporte. Também registra a quantidade de recortes elegíveis e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem viagens, cargas e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
+Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de portos, ela mantém a distância representativa dos recortes completos após a verificação de P95, ponderada pela carga média a bordo, e a intensidade, ponderada pelo trabalho de transporte de todos os recortes elegíveis. Também registra a quantidade de recortes, o limite P95 quando aplicável e a procedência dos dados. A matriz é direcional: Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem viagens, cargas e distâncias observadas diferentes. A `SeaMatrix` também é salva no Supabase Storage como o arquivo JSON `data/sea_matrix.json`.
 
 ```mermaid
 flowchart LR
@@ -783,17 +772,17 @@ flowchart LR
 
 As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e, as colunas, o porto de destino.
 
-A Tabela 13 apresenta a distância representativa de cada sentido. Nela, cada recorte completo é ponderado pela carga média mantida a bordo durante o percurso, conforme explicado na seçao 3.3. . Nota-se que a distância de ida pode ser diferente da distância de volta, uma vez que cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias observadas. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
+A Tabela 13 apresenta a distância representativa de cada sentido. Quando há 20 ou mais recortes, as distâncias acima do P95 são retiradas antes da média ponderada pela carga média a bordo, conforme explicado na Seção 3.3.4.4. Nota-se que a distância de ida pode ser diferente da distância de volta, uma vez que cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias observadas. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
 
-**Tabela 13 — Distância marítima representativa, ponderada pela carga média a bordo, na matriz marítima (km).**
+**Tabela 13 — Distância marítima representativa após a triagem P95, ponderada pela carga média a bordo, na matriz marítima (km).**
 
 | Origem / destino | Santos | Salvador | Suape | Pecém | Manaus |
 | :-- | --: | --: | --: | --: | --: |
-| Santos | — | 3.092,510 | 3.035,287 | 3.730,892 | 6.142,461 |
-| Salvador | 3.246,911 | — | 4.312,202 | 3.831,370 | 3.839,071 |
-| Suape | 4.086,744 | 3.023,760 | — | 1.070,363 | 3.256,185 |
-| Pecém | 4.161,942 | 2.660,713 | 5.519,085 | — | 2.195,720 |
-| Manaus | 5.931,919 | 7.095,857 | 5.900,540 | 6.341,446 | — |
+| Santos | — | 2.516,136 | 2.912,073 | 3.578,767 | 6.094,975 |
+| Salvador | 2.867,589 | — | 4.122,437 | 3.475,834 | 3.819,166 |
+| Suape | 3.800,410 | 2.801,434 | — | 940,458 | 3.214,997 |
+| Pecém | 4.103,118 | 2.437,283 | 5.301,235 | — | 2.195,720 |
+| Manaus | 5.867,445 | 6.585,233 | 5.560,801 | 5.768,673 | — |
 
 *Fonte: elaboração própria a partir da matriz marítima direcional preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em 19 de julho de 2026.*
 
@@ -819,17 +808,17 @@ O trecho abaixo representa, de forma simplificada, como a matriz pode ser consul
 {
     "Porto de Santos": {
         "Porto de Salvador": {
-            "distancia_km": 3092.510,
+            "distancia_km": 2516.136,
             "intensidade_g_por_t_nm": 9.605744,
             ...
         },
     "Porto de Suape": {
-        "distancia_km": 3035.287,
+        "distancia_km": 2912.073,
         "intensidade_g_por_t_nm": 8.729368,
         ...
     },
     "Porto de Manaus": {
-      "distancia_km": 6142.461,
+      "distancia_km": 6094.975,
       "intensidade_g_por_t_nm": 9.009824,
       ...
     },
@@ -886,10 +875,11 @@ No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos
 | :-- | :-- | :-- |
 | Cobertura observada | 89 recortes em 22 corredores | Todas as viagens em que Santos aparece antes de Manaus são consideradas no mesmo sentido |
 | Forma dos recortes | 1 direto e 88 com escalas intermediárias | Não há corredor obrigatório nem seleção do percurso mais curto |
-| Distância marítima | 6.142,461 km, ou 3.316,664 nm | Média da distância total, ponderada pela carga média a bordo das 89 viagens completas |
+| Amostra da distância | 87 recortes em 20 corredores; P95 de 6.975,000 km | Os 2 recortes acima do P95 permanecem auditáveis, mas não entram na média de distância |
+| Distância marítima | 6.094,975 km, ou 3.291,023 nm | Média da distância total, ponderada pela carga média a bordo dos 87 recortes até o P95 |
 | Intensidade marítima | 9,009824 g/(t·nm) | Média ponderada pelo trabalho de transporte dos 89 recortes |
 | Origem das intensidades | 19 por IMO; 49 por tipo sem IMO utilizável; 21 por tipo após tratamento de valor atípico | A fonte permanece identificada para cada recorte |
-| Aviso de distância | 1 subtrecho aproximado por haversine entre 402 subtrechos | A distância do cenário continua sendo uma média ponderada de percursos observados, mas o aviso é preservado |
+| Aviso de distância | 1 subtrecho aproximado por haversine entre 391 subtrechos | A aproximação permanece identificada na amostra de distância usada no cenário |
 
 ### 4.6 Resultado final do cenário
 
@@ -899,9 +889,9 @@ Após executar as etapas descritas nas seções anteriores, o pipeline reúne os
 
 | Indicador | Rodovia direta | Alternativa multimodal | Diferença da alternativa multimodal |
 | :-- | --: | --: | :-- |
-| Distância percorrida | 3.491,431 km | 7.632,322 km | 4.140,891 km a mais (118,60%) |
-| Custo modelado do combustível | R$ 12.318,68 | R$ 6.930,99 | R$ 5.387,69 a menos (43,74%) |
-| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.051,69 kg CO₂e | 1.016,59 kg CO₂e a menos (24,99%) |
+| Distância percorrida | 3.491,431 km | 7.584,836 km | 4.093,405 km a mais (117,24%) |
+| Custo modelado do combustível | R$ 12.318,68 | R$ 6.918,66 | R$ 5.400,02 a menos (43,84%) |
+| Emissões operacionais TTW | 4.068,28 kg CO₂e | 3.041,62 kg CO₂e | 1.026,66 kg CO₂e a menos (25,24%) |
 
 ### 4.7 Rastreabilidade, auditoria e versionamento
 
@@ -913,7 +903,7 @@ O resultado não guarda apenas os totais de custo e emissão. A cada execução,
 | :-- | :-- | :-- |
 | Rota rodoviária direta | 3.491,431 km; resultado originalmente obtido do ORS e reutilizado na execução | Permite conferir a distância usada na alternativa direta |
 | Portos selecionados | Santos (SP) e Manaus (AM) | Mostra onde começam e terminam os acessos marítimos e rodoviários |
-| Ligação marítima | 89 viagens completas observadas em 22 corredores | Identifica a base da intensidade e da distância marítimas |
+| Ligação marítima | 89 viagens completas em 22 corredores; 87 recortes até o P95 para a distância | Identifica a base da intensidade e da distância marítimas |
 | Intensidade marítima | 9,009824 g/(t·nm); fontes por IMO e por tipo identificadas | Diferencia medição individual de estimativa de grupo |
 | Operações portuárias | RTG e caminhão interno do terminal | Identifica os equipamentos considerados no cálculo |
 | Preços de combustível | Diesel S10 da ANP e VLSFO da Ship & Bunker, com data e valor usados | Permite atualizar ou repetir o componente de custo |
@@ -961,368 +951,11 @@ As cores e a altura da superfície facilitam a leitura espacial dessas diferenç
 
 *Figura 9 — Representação espacial dos resultados calculados na página Mapa de calor. Fonte: elaboração própria.*
 
-## 5. Comparações com referências externas
+## 5. Comparações com ferramentas externas
 
-Esta seção compara os resultados do CabotageLens com referências externas de duas naturezas: os cenários acadêmicos publicados pelo Prof. Dr. Gustavo Adolfo Alves da Costa e coautores, citados nesta seção como Costa et al., e ferramentas públicas de cálculo de emissões. As comparações situam os resultados e tornam explícitas as diferenças de rota, carga, combustível e fronteira de emissão. Elas não são utilizadas para ajustar os parâmetros do sistema.
+As ferramentas externas permitem confrontar o resultado do CabotageLens com estimativas já disponíveis ao público. Em cada caso, são apresentadas as distâncias, as emissões ou os valores de custo disponíveis na respectiva ferramenta. Quando a rota, o porto ou outro parâmetro difere, a diferença permanece explícita; os resultados não são ajustados para produzir uma equivalência artificial.
 
-### 5.1 Comparação com os cenários de Costa et al.
-
-Esta subseção confronta o CabotageLens com os dados e cenários publicados por Costa et al. A intenção não é tratar as fontes como se fossem a mesma simulação, mas mostrar, item a item, onde as escolhas de rota, consumo, combustível e alocação coincidem ou divergem. Assim, os números permanecem rastreáveis e não são usados para ajustar artificialmente o resultado do sistema.
-
-#### 5.1.1 Base de comparação e limites de equivalência
-
-A planilha de apoio de Costa et al. fornece 21 ligações direcionais entre Manaus, Fortaleza, Recife, Salvador, Rio de Janeiro e São Paulo. Para confrontar o cenário Base, cada ligação é avaliada no CabotageLens com 1 TEU e uma remessa de 14 t. A planilha apresenta resultados por contêiner, mas não explicita a massa desse contêiner; por isso, suas colunas são mantidas como “por contêiner”, enquanto as do CabotageLens são identificadas como “por 14 t”.
-
-**Tabela 19 — Escopo dos dados de Costa et al. e forma de comparação.**
-
-| Fonte | Resultado disponível | Uso nesta seção |
-| :-- | --: | --: |
-| Planilha: cenário Base | Distâncias, emissões por ligação e rotação fixa do navio | Comparação por ligação |
-| Planilha: C1 a C4 | Emissões semanais por combinação de combustíveis | Comparação de cenários, sem reexecução no sistema |
-| Artigo de competitividade | Limiar de competitividade e sensibilidades econômicas | Comparação de parâmetros e de escopo |
-| Artigo de descarbonização | Consumo e emissões da frota nacional em fronteira WTW | Referência tecnológica e ambiental |
-
-As emissões do CabotageLens são operacionais TTW, isto é, representam a queima do combustível durante o transporte. A planilha não qualifica expressamente a fronteira de suas emissões de CO₂e; por isso, seus valores são chamados apenas de “emissões reportadas pela planilha”. Já os artigos usam, em partes de suas análises, a fronteira WTW. Essas diferenças impedem uma comparação de magnitude como se os valores fossem diretamente equivalentes [workbookdados; competitiveness2024; decarb2024].
-
-#### 5.1.2 Cenários de combustível da planilha
-
-A Tabela 20 reúne todos os cenários da planilha. O cenário Base é o único que utiliza diesel nas pernas rodoviárias e VLSFO com MDO na navegação, combinação correspondente aos combustíveis atualmente calculados pelo CabotageLens. Os cenários C1 a C4 permanecem como referências externas, pois exigiriam parâmetros específicos de consumo e de emissão para GNV, HVO, LNG e metanol em cada etapa.
-
-**Tabela 20 — Combustíveis adotados nos cenários da planilha de Costa et al.**
-
-| Etapa | Base | C1 | C2 | C3 | C4 |
-| :-- | --: | --: | --: | --: | --: |
-| Rodovia direta | Diesel | GNV | HVO | GNV | GNV |
-| Hidrovia | IFO | IFO | HVO | HVO | HVO |
-| Acessos rodoviários da cabotagem | Diesel | GNV | HVO | GNV | GNV |
-| Depot | Diesel | Diesel | HVO | HVO | HVO |
-| Terminal de contêineres | Diesel | Diesel | HVO | HVO | HVO |
-| Navio no porto | MDO | MDO | HVO | LNG | Metanol |
-| Praticagem e rebocadores | MDO | MDO | HVO | HVO | HVO |
-| Navio em viagem | VLSFO + MDO | VLSFO + MDO | VLSFO + HVO | LNG | Metanol |
-
-#### 5.1.3 Comparação das distâncias
-
-As cinco configurações da planilha mantêm as mesmas rotas físicas: C1 a C4 alteram combustíveis e fatores de emissão, mas não as distâncias. Por isso, as Tabelas 22 a 24 apresentam cada ligação uma única vez; seus valores valem para o cenário Base e para C1–C4.
-
-##### 5.1.3.1 Portos adotados
-
-Antes de comparar as distâncias marítimas, é necessário identificar os portos associados a cada cidade. A planilha usa uma rede portuária fixa. O CabotageLens escolhe o porto mais próximo da origem e do destino informados, conforme o procedimento da Seção 4.4.2. Essa diferença aparece principalmente em Fortaleza, Recife e Rio de Janeiro.
-
-**Tabela 21 — Portos associados às cidades nas duas abordagens.**
-
-| Cidade | Planilha de Costa et al. | CabotageLens |
-| :-- | --: | --: |
-| Manaus | Manaus (BRMAO) | Porto de Manaus |
-| Fortaleza | Pecém (BRPEC) | Porto de Fortaleza |
-| Recife | Suape (BRSUA) | Porto do Recife |
-| Salvador | Salvador (BRSSA) | Porto de Salvador |
-| Rio de Janeiro | Itaguaí (BRIGI) | Porto do Rio de Janeiro |
-| São Paulo | Santos (BRSSZ) | Porto de Santos |
-
-##### 5.1.3.2 Rodovia direta
-
-A Tabela 22 compara a distância terrestre usada para a alternativa direta. Nas nove ligações que envolvem Manaus, a planilha registra a parcela rodoviária como “Manaus via Belém” e inclui uma hidrovia em separado. O CabotageLens, por sua vez, consulta uma rota rodoviária entre as cidades. Portanto, essas nove linhas descrevem redes diferentes e não devem ser interpretadas como uma conferência direta da distância por estrada.
-
-**Tabela 22 — Distância da alternativa direta por ligação.**
-
-| Ligação | Costa et al.: rodovia no arquivo (km) | CabotageLens: rodovia (km) | Diferença (km) |
-| :-- | --: | --: | --: |
-| Manaus → Fortaleza | 1.523 | 5.569,6 | 4.046,6 |
-| Manaus → Recife | 2.042 | 5.558,6 | 3.516,6 |
-| Manaus → Rio de Janeiro | 3.122 | 4.280,7 | 1.158,7 |
-| Manaus → São Paulo | 2.906 | 3.878,8 | 972,8 |
-| Fortaleza → Manaus | 1.523 | 5.564,2 | 4.041,2 |
-| Fortaleza → Rio de Janeiro | 2.582 | 2.697,1 | 115,1 |
-| Fortaleza → São Paulo | 3.085 | 3.134,6 | 49,6 |
-| Recife → Manaus | 2.042 | 5.549,8 | 3.507,8 |
-| Recife → Rio de Janeiro | 2.320 | 2.310,3 | −9,7 |
-| Recife → São Paulo | 2.648 | 2.643,0 | −5,0 |
-| Salvador → Manaus | 2.069 | 4.873,0 | 2.804,0 |
-| Salvador → Fortaleza | 1.183 | 1.189,9 | 6,9 |
-| Salvador → Recife | 847 | 807,9 | −39,1 |
-| Rio de Janeiro → Manaus | 3.122 | 4.269,3 | 1.147,3 |
-| Rio de Janeiro → Fortaleza | 2.582 | 2.692,5 | 110,5 |
-| Rio de Janeiro → Recife | 2.320 | 2.309,3 | −10,7 |
-| Rio de Janeiro → Salvador | 1.633 | 1.630,7 | −2,3 |
-| São Paulo → Manaus | 2.906 | 3.870,0 | 964,0 |
-| São Paulo → Fortaleza | 3.085 | 3.133,9 | 48,9 |
-| São Paulo → Recife | 2.648 | 2.647,0 | −1,0 |
-| São Paulo → Salvador | 1.929 | 1.968,4 | 39,4 |
-
-Para as demais doze ligações, ambas as fontes descrevem exclusivamente o deslocamento rodoviário entre as cidades. As diferenças menores decorrem da data, do provedor e do traçado da rota, e não de uma conversão de unidade.
-
-##### 5.1.3.3 Acessos aos portos
-
-A planilha soma, em cada extremo, o deslocamento entre a cidade, o terminal de contêineres, o depot e a transportadora. O CabotageLens calcula somente o acesso rodoviário entre o endereço e o porto escolhido. A Tabela 23 deixa essa diferença de fronteira explícita.
-
-**Tabela 23 — Distância dos acessos terrestres da alternativa com cabotagem.**
-
-| Ligação | Costa et al.: acessos logísticos (km) | CabotageLens: acessos viários (km) | Diferença (km) |
-| :-- | --: | --: | --: |
-| Manaus → Fortaleza | 142,0 | 16,2 | −125,8 |
-| Manaus → Recife | 140,6 | 9,4 | −131,2 |
-| Manaus → Rio de Janeiro | 211,8 | 9,8 | −202,0 |
-| Manaus → São Paulo | 232,0 | 91,9 | −140,1 |
-| Fortaleza → Manaus | 142,0 | 14,9 | −127,1 |
-| Fortaleza → Rio de Janeiro | 293,8 | 10,4 | −283,4 |
-| Fortaleza → São Paulo | 314,0 | 92,5 | −221,5 |
-| Recife → Manaus | 140,6 | 9,1 | −131,5 |
-| Recife → Rio de Janeiro | 292,4 | 4,6 | −287,8 |
-| Recife → São Paulo | 312,6 | 86,7 | −225,9 |
-| Salvador → Manaus | 64,0 | 11,0 | −53,0 |
-| Salvador → Fortaleza | 146,0 | 12,9 | −133,1 |
-| Salvador → Recife | 144,6 | 6,1 | −138,5 |
-| Rio de Janeiro → Manaus | 211,8 | 8,8 | −203,0 |
-| Rio de Janeiro → Fortaleza | 293,8 | 10,7 | −283,1 |
-| Rio de Janeiro → Recife | 292,4 | 3,9 | −288,5 |
-| Rio de Janeiro → Salvador | 215,8 | 7,1 | −208,7 |
-| São Paulo → Manaus | 232,0 | 92,9 | −139,1 |
-| São Paulo → Fortaleza | 314,0 | 94,8 | −219,2 |
-| São Paulo → Recife | 312,6 | 88,0 | −224,6 |
-| São Paulo → Salvador | 236,0 | 91,2 | −144,8 |
-
-##### 5.1.3.4 Perna marítima
-
-Na planilha, a navegação segue uma rotação fixa: Santos, Itaguaí, Salvador, Suape, Pecém, Macapá, Manaus, Macapá, Pecém, Suape e Santos. A distância de cada ligação da coluna de Costa et al. foi reconstruída pela soma dos subtrechos dessa rotação no sentido do fluxo de contêineres. Já o CabotageLens usa a distância armazenada na SeaMatrix para o par de portos escolhido. Ela representa a média das viagens observadas quando há dados suficientes; nos demais pares, a matriz preserva a procedência da distância disponível.
-
-**Tabela 24 — Distância marítima por ligação e sua procedência no CabotageLens.**
-
-| Ligação | Costa et al.: rotação fixa (km) | CabotageLens: SeaMatrix (km) | Procedência da distância | Diferença (km) |
-| :-- | --: | --: | :-- | --: |
-| Manaus → Fortaleza | 2.613,2 | 7.948,3 | Média de viagens observadas | 5.335,2 |
-| Manaus → Recife | 3.411,4 | 2.833,8 | Aproximação por Haversine | −577,6 |
-| Manaus → Rio de Janeiro | 5.944,9 | 6.946,8 | Média de viagens observadas | 1.001,8 |
-| Manaus → São Paulo | 5.681,9 | 5.931,9 | Média de viagens observadas | 250,0 |
-| Fortaleza → Manaus | 2.613,2 | 2.991,0 | Média de viagens observadas | 377,8 |
-| Fortaleza → Rio de Janeiro | 8.558,1 | 2.192,7 | Aproximação por Haversine | −6.365,4 |
-| Fortaleza → São Paulo | 8.295,1 | 3.145,0 | SeaMatrix | −5.150,1 |
-| Recife → Manaus | 3.411,4 | 2.833,8 | Aproximação por Haversine | −577,6 |
-| Recife → Rio de Janeiro | 9.356,3 | 1.873,9 | Aproximação por Haversine | −7.482,4 |
-| Recife → São Paulo | 9.093,3 | 2.148,8 | Aproximação por Haversine | −6.944,5 |
-| Salvador → Manaus | 4.085,5 | 3.839,1 | Média de viagens observadas | −246,4 |
-| Salvador → Fortaleza | 1.472,3 | 1.029,6 | Aproximação por Haversine | −442,7 |
-| Salvador → Recife | 674,1 | 676,3 | Aproximação por Haversine | 2,2 |
-| Rio de Janeiro → Manaus | 5.496,7 | 5.263,1 | Média de viagens observadas | −233,7 |
-| Rio de Janeiro → Fortaleza | 2.883,6 | 2.192,7 | Aproximação por Haversine | −690,9 |
-| Rio de Janeiro → Recife | 2.085,4 | 1.873,9 | Aproximação por Haversine | −211,4 |
-| Rio de Janeiro → Salvador | 1.411,2 | 1.598,3 | Média de viagens observadas | 187,1 |
-| São Paulo → Manaus | 5.759,7 | 6.142,5 | Média de viagens observadas | 382,7 |
-| São Paulo → Fortaleza | 3.146,5 | 3.314,5 | Média de viagens observadas | 168,0 |
-| São Paulo → Recife | 2.348,3 | 2.148,8 | Aproximação por Haversine | −199,6 |
-| São Paulo → Salvador | 1.674,2 | 3.092,5 | Média de viagens observadas | 1.418,3 |
-
-Das 21 distâncias marítimas, dez são médias de viagens observadas, uma vem diretamente da SeaMatrix e dez usam a aproximação por Haversine porque o par de portos não possui uma distância observada disponível. As maiores diferenças da Tabela 24 não são erros de conversão. Elas mostram o efeito de comparar uma programação fixa de serviço com uma matriz de procedências diferentes, além das diferenças de porto indicadas na Tabela 21.
-
-#### 5.1.4 Comparação do consumo de combustível
-
-A comparação física por ligação concentra-se no cenário Base. Nele, a planilha informa o rendimento rodoviário e os consumos da rotação marítima, o que permite recuperar litros ou quilogramas para cada etapa. Nos cenários C1 a C4, os combustíveis mudam, mas a planilha apresenta apenas emissões semanais agregadas; por isso, não seriam inventados volumes por ligação que a fonte não fornece.
-
-##### 5.1.4.1 Combustível na rodovia direta, nos acessos e na hidrovia
-
-A planilha aplica 3,61 km/L ao diesel rodoviário. Como ela não armazena litros por ligação, os valores da coluna de Costa et al. foram obtidos dividindo a distância pelo rendimento informado. No CabotageLens, a regra automática escolhe, para 14 t, uma carreta de cinco eixos com rendimento de 2,30 km/L. Nas nove ligações que envolvem Manaus, a planilha acrescenta uma etapa hidroviária entre Manaus e Belém. Ela consome IFO: 196,3 kg por carreta no sentido Manaus–Belém e 274,9 kg por carreta no sentido Belém–Manaus. Esse IFO é apresentado separadamente, pois a fonte não o registra na mesma unidade das colunas rodoviárias por contêiner. A Tabela 25 mostra todos os consumos físicos disponíveis; ela não calcula uma diferença percentual porque as distâncias e os limites dos acessos são diferentes.
-
-**Tabela 25 — Combustível estimado por ligação na estrada, nos acessos e na hidrovia.**
-
-| Ligação | Costa et al.: direto (L/contêiner) | Costa et al.: IFO hidroviário (kg/carreta) | CabotageLens: direto (L/14 t) | Costa et al.: acessos (L/contêiner) | CabotageLens: acessos (L/14 t) |
-| :-- | --: | --: | --: | --: | --: |
-| Manaus → Fortaleza | 421,9 | 196,3 | 2.421,6 | 39,3 | 7,1 |
-| Manaus → Recife | 565,7 | 196,3 | 2.416,8 | 38,9 | 4,1 |
-| Manaus → Rio de Janeiro | 864,8 | 196,3 | 1.861,2 | 58,7 | 4,3 |
-| Manaus → São Paulo | 805,0 | 196,3 | 1.686,4 | 64,3 | 40,0 |
-| Fortaleza → Manaus | 421,9 | 274,9 | 2.419,2 | 39,3 | 6,5 |
-| Fortaleza → Rio de Janeiro | 715,2 | — | 1.172,7 | 81,4 | 4,5 |
-| Fortaleza → São Paulo | 854,6 | — | 1.362,9 | 87,0 | 40,2 |
-| Recife → Manaus | 565,7 | 274,9 | 2.413,0 | 38,9 | 4,0 |
-| Recife → Rio de Janeiro | 642,7 | — | 1.004,5 | 81,0 | 2,0 |
-| Recife → São Paulo | 733,5 | — | 1.149,1 | 86,6 | 37,7 |
-| Salvador → Manaus | 573,1 | 274,9 | 2.118,7 | 17,7 | 4,8 |
-| Salvador → Fortaleza | 327,7 | — | 517,4 | 40,4 | 5,6 |
-| Salvador → Recife | 234,6 | — | 351,3 | 40,1 | 2,7 |
-| Rio de Janeiro → Manaus | 864,8 | 274,9 | 1.856,2 | 58,7 | 3,8 |
-| Rio de Janeiro → Fortaleza | 715,2 | — | 1.170,7 | 81,4 | 4,7 |
-| Rio de Janeiro → Recife | 642,7 | — | 1.004,1 | 81,0 | 1,7 |
-| Rio de Janeiro → Salvador | 452,4 | — | 709,0 | 59,8 | 3,1 |
-| São Paulo → Manaus | 805,0 | 274,9 | 1.682,6 | 64,3 | 40,4 |
-| São Paulo → Fortaleza | 854,6 | — | 1.362,6 | 87,0 | 41,2 |
-| São Paulo → Recife | 733,5 | — | 1.150,9 | 86,6 | 38,3 |
-| São Paulo → Salvador | 534,3 | — | 855,8 | 65,4 | 39,7 |
-
-O IFO decorre de 209,5 L/h de consumo do comboio, 1.067 L/t de conversão, 120 carretas por viagem e durações de cinco dias de Manaus a Belém ou sete dias no sentido inverso. A alternativa direta do CabotageLens não usa essa hidrovia: ela é inteiramente rodoviária. Portanto, o IFO não deve ser somado à sua coluna de diesel.
-
-##### 5.1.4.2 Combustível da navegação
-
-A planilha calcula o consumo do navio em uma rotação fixa e reparte o combustível de cada trecho entre os contêineres a bordo. A Tabela 26 reproduz essa alocação para as 21 ligações, separando VLSFO e MDO. O CabotageLens atribui VLSFO à remessa de 14 t pela intensidade em g/(t·nm) e pela distância da SeaMatrix. As duas colunas revelam as escolhas de alocação sem forçar uma equivalência percentual entre elas.
-
-**Tabela 26 — Combustível e intensidade da navegação atribuídos a cada ligação.**
-
-| Ligação | Costa et al.: VLSFO (kg/contêiner) | Costa et al.: MDO (kg/contêiner) | Costa et al.: total em viagem (kg/contêiner) | CabotageLens: intensidade [g/(t·nm)] | CabotageLens: VLSFO de navegação (kg/14 t) |
-| :-- | --: | --: | --: | --: | --: |
-| Manaus → Fortaleza | 152,9 | 5,0 | 157,9 | 7,588 | 455,9 |
-| Manaus → Recife | 209,9 | 6,8 | 216,6 | 6,070 | 130,0 |
-| Manaus → Rio de Janeiro | 416,1 | 13,3 | 429,4 | 9,125 | 479,2 |
-| Manaus → São Paulo | 394,4 | 12,6 | 407,0 | 9,099 | 408,0 |
-| Fortaleza → Manaus | 212,3 | 6,5 | 218,8 | 7,334 | 165,8 |
-| Fortaleza → Rio de Janeiro | 628,5 | 19,8 | 648,2 | 6,070 | 100,6 |
-| Fortaleza → São Paulo | 606,7 | 19,1 | 625,8 | 6,070 | 144,3 |
-| Recife → Manaus | 275,2 | 8,6 | 283,7 | 6,070 | 130,0 |
-| Recife → Rio de Janeiro | 691,3 | 21,8 | 713,1 | 6,070 | 86,0 |
-| Recife → São Paulo | 669,6 | 21,1 | 690,7 | 6,070 | 98,6 |
-| Salvador → Manaus | 330,0 | 10,3 | 340,3 | 9,322 | 270,5 |
-| Salvador → Fortaleza | 117,6 | 3,8 | 121,4 | 6,070 | 47,2 |
-| Salvador → Recife | 54,8 | 1,7 | 56,5 | 6,070 | 31,0 |
-| Rio de Janeiro → Manaus | 439,5 | 13,7 | 453,2 | 9,168 | 364,8 |
-| Rio de Janeiro → Fortaleza | 227,1 | 7,2 | 234,4 | 6,070 | 100,6 |
-| Rio de Janeiro → Recife | 164,3 | 5,2 | 169,5 | 6,070 | 86,0 |
-| Rio de Janeiro → Salvador | 109,5 | 3,4 | 112,9 | 6,111 | 73,8 |
-| São Paulo → Manaus | 461,2 | 14,4 | 475,6 | 9,010 | 418,4 |
-| São Paulo → Fortaleza | 248,9 | 7,9 | 256,8 | 7,430 | 186,2 |
-| São Paulo → Recife | 186,0 | 5,9 | 191,9 | 6,070 | 98,6 |
-| São Paulo → Salvador | 131,2 | 4,1 | 135,4 | 9,606 | 224,6 |
-
-As dez intensidades calculadas com atividade observada aparecem individualmente na tabela. Nas outras onze ligações, sem intensidade específica para o par de portos, o sistema usa a intensidade de 6,070 g/(t·nm) representativa da classe do navio. A regra deixa claro quais consumos marítimos foram ligados a observações da ANTAQ e do EU MRV e quais foram estimados pela classe da embarcação.
-
-Para permitir a conferência do denominador da planilha, a Tabela 27 traz o inventário físico da rotação completa. Esses totais pertencem ao serviço inteiro, não a uma remessa isolada.
-
-**Tabela 27 — Inventário de combustível da rotação fixa da planilha, cenário Base.**
-
-| Etapa | Combustível | Consumo físico |
-| :-- | --: | --: |
-| Navegação | VLSFO | 1.042,915 t por rotação |
-| Navegação | MDO | 32,944 t por rotação |
-| Estadia em porto | MDO | 18,640 t por rotação |
-
-O MDO de navegação e de estadia pertence à rotação inteira. A planilha não o disponibiliza como uma massa física isolada por ligação na mesma tabela que resume as emissões. Por isso, esses componentes permanecem no inventário do serviço, sem criar uma atribuição por ligação que a fonte não registra diretamente.
-
-##### 5.1.4.3 Operações portuárias
-
-As operações em porto também têm unidades diferentes nas fontes. A planilha registra consumos específicos de equipamentos e de serviços; a execução do CabotageLens calcula o diesel das operações nos dois portos do cenário. A Tabela 28 apresenta os parâmetros sem somá-los como se fossem a mesma atividade.
-
-**Tabela 28 — Consumo associado às operações portuárias.**
-
-| Componente | Planilha de Costa et al., cenário Base | CabotageLens, cenário de 14 t |
-| :-- | --: | --: |
-| Depot | 1,0714 L por contêiner | Incluído no cenário de operações portuárias |
-| RTG | 1,4000 L por contêiner | Incluído no cenário de operações portuárias |
-| Terminal tractor | 0,9750 L por contêiner | Incluído no cenário de operações portuárias |
-| Lancha de praticagem | 60 L por operação | Incluído no cenário de operações portuárias |
-| Rebocadores | 3.028 L por operação | Incluído no cenário de operações portuárias |
-| Total calculado nos dois portos | Não há um único valor por ligação | 4,8199 L de diesel, ou 4,0969 kg de diesel |
-
-#### 5.1.5 Comparação dos rendimentos e das regras de alocação
-
-A Tabela 29 resume as premissas que explicam os consumos anteriores. A comparação mantém a unidade de cada método. O consumo total do navio por dia, por exemplo, não é convertido artificialmente em g/(t·nm), pois isso exigiria conhecer a carga efetiva, a ocupação e a massa por contêiner de cada viagem da fonte. As intensidades efetivamente usadas em cada ligação já estão visíveis na Tabela 26.
-
-**Tabela 29 — Rendimentos e regras utilizados pelas fontes.**
-
-| Elemento | Costa et al. | CabotageLens | Leitura correta |
-| :-- | --: | --: | --: |
-| Rendimento do caminhão a diesel | 3,61 km/L na planilha; 0,28 L/km no artigo de competitividade | 2,30 km/L para 14 t, carreta de cinco eixos escolhida automaticamente | Parâmetro comparável, aplicado a redes de rota diferentes |
-| Velocidade marítima | Velocidade projetada de 20 kn; média de 15,660 kn na rotação | Não impõe uma velocidade única; usa a atividade observada e a intensidade da ligação | A velocidade fixa do proforma não é parâmetro do cálculo marítimo atual |
-| Consumo principal do navio | VLSFO: $F_{\mathrm{dia}}=0{,}006754\times u^3+37{,}23$, em t/dia; a planilha usa $F_{\mathrm{hora}}=F_{\mathrm{dia}}/24$, em t/h, onde $u$ é a velocidade em nós | Intensidade entre 6,070000 e 9,605744 g/(t·nm), conforme a ligação | Unidades diferentes; não há conversão direta defensável |
-| Combustível auxiliar do navio | Planilha: 2 t/dia em viagem e 3 t/dia no porto, como MDO | VLSFO atribuído à carga; operações portuárias calculadas em separado | As fronteiras de combustível não são idênticas |
-| Alocação da viagem marítima | Combustível do trecho dividido pelos contêineres a bordo | Consumo calculado com carga, distância e intensidade da ligação | Regra de alocação diferente |
-| Carga usada no confronto | Contêiner, sem massa explicitada na planilha | 1 TEU e 14 t; fator de ocupação de 80% no benchmark | Mesma unidade de contêiner, mas massa explicitada apenas no modelo |
-
-#### 5.1.6 Limites da comparação de custos
-
-A planilha não oferece uma matriz de custo por ligação. Seu proforma traz os custos de uma rotação completa do serviço, incluindo itens que não fazem parte do custo operacional de combustível calculado pelo CabotageLens. O sistema produz custos de combustível por ligação, mas a fonte de Costa et al. não oferece um denominador equivalente para confrontá-los. A Tabela 30 preserva os valores originais para que a diferença de escopo fique clara.
-
-**Tabela 30 — Custos da rotação completa no proforma da planilha.**
-
-| Item | Valor (R$) |
-| :-- | --: |
-| Praticagem | 1.092.000,00 |
-| Rebocadores | 404.000,00 |
-| Terminal de contêineres | 19.835,73 |
-| VLSFO | 4.371.065,42 |
-| MGO | 461.758,11 |
-| Navio | 3.203.200,00 |
-| Total | 9.551.859,26 |
-| Custo por slot | 4.264,22 por TEU |
-
-O proforma usa R$ 4.191,20/t para VLSFO e R$ 6.838,00/t para MGO. O CabotageLens atualiza os preços de diesel e de VLSFO a partir de suas fontes operacionais e calcula o custo do combustível das pernas da rota. Como a planilha inclui custo do navio, praticagem, rebocadores e terminal na rotação inteira, não há uma comparação monetária por ligação que seja metodologicamente equivalente.
-
-#### 5.1.7 Comparação das emissões
-
-A planilha informa cinco cenários agregados. A Tabela 31 mostra todos eles e separa o que é resultado externo do que pode ser reproduzido com os combustíveis atuais do CabotageLens.
-
-**Tabela 31 — Emissões semanais reportadas pela planilha de Costa et al.**
-
-| Cenário | Rodovia direta (tCO₂e/semana) | Cabotagem (tCO₂e/semana) | Redução da cabotagem |
-| :-- | --: | --: | --: |
-| Base | 7.614,971 | 4.159,789 | 45,374% |
-| C1 | 6.981,470 | 4.103,280 | 41,226% |
-| C2 | 7.185,135 | 4.121,218 | 42,642% |
-| C3 | 6.798,985 | 3.592,099 | 47,167% |
-| C4 | 6.798,985 | 3.787,436 | 44,294% |
-
-A Tabela 32 apresenta o cenário Base ligação a ligação. Os valores do CabotageLens usam a regra atual de seleção automática do veículo para 14 t. Assim, a emissão rodoviária e os acessos são recalculados com 2,30 km/L; a perna marítima permanece baseada nas intensidades e distâncias da SeaMatrix.
-
-**Tabela 32 — Emissões por ligação no cenário Base.**
-
-| Ligação | Planilha: rodovia | Planilha: cabotagem | Redução na planilha | CabotageLens: rodovia TTW | CabotageLens: multimodal TTW | Redução no CabotageLens |
-| :-- | --: | --: | --: | --: | --: | --: |
-| Manaus → Fortaleza | 1.733,9 | 751,6 | 56,7% | 6.489,8 | 1.451,6 | 77,6% |
-| Manaus → Recife | 2.113,1 | 960,2 | 54,6% | 6.477,0 | 428,8 | 93,4% |
-| Manaus → Rio de Janeiro | 2.902,2 | 1.705,8 | 41,2% | 4.987,9 | 1.516,6 | 69,6% |
-| Manaus → São Paulo | 2.744,4 | 1.639,4 | 40,3% | 4.519,6 | 1.390,5 | 69,2% |
-| Fortaleza → Manaus | 1.982,3 | 1.019,5 | 48,6% | 6.483,5 | 546,6 | 91,6% |
-| Fortaleza → Rio de Janeiro | 1.886,6 | 1.151,8 | 39,0% | 3.142,7 | 338,3 | 89,2% |
-| Fortaleza → São Paulo | 2.254,2 | 1.085,3 | 51,9% | 3.652,5 | 570,1 | 84,4% |
-| Recife → Manaus | 2.361,5 | 1.255,9 | 46,8% | 6.466,8 | 428,5 | 93,4% |
-| Recife → Rio de Janeiro | 1.695,2 | 943,6 | 44,3% | 2.692,0 | 286,0 | 89,4% |
-| Recife → São Paulo | 1.934,8 | 877,1 | 54,7% | 3.079,7 | 421,0 | 86,3% |
-| Salvador → Manaus | 2.381,3 | 1.387,7 | 41,7% | 5.678,1 | 868,2 | 84,7% |
-| Salvador → Fortaleza | 864,4 | 567,3 | 34,4% | 1.386,5 | 175,1 | 87,4% |
-| Salvador → Recife | 618,9 | 334,5 | 45,9% | 941,4 | 116,7 | 87,6% |
-| Rio de Janeiro → Manaus | 3.150,7 | 1.863,5 | 40,9% | 4.974,7 | 1.159,1 | 76,7% |
-| Rio de Janeiro → Fortaleza | 1.886,6 | 1.043,1 | 44,7% | 3.137,4 | 338,7 | 89,2% |
-| Rio de Janeiro → Recife | 1.695,2 | 810,4 | 52,2% | 2.690,9 | 285,2 | 89,4% |
-| Rio de Janeiro → Salvador | 1.193,2 | 560,7 | 53,0% | 1.900,1 | 251,1 | 86,8% |
-| São Paulo → Manaus | 2.992,8 | 1.959,1 | 34,5% | 4.509,4 | 1.424,0 | 68,4% |
-| São Paulo → Fortaleza | 2.254,2 | 1.138,7 | 49,5% | 3.651,6 | 703,1 | 80,7% |
-| São Paulo → Recife | 1.934,8 | 905,9 | 53,2% | 3.084,3 | 422,5 | 86,3% |
-| São Paulo → Salvador | 1.409,5 | 656,3 | 53,4% | 2.293,6 | 818,5 | 64,3% |
-
-*Nota: emissões em kg CO₂e por contêiner na planilha e por remessa de 14 t no CabotageLens. A redução é calculada contra a alternativa rodoviária da mesma fonte.*
-
-Nas 21 ligações, as duas abordagens apontam menor emissão para a alternativa com cabotagem. A redução média simples é de 46,7% na planilha e de 83,1% no CabotageLens. Essa concordância é direcional. Dez resultados marítimos usam distância média de viagens observadas, um usa a distância disponível na SeaMatrix e dez usam a aproximação por Haversine indicada na Tabela 24. As diferenças numéricas acompanham as diferenças já mostradas nas rotas, nos portos, nos rendimentos, nos combustíveis auxiliares e na fronteira ambiental; elas não devem ser usadas para calibrar a intensidade marítima do sistema.
-
-#### 5.1.8 Comparação com os artigos de Costa et al.
-
-O artigo de competitividade avalia uma super-rede que inclui frete, espaço no navio, movimentação em terminal, estoque em trânsito e preço de carbono. Seu resultado é o limiar rodoviário a partir do qual a cabotagem se torna competitiva, e não uma matriz de consumo ou de custo por ligação. A Tabela 33 reproduz todas as sensibilidades publicadas [competitiveness2024].
-
-**Tabela 33 — Sensibilidades do estudo de competitividade de Costa et al.**
-
-| Caso | Alteração em relação ao caso Base | Limiar de competitividade |
-| :-- | --: | --: |
-| Base | Parâmetros de referência do artigo | 1.616 km |
-| C1 | Preço do slot marítimo 20% menor | 1.448 km |
-| C2 | Fator de emissão do diesel 80% menor | 1.666 km |
-| C3 | Fator de emissão marítimo 80% menor | 1.568 km |
-| C4 | Valor da carga de R$ 200 mil para R$ 500 mil | 1.777 km |
-| C5 | Juros diários em dobro | 1.724 km |
-| C6 | Carbono de R$ 356,20 para R$ 100 por tCO₂e | 1.617 km |
-| C7 | Tempo de trânsito marítimo de 10,5 para 16 dias | 1.719 km |
-| C8 | Slot e movimentação no terminal 20% maiores, com juros em dobro | 2.159 km |
-
-O artigo de descarbonização trabalha com a frota brasileira de cabotagem e com emissões WTW. Ele fornece uma referência para combustíveis alternativos, mas não permite reproduzir uma ligação de 14 t. A Tabela 34 mantém o resultado percentual reportado, sem misturá-lo às emissões TTW do sistema [decarb2024].
-
-**Tabela 34 — Cenário de descarbonização apresentado por Costa et al.**
-
-| Caso | Combustível marítimo | Escala e fronteira | Resultado informado | Comparação com o sistema |
-| :-- | --: | --: | --: | --: |
-| Referência | VLSFO + MDO | Frota nacional; WTW | Base de comparação | Referência externa |
-| Substituição integral | HVO | Frota nacional; WTW | Redução de 75,4% de CO₂e | Exigiria parâmetros de HVO por etapa |
-
-Em conjunto, as tabelas desta subseção mostram exatamente o que pode ser comparado hoje: rotas, consumos, rendimentos e emissões do cenário Base por ligação, além das sensibilidades publicadas para outros combustíveis e para competitividade. Onde a unidade, a rota ou a fronteira não são equivalentes, o dado é mantido como referência de contexto, e não apresentado como uma saída reproduzida pelo CabotageLens.
-
-### 5.2 Comparação com ferramentas externas
-
-As ferramentas externas permitem confrontar o resultado do CabotageLens com estimativas já disponíveis ao público. Em cada caso, são apresentadas as distâncias e as emissões de cada etapa que a ferramenta externa torna disponível. Quando a rota, o porto ou outro parâmetro difere, a diferença permanece explícita; os resultados não são ajustados para produzir uma equivalência artificial.
-
-#### 5.2.1 [Calculadora de emissões da Aliança](https://www.alianca.com.br/calculadora-de-co2)
+### 5.1 [Calculadora de emissões da Aliança](https://www.alianca.com.br/calculadora-de-co2)
 
 Na calculadora da Aliança, o cenário informado foi São Paulo–Abaetetuba, com um contêiner seco de 40 pés e 20 t de carga. O mesmo cenário foi executado no CabotageLens com 20 t e 2 TEU, equivalentes a um contêiner de 40 pés. As duas alternativas multimodais utilizam Santos como porto de embarque e Vila do Conde como porto de desembarque.
 
@@ -1332,27 +965,25 @@ A tabela separa as etapas da alternativa multimodal e compara somente as emissõ
 
 *Figura 10 — Resultado da calculadora da Aliança para São Paulo–Abaetetuba. Fonte: resultado exportado pela ferramenta, fornecido pelo autor.*
 
-**Tabela 35 — Emissões TTW por etapa no cenário São Paulo–Abaetetuba, com 20 t de carga.**
+**Tabela 19 — Emissões TTW por etapa no cenário São Paulo–Abaetetuba, com 20 t de carga.**
 
 | Etapa | Aliança: distância | Aliança: CO₂ TTW | CabotageLens: distância | CabotageLens: CO₂e TTW |
 | :-- | --: | --: | --: | --: |
 | Rodovia direta | 2.807 km | 4,065 t | 2.835,762 km | 3,800 t |
 | Acesso rodoviário inicial: São Paulo–Santos | 68 km | 0,104 t | 86,170 km | 0,115 t |
-| Navegação: Santos–Vila do Conde | 4.869 km | 0,694 t | 2.509,709 km* | 0,512 t |
+| Navegação: Santos–Vila do Conde | 4.869 km | 0,694 t | 4.495,000 km | 0,918 t |
 | Operações portuárias: Santos e Vila do Conde | — | Não discriminadas | — | 0,026 t |
 | Acesso rodoviário final: Vila do Conde–Abaetetuba | 125 km | 0,177 t | 33,950 km | 0,045 t |
-| **Total multimodal** | **5.062 km** | **0,975 t** | **2.629,829 km** | **0,699 t** |
-| **Redução em relação à rodovia direta** | — | **3,090 t (76,0%)** | — | **3,101 t (81,6%)** |
+| **Total multimodal** | **5.062 km** | **0,975 t** | **4.615,120 km** | **1,104 t** |
+| **Redução em relação à rodovia direta** | — | **3,090 t (76,0%)** | — | **2,696 t (70,9%)** |
 
-\* No CabotageLens, não há viagem observada na Agência Nacional de Transportes Aquaviários (ANTAQ) entre Santos e Vila do Conde para compor a matriz marítima. Por isso, a distância dessa etapa usa a aproximação costeira de Haversine, e a intensidade de 6,07 g/(t·nm) vem da classe de navio `container_feeder`.
-
-Na rodovia direta, as distâncias são próximas: 2.807 km na Aliança e 2.835,762 km no CabotageLens. A principal diferença está na cadeia multimodal. A Aliança informa 4.869 km para a navegação e 125 km para o acesso final, enquanto o CabotageLens calcula 2.509,709 km e 33,950 km, respectivamente. Essa diferença de percurso explica a maior parte da distância multimodal total apresentada pela ferramenta externa. O CabotageLens registra a aproximação usada na perna marítima, em vez de apresentá-la como uma viagem observada.
+Na rodovia direta, as distâncias são próximas: 2.807 km na Aliança e 2.835,762 km no CabotageLens. Na cadeia multimodal, a Aliança informa 4.869 km para a navegação e 125 km para o acesso final, enquanto o CabotageLens usa 4.495 km e 33,950 km, respectivamente. A diferença restante decorre sobretudo do acesso final e da referência de distância adotada para cada porto.
 
 A distância total multimodal soma apenas os dois acessos rodoviários e a etapa marítima; as operações portuárias não acrescentam distância. A Aliança não as separa: os três trechos exibidos pela ferramenta somam exatamente o total multimodal de 0,975 t. No CabotageLens, essas operações aparecem como uma etapa própria, com 0,026 t de CO₂e TTW, e são incluídas no total. A tabela compara apenas TTW, que é o escopo adotado pelo CabotageLens; a calculadora da Aliança também exibe valores WTW, mas eles não são usados nesta comparação.
 
 Há uma inconsistência de sinal no quadro de economia exibido pela Aliança: a diferença entre seus próprios totais TTW é aproximadamente 4,065 − 0,975 = 3,090 t de redução, mas a tela apresenta −3,089 t. Por esse motivo, a última linha da tabela é calculada diretamente a partir dos totais de cada alternativa. O CabotageLens apresenta a redução com sinal coerente com as emissões totais mostradas.
 
-#### 5.2.2 [Calculadora de emissões da Log-In](https://www.loginlogistica.com.br/calculadora-co2/)
+### 5.2 [Calculadora de emissões da Log-In](https://www.loginlogistica.com.br/calculadora-co2/)
 
 A captura da calculadora da Log-In refere-se ao cenário São Paulo–Rio Branco e mostra uma alternativa rodoviária de 3.032 km. A alternativa por cabotagem é composta por três trechos de 89,9 km, 6.112 km e 1.394 km, compatíveis com a estrutura São Paulo–Santos–Manaus–Rio Branco. O mesmo cenário foi executado no CabotageLens com 14 t e 1 TEU.
 
@@ -1360,19 +991,19 @@ A captura da calculadora da Log-In refere-se ao cenário São Paulo–Rio Branco
 
 *Figura 11 — Resultado da calculadora de emissões da Log-In. Fonte: captura de tela fornecida pelo autor.*
 
-**Tabela 36 — Emissões no cenário de referência São Paulo–Rio Branco.**
+**Tabela 20 — Emissões no cenário de referência São Paulo–Rio Branco.**
 
 | Alternativa | Log-In: distância | Log-In: emissões de GEE | CabotageLens: distância | CabotageLens: CO₂e TTW |
 | :-- | --: | --: | --: | --: |
 | Rodovia direta | 3.032 km | 3,1 t | 3.491,431 km | 4,068 t |
-| Multimodal | 7.595,9 km | 2,9 t | 7.632,322 km | 3,052 t |
-| Redução em relação à rodovia | — | 0,2 t | — | 1,017 t |
+| Multimodal | 7.595,9 km | 2,9 t | 7.584,836 km | 3,042 t |
+| Redução em relação à rodovia | — | 0,2 t | — | 1,027 t |
 
-No resultado multimodal, as duas ferramentas estão próximas. A distância da Log-In é 36,422 km menor, uma diferença de 0,48%, e a emissão de GEE informada é 0,152 t menor, ou 5,0% em relação ao CabotageLens. Essa proximidade é positiva porque os valores divulgados pelas duas ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
+No resultado multimodal, as duas ferramentas estão próximas. A distância da Log-In é 11,064 km maior, uma diferença de 0,15%, e a emissão de GEE informada é 0,142 t menor, ou 4,7% em relação ao CabotageLens. Essa proximidade é positiva porque os valores divulgados pelas duas ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
 
 Na alternativa rodoviária, porém, a distância da Log-In não corresponde à rota porta a porta São Paulo–Rio Branco previamente calculada. A ferramenta informa 3.032 km, enquanto o CabotageLens obteve 3.491,431 km e a conferência independente no Google Maps indicou 3.497 km, como apresentado na Seção 4.3.1.1. Essa diferença de 459,431 km, ou 13,2%, contribui para que a emissão rodoviária informada pela Log-In seja menor. Por isso, a comparação rodoviária não deve ser interpretada como uma equivalência direta entre os dois sistemas.
 
-#### 5.2.3 [Calculadora de piso mínimo de frete da ANTT](https://calculadorafrete.antt.gov.br/)
+### 5.3 [Calculadora de piso mínimo de frete da ANTT](https://calculadorafrete.antt.gov.br/)
 
 Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário foi informado como carga conteinerizada, cinco eixos e 3.491 km. O resultado oficial exibido foi R$ 21.308,12. Para a mesma ligação São Paulo–Rio Branco, o CabotageLens calculou 3.491,431 km, selecionou cinco eixos para a carga de 14 t e estimou R$ 12.318,68 de custo de combustível.
 
@@ -1380,7 +1011,7 @@ Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário
 
 *Figura 12 — Resultado da calculadora de piso mínimo de frete da ANTT para a distância de 3.491 km. Fonte: captura de tela fornecida pelo autor.*
 
-**Tabela 37 — Valores para a ligação São Paulo–Rio Branco.**
+**Tabela 21 — Valores para a ligação São Paulo–Rio Branco.**
 
 | Item | Calculadora da ANTT | CabotageLens |
 | :-- | --: | --: |
@@ -1396,31 +1027,15 @@ Os dois valores têm finalidades diferentes: o resultado da ANTT é o piso míni
 
 Este trabalho apresentou o CabotageLens, uma ferramenta para comparar duas formas de transportar a mesma remessa entre uma origem e um destino: a alternativa rodoviária direta e a alternativa multimodal com acessos rodoviários, operações portuárias e cabotagem. Ao aplicar as duas alternativas à mesma carga, origem e destino, o sistema evita comparar apenas o trecho marítimo com uma viagem rodoviária completa.
 
-No exemplo de uma remessa de 14 t entre São Paulo e Rio Branco, a alternativa multimodal percorre 118,60% mais quilômetros do que a rodoviária direta. Mesmo assim, emite 24,99% menos CO₂e operacional e apresenta custo modelado do combustível 43,74% menor. O resultado mostra que a distância total, isoladamente, não é suficiente para comparar os modais: os acessos rodoviários, as operações portuárias e a navegação precisam ser avaliados na mesma cadeia logística.
-
-A comparação com o cenário Base da planilha de Costa et al. oferece uma referência externa de direção. Nas 21 ligações reexecutadas, tanto a planilha quanto o CabotageLens apontaram menor emissão para a alternativa com cabotagem. Como as fontes adotam rotas, fatores e fronteiras diferentes, essa concordância não valida a magnitude das reduções. Ela mostra apenas que, no conjunto comparado, as duas abordagens chegam ao mesmo sentido na comparação de emissões [workbookdados; competitiveness2024].
+No exemplo de uma remessa de 14 t entre São Paulo e Rio Branco, a alternativa multimodal percorre 117,24% mais quilômetros do que a rodoviária direta. Mesmo assim, emite 25,24% menos CO₂e operacional e apresenta custo modelado do combustível 43,84% menor. O resultado mostra que a distância total, isoladamente, não é suficiente para comparar os modais: os acessos rodoviários, as operações portuárias e a navegação precisam ser avaliados na mesma cadeia logística.
 
 ### 6.2 Contribuição metodológica
 
 A principal contribuição do CabotageLens está na construção da perna marítima com dados observados. Em vez de fixar um corredor entre dois portos, o sistema reconstrói as viagens registradas pela Agência Nacional de Transportes Aquaviários (ANTAQ), preserva as escalas intermediárias e calcula a carga a bordo em cada subtrecho. Sempre que possível, a intensidade vem do mesmo número IMO na base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV). Quando essa correspondência não está disponível ou é considerada atípica, o cálculo usa uma referência estatística de navios semelhantes e informa a fonte adotada.
 
-A ligação Santos–Manaus demonstra o efeito dessa escolha: os 89 recortes completos formam 22 sequências de portos, com viagens diretas e viagens com escalas intermediárias. A distância representativa de 6.142,461 km e a intensidade de 9,009824 g/(t·nm) são formadas a partir desse conjunto de viagens. Portanto, esses indicadores não descrevem uma rota única nem o desempenho de um único navio; sua procedência permanece registrada para conferência.
+A ligação Santos–Manaus demonstra o efeito dessa escolha: os 89 recortes completos formam 22 sequências de portos, com viagens diretas e viagens com escalas intermediárias. Para a distância, os 2 recortes acima do P95 de 6.975,000 km são retirados da média, resultando em 6.094,975 km com 87 recortes; a intensidade de 9,009824 g/(t·nm) continua usando os 89 recortes. Portanto, esses indicadores não descrevem uma rota única nem o desempenho de um único navio; sua procedência permanece registrada para conferência.
 
-### 6.3 Alcance e limites de uso
-
-O CabotageLens é um instrumento de triagem e comparação auditável. Ele torna explícitos os dados, as fontes de intensidade, os preços e as aproximações que formam cada resultado. A decisão logística final ainda exige informações sobre serviço, prazo, capacidade, terminais, contratos e fretes comerciais.
-
-Os principais limites de uso são:
-
-- **Dados e intensidade marítima:** as viagens da ANTAQ representam o período observado em 2025. Quando não há intensidade individual utilizável no EU MRV, o sistema usa uma referência documentada de classe ou tipo de navio; ela não equivale a uma medição direta do consumo daquele navio.
-
-- **Distância e oferta de serviço:** algumas distâncias marítimas usam a aproximação de Haversine, identificada na saída. Uma viagem registrada confirma uma sequência observada, mas não garante frequência futura, espaço disponível ou serviço comercial regular.
-
-- **Escopo do resultado:** as emissões são operacionais TTW de CO₂e e os valores monetários representam o custo modelado do combustível. Eles não representam emissões WTW, ciclo de vida completo, tarifa de frete, contrato de armador ou análise comercial completa.
-
-- **Combustíveis alternativos:** os cenários externos com GNV, HVO, LNG e metanol permanecem como referência, pois ainda não possuem parâmetros completos de consumo, emissão e preço para todas as etapas do modelo.
-
-Esses limites não anulam a comparação; eles definem a forma correta de utilizá-la. Um resultado favorável à cabotagem em determinado cenário não demonstra superioridade universal, mas oferece uma base explícita e verificável para a análise inicial de alternativas logísticas [competitiveness2024; modalshiftreview2020].
+Além da contribuição metodológica, o CabotageLens constitui uma contribuição aplicada e acessível: a [aplicação está disponível publicamente](https://cabotagelens.streamlit.app/) e seu [código-fonte, documentação e regras de cálculo podem ser consultados no repositório público do projeto](https://github.com/pennylanesccp/cabotage-lens). Dessa forma, outras pessoas podem executar cenários próprios, conferir as premissas adotadas e reproduzir a lógica de cálculo, dentro dos limites de dados e escopo descritos neste trabalho.
 
 ## Referências
 

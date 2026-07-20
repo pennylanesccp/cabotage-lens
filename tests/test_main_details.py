@@ -249,6 +249,62 @@ class MainDetailsTests(unittest.TestCase):
             rows["Observed-voyage distance sources"]["Value"],
         )
 
+    def test_assumptions_show_p95_distance_screening_provenance(self) -> None:
+        source = (
+            "observed_complete_voyage_distance_p95_filtered_"
+            "mean_onboard_cargo_weighted_mean"
+        )
+        results = {
+            "inputs": {},
+            "multimodal": {
+                "sea": {
+                    "route_observation_mode": "observed_voyage_corridors",
+                    "scenario_distance_method": (
+                        "p95_filtered_mean_onboard_cargo_weighted_mean_"
+                        "complete_observed_voyage_distances"
+                    ),
+                    "scenario_distance_km": 6094.975,
+                    "scenario_distance_observation_count": 89,
+                    "scenario_distance_corridor_count": 22,
+                    "scenario_distance_outlier_rule": (
+                        "exclude_complete_observed_voyages_above_"
+                        "unweighted_distance_p95_before_representative_mean"
+                    ),
+                    "scenario_distance_outlier_upper_quantile": 0.95,
+                    "scenario_distance_outlier_min_sample_size": 20,
+                    "scenario_distance_outlier_upper_threshold_km": 6975.0,
+                    "scenario_distance_outlier_applied": True,
+                    "scenario_distance_retained_voyage_count": 87,
+                    "scenario_distance_outlier_excluded_voyage_count": 2,
+                    "distance_source": source,
+                    "distance_provenance": {
+                        "source": source,
+                        "source_type": "observed_voyage_mean",
+                    },
+                }
+            },
+        }
+
+        rows = {
+            row["Parameter"]: row
+            for row in _assumptions_table(results=results, payload={}).to_dict(
+                "records"
+            )
+        }
+
+        scenario = rows["Maritime scenario distance"]
+        self.assertIn("P95-screened", scenario["Value"])
+        self.assertIn("P95 eligibility: at least 20 complete voyages", scenario["Value"])
+        self.assertIn("P95 upper cutoff: applied", scenario["Value"])
+        self.assertIn("P95 threshold: 6975.000 km", scenario["Value"])
+        self.assertIn("retained voyages: 87", scenario["Value"])
+        self.assertIn("excluded above P95: 2", scenario["Value"])
+        self.assertIn("does not change the same-OD intensity sample", scenario["Description"])
+        self.assertIn(
+            "P95-screened mean of complete observed voyage distances",
+            rows["Maritime distance source"]["Value"],
+        )
+
     def test_legacy_stitched_corridor_is_not_labeled_as_observed_voyage(self) -> None:
         results = {
             "multimodal": {

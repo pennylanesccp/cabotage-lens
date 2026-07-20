@@ -49,6 +49,28 @@ class RouteQualityWarningTests(unittest.TestCase):
 
         self.assertEqual(warnings, [])
 
+    def test_external_reference_is_not_labeled_as_haversine_fallback(self) -> None:
+        warnings = build_route_quality_warnings(
+            self._geometry(
+                port_destiny={"name": "Porto de Vila do Conde"},
+                road_direct={"distance_km": 2835.0},
+                first_mile={"distance_km": 86.0},
+                last_mile={"distance_km": 34.0},
+                sea_leg={
+                    "distance_km": 4495.0,
+                    "source": "geografos_reference",
+                    "distance_provenance": {
+                        "source_type": "external_reference",
+                    },
+                },
+            )
+        )
+
+        self.assertNotIn(
+            "fallback_maritime_distance",
+            {warning["code"] for warning in warnings},
+        )
+
     def test_warning_renderer_suppresses_fallback_warning_in_streamlit_ui(self) -> None:
         fake_streamlit = SimpleNamespace(markdown=Mock(), warning=Mock())
         results = {

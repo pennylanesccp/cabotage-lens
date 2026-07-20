@@ -14,6 +14,9 @@ from modules.cabotage.sea_matrix_efficiency import (
     PAIR_INTENSITY_ZERO_WORK_SOURCE,
     ROUTE_OBSERVATION_MODE,
     SCENARIO_DISTANCE_METHOD,
+    SCENARIO_DISTANCE_OUTLIER_MIN_SAMPLE_SIZE,
+    SCENARIO_DISTANCE_OUTLIER_RULE,
+    SCENARIO_DISTANCE_OUTLIER_UPPER_QUANTILE,
     SCENARIO_DISTANCE_WEIGHT,
     SCENARIO_DISTANCE_ZERO_CARGO_METHOD,
     SCENARIO_DISTANCE_ZERO_CARGO_SOURCE,
@@ -478,6 +481,9 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
         self.assertEqual(stats["corridor_count"], 2)
         self.assertEqual(stats["scenario_distance_observation_count"], 2)
+        self.assertFalse(stats["scenario_distance_outlier_applied"])
+        self.assertEqual(stats["scenario_distance_retained_voyage_count"], 2)
+        self.assertEqual(stats["scenario_distance_outlier_excluded_voyage_count"], 0)
         # Each complete voyage has the same reconstructed mean cargo (100 t).
         # The representative distance is therefore the mean of 370.4 and
         # 222.24 km, rather than a transport-work-weighted value of 314.84 km.
@@ -489,6 +495,91 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertIn(["Port A", "Port Suape", "Port B"], option_paths)
         self.assertIn(["Port A", "Port Recife", "Port B"], option_paths)
         self.assertNotIn(["Port A", "Port X", "Port B"], option_paths)
+
+    def test_scenario_distance_p95_excludes_only_long_distance_outlier(
+        self,
+    ) -> None:
+        """P95 screens distance without changing the all-voyage intensity mean."""
+        ports = ["Port A", "Port B"]
+        pairs: dict[tuple[str, str], float] = {}
+        voyages: list[dict[str, object]] = []
+        stops: list[dict[str, object]] = []
+
+        # Nineteen observed recortes are 100 km long; the twentieth is an
+        # exceptional 1,000 km itinerary. With n=20, the linear P95 is 145 km,
+        # so exactly the long itinerary is excluded from the distance sample.
+        for index in range(SCENARIO_DISTANCE_OUTLIER_MIN_SAMPLE_SIZE - 1):
+            intermediate = f"Port Normal {index + 1}"
+            voyage_id = f"normal-{index + 1}"
+            ports.append(intermediate)
+            pairs[("Port A", intermediate)] = 50.0
+            pairs[(intermediate, "Port B")] = 50.0
+            voyages.append({"voyage_id": voyage_id, "imo": "1111111"})
+            stops.extend(
+                self._three_stop_voyage(
+                    voyage_id,
+                    "Port A",
+                    intermediate,
+                    "Port B",
+                )
+            )
+
+        ports.append("Port Longo")
+        pairs[("Port A", "Port Longo")] = 500.0
+        pairs[("Port Longo", "Port B")] = 500.0
+        voyages.append({"voyage_id": "longa", "imo": "2222222"})
+        stops.extend(
+            self._three_stop_voyage(
+                "longa",
+                "Port A",
+                "Port Longo",
+                "Port B",
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=ports,
+                matrix=self._symmetric_matrix(pairs),
+                voyages=voyages,
+                stops=stops,
+                ships=[
+                    self._ship("1111111", [self._record(2024, 10.0)]),
+                    self._ship("2222222", [self._record(2024, 20.0)]),
+                ],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(
+            stats["scenario_distance_outlier_rule"],
+            SCENARIO_DISTANCE_OUTLIER_RULE,
+        )
+        self.assertEqual(
+            stats["scenario_distance_outlier_upper_quantile"],
+            SCENARIO_DISTANCE_OUTLIER_UPPER_QUANTILE,
+        )
+        self.assertTrue(stats["scenario_distance_outlier_applied"])
+        self.assertEqual(stats["scenario_distance_observation_count"], 20)
+        self.assertEqual(stats["scenario_distance_retained_voyage_count"], 19)
+        self.assertEqual(stats["scenario_distance_outlier_excluded_voyage_count"], 1)
+        self.assertEqual(
+            stats["scenario_distance_outlier_upper_threshold_km"],
+            145.0,
+        )
+        self.assertEqual(stats["distance_km"], 100.0)
+        self.assertEqual(stats["scenario_distance_source_counts"], {"sea_matrix": 38})
+
+        # The pair intensity remains transport-work weighted over all 20
+        # observed voyages, including the distance outlier.
+        expected_intensity = ((19 * 100.0 * 10.0) + (1000.0 * 20.0)) / (
+            (19 * 100.0) + 1000.0
+        )
+        self.assertAlmostEqual(
+            stats["pair_intensity_g_per_tnm"],
+            expected_intensity,
+            places=6,
+        )
 
     def test_scenario_distance_weights_by_mean_onboard_cargo_not_transport_work(
         self,
@@ -861,6 +952,81 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         self.assertEqual(summary["haversine_fallback_segments"], 1)
         self.assertEqual(summary["skipped_missing_distance_segments"], 0)
 
+    def test_external_distance_reference_precedes_haversine_in_reconstruction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port B"],
+                port_records=[
+                    {"name": "Port A", "slug": "port-a", "lat": 0.0, "lon": 0.0},
+                    {"name": "Port B", "slug": "port-b", "lat": 0.0, "lon": 1.0},
+                ],
+                matrix=self._symmetric_matrix({("Port A", "Port B"): 0.0}),
+                external_distance_fallbacks={
+                    "Port A": {
+                        "Port B": {
+                            "distance_km": 185.2,
+                            "source": "geografos_reference",
+                            "source_type": "external_reference",
+                        }
+                    }
+                },
+                voyages=[{"voyage_id": "external-distance", "imo": "1111111"}],
+                stops=[
+                    self._stop("external-distance", 0, "Port A", 100.0, 10.0),
+                    self._stop("external-distance", 1, "Port B", -100.0, -10.0),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+            )
+
+        stats = payload["voyage_fuel_g_per_tnm_directional"]["Port A"]["Port B"]
+        self.assertEqual(
+            stats["scenario_distance_source_counts"],
+            {"geografos_reference": 1},
+        )
+        self.assertEqual(stats["distance_km"], 185.2)
+        summary = payload["voyage_fuel_g_per_tnm_directional_meta"]["segment_summary"]
+        self.assertEqual(summary["external_reference_segments"], 1)
+        self.assertEqual(summary["haversine_fallback_segments"], 0)
+
+    def test_pruning_keeps_external_distance_references(self) -> None:
+        external_fallbacks = {
+            "Port A": {
+                "Port C": {
+                    "distance_km": 4495.0,
+                    "source": "geografos_reference",
+                    "source_type": "external_reference",
+                }
+            }
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload, _ = self._run_enrichment(
+                Path(tmpdir),
+                ports=["Port A", "Port B", "Port C"],
+                port_records=[
+                    {"name": "Port A", "slug": "port-a", "lat": 0.0, "lon": 0.0},
+                    {"name": "Port B", "slug": "port-b", "lat": 0.0, "lon": 1.0},
+                    {"name": "Port C", "slug": "port-c", "lat": 1.0, "lon": 1.0},
+                ],
+                matrix=self._symmetric_matrix(
+                    {("Port A", "Port B"): 185.2, ("Port A", "Port C"): 4495.0}
+                ),
+                external_distance_fallbacks=external_fallbacks,
+                voyages=[{"voyage_id": "observed", "imo": "1111111"}],
+                stops=[
+                    self._stop("observed", 0, "Port A", 100.0, 10.0),
+                    self._stop("observed", 1, "Port B", -100.0, -10.0),
+                ],
+                ships=[self._ship("1111111", [self._record(2024, 10.0)])],
+                possible_pairs_only=True,
+            )
+
+        self.assertNotIn("Port C", payload["matrix"]["Port A"])
+        self.assertEqual(
+            payload["external_distance_fallbacks"]["Port A"]["Port C"]["distance_km"],
+            4495.0,
+        )
+
     def test_intensity_hierarchy_and_source_counts(self) -> None:
         ports = [f"Port {letter}" for letter in "ABCDEFGH"]
         matrix = self._symmetric_matrix(
@@ -1055,6 +1221,8 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
         ships: list[dict[str, object]],
         class_payload: dict[str, object] | None = None,
         port_records: list[dict[str, object]] | None = None,
+        external_distance_fallbacks: dict[str, object] | None = None,
+        possible_pairs_only: bool = False,
         audit_voyage_ids: Iterable[str] | str | None = None,
     ) -> tuple[dict[str, object], dict[str, object]]:
         matrix_path = root / "sea_matrix.json"
@@ -1072,6 +1240,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                         for port in ports
                     ],
                     "matrix": matrix,
+                    "external_distance_fallbacks": external_distance_fallbacks or {},
                 }
             ),
             encoding="utf-8",
@@ -1112,7 +1281,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                 stops_csv_path=stops_path,
                 mrv_json_path=mrv_path,
                 class_efficiency_json_path=class_path,
-                possible_pairs_only=False,
+                possible_pairs_only=possible_pairs_only,
                 matched_pairs_only=True,
                 prefer_local_voyage_inputs=True,
                 audit_voyage_ids=audit_voyage_ids,

@@ -27,24 +27,34 @@ DEFAULT_CLASS_EFFICIENCY_JSON_PATH = Path(
     "data/processed/cabotage_data/container_ship_efficiency_classes.json"
 )
 DEFAULT_SHIP_TYPE = "Container ship"
-PARSER_VERSION = "sea_matrix_efficiency_v6"
-MARITIME_INTENSITY_SCHEMA_VERSION = 7
+PARSER_VERSION = "sea_matrix_efficiency_v8"
+MARITIME_INTENSITY_SCHEMA_VERSION = 8
 _KM_PER_NAUTICAL_MILE = 1.852
 DEPLOYMENT_REQUIRED_ROUTE = ("Porto de Santos", "Porto de Manaus")
 ROUTE_OBSERVATION_MODE = "observed_voyage_corridors"
 SCENARIO_DISTANCE_METHOD = (
-    "mean_onboard_cargo_weighted_mean_complete_observed_voyage_distances"
+    "p95_filtered_mean_onboard_cargo_weighted_mean_"
+    "complete_observed_voyage_distances"
 )
 SCENARIO_DISTANCE_SCOPE = "one_complete_ordered_od_observation_per_voyage"
 SCENARIO_DISTANCE_SOURCE = (
-    "observed_complete_voyage_distance_mean_onboard_cargo_weighted_mean"
+    "observed_complete_voyage_distance_p95_filtered_"
+    "mean_onboard_cargo_weighted_mean"
 )
 SCENARIO_DISTANCE_WEIGHT = "mean_onboard_cargo_t"
 SCENARIO_DISTANCE_ZERO_CARGO_METHOD = (
-    "arithmetic_mean_complete_observed_voyage_distances_zero_mean_onboard_cargo"
+    "p95_filtered_arithmetic_mean_complete_observed_voyage_distances_"
+    "zero_mean_onboard_cargo"
 )
 SCENARIO_DISTANCE_ZERO_CARGO_SOURCE = (
-    "observed_complete_voyage_distance_unweighted_mean_zero_mean_onboard_cargo"
+    "observed_complete_voyage_distance_p95_filtered_"
+    "unweighted_mean_zero_mean_onboard_cargo"
+)
+SCENARIO_DISTANCE_OUTLIER_UPPER_QUANTILE = 0.95
+SCENARIO_DISTANCE_OUTLIER_MIN_SAMPLE_SIZE = 20
+SCENARIO_DISTANCE_OUTLIER_RULE = (
+    "exclude_complete_observed_voyages_above_unweighted_distance_p95_"
+    "before_representative_mean"
 )
 # Compatibility alias for callers that imported the former name. It no longer
 # denotes a selected corridor; it identifies the scenario-distance rule.
@@ -227,6 +237,7 @@ def enrich_sea_matrix_with_efficiency(
     port_lookup = _build_port_lookup(payload)
     port_coordinates = _build_port_coordinates(payload)
     matrix = payload.get("matrix") or {}
+    external_distance_fallbacks = payload.get("external_distance_fallbacks") or {}
     coastline_factor = _float_or_none(payload.get("coastline_factor")) or 1.0
 
     segments, subroutes, segment_meta = _build_segments(
@@ -236,6 +247,7 @@ def enrich_sea_matrix_with_efficiency(
         port_lookup=port_lookup,
         port_coordinates=port_coordinates,
         matrix=matrix,
+        external_distance_fallbacks=external_distance_fallbacks,
         coastline_factor=coastline_factor,
         audit_voyage_ids=effective_audit_voyage_ids,
     )
@@ -261,8 +273,8 @@ def enrich_sea_matrix_with_efficiency(
         "source": (
             "ANTAQ observed same-voyage corridors + EU MRV latest IMO intensity with "
             "explicit IMO outlier replacement and robust vessel-class and ship-type "
-            "estimates; same-OD transport-work-weighted intensity and mean-onboard-"
-            "cargo-weighted distance across complete observed voyages"
+            "estimates; same-OD transport-work-weighted intensity and P95-screened, "
+            "mean-onboard-cargo-weighted distance across complete observed voyages"
         ),
         "route_observation_mode": ROUTE_OBSERVATION_MODE,
         "scenario_distance_method": SCENARIO_DISTANCE_METHOD,
@@ -280,6 +292,17 @@ def enrich_sea_matrix_with_efficiency(
             "exclude_zero_mean_onboard_cargo_when_positive_cargo_exists; otherwise use "
             "arithmetic_mean_of_complete_same_od_voyages"
         ),
+        "scenario_distance_outlier_policy": {
+            "rule": SCENARIO_DISTANCE_OUTLIER_RULE,
+            "upper_quantile": SCENARIO_DISTANCE_OUTLIER_UPPER_QUANTILE,
+            "minimum_same_od_sample_size": (
+                SCENARIO_DISTANCE_OUTLIER_MIN_SAMPLE_SIZE
+            ),
+            "threshold_population": (
+                "complete_observed_same_od_voyage_distances_km"
+            ),
+            "retained_observations": "distance_km_less_than_or_equal_to_p95",
+        },
         "weighting": "tonne_nm",
         "pair_intensity_method": PAIR_INTENSITY_METHOD,
         "pair_intensity_scope": PAIR_INTENSITY_SCOPE,
@@ -300,8 +323,9 @@ def enrich_sea_matrix_with_efficiency(
         ),
         "cargo_reconstruction_rule": "minimum_nonnegative_prefix_offset",
         "distance_resolution_rule": (
-            "positive sea-matrix distance first; coordinate haversine fallback for "
-            "distinct canonical ports when the matrix value is missing or nonpositive"
+            "positive sea-matrix distance first; retained external port-pair reference "
+            "second; coordinate haversine fallback for distinct canonical ports only "
+            "when both are missing or nonpositive"
         ),
         "intensity_resolution_hierarchy": [
             "eu_mrv_imo_latest",
@@ -395,7 +419,16 @@ def validate_enriched_sea_matrix_payload(
         if _norm(origin) != _norm(destination) and _float_or_none(distance_km) is not None
         and float(distance_km) > 0.0
     )
-    if usable_distance_pairs <= 0:
+    usable_external_reference_pairs = sum(
+        1
+        for origin, destinations in sea_matrix.external_distance_fallbacks.items()
+        for destination, reference in destinations.items()
+        if _norm(origin) != _norm(destination)
+        and isinstance(reference, dict)
+        and _float_or_none(reference.get("distance_km")) is not None
+        and float(reference["distance_km"]) > 0.0
+    )
+    if usable_distance_pairs + usable_external_reference_pairs <= 0:
         raise ValueError("Sea matrix payload contains no usable positive port-pair distances.")
 
     usable_directional_pairs = sum(
@@ -414,6 +447,7 @@ def validate_enriched_sea_matrix_payload(
 
     result: dict[str, Any] = {
         "usable_distance_pairs": usable_distance_pairs,
+        "usable_external_reference_pairs": usable_external_reference_pairs,
         "usable_directional_pairs": usable_directional_pairs,
     }
     if required_route is None:
@@ -485,6 +519,24 @@ def validate_enriched_sea_matrix_payload(
         "scenario_distance_scope": stats.get("scenario_distance_scope"),
         "scenario_distance_observation_count": stats.get(
             "scenario_distance_observation_count"
+        ),
+        "scenario_distance_retained_voyage_count": stats.get(
+            "scenario_distance_retained_voyage_count"
+        ),
+        "scenario_distance_outlier_rule": stats.get(
+            "scenario_distance_outlier_rule"
+        ),
+        "scenario_distance_outlier_upper_quantile": stats.get(
+            "scenario_distance_outlier_upper_quantile"
+        ),
+        "scenario_distance_outlier_upper_threshold_km": stats.get(
+            "scenario_distance_outlier_upper_threshold_km"
+        ),
+        "scenario_distance_outlier_applied": stats.get(
+            "scenario_distance_outlier_applied"
+        ),
+        "scenario_distance_outlier_excluded_voyage_count": stats.get(
+            "scenario_distance_outlier_excluded_voyage_count"
         ),
         "scenario_distance_corridor_count": stats.get(
             "scenario_distance_corridor_count"
@@ -602,7 +654,7 @@ def _linear_percentile(values: list[float], quantile: float) -> float:
     """Return an inclusive linear percentile without adding a dependency."""
     ordered = sorted(float(value) for value in values if float(value) > 0.0)
     if not ordered:
-        raise ValueError("Percentile requires at least one positive MRV value.")
+        raise ValueError("Percentile requires at least one positive value.")
     if not 0.0 <= quantile <= 1.0:
         raise ValueError("Percentile quantile must be between zero and one.")
 
@@ -616,6 +668,73 @@ def _linear_percentile(values: list[float], quantile: float) -> float:
         ordered[lower_index]
         + fraction * (ordered[upper_index] - ordered[lower_index])
     )
+
+
+def _filter_subroutes_above_distance_p95(
+    subroutes: list[VoyageSubroute],
+) -> tuple[list[VoyageSubroute], dict[str, Any]]:
+    """Keep complete observed OD recortes at or below their unweighted P95.
+
+    The percentile is a screening rule for exceptionally long observed
+    itineraries, not the representative distance itself.  It is only applied
+    when the OD pair has the same minimum sample size used by the IMO P95
+    outlier rule.  The returned metadata remains in the SeaMatrix so the raw
+    coverage and every excluded observation can be audited.
+    """
+
+    distances = [float(subroute.distance_km) for subroute in subroutes]
+    candidate_count = len(subroutes)
+    if candidate_count < SCENARIO_DISTANCE_OUTLIER_MIN_SAMPLE_SIZE:
+        return list(subroutes), {
+            "scenario_distance_outlier_rule": SCENARIO_DISTANCE_OUTLIER_RULE,
+            "scenario_distance_outlier_upper_quantile": (
+                SCENARIO_DISTANCE_OUTLIER_UPPER_QUANTILE
+            ),
+            "scenario_distance_outlier_min_sample_size": (
+                SCENARIO_DISTANCE_OUTLIER_MIN_SAMPLE_SIZE
+            ),
+            "scenario_distance_outlier_upper_threshold_km": None,
+            "scenario_distance_outlier_applied": False,
+            "scenario_distance_outlier_excluded_voyage_count": 0,
+            "scenario_distance_retained_voyage_count": candidate_count,
+        }
+
+    threshold_km = _linear_percentile(
+        distances,
+        SCENARIO_DISTANCE_OUTLIER_UPPER_QUANTILE,
+    )
+    retained = [
+        subroute
+        for subroute in subroutes
+        if float(subroute.distance_km) <= threshold_km
+    ]
+    return retained, {
+        "scenario_distance_outlier_rule": SCENARIO_DISTANCE_OUTLIER_RULE,
+        "scenario_distance_outlier_upper_quantile": (
+            SCENARIO_DISTANCE_OUTLIER_UPPER_QUANTILE
+        ),
+        "scenario_distance_outlier_min_sample_size": (
+            SCENARIO_DISTANCE_OUTLIER_MIN_SAMPLE_SIZE
+        ),
+        "scenario_distance_outlier_upper_threshold_km": round(threshold_km, 3),
+        "scenario_distance_outlier_applied": True,
+        "scenario_distance_outlier_excluded_voyage_count": (
+            candidate_count - len(retained)
+        ),
+        "scenario_distance_retained_voyage_count": len(retained),
+    }
+
+
+def _subroute_distance_source_counts(
+    subroutes: list[VoyageSubroute],
+) -> dict[str, int]:
+    """Count the segment-distance sources that remain in the distance sample."""
+    counts = Counter(
+        segment.distance_source
+        for subroute in subroutes
+        for segment in subroute.segments
+    )
+    return dict(sorted(counts.items()))
 
 
 def _load_mrv_intensity_catalog(path: Path | str) -> dict[str, Any]:
@@ -1060,6 +1179,7 @@ def _haversine_distance_km(
 
 def _resolve_segment_distance_km(
     matrix: dict[str, Any],
+    external_distance_fallbacks: dict[str, Any],
     port_coordinates: dict[str, tuple[float, float]],
     from_port: str,
     to_port: str,
@@ -1069,6 +1189,14 @@ def _resolve_segment_distance_km(
     matrix_distance = _matrix_distance_km(matrix, from_port, to_port)
     if matrix_distance is not None and matrix_distance > 0.0:
         return matrix_distance, "sea_matrix"
+
+    external_reference = _external_distance_reference(
+        external_distance_fallbacks,
+        from_port,
+        to_port,
+    )
+    if external_reference is not None:
+        return external_reference
 
     if _norm(from_port) == _norm(to_port):
         return None, "same_canonical_port"
@@ -1084,6 +1212,28 @@ def _resolve_segment_distance_km(
     if distance_km <= 0.0:
         return None, "unavailable"
     return distance_km, "haversine_fallback"
+
+
+def _external_distance_reference(
+    external_distance_fallbacks: dict[str, Any],
+    from_port: str,
+    to_port: str,
+) -> tuple[float, str] | None:
+    """Resolve a retained published distance in either direction."""
+    for origin, destination in ((from_port, to_port), (to_port, from_port)):
+        row = external_distance_fallbacks.get(origin)
+        if not isinstance(row, dict):
+            continue
+        reference = row.get(destination)
+        if isinstance(reference, dict):
+            distance_km = _float_or_none(reference.get("distance_km"))
+            source = _text_or_none(reference.get("source"))
+        else:
+            distance_km = _float_or_none(reference)
+            source = None
+        if distance_km is not None and distance_km > 0.0:
+            return distance_km, source or "external_reference"
+    return None
 
 
 def _minimum_nonnegative_initial(net_changes: list[float]) -> float:
@@ -1103,6 +1253,7 @@ def _build_segments(
     port_lookup: dict[str, str],
     port_coordinates: dict[str, tuple[float, float]],
     matrix: dict[str, Any],
+    external_distance_fallbacks: dict[str, Any],
     coastline_factor: float,
     audit_voyage_ids: set[str] | None = None,
 ) -> tuple[list[VoyageSegment], list[VoyageSubroute], dict[str, Any]]:
@@ -1121,6 +1272,7 @@ def _build_segments(
     positive_cargo_segments = 0
     mapped_segments = 0
     matrix_distance_segments = 0
+    external_reference_segments = 0
     haversine_fallback_segments = 0
     matched_segments = 0
     resolved_segments = 0
@@ -1253,6 +1405,7 @@ def _build_segments(
 
             distance_km, distance_source = _resolve_segment_distance_km(
                 matrix,
+                external_distance_fallbacks,
                 port_coordinates,
                 from_port,
                 to_port,
@@ -1284,6 +1437,8 @@ def _build_segments(
             mapped_segments += 1
             if distance_source == "sea_matrix":
                 matrix_distance_segments += 1
+            elif distance_source in {"external_reference", "geografos_reference"}:
+                external_reference_segments += 1
             elif distance_source == "haversine_fallback":
                 haversine_fallback_segments += 1
             distance_nm = distance_km / _KM_PER_NAUTICAL_MILE
@@ -1474,6 +1629,7 @@ def _build_segments(
         "positive_cargo_segments": positive_cargo_segments,
         "mapped_segments": mapped_segments,
         "matrix_distance_segments": matrix_distance_segments,
+        "external_reference_segments": external_reference_segments,
         "haversine_fallback_segments": haversine_fallback_segments,
         "matched_segments": matched_segments,
         "resolved_segments": resolved_segments,
@@ -1552,20 +1708,48 @@ def _aggregate_subroute_stats(
             ),
         )
         pair_observations = pair_subroutes[(origin, destination)]
-        distance_km_values = [
+        candidate_distance_km_values = [
             float(subroute.distance_km) for subroute in pair_observations
         ]
-        distance_nm_values = [
-            float(subroute.distance_nm) for subroute in pair_observations
+        (
+            scenario_distance_observations,
+            distance_outlier_meta,
+        ) = _filter_subroutes_above_distance_p95(pair_observations)
+        if distance_outlier_meta["scenario_distance_outlier_applied"]:
+            _log.debug(
+                "maritime_distance_p95 origin=%r destination=%r candidate_voyages=%d "
+                "threshold_km=%.6f retained_voyages=%d excluded_voyages=%d",
+                origin,
+                destination,
+                len(pair_observations),
+                float(
+                    distance_outlier_meta[
+                        "scenario_distance_outlier_upper_threshold_km"
+                    ]
+                ),
+                int(distance_outlier_meta["scenario_distance_retained_voyage_count"]),
+                int(
+                    distance_outlier_meta[
+                        "scenario_distance_outlier_excluded_voyage_count"
+                    ]
+                ),
+            )
+        retained_distance_km_values = [
+            float(subroute.distance_km)
+            for subroute in scenario_distance_observations
+        ]
+        retained_distance_nm_values = [
+            float(subroute.distance_nm)
+            for subroute in scenario_distance_observations
         ]
         positive_weight_observations = [
             (subroute, float(subroute.mean_onboard_cargo_t))
-            for subroute in pair_observations
+            for subroute in scenario_distance_observations
             if float(subroute.mean_onboard_cargo_t) > 0.0
         ]
         zero_weight_observations = [
             subroute
-            for subroute in pair_observations
+            for subroute in scenario_distance_observations
             if float(subroute.mean_onboard_cargo_t) <= 0.0
         ]
         scenario_distance_mean_onboard_cargo_t_total = sum(
@@ -1597,11 +1781,11 @@ def _aggregate_subroute_stats(
             # A distance can still be reported when every reconstructed recorte
             # has zero mean cargo on board. This is explicitly marked so it cannot
             # be mistaken for the normal cargo-weighted calculation.
-            mean_distance_km = statistics.fmean(distance_km_values)
-            mean_distance_nm = statistics.fmean(distance_nm_values)
+            mean_distance_km = statistics.fmean(retained_distance_km_values)
+            mean_distance_nm = statistics.fmean(retained_distance_nm_values)
             variance_km = (
-                statistics.pvariance(distance_km_values)
-                if len(distance_km_values) > 1
+                statistics.pvariance(retained_distance_km_values)
+                if len(retained_distance_km_values) > 1
                 else 0.0
             )
             scenario_distance_method = SCENARIO_DISTANCE_ZERO_CARGO_METHOD
@@ -1610,12 +1794,14 @@ def _aggregate_subroute_stats(
             scenario_distance_stddev_method = (
                 "unweighted_population_zero_mean_onboard_cargo"
             )
-            scenario_distance_effective_voyage_count = len(pair_observations)
+            scenario_distance_effective_voyage_count = len(
+                scenario_distance_observations
+            )
 
-        # Each complete, ordered OD recorte is retained. Its influence on the
-        # representative scenario distance is its mean cargo aboard in tonnes,
-        # reconstructed from every subleg. Transport work remains an audit metric
-        # and the weight for intensity, but does not weight distance a second time.
+        # The P95 filter only screens the distance sample.  Every complete,
+        # ordered OD recorte remains available to the pair-intensity calculation
+        # below.  Retained distances are then weighted by reconstructed mean cargo
+        # aboard, so transport work does not weight distance a second time.
         stats: dict[str, Any] = {
             "distance_km": round(mean_distance_km, 3),
             "distance_nm": round(mean_distance_nm, 3),
@@ -1625,6 +1811,7 @@ def _aggregate_subroute_stats(
             "scenario_distance_method": scenario_distance_method,
             "scenario_distance_scope": SCENARIO_DISTANCE_SCOPE,
             "scenario_distance_weight": scenario_distance_weight,
+            **distance_outlier_meta,
             "scenario_distance_mean_onboard_cargo_t_total": round(
                 scenario_distance_mean_onboard_cargo_t_total,
                 3,
@@ -1643,9 +1830,29 @@ def _aggregate_subroute_stats(
                 scenario_distance_effective_voyage_count
             ),
             "scenario_distance_observation_count": len(pair_observations),
+            "scenario_distance_retained_corridor_count": len(
+                {
+                    subroute.corridor_port_path
+                    for subroute in scenario_distance_observations
+                }
+            ),
             "scenario_distance_corridor_count": len(ordered_options),
-            "scenario_distance_min_km": round(min(distance_km_values), 3),
-            "scenario_distance_max_km": round(max(distance_km_values), 3),
+            "scenario_distance_min_km": round(
+                min(candidate_distance_km_values),
+                3,
+            ),
+            "scenario_distance_max_km": round(
+                max(candidate_distance_km_values),
+                3,
+            ),
+            "scenario_distance_retained_min_km": round(
+                min(retained_distance_km_values),
+                3,
+            ),
+            "scenario_distance_retained_max_km": round(
+                max(retained_distance_km_values),
+                3,
+            ),
             "scenario_distance_stddev_km": round(math.sqrt(variance_km), 3),
             "scenario_distance_stddev_method": scenario_distance_stddev_method,
             "route_observation_mode": ROUTE_OBSERVATION_MODE,
@@ -1707,8 +1914,10 @@ def _aggregate_subroute_stats(
         stats["distance_source_counts"] = dict(
             sorted(all_distance_source_counts.items())
         )
-        stats["scenario_distance_source_counts"] = dict(
-            sorted(all_distance_source_counts.items())
+        # The aggregate distance describes only the P95-retained sample; retain
+        # its source counts separately from the raw all-observation coverage.
+        stats["scenario_distance_source_counts"] = _subroute_distance_source_counts(
+            scenario_distance_observations
         )
         stats["candidate_observed_transport_work_tnm"] = round(
             sum(float(item.get("observed_transport_work_tnm") or 0.0) for item in ordered_options),
