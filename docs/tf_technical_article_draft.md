@@ -1,26 +1,39 @@
 # CabotageLens: sistema computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil
 
-> **Documento de validação textual.**
->
-> Durante esta etapa, este Markdown concentra o conteúdo editável do artigo técnico. As revisões de texto devem ser feitas aqui. O [arquivo LaTeX](tf_technical_article.tex) será sincronizado e compilado somente após a aprovação do conteúdo.
-
 **Autor:** Felipe de Sá Proença
 
-**Status:** em validação textual
+## Sumário
 
----
+1. Introdução
+2. Revisão da literatura e fundamentação metodológica
+3. Metodologia
+4. Implementação computacional
+5. Comparações com ferramentas externas
+6. Conclusões
+7. Referências
 
-## Resumo
+## Dicionário de termos
 
-A escolha entre transporte rodoviário direto e transporte com cabotagem não depende apenas da distância percorrida. No Brasil, uma rota com cabotagem pode reduzir parte das emissões no trecho principal, mas também inclui deslocamentos rodoviários até os portos, operações portuárias, espera, movimentação de carga e o percurso real realizado pelo navio. Quando esses elementos são ignorados, a comparação entre os modais fica incompleta e pode levar a conclusões pouco confiáveis.
-
-Este trabalho apresenta o CabotageLens, uma ferramenta desenvolvida para comparar, de forma mais assertiva, duas alternativas para a mesma origem, destino e carga: uma viagem totalmente rodoviária e uma cadeia logística formada por rodovia, cabotagem e rodovia. A ferramenta utiliza dados públicos de instituições públicas e privadas, combinando informações de rotas terrestres, movimentação portuária, viagens marítimas, consumo de combustível, emissões e custos modelados.
-
-A principal contribuição do sistema é tratar a operação logística como uma cadeia completa, e não como trechos isolados. Na perna marítima, o sistema reconstrói o percurso observado dos navios, considera cargas transportadas ao longo dos subtrechos e evita assumir previamente um corredor fixo. Na comparação ambiental, inclui pontos de emissão que normalmente ficam fora de análises simplificadas, como acessos terrestres aos portos e emissões associadas às etapas portuárias quando há dados disponíveis.
-
-Com isso, o CabotageLens fornece uma base mais transparente para avaliar custo e emissões de carbono entre alternativas rodoviárias e multimodais, permitindo que a decisão seja sustentada por dados rastreáveis, premissas explícitas e uma representação mais próxima da operação real.
-
-**Palavras-chave**: cabotagem; transporte rodoviário; transporte multimodal; ANTAQ; EU MRV; emissões operacionais; logística; Brasil.
+| Termo ou sigla | Significado no estudo |
+| :-- | :-- |
+| ANP | Agência Nacional do Petróleo, Gás Natural e Biocombustíveis; publica os preços de Diesel S10 usados no cálculo de custo. |
+| ANTAQ | Agência Nacional de Transportes Aquaviários; fornece os registros observados de atracação e movimentação de carga. |
+| ANTT | Agência Nacional de Transportes Terrestres; publica os rendimentos rodoviários por número de eixos usados na estimativa de consumo. |
+| Cabotagem | Transporte aquaviário de cargas entre portos do mesmo país. |
+| CO₂e | Dióxido de carbono equivalente; unidade que expressa emissões de gases de efeito estufa em uma mesma base. |
+| EU MRV | Sistema europeu de Monitoramento, Reporte e Verificação; fornece indicadores anuais de atividade e consumo dos navios. |
+| *First mile* e *last mile* | Acessos rodoviários entre a origem e o porto de embarque, e entre o porto de desembarque e o destino, respectivamente. |
+| Geocodificação | Conversão de um endereço ou local informado em coordenadas geográficas. |
+| Distância de Haversine | Distância geométrica entre dois pontos calculada a partir de latitude e longitude; usada somente para selecionar os portos mais próximos. |
+| IMO | Número de identificação permanente atribuído pela Organização Marítima Internacional a cada navio. |
+| Intensidade marítima | Combustível associado ao transporte de uma tonelada por uma milha náutica, expresso em g/(t·nm). |
+| LCA | *Life-cycle assessment*, ou avaliação de ciclo de vida; fronteira mais ampla que pode incluir veículos, infraestrutura e cadeia do combustível. |
+| P95 | Percentil 95; limite usado para identificar valores excepcionalmente altos em conjuntos de dados. |
+| Perna marítima | Trecho de cabotagem entre o porto de embarque e o porto de desembarque. |
+| TEU e TKU | Unidade equivalente a um contêiner de 20 pés e tonelada-quilômetro útil, respectivamente. |
+| Trabalho de transporte | Produto da carga a bordo pela distância em cada subtrecho, expresso em t·nm. |
+| TTW e WTW | *Tank-to-wheel*, que considera a queima do combustível durante o transporte, e *well-to-wheel*, que também inclui suas etapas anteriores. |
+| VLSFO | *Very low sulphur fuel oil*, óleo combustível naval de baixíssimo teor de enxofre. |
 
 ## 1. Introdução
 
@@ -30,21 +43,21 @@ O transporte de cargas no Brasil é fortemente concentrado nas rodovias. Em 2015
 
 *Figura 1 — Distribuição da atividade de transporte de cargas no Brasil em 2015, medida em TKU. Fonte: [Sindicato dos Bancários de São Paulo, Osasco e Região (2018)](https://spbancarios.com.br/05/2018/brasil-e-dependente-do-transporte-rodoviario-de-cargas), com dados de 2015 do Plano Nacional de Logística, conforme informado pela publicação.*
 
-Além do papel predominante na matriz, o transporte rodoviário de cargas depende, principalmente, do diesel e contribui para as emissões de gases de efeito estufa do setor. Por isso, políticas de transporte buscam transferir parte das viagens longas para modais mais eficientes. Tomemos de exemplo a [Comissão Europeia, 2011](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52011DC0144), que no Livro Branco dos Transportes definiu a meta de transferir, até 2030, 30% das cargas rodoviárias transportadas por mais de 300 km para ferrovias ou vias aquaviárias e, até 2050, mais de 50%. Nesse contexto, a cabotagem — o transporte marítimo entre portos do mesmo país utilizando a navegação pela costa nacional ou por vias interiores — é uma alternativa possível para parte das cargas de longa distância no Brasil [icct2022].
+Além do papel predominante na matriz, o transporte rodoviário de cargas depende, principalmente, do diesel e contribui para as emissões de gases de efeito estufa do setor. Por isso, políticas de transporte buscam transferir parte das viagens longas para modais mais eficientes. Tomemos de exemplo a [Comissão Europeia (2011)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52011DC0144), que no Livro Branco dos Transportes definiu a meta de transferir, até 2030, 30% das cargas rodoviárias transportadas por mais de 300 km para ferrovias ou vias aquaviárias e, até 2050, mais de 50%. Nesse contexto, a cabotagem — o transporte marítimo entre portos do mesmo país utilizando a navegação pela costa nacional ou por vias interiores — é uma alternativa possível para parte das cargas de longa distância no Brasil (Carvalho, 2022).
 
-Para saber se a cabotagem faz sentido em uma ligação específica, a comparação precisa ser porta a porta. Uma comparação porta a porta começa no local onde a carga está e termina no local em que ela será entregue. As duas alternativas precisam prestar exatamente o mesmo serviço: transportar a mesma massa entre esses dois pontos. No caminho rodoviário, o caminhão percorre todo o trajeto por estrada. Na alternativa com cabotagem, a carga segue de caminhão até o porto de embarque, é transportada pelo navio entre os portos e, em seguida, segue de caminhão do porto de desembarque até o destino final. Por isso, a análise soma distância, consumo, emissões e custo de todas essas etapas, em vez de comparar apenas o trecho marítimo com a viagem rodoviária completa. Os portos escolhidos, as distâncias de acesso, a carga e as operações de transbordo podem mudar o resultado [shortsea2019; modalshiftreview2020].
+Para saber se a cabotagem faz sentido em uma ligação específica, a comparação precisa ser porta a porta. Uma comparação porta a porta começa no local onde a carga está e termina no local em que ela será entregue. As duas alternativas precisam prestar exatamente o mesmo serviço: transportar a mesma massa entre esses dois pontos. No caminho rodoviário, o caminhão percorre todo o trajeto por estrada. Na alternativa com cabotagem, a carga segue de caminhão até o porto de embarque, é transportada pelo navio entre os portos e, em seguida, segue de caminhão do porto de desembarque até o destino final. Por isso, a análise soma distância, consumo, emissões e custo de todas essas etapas, em vez de comparar apenas o trecho marítimo com a viagem rodoviária completa. Os portos escolhidos, as distâncias de acesso, a carga e as operações de transbordo podem mudar o resultado (Svindland e Hjelle, 2019; Raza, Svanberg e Wiegmans, 2020).
 
 É para tornar essa comparação possível que foi desenvolvido o CabotageLens. O usuário informa a origem, o destino e a massa da carga, e o sistema constrói as duas alternativas de transporte. Para cada uma, apresenta a distância total, o consumo de combustível, as emissões operacionais e o custo modelado do combustível. Ao reunir essas informações em uma mesma base de comparação, a ferramenta permite avaliar, para cada ligação, como a alternativa com cabotagem se diferencia da rota feita inteiramente por estrada. Com isso, a comparação deixa de ser uma escolha abstrata entre caminhão e navio e passa a considerar a operação logística completa.
 
 ## 2. Revisão da literatura e fundamentação metodológica
 
-A literatura mostra que a cabotagem pode ser relevante em viagens longas, mas o resultado muda de uma ligação para outra [icct2022]. Uma rota pode ter uma longa navegação e acessos rodoviários curtos. Outra pode exigir muitos quilômetros por estrada até o porto. Frequência, tempo, confiabilidade, estoque e disponibilidade do serviço também influenciam a decisão real [competitiveness2024]. O CabotageLens calcula rotas, combustível, emissões operacionais e custo modelado do combustível. Ele não representa por completo todas as condições comerciais.
+A literatura mostra que a cabotagem pode ser relevante em viagens longas, mas o resultado muda de uma ligação para outra (Carvalho, 2022). Uma rota pode ter uma longa navegação e acessos rodoviários curtos. Outra pode exigir muitos quilômetros por estrada até o porto. Frequência, tempo, confiabilidade, estoque e disponibilidade do serviço também influenciam a decisão real (Costa et al., 2025). O CabotageLens calcula rotas, combustível, emissões operacionais e custo modelado do combustível. Ele não representa por completo todas as condições comerciais.
 
-Estudos de *short sea shipping* (navegação marítima de curta distância) também mostram que a substituição do transporte rodoviário pelo transporte marítimo não significa uma vantagem ambiental automática. O resultado depende do tipo de navio, de sua utilização, das distâncias e da carga à qual o consumo é atribuído [shortsea2019]. Por isso, a unidade analisada deve ser a remessa completa, e não um navio e um caminhão considerados isoladamente [modalshiftreview2020].
+Estudos de *short sea shipping* (navegação marítima de curta distância) também mostram que a substituição do transporte rodoviário pelo transporte marítimo não significa uma vantagem ambiental automática. O resultado depende do tipo de navio, de sua utilização, das distâncias e da carga à qual o consumo é atribuído (Svindland e Hjelle, 2019). Por isso, a unidade analisada deve ser a remessa completa, e não um navio e um caminhão considerados isoladamente (Raza, Svanberg e Wiegmans, 2020).
 
-Um princípio metodológico do estudo é dar preferência a dados públicos, oficiais, observados e auditáveis. A Agência Nacional de Transportes Aquaviários (ANTAQ), órgão federal que regula e acompanha o transporte aquaviário brasileiro, fornece os registros de escalas e de movimentação de carga. A base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) publica indicadores anuais de consumo e atividade dos navios. Essas fontes permitem relacionar uma operação registrada no Brasil ao desempenho do navio identificado pelo número da Organização Marítima Internacional (IMO), uma identificação permanente da embarcação. Os campos utilizados, os arquivos de origem e a forma de reconstruir as viagens são apresentados na Seção 3.3 [antaq2025; eumrv2025].
+Um princípio metodológico do estudo é dar preferência a dados públicos, oficiais, observados e auditáveis. A Agência Nacional de Transportes Aquaviários (ANTAQ), órgão federal que regula e acompanha o transporte aquaviário brasileiro, fornece os registros de escalas e de movimentação de carga. A base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) publica indicadores anuais de consumo e atividade dos navios. Essas fontes permitem relacionar uma operação registrada no Brasil ao desempenho do navio identificado pelo número da Organização Marítima Internacional (IMO), uma identificação permanente da embarcação. Os campos utilizados, os arquivos de origem e a forma de reconstruir as viagens são apresentados na Seção 3.3 (ANTAQ, 2025; EMSA, 2026).
 
-O cálculo de emissões adota a fronteira operacional *tank-to-wheel* (TTW, do tanque à roda), pois o objetivo é comparar as emissões diretamente associadas ao transporte da mesma remessa. Em um caminhão a diesel, por exemplo, isso corresponde às emissões liberadas pelo escapamento durante a viagem. As fronteiras *well-to-wheel* (WTW, do poço à roda) e de avaliação de ciclo de vida (*life-cycle assessment*, LCA) ampliariam a análise para etapas que ocorrem antes ou além do deslocamento [decarb2024; maritimelca2024], mas não foram adotadas no presente estudo.
+O cálculo de emissões adota a fronteira operacional *tank-to-wheel* (TTW, do tanque à roda), pois o objetivo é comparar as emissões diretamente associadas ao transporte da mesma remessa. Em um caminhão a diesel, por exemplo, isso corresponde às emissões liberadas pelo escapamento durante a viagem. As fronteiras *well-to-wheel* (WTW, do poço à roda) e de avaliação de ciclo de vida (*life-cycle assessment*, LCA) ampliariam a análise para etapas que ocorrem antes ou além do deslocamento (Costa, Mendes e Silva, 2024; Roux et al., 2024), mas não foram adotadas no presente estudo.
 
 **Quadro 1 — Fronteiras de emissão e aplicação ao caminhão a diesel.**
 
@@ -54,7 +67,7 @@ O cálculo de emissões adota a fronteira operacional *tank-to-wheel* (TTW, do t
 | WTW (*well-to-wheel*) | Inclui a queima e as etapas anteriores da cadeia do combustível. | Também inclui extração, refino, transporte e distribuição do diesel. |
 | LCA (*life-cycle assessment*) | Avalia um escopo mais amplo do sistema de transporte. | Pode incluir a fabricação, a manutenção e o fim de vida do caminhão e da infraestrutura. |
 
-*Fonte: elaboração própria com base em [decarb2024; maritimelca2024].*
+*Fonte: elaboração própria com base em Costa, Mendes e Silva (2024) e Roux et al. (2024).*
 
 Além das emissões, o estudo delimita o custo e o serviço que serão comparados. O custo apresentado é uma estimativa do custo do combustível consumido nas etapas calculadas. Ele não representa frete comercial, tarifa contratada, negociação, seguro, estoque ou multas por permanência. O serviço comparado é o transporte da mesma remessa entre a mesma origem e o mesmo destino. As viagens observadas permitem reconstruir os percursos marítimos, mas não garantem frequência, espaço no navio ou disponibilidade comercial futura.
 
@@ -80,7 +93,7 @@ Nos exemplos desta seção, a remessa tem 14 t e segue de São Paulo (SP) para 
 - porto de embarque → porto de desembarque; e
 - porto de desembarque → destino.
 
-As operações de movimentação de carga nos dois terminais também entram no cálculo. Dessa forma, a comparação considera a cadeia completa, e não apenas o trecho marítimo frente à viagem rodoviária inteira [shortsea2019; competitiveness2024].
+As operações de movimentação de carga nos dois terminais também entram no cálculo. Dessa forma, a comparação considera a cadeia completa, e não apenas o trecho marítimo frente à viagem rodoviária inteira (Svindland e Hjelle, 2019; Costa et al., 2025).
 
 Para estimar as operações portuárias, o sistema representa a remessa de 14 t como 1 TEU (*twenty-foot equivalent unit*, unidade equivalente a um contêiner de 20 pés). Essa conversão determina quantos contêineres precisam ser movimentados nos terminais.
 
@@ -181,7 +194,7 @@ $$
 
 #### 3.2.3 Emissões operacionais da perna rodoviária
 
-As emissões da alternativa rodoviária são calculadas a partir do diesel consumido na Seção 3.2.1. A fronteira adotada é *tank-to-wheel* (TTW, do tanque à roda): ela considera somente as emissões geradas pela queima do combustível durante o transporte. O sistema aplica o fator 2,68 kg CO₂e por litro de diesel, baseado nas Diretrizes de 2006 do Painel Intergovernamental sobre Mudanças Climáticas (IPCC) [ipcc2006]. Costa et al. [competitiveness2024] é a referência brasileira usada para manter essa estimativa na fronteira TTW, sem incluir a produção, o refino ou a distribuição do combustível.
+As emissões da alternativa rodoviária são calculadas a partir do diesel consumido na Seção 3.2.1. A fronteira adotada é *tank-to-wheel* (TTW, do tanque à roda): ela considera somente as emissões geradas pela queima do combustível durante o transporte. O sistema aplica o fator 2,68 kg CO₂e por litro de diesel, baseado nas Diretrizes de 2006 do Painel Intergovernamental sobre Mudanças Climáticas (IPCC, 2006). O estudo de Costa et al. (2025) é a referência brasileira usada para manter essa estimativa na fronteira TTW, sem incluir a produção, o refino ou a distribuição do combustível.
 
 A emissão rodoviária é o consumo de diesel multiplicado pelo fator de emissão:
 
@@ -237,9 +250,9 @@ O primeiro acesso, chamado de *first mile*, leva a carga da origem até o porto 
 
 As operações portuárias são as movimentações realizadas dentro do terminal quando a remessa passa entre o transporte rodoviário e o navio. No porto de embarque, o contêiner chega pelo *first mile* e precisa ser movimentado até o navio; no porto de desembarque, ocorre o caminho inverso antes do *last mile*. Essas atividades não pertencem nem ao acesso rodoviário nem à navegação. Por isso, o combustível consumido no terminal é calculado como um componente próprio da alternativa multimodal.
 
-O modelo representa esse consumo pelos equipamentos para os quais há fatores de atividade no cenário adotado: o guindaste sobre pneus do pátio (*rubber-tyred gantry*, RTG) e o caminhão que circula internamente no terminal. Estudos sobre carga e descarga em portos e sobre o uso energético de RTGs fundamentam a representação da operação por equipamento a seguir [shipops2022; rtg2017].
+O modelo representa esse consumo pelos equipamentos para os quais há fatores de atividade no cenário adotado: o guindaste sobre pneus do pátio (*rubber-tyred gantry*, RTG) e o caminhão que circula internamente no terminal. Estudos sobre carga e descarga em portos e sobre o uso energético de RTGs fundamentam a representação da operação por equipamento a seguir (Nguyen, Woo e Kim, 2022; Papaioannou et al., 2017).
 
-O cálculo segue uma sequência simples: a carga informada é convertida em contêineres equivalentes a 20 pés (TEU); cada TEU gera uma quantidade definida de movimentos por equipamento; e cada movimento é convertido em litros de diesel. Os movimentos por contêiner e os consumos por movimento vêm do cenário de referência parametrizado com dados de Santos no estudo de Costa et al. [workbookdados].
+O cálculo segue uma sequência simples: a carga informada é convertida em contêineres equivalentes a 20 pés (TEU); cada TEU gera uma quantidade definida de movimentos por equipamento; e cada movimento é convertido em litros de diesel. Os movimentos por contêiner e os consumos por movimento vêm do cenário de referência parametrizado com dados de Santos (Dados Relatório 2, 2024).
 
 O cenário sempre considera duas operações portuárias: uma no porto de embarque e outra no porto de desembarque. Como a mesma remessa passa pelos dois terminais, a fórmula já usa a multiplicação por 2:
 
@@ -343,7 +356,7 @@ Esse indicador é uma razão, e não o consumo total de uma viagem. Uma intensid
 
 A ANTAQ informa por onde o navio passou e qual carga levava, mas não informa diretamente o combustível consumido. Esse dado vem da base de **Monitoramento, Reporte e Verificação da União Europeia** (*European Union Monitoring, Reporting and Verification*, EU MRV), que publica indicadores anuais de consumo, atividade e emissões por embarcação. O número IMO registrado na ANTAQ permite procurar o mesmo navio nessa base.
 
-Na viagem `voyage_9612791_00011`, o IMO 9612791 foi encontrado diretamente no EU MRV, com intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$ [eumrv2025]. A Tabela 6 mostra os campos usados nessa correspondência.
+Na viagem `voyage_9612791_00011`, o IMO 9612791 foi encontrado diretamente no EU MRV, com intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$ (EMSA, 2026). A Tabela 6 mostra os campos usados nessa correspondência.
 
 **Tabela 6 — Dados do EU MRV usados para a viagem `voyage_9612791_00011`.**
 
@@ -507,8 +520,8 @@ Os trechos de *first mile* e *last mile* usam a mesma conversão de diesel em em
 
 | Etapa do transporte | Fonte do fator | Fator de emissão |
 | :-- | :-- | :-- |
-| Operações portuárias | Mesma base do IPCC (2006) [ipcc2006]. | 2,68 kg CO₂e/L de diesel |
-| Navegação | Costa et al. [competitiveness2024]: Resolução IMO MEPC.391(81). | 3,114 kg CO₂e/kg de VLSFO |
+| Operações portuárias | IPCC (2006). | 2,68 kg CO₂e/L de diesel |
+| Navegação | Costa et al. (2025): Resolução IMO MEPC.391(81). | 3,114 kg CO₂e/kg de VLSFO |
 
 #### 3.3.6 Custo do combustível
 
@@ -670,10 +683,10 @@ Após confirmar que o XLSX baixado gerou uma tabela válida de preços por Unida
 
 | DATA INICIAL | DATA FINAL | REGIÃO | ESTADO | PRODUTO | UNIDADE DE MEDIDA | PREÇO MÉDIO REVENDA |
 | :-- | :-- | :-- | :-- | :-- | :-- | --: |
-| 07-12-26 | 07-18-26 | SUDESTE | SAO PAULO | OLEO DIESEL S10 | R$/l | 6.96 |
-| 07-12-26 | 07-18-26 | NORTE | ACRE | OLEO DIESEL S10 | R$/l | 9.27 |
-| 07-12-26 | 07-18-26 | NORTE | AMAZONAS | OLEO DIESEL S10 | R$/l | 7.25 |
-| 07-12-26 | 07-18-26 | NORDESTE | PERNAMBUCO | OLEO DIESEL S10 | R$/l | 6.88 |
+| 07-12-26 | 07-18-26 | SUDESTE | SAO PAULO | OLEO DIESEL S10 | R\$/l | 6.96 |
+| 07-12-26 | 07-18-26 | NORTE | ACRE | OLEO DIESEL S10 | R\$/l | 9.27 |
+| 07-12-26 | 07-18-26 | NORTE | AMAZONAS | OLEO DIESEL S10 | R\$/l | 7.25 |
+| 07-12-26 | 07-18-26 | NORDESTE | PERNAMBUCO | OLEO DIESEL S10 | R\$/l | 6.88 |
 
 *Fonte: planilha semanal de preços de revenda por estado da ANP, aba `ESTADOS - DESDE 30.12.2012`, produto `OLEO DIESEL S10`, período de 12 a 18 de julho de 2026. Valores reproduzidos do arquivo `SEMANAL_ESTADOS-DESDE_2013.xlsx` usado para conferir a rotina de leitura.*
 
@@ -691,11 +704,11 @@ No exemplo São Paulo–Rio Branco, uma remessa de 14 t percorre 3.491,431 km.
 
 ```mermaid
 flowchart LR
-    P["Preço do Diesel<br/>R$ 8,115/L"] --> F["Custo modelado do combustível<br/>R$ 12.318,68"]
-    A["Carga, Origem e Destino<br/>14t de São Paulo até Rio Branco"] --> B["Geocodificação"]
+    A["Carga, origem e destino<br/>14t de São Paulo até Rio Branco"] --> B["Geocodificação"]
     A --> D
     B --> C["Distância rodoviária<br/>3.491,431 km"] --> E
     D["Rendimento do veículo<br/>2,3 km/L de Diesel"] --> E["Consumo de Diesel S10<br/>1.518,014 L"] --> F
+    P["Preço do Diesel<br/>R$ 8,115/L"] --> F["Custo modelado do combustível<br/>R$ 12.318,68"]
     E --> G
     M["Fator de emissão do Diesel<br/>2,68 kg CO₂e/L"] --> G["Emissões TTW<br/>4.068,28 kg CO₂e"]
 ```
@@ -764,10 +777,9 @@ Os resultados são reunidos na estrutura `SeaMatrix`. Para cada par ordenado de 
 ```mermaid
 flowchart LR
     A["Carga e Atracação<br/>ANTAQ"] --> B["Reconstrução das viagens<br/>e da carga a bordo"]
-    B --> C["Recortes completos<br/>entre portos ordenados"]
+    B --> C["Recortes completos<br/>entre portos ordenados"] --> T
     D["EU MRV<br/>intensidade por IMO"] --> E["Intensidade individual<br/>ou referência robusta"]
-    C --> F["SeaMatrix<br/>distância, intensidade e cobertura"]
-    E --> F
+    E --> T["Trabalho de transporte<br/>e consumo por recorte"] --> F["SeaMatrix<br/>distância, intensidade e cobertura"]
 ```
 
 As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e, as colunas, o porto de destino.
@@ -1039,4 +1051,48 @@ Além da contribuição metodológica, o CabotageLens constitui uma contribuiç�
 
 ## Referências
 
-As citações permanecem identificadas por suas chaves, entre colchetes, para facilitar a validação e a posterior sincronização com o LaTeX. Os dados bibliográficos completos estão em [`docs/references.bib`](references.bib), e os limites de uso de cada fonte estão registrados no [mapa de citações da literatura](tf_support/writing/tf_literature_citation_map.md).
+AGÊNCIA NACIONAL DO PETRÓLEO, GÁS NATURAL E BIOCOMBUSTÍVEIS (ANP). *Levantamento semanal de preços de combustíveis por estado*. 2026. Disponível em: <https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas>. Acesso em: 19 jul. 2026.
+
+AGÊNCIA NACIONAL DE TRANSPORTES AQUAVIÁRIOS (ANTAQ). *Painel Estatístico Aquaviário: dados de atracação e carga*. 2025. Disponível em: <https://estatistica.antaq.gov.br/ea/sense/download.html>. Acesso em: 19 jul. 2026.
+
+AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES (ANTT). *Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas*. 2025. Disponível em: <https://anttlegis.antt.gov.br/action/UrlPublicasAction.php?acao=abrirAtoPublico&cod_menu=9230&cod_modulo=623&num_ato=00000001&seq_ato=ATT&sgl_orgao=SUROC%2FANTT%2FMT&sgl_tipo=POR&vlr_ano=2025>. Acesso em: 19 jul. 2026.
+
+AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES (ANTT). *Calculadora de piso mínimo de frete*. 2026. Disponível em: <https://calculadorafrete.antt.gov.br/>. Acesso em: 19 jul. 2026.
+
+ALIANÇA NAVEGAÇÃO E LOGÍSTICA. *Calculadora de CO2*. 2026. Disponível em: <https://www.alianca.com.br/calculadora-de-co2>. Acesso em: 19 jul. 2026.
+
+BANCO CENTRAL EUROPEU. *Euro foreign exchange reference rates*. 2026. Disponível em: <https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html>. Acesso em: 19 jul. 2026.
+
+CARVALHO, Francielle. *Brazilian coastal shipping: new prospects for growth with decarbonization*. Working Paper n. 2022-24. Washington, DC: International Council on Clean Transportation, 2022. Disponível em: <https://theicct.org/wp-content/uploads/2022/07/brazilmarinebrazil-coastal-shipping-new-prospects-growth-decarbonization-jul22.pdf>. Acesso em: 19 jul. 2026.
+
+COSTA, Gustavo Adolfo Alves da; MENDES, André Bergsten; GOMES DA CRUZ, José Pedro. Brazilian maritime containerized cabotage competitiveness assessment based on a multimodal super network. *Journal of Transport Geography*, v. 122, e104062, 2025. DOI: <https://doi.org/10.1016/j.jtrangeo.2024.104062>.
+
+COSTA, Gustavo Adolfo Alves da; MENDES, André Bergsten; SILVA, Vanina Macowski Durski. Decarbonization pathways in Brazilian maritime cabotage: a comparative analysis of very low sulfur fuel oil, marine diesel oil, and hydrogenated vegetable oil in carbon dioxide equivalent emissions. *Latin American Transport Studies*, v. 2, e100018, 2024. DOI: <https://doi.org/10.1016/j.latran.2024.100018>.
+
+DADOS RELATÓRIO 2. *Parâmetros de operações portuárias*. Planilha de dados não publicada utilizada na parametrização do modelo, 2024.
+
+EUROPEAN COMMISSION. *White Paper: roadmap to a single European transport area — towards a competitive and resource efficient transport system*. COM(2011) 144 final. Brussels, 2011. Disponível em: <https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52011DC0144>. Acesso em: 19 jul. 2026.
+
+EUROPEAN MARITIME SAFETY AGENCY (EMSA). *THETIS-MRV: Publication of Information*. 2026. Disponível em: <https://mrv.emsa.europa.eu/>. Acesso em: 19 jul. 2026.
+
+GEÓGRAFOS. *Distâncias marítimas entre portos*. 2026. Disponível em: <https://www.geografos.com.br/distancias-maritimas-entre-portos>. Acesso em: 19 jul. 2026.
+
+GOOGLE. *Google Maps*. 2026. Disponível em: <https://www.google.com/maps>. Acesso em: 19 jul. 2026.
+
+INTERGOVERNMENTAL PANEL ON CLIMATE CHANGE (IPCC). *2006 IPCC Guidelines for National Greenhouse Gas Inventories: Volume 2 — Energy*. 2006. Disponível em: <https://www.ipcc-nggip.iges.or.jp/public/2006gl/vol2.html>. Acesso em: 19 jul. 2026.
+
+LOG-IN LOGÍSTICA. *Calculadora de CO2*. 2026. Disponível em: <https://www.loginlogistica.com.br/calculadora-co2/>. Acesso em: 19 jul. 2026.
+
+NGUYEN, Phong-Nha; WOO, Su-Han; KIM, Hwayoung. Ship emissions in hotelling phase and loading/unloading in Southeast Asia ports. *Transportation Research Part D: Transport and Environment*, v. 105, e103223, 2022. DOI: <https://doi.org/10.1016/j.trd.2022.103223>.
+
+PAPAIOANNOU, Vicky et al. Analysis of energy usage for RTG cranes. *Energy*, v. 125, p. 337–344, 2017. DOI: <https://doi.org/10.1016/j.energy.2017.02.122>.
+
+RAZA, Zeeshan; SVANBERG, Martin; WIEGMANS, Bart. Modal shift from road haulage to short sea shipping: a systematic literature review and research directions. *Transport Reviews*, v. 40, n. 3, p. 382–406, 2020. DOI: <https://doi.org/10.1080/01441647.2020.1714789>.
+
+ROUX, M.; LODATO, C.; LAURENT, A.; ASTRUP, T. F. A review of life cycle assessment studies of maritime fuels: critical insights, gaps, and recommendations. *Sustainable Production and Consumption*, v. 50, p. 69–86, 2024. DOI: <https://doi.org/10.1016/j.spc.2024.07.016>.
+
+SHIP AND BUNKER. *Brazil bunker prices*. 2026. Disponível em: <https://shipandbunker.com/prices/br-brazil>. Acesso em: 19 jul. 2026.
+
+SINDICATO DOS BANCÁRIOS DE SÃO PAULO, OSASCO E REGIÃO. *Brasil é dependente do transporte rodoviário de cargas*. 2018. Disponível em: <https://spbancarios.com.br/05/2018/brasil-e-dependente-do-transporte-rodoviario-de-cargas>. Acesso em: 19 jul. 2026.
+
+SVINDLAND, Morten; HJELLE, Harald M. The comparative CO2 efficiency of short sea container transport. *Transportation Research Part D: Transport and Environment*, v. 77, p. 11–20, 2019. DOI: <https://doi.org/10.1016/j.trd.2019.08.025>.

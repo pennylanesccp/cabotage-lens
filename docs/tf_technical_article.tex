@@ -79,20 +79,28 @@
 \newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{#1}}
 \newcommand{\WarningTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{#1}}}}
 \usepackage{longtable,booktabs}
+\usepackage{needspace}
 % Fix footnotes in tables (requires footnote package)
 \IfFileExists{footnote.sty}{\usepackage{footnote}\makesavenoteenv{longtable}}{}
 \setlength{\emergencystretch}{3em}  % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \setcounter{secnumdepth}{0}
+% Mantém títulos junto do primeiro bloco de conteúdo, evitando títulos órfãos.
+\let\oldsection\section
+\renewcommand{\section}{\Needspace{14\baselineskip}\oldsection}
+\let\oldsubsection\subsection
+\renewcommand{\subsection}{\Needspace{12\baselineskip}\oldsubsection}
+\let\oldsubsubsection\subsubsection
+\renewcommand{\subsubsection}{\Needspace{10\baselineskip}\oldsubsubsection}
 % Redefines (sub)paragraphs to behave more like sections
 \ifx\paragraph\undefined\else
 \let\oldparagraph\paragraph
-\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\renewcommand{\paragraph}[1]{\Needspace{7\baselineskip}\oldparagraph{#1}\mbox{}}
 \fi
 \ifx\subparagraph\undefined\else
 \let\oldsubparagraph\subparagraph
-\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\renewcommand{\subparagraph}[1]{\Needspace{6\baselineskip}\oldsubparagraph{#1}\mbox{}}
 \fi
 
 % set default figure placement to htbp
@@ -107,6 +115,8 @@
   \usepackage{polyglossia}
   \setmainlanguage[]{brazil}
 \fi
+\usepackage[backend=biber,style=abnt,sorting=nyt]{biblatex}
+\addbibresource{references.bib}
 
 \title{CabotageLens: sistema computacional auditável para comparação porta a
 porta entre rodovia e cabotagem no Brasil}
@@ -115,12 +125,9 @@ porta entre rodovia e cabotagem no Brasil}
 
 
 % -----------------------------------------------------------------------------
-% Fonte LaTeX preparada a partir de docs/tf_technical_article_draft.md.
-% O Markdown continua sendo a fonte de validação textual. Não edite os dois
-% arquivos de forma independente enquanto a validação estiver em andamento.
-% Compilação prevista: XeLaTeX. As chaves de citação permanecem visíveis no
-% corpo, como no Markdown; docs/references.bib permanece disponível para a
-% etapa posterior de normalização bibliográfica.
+% Fonte LaTeX da versão final do artigo técnico.
+% O Markdown homônimo mantém a versão em texto simples.
+% Compilação prevista: XeLaTeX com Biber.
 % -----------------------------------------------------------------------------
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
@@ -138,61 +145,48 @@ porta entre rodovia e cabotagem no Brasil}
   columns=fullflexible, backgroundcolor=\color{clgray}}
 \setlength{\emergencystretch}{2em}
 \setcounter{secnumdepth}{-\maxdimen}
+\setcounter{tocdepth}{4}
+\renewcommand{\contentsname}{Sumário}
+\renewcommand{\refname}{Referências}
 
 \begin{document}
 \maketitle
+\thispagestyle{empty}
+\clearpage
 
-\begin{quote}
-\textbf{Documento de validação textual.}
+\tableofcontents
+\clearpage
 
-Durante esta etapa, este Markdown concentra o conteúdo editável do
-artigo técnico. As revisões de texto devem ser feitas aqui. O
-\href{tf_technical_article.tex}{arquivo LaTeX} será sincronizado e
-compilado somente após a aprovação do conteúdo.
-\end{quote}
+\section*{Dicionário de termos}
+\addcontentsline{toc}{section}{Dicionário de termos}
 
-\textbf{Autor:} Felipe de Sá Proença
+\begin{longtable}{@{}p{0.28\linewidth}p{0.66\linewidth}@{}}
+\toprule
+\textbf{Termo ou sigla} & \textbf{Significado no estudo} \\
+\midrule
+\endhead
+ANP & Agência Nacional do Petróleo, Gás Natural e Biocombustíveis; publica os preços de Diesel S10 usados no cálculo de custo. \\
+ANTAQ & Agência Nacional de Transportes Aquaviários; fornece os registros observados de atracação e movimentação de carga. \\
+ANTT & Agência Nacional de Transportes Terrestres; publica os rendimentos rodoviários por número de eixos usados na estimativa de consumo. \\
+Cabotagem & Transporte aquaviário de cargas entre portos do mesmo país. \\
+CO\textsubscript{2}e & Dióxido de carbono equivalente; unidade que expressa emissões de gases de efeito estufa em uma mesma base. \\
+EU MRV & Sistema europeu de Monitoramento, Reporte e Verificação; fornece indicadores anuais de atividade e consumo dos navios. \\
+\textit{First mile} e \textit{last mile} & Acessos rodoviários entre a origem e o porto de embarque, e entre o porto de desembarque e o destino, respectivamente. \\
+Geocodificação & Conversão de um endereço ou local informado em coordenadas geográficas. \\
+Distância de Haversine & Distância geométrica entre dois pontos calculada a partir de latitude e longitude; usada somente para selecionar os portos mais próximos. \\
+IMO & Número de identificação permanente atribuído pela Organização Marítima Internacional a cada navio. \\
+Intensidade marítima & Combustível associado ao transporte de uma tonelada por uma milha náutica, expresso em g/(t·nm). \\
+LCA & \textit{Life-cycle assessment}, ou avaliação de ciclo de vida; fronteira mais ampla que pode incluir veículos, infraestrutura e cadeia do combustível. \\
+P95 & Percentil 95; limite usado para identificar valores excepcionalmente altos em conjuntos de dados. \\
+Perna marítima & Trecho de cabotagem entre o porto de embarque e o porto de desembarque. \\
+TEU e TKU & Unidade equivalente a um contêiner de 20 pés e tonelada-quilômetro útil, respectivamente. \\
+Trabalho de transporte & Produto da carga a bordo pela distância em cada subtrecho, expresso em t·nm. \\
+TTW e WTW & \textit{Tank-to-wheel}, que considera a queima do combustível durante o transporte, e \textit{well-to-wheel}, que também inclui suas etapas anteriores. \\
+VLSFO & \textit{Very low sulphur fuel oil}, óleo combustível naval de baixíssimo teor de enxofre. \\
+\bottomrule
+\end{longtable}
 
-\textbf{Status:} em validação textual
-
-\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
-
-\hypertarget{resumo}{%
-\section{Resumo}\label{resumo}}
-
-A escolha entre transporte rodoviário direto e transporte com cabotagem
-não depende apenas da distância percorrida. No Brasil, uma rota com
-cabotagem pode reduzir parte das emissões no trecho principal, mas
-também inclui deslocamentos rodoviários até os portos, operações
-portuárias, espera, movimentação de carga e o percurso real realizado
-pelo navio. Quando esses elementos são ignorados, a comparação entre os
-modais fica incompleta e pode levar a conclusões pouco confiáveis.
-
-Este trabalho apresenta o CabotageLens, uma ferramenta desenvolvida para
-comparar, de forma mais assertiva, duas alternativas para a mesma
-origem, destino e carga: uma viagem totalmente rodoviária e uma cadeia
-logística formada por rodovia, cabotagem e rodovia. A ferramenta utiliza
-dados públicos de instituições públicas e privadas, combinando
-informações de rotas terrestres, movimentação portuária, viagens
-marítimas, consumo de combustível, emissões e custos modelados.
-
-A principal contribuição do sistema é tratar a operação logística como
-uma cadeia completa, e não como trechos isolados. Na perna marítima, o
-sistema reconstrói o percurso observado dos navios, considera cargas
-transportadas ao longo dos subtrechos e evita assumir previamente um
-corredor fixo. Na comparação ambiental, inclui pontos de emissão que
-normalmente ficam fora de análises simplificadas, como acessos
-terrestres aos portos e emissões associadas às etapas portuárias quando
-há dados disponíveis.
-
-Com isso, o CabotageLens fornece uma base mais transparente para avaliar
-custo e emissões de carbono entre alternativas rodoviárias e
-multimodais, permitindo que a decisão seja sustentada por dados
-rastreáveis, premissas explícitas e uma representação mais próxima da
-operação real.
-
-\textbf{Palavras-chave}: cabotagem; transporte rodoviário; transporte
-multimodal; ANTAQ; EU MRV; emissões operacionais; logística; Brasil.
+\clearpage
 
 \hypertarget{introduuxe7uxe3o}{%
 \section{1. Introdução}\label{introduuxe7uxe3o}}
@@ -210,8 +204,7 @@ imediata para transportar cargas no país, inclusive em trajetos longos.
 
 \emph{Figura 1 --- Distribuição da atividade de transporte de cargas no
 Brasil em 2015, medida em TKU. Fonte:
-\href{https://spbancarios.com.br/05/2018/brasil-e-dependente-do-transporte-rodoviario-de-cargas}{Sindicato
-dos Bancários de São Paulo, Osasco e Região (2018)}, com dados de 2015
+\textcite{spbancarios2018}, com dados de 2015
 do Plano Nacional de Logística, conforme informado pela publicação.}
 
 Além do papel predominante na matriz, o transporte rodoviário de cargas
@@ -220,13 +213,14 @@ de efeito estufa do setor. Por isso, políticas de transporte buscam
 transferir parte das viagens longas para modais mais eficientes. Tomemos
 de exemplo a
 \href{https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52011DC0144}{Comissão
-Europeia, 2011}, que no Livro Branco dos Transportes definiu a meta de
+Europeia}, que no Livro Branco dos Transportes definiu a meta de
 transferir, até 2030, 30\% das cargas rodoviárias transportadas por mais
-de 300 km para ferrovias ou vias aquaviárias e, até 2050, mais de 50\%.
+de 300 km para ferrovias ou vias aquaviárias e, até 2050, mais de 50\%
+\parencite{eupolicy2011}.
 Nesse contexto, a cabotagem --- o transporte marítimo entre portos do
 mesmo país utilizando a navegação pela costa nacional ou por vias
 interiores --- é uma alternativa possível para parte das cargas de longa
-distância no Brasil {[}icct2022{]}.
+distância no Brasil \parencite{icct2022}.
 
 Para saber se a cabotagem faz sentido em uma ligação específica, a
 comparação precisa ser porta a porta. Uma comparação porta a porta
@@ -240,8 +234,8 @@ de caminhão do porto de desembarque até o destino final. Por isso, a
 análise soma distância, consumo, emissões e custo de todas essas etapas,
 em vez de comparar apenas o trecho marítimo com a viagem rodoviária
 completa. Os portos escolhidos, as distâncias de acesso, a carga e as
-operações de transbordo podem mudar o resultado {[}shortsea2019;
-modalshiftreview2020{]}.
+operações de transbordo podem mudar o resultado
+\parencite{shortsea2019,modalshiftreview2020}.
 
 É para tornar essa comparação possível que foi desenvolvido o
 CabotageLens. O usuário informa a origem, o destino e a massa da carga,
@@ -259,11 +253,11 @@ passa a considerar a operação logística completa.
 metodológica}\label{revisuxe3o-da-literatura-e-fundamentauxe7uxe3o-metodoluxf3gica}}
 
 A literatura mostra que a cabotagem pode ser relevante em viagens
-longas, mas o resultado muda de uma ligação para outra {[}icct2022{]}.
+longas, mas o resultado muda de uma ligação para outra \parencite{icct2022}.
 Uma rota pode ter uma longa navegação e acessos rodoviários curtos.
 Outra pode exigir muitos quilômetros por estrada até o porto.
 Frequência, tempo, confiabilidade, estoque e disponibilidade do serviço
-também influenciam a decisão real {[}competitiveness2024{]}. O
+também influenciam a decisão real \parencite{competitiveness2024}. O
 CabotageLens calcula rotas, combustível, emissões operacionais e custo
 modelado do combustível. Ele não representa por completo todas as
 condições comerciais.
@@ -272,10 +266,10 @@ Estudos de \emph{short sea shipping} (navegação marítima de curta
 distância) também mostram que a substituição do transporte rodoviário
 pelo transporte marítimo não significa uma vantagem ambiental
 automática. O resultado depende do tipo de navio, de sua utilização, das
-distâncias e da carga à qual o consumo é atribuído {[}shortsea2019{]}.
+distâncias e da carga à qual o consumo é atribuído \parencite{shortsea2019}.
 Por isso, a unidade analisada deve ser a remessa completa, e não um
 navio e um caminhão considerados isoladamente
-{[}modalshiftreview2020{]}.
+\parencite{modalshiftreview2020}.
 
 Um princípio metodológico do estudo é dar preferência a dados públicos,
 oficiais, observados e auditáveis. A Agência Nacional de Transportes
@@ -287,8 +281,8 @@ atividade dos navios. Essas fontes permitem relacionar uma operação
 registrada no Brasil ao desempenho do navio identificado pelo número da
 Organização Marítima Internacional (IMO), uma identificação permanente
 da embarcação. Os campos utilizados, os arquivos de origem e a forma de
-reconstruir as viagens são apresentados na Seção 3.3 {[}antaq2025;
-eumrv2025{]}.
+reconstruir as viagens são apresentados na Seção 3.3
+\parencite{antaq2025,emsa2026}.
 
 O cálculo de emissões adota a fronteira operacional \emph{tank-to-wheel}
 (TTW, do tanque à roda), pois o objetivo é comparar as emissões
@@ -297,7 +291,7 @@ diesel, por exemplo, isso corresponde às emissões liberadas pelo
 escapamento durante a viagem. As fronteiras \emph{well-to-wheel} (WTW,
 do poço à roda) e de avaliação de ciclo de vida (\emph{life-cycle
 assessment}, LCA) ampliariam a análise para etapas que ocorrem antes ou
-além do deslocamento {[}decarb2024; maritimelca2024{]}, mas não foram
+além do deslocamento \parencite{decarb2024,maritimelca2024}, mas não foram
 adotadas no presente estudo.
 
 \textbf{Quadro 1 --- Fronteiras de emissão e aplicação ao caminhão a
@@ -340,8 +334,8 @@ infraestrutura.\strut
 \bottomrule
 \end{longtable}
 
-\emph{Fonte: elaboração própria com base em {[}decarb2024;
-maritimelca2024{]}.}
+\emph{Fonte: elaboração própria com base em
+\parencite{decarb2024,maritimelca2024}.}
 
 Além das emissões, o estudo delimita o custo e o serviço que serão
 comparados. O custo apresentado é uma estimativa do custo do combustível
@@ -368,7 +362,7 @@ Não incluído no cálculo\strut
 \begin{minipage}[t]{0.07\columnwidth}\raggedright
 Emissões\strut
 \end{minipage} & \begin{minipage}[t]{0.39\columnwidth}\raggedright
-Emissões operacionais TTW de CO₂e por remessa\strut
+Emissões operacionais TTW de CO\textsubscript{2}e por remessa\strut
 \end{minipage} & \begin{minipage}[t]{0.45\columnwidth}\raggedright
 WTW, LCA, fabricação de caminhões, navios e equipamentos portuários e
 inventário completo de poluentes locais\strut
@@ -432,7 +426,7 @@ a mesma remessa percorre três trechos:
 As operações de movimentação de carga nos dois terminais também entram
 no cálculo. Dessa forma, a comparação considera a cadeia completa, e não
 apenas o trecho marítimo frente à viagem rodoviária inteira
-{[}shortsea2019; competitiveness2024{]}.
+\parencite{shortsea2019,competitiveness2024}.
 
 Para estimar as operações portuárias, o sistema representa a remessa de
 14~t como 1~TEU (\emph{twenty-foot equivalent unit}, unidade equivalente
@@ -454,8 +448,8 @@ Massa de VLSFO (óleo combustível naval de baixo teor de enxofre) & \(M\)
 Massa da carga & \(m\) & t\tabularnewline
 Preço do combustível & \(P\) & R\(/L ou R\)/kg\tabularnewline
 Custo modelado do combustível & \(C\) & R\$\tabularnewline
-Emissão operacional & \(E\) & kg CO₂e\tabularnewline
-Fator de emissão & \(FE\) & kg CO₂e/L\tabularnewline
+Emissão operacional & \(E\) & kg CO\textsubscript{2}e\tabularnewline
+Fator de emissão & \(FE\) & kg CO\textsubscript{2}e/L\tabularnewline
 Eficiência do veículo & \(\eta\) & km/L\tabularnewline
 Intensidade marítima & \(I\) & g/(t·nm)\tabularnewline
 Trabalho de transporte & \(W\) & t·nm\tabularnewline
@@ -489,7 +483,7 @@ os rendimentos médios por número de eixos publicados pela
 oficiais foram obtidos na tabela da Política Nacional de Pisos Mínimos
 do Transporte Rodoviário de Cargas, disponibilizada no
 \href{https://anttlegis.antt.gov.br/action/UrlPublicasAction.php?acao=abrirAtoPublico\&cod_menu=9230\&cod_modulo=623\&num_ato=00000001\&seq_ato=ATT\&sgl_orgao=SUROC\%2FANTT\%2FMT\&sgl_tipo=POR\&vlr_ano=2025}{portal
-de legislação da ANTT (ANTTlegis)}. A tabela de referência adotada no
+de legislação da ANTT (ANTTlegis)} \parencite{antt2025}. A tabela de referência adotada no
 modelo associa a faixa de carga ao número de eixos e relaciona cada
 configuração à eficiência básica em quilômetros por litro (km/L). A
 seleção automática é uma regra de modelagem para estimar consumo; não é
@@ -555,7 +549,7 @@ rota rodoviária. O preço do Diesel S10 vem do levantamento semanal da
 \href{https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas}{Agência
 Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)}, agência
 federal que publica preços médios de combustíveis por Unidade da
-Federação (UF). O sistema sempre busca os dados mais recentes para a
+Federação (UF) \parencite{anp2026}. O sistema sempre busca os dados mais recentes para a
 comparação.
 
 Nas rotas interestaduais, o preço adotado é a média aritmética entre o
@@ -613,9 +607,9 @@ As emissões da alternativa rodoviária são calculadas a partir do diesel
 consumido na Seção~3.2.1. A fronteira adotada é \emph{tank-to-wheel}
 (TTW, do tanque à roda): ela considera somente as emissões geradas pela
 queima do combustível durante o transporte. O sistema aplica o fator
-2,68~kg~CO₂e por litro de diesel, baseado nas Diretrizes de 2006 do
+2,68~kg~CO\textsubscript{2}e por litro de diesel, baseado nas Diretrizes de 2006 do
 Painel Intergovernamental sobre Mudanças Climáticas (IPCC)
-{[}ipcc2006{]}. Costa et al. {[}competitiveness2024{]} é a referência
+\parencite{ipcc2006}. \textcite{competitiveness2024} é a referência
 brasileira usada para manter essa estimativa na fronteira TTW, sem
 incluir a produção, o refino ou a distribuição do combustível.
 
@@ -628,8 +622,8 @@ E_{\mathrm{rod}}
 \]
 
 Nessa expressão, \(E_{\mathrm{rod}}\) é a emissão operacional da rota,
-em kg~CO₂e; \(V_{\mathrm{diesel,rod}}\) é o volume de diesel, em litros;
-e \(FE_{\mathrm{diesel}}\) é o fator de emissão, em kg~CO₂e/L. No
+em kg~CO\textsubscript{2}e; \(V_{\mathrm{diesel,rod}}\) é o volume de diesel, em litros;
+e \(FE_{\mathrm{diesel}}\) é o fator de emissão, em kg~CO\textsubscript{2}e/L. No
 exemplo São Paulo--Rio Branco, os 1.518,014~L estimados na Seção~3.2.1
 resultam em:
 
@@ -637,8 +631,8 @@ resultam em:
 \begin{aligned}
 E_{\mathrm{rod}}
 &=V_{\mathrm{diesel,rod}}\times FE_{\mathrm{diesel}}\\
-&=1.518{,}014\ \mathrm{L}\times2{,}68\ \text{kg CO₂e/L}\\
-&=4.068{,}28\ \text{kg CO₂e}.
+&=1.518{,}014\ \mathrm{L}\times2{,}68\ \text{kg CO\textsubscript{2}e/L}\\
+&=4.068{,}28\ \text{kg CO\textsubscript{2}e}.
 \end{aligned}
 \]
 
@@ -665,7 +659,7 @@ Item & Valor no exemplo\tabularnewline
 \textbf{Diesel consumido} & 1.518,014~L\tabularnewline
 \textbf{Preço do Diesel S10} & R\$~8,115/L\tabularnewline
 \textbf{Custo modelado do combustível} & R\$~12.318,68\tabularnewline
-\textbf{Emissões operacionais TTW} & 4.068,28~kg~CO₂e\tabularnewline
+\textbf{Emissões operacionais TTW} & 4.068,28~kg~CO\textsubscript{2}e\tabularnewline
 \bottomrule
 \end{longtable}
 
@@ -732,14 +726,14 @@ fatores de atividade no cenário adotado: o guindaste sobre pneus do
 pátio (\emph{rubber-tyred gantry}, RTG) e o caminhão que circula
 internamente no terminal. Estudos sobre carga e descarga em portos e
 sobre o uso energético de RTGs fundamentam a representação da operação
-por equipamento a seguir {[}shipops2022; rtg2017{]}.
+por equipamento a seguir \parencite{shipops2022,rtg2017}.
 
 O cálculo segue uma sequência simples: a carga informada é convertida em
 contêineres equivalentes a 20 pés (TEU); cada TEU gera uma quantidade
 definida de movimentos por equipamento; e cada movimento é convertido em
 litros de diesel. Os movimentos por contêiner e os consumos por
 movimento vêm do cenário de referência parametrizado com dados de Santos
-no estudo de Costa et al. {[}workbookdados{]}.
+\parencite{workbookdados}.
 
 O cenário sempre considera duas operações portuárias: uma no porto de
 embarque e outra no porto de desembarque. Como a mesma remessa passa
@@ -1043,9 +1037,12 @@ distância está em milhas náuticas (nm):
   \node[clnode] (mU) at (5.10cm,-0.00cm) {Suape};
   \node[clnode] (mP) at (10.20cm,-0.00cm) {Pecém};
   \node[clnode] (mM) at (15.30cm,-0.00cm) {Manaus};
-  \draw[clarrow] (mS) -- node[midway, above, align=center, font=\scriptsize] {1.259,179 nm\\Carga a bordo: 12.858,754 t} (mU);
-  \draw[clarrow] (mU) -- node[midway, above, align=center, font=\scriptsize] {507,806 nm\\Carga a bordo: 16.718,333 t} (mP);
-  \draw[clarrow] (mP) -- node[midway, above, align=center, font=\scriptsize] {1.185,594 nm\\Carga a bordo: 12.325,900 t} (mM);
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (2.55cm,1.45cm) {Distância: 1.259,179 nm\\Carga a bordo: 12.858,754 t};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (7.65cm,1.45cm) {Distância: 507,806 nm\\Carga a bordo: 16.718,333 t};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (12.75cm,1.45cm) {Distância: 1.185,594 nm\\Carga a bordo: 12.325,900 t};
+  \draw[clarrow] (mS) -- (mU);
+  \draw[clarrow] (mU) -- (mP);
+  \draw[clarrow] (mP) -- (mM);
 \end{tikzpicture}%
 }
 \end{center}
@@ -1087,7 +1084,7 @@ navio nessa base.
 
 Na viagem \texttt{voyage\_9612791\_00011}, o IMO 9612791 foi encontrado
 diretamente no EU MRV, com intensidade de
-\(7{,}43\ \mathrm{g/(t\cdot nm)}\) {[}eumrv2025{]}. A Tabela 6 mostra os
+\(7{,}43\ \mathrm{g/(t\cdot nm)}\) \parencite{emsa2026}. A Tabela 6 mostra os
 campos usados nessa correspondência.
 
 \textbf{Tabela 6 --- Dados do EU MRV usados para a viagem
@@ -1534,17 +1531,17 @@ Fator de emissão\strut
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Operações portuárias\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-Mesma base do IPCC (2006) {[}ipcc2006{]}.\strut
+Mesma base de \textcite{ipcc2006}.\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-2,68~kg~CO₂e/L de diesel\strut
+2,68~kg~CO\textsubscript{2}e/L de diesel\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Navegação\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-Costa et al. {[}competitiveness2024{]}: Resolução IMO
+\textcite{competitiveness2024}: Resolução IMO
 MEPC.391(81).\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-3,114~kg~CO₂e/kg de VLSFO\strut
+3,114~kg~CO\textsubscript{2}e/kg de VLSFO\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
@@ -1569,16 +1566,18 @@ operações portuárias, cada porto usa diretamente o preço do diesel na
 sua própria UF.
 
 O sistema também busca a cotação mais recente disponível do VLSFO na
-\href{https://shipandbunker.com/prices/br-brazil}{Ship \& Bunker}. Nesta
+\href{https://shipandbunker.com/prices/br-brazil}{Ship \& Bunker}
+\parencite{shipbunker2026}. Nesta
 execução, a cotação de 18 de julho de 2026 foi US\$~741,50/mt. A sigla
 \texttt{mt} significa \emph{metric tonne}, ou tonelada métrica,
 equivalente a 1.000~kg. A taxa de conversão USD/BRL também é sempre a
 mais recente: de R\$~5,141345 por US\$, obtida pela ferramenta
 \href{https://pypi.org/project/CurrencyConverter/}{CurrencyConverter} a
-partir de dados do Banco Central Europeu (BCE), o preço convertido foi
+partir de dados do Banco Central Europeu (BCE) \parencite{ecb2026}, o preço convertido foi
 R\$~3.812,31/mt, ou R\$~3,812/kg. A Tabela 8 resume as fontes, os
 valores de origem e os preços usados no exemplo.
 
+\Needspace{10\baselineskip}
 \textbf{Tabela 8 --- Preços de combustível usados no exemplo São
 Paulo--Rio Branco.}
 
@@ -1689,7 +1688,7 @@ São Paulo--Porto de Santos\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 R\$~260,76\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-100,41~kg~CO₂e\strut
+100,41~kg~CO\textsubscript{2}e\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.14\columnwidth}\raggedright
 Navegação\strut
@@ -1702,7 +1701,7 @@ Porto de Santos--Porto de Manaus\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 R\$~1.582,57\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.292,69~kg~CO₂e\strut
+1.292,69~kg~CO\textsubscript{2}e\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.14\columnwidth}\raggedright
 Operações portuárias\strut
@@ -1715,7 +1714,7 @@ Santos e Manaus\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 R\$~34,25\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-12,92~kg~CO₂e\strut
+12,92~kg~CO\textsubscript{2}e\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.14\columnwidth}\raggedright
 \emph{Last mile}\strut
@@ -1728,7 +1727,7 @@ Porto de Manaus--Rio Branco\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 R\$~5.041,08\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.635,60~kg~CO₂e\strut
+1.635,60~kg~CO\textsubscript{2}e\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.14\columnwidth}\raggedright
 \textbf{Total}\strut
@@ -1741,7 +1740,7 @@ R\$~5.041,08\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 \textbf{R\$~6.918,66}\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-\textbf{3.041,62~kg~CO₂e}\strut
+\textbf{3.041,62~kg~CO\textsubscript{2}e}\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
@@ -1783,11 +1782,11 @@ Distância percorrida\strut
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Emissões operacionais TTW\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.068,28~kg~CO₂e\strut
+4.068,28~kg~CO\textsubscript{2}e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.041,62~kg~CO₂e\strut
+3.041,62~kg~CO\textsubscript{2}e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-1.026,66~kg~CO₂e a menos (25,24\%).\strut
+1.026,66~kg~CO\textsubscript{2}e a menos (25,24\%).\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Custo modelado do combustível\strut
@@ -2018,7 +2017,7 @@ referência
 \texttt{Avenida\ Professor\ Luciano\ Gualberto,\ São\ Paulo,\ SP}. A
 consulta independente no Google Maps retornou as coordenadas latitude
 igual a −23,560017° e longitude igual a −46,727769°, apresentadas na
-Figura 3. Para o mesmo endereço, o motor de geocodificação retornou as
+Figura 3 \parencite{googlemaps2026}. Para o mesmo endereço, o motor de geocodificação retornou as
 coordenadas (−23,558808°; −46,730357°). A distância em linha reta entre
 os dois pontos é aproximadamente 296~m.
 
@@ -2070,18 +2069,20 @@ Seção 4.2, o ORS recebeu as coordenadas de São Paulo (latitude
 \begin{center}
 \resizebox{\linewidth}{!}{%
 \begin{tikzpicture}
-  \node[clnode] (mA) at (-5.20cm,0.00cm) {Origem: São Paulo, SP};
-  \node[clnode] (mR) at (-5.20cm,-3.00cm) {Geocodificação};
-  \node[clnode] (mB) at (0.00cm,0.00cm) {Destino: Rio Branco, AC};
-  \node[clnode] (mS) at (0.00cm,-3.00cm) {Geocodificação};
-  \node[clnode] (mC) at (-2.60cm,-6.00cm) {Latitude: −23,550520°\\Longitude: −46,633308°};
-  \node[clnode] (mT) at (5.20cm,0.00cm) {Consulta de rota\\ORS/LocationIQ};
-  \node[clnode] (mD) at (2.60cm,-6.00cm) {Latitude: −9,989637°\\Longitude: −67,822462°};
-  \node[clnode] (mE) at (5.20cm,-3.00cm) {Distância rodoviária:\\3.491,431 km};
+  \node[clnode] (mA) at (-5.50cm,2.00cm) {Origem: São Paulo, SP};
+  \node[clnode] (mR) at (-5.50cm,0.00cm) {Geocodificação};
+  \node[clnode] (mC) at (-5.50cm,-2.30cm) {Latitude: −23,550520°\\Longitude: −46,633308°};
+  \node[clnode] (mB) at (-0.50cm,2.00cm) {Destino: Rio Branco, AC};
+  \node[clnode] (mS) at (-0.50cm,0.00cm) {Geocodificação};
+  \node[clnode] (mD) at (-0.50cm,-2.30cm) {Latitude: −9,989637°\\Longitude: −67,822462°};
+  \node[clnode] (mT) at (4.20cm,-4.30cm) {Consulta de rota\\ORS/LocationIQ};
+  \node[clnode] (mE) at (8.70cm,-4.30cm) {Distância rodoviária:\\3.491,431 km};
   \draw[clarrow] (mA) -- (mR);
   \draw[clarrow] (mB) -- (mS);
   \draw[clarrow] (mR) -- (mC);
   \draw[clarrow] (mS) -- (mD);
+  \draw[clarrow] (mC) -- (mT);
+  \draw[clarrow] (mD) -- (mT);
   \draw[clarrow] (mT) -- (mE);
 \end{tikzpicture}%
 }
@@ -2131,57 +2132,19 @@ indisponível.
 \textbf{Tabela 12 --- Recorte bruto da planilha semanal da ANP para
 \texttt{OLEO\ DIESEL\ S10}.}
 
-\begin{longtable}[]{@{}llllllr@{}}
+{\scriptsize
+\renewcommand{\arraystretch}{0.78}
+\begin{tabular}{@{}p{0.095\linewidth}p{0.095\linewidth}p{0.09\linewidth}p{0.14\linewidth}p{0.15\linewidth}p{0.13\linewidth}p{0.14\linewidth}@{}}
 \toprule
-\begin{minipage}[b]{0.12\columnwidth}\raggedright
-DATA INICIAL\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedright
-DATA FINAL\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedright
-REGIÃO\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedright
-ESTADO\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedright
-PRODUTO\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedright
-UNIDADE DE MEDIDA\strut
-\end{minipage} & \begin{minipage}[b]{0.12\columnwidth}\raggedleft
-PREÇO MÉDIO REVENDA\strut
-\end{minipage}\tabularnewline
+\textbf{DATA\newline INICIAL} & \textbf{DATA\newline FINAL} & \textbf{REGIÃO} & \textbf{ESTADO} & \textbf{PRODUTO} & \textbf{UNIDADE\newline DE MEDIDA} & \raggedleft\textbf{PREÇO MÉDIO\newline REVENDA}\tabularnewline
 \midrule
-\endhead
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-07-12-26\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-07-18-26\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-SUDESTE\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-SAO PAULO\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-OLEO DIESEL S10\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-R\(/l | 6.96 | | 07-12-26 | 07-18-26 | NORTE | ACRE | OLEO DIESEL S10 | R\)/l\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-9.27\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.12\columnwidth}\raggedright
-07-12-26\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-07-18-26\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-NORTE\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-AMAZONAS\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-OLEO DIESEL S10\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedright
-R\(/l | 7.25 | | 07-12-26 | 07-18-26 | NORDESTE | PERNAMBUCO | OLEO DIESEL S10 | R\)/l\strut
-\end{minipage} & \begin{minipage}[t]{0.12\columnwidth}\raggedleft
-6.88\strut
-\end{minipage}\tabularnewline
+07-12-26 & 07-18-26 & SUDESTE & SAO PAULO & OLEO DIESEL S10 & R\$/l & \raggedleft 6.96\tabularnewline
+07-12-26 & 07-18-26 & NORTE & ACRE & OLEO DIESEL S10 & R\$/l & \raggedleft 9.27\tabularnewline
+07-12-26 & 07-18-26 & NORTE & AMAZONAS & OLEO DIESEL S10 & R\$/l & \raggedleft 7.25\tabularnewline
+07-12-26 & 07-18-26 & NORDESTE & PERNAMBUCO & OLEO DIESEL S10 & R\$/l & \raggedleft 6.88\tabularnewline
 \bottomrule
-\end{longtable}
+\end{tabular}
+}
 
 \emph{Fonte: planilha semanal de preços de revenda por estado da ANP,
 aba \texttt{ESTADOS\ -\ DESDE\ 30.12.2012}, produto
@@ -2219,26 +2182,28 @@ No exemplo São Paulo--Rio Branco, uma remessa de 14~t percorre
 3.491,431~km. O sistema seleciona uma carreta de cinco eixos, com
 eficiência de 2,3~km/L, e estima 1.518,014~L de Diesel S10. Com o preço
 e o fator de emissão definidos nas Seções~3.2.2 e 3.2.3, o resultado é
-R\$~12.318,68 de custo modelado do combustível e 4.068,28~kg~CO₂e de
+R\$~12.318,68 de custo modelado do combustível e 4.068,28~kg~CO\textsubscript{2}e de
 emissões operacionais TTW.
 
 \begin{center}
 \resizebox{\linewidth}{!}{%
 \begin{tikzpicture}
-  \node[clnode] (mP) at (0.00cm,2.80cm) {Preço do Diesel\\R\$ 8,115/L};
-  \node[clnode] (mF) at (5.10cm,2.80cm) {Custo modelado do combustível\\R\$ 12.318,68};
-  \node[clnode] (mA) at (0.00cm,-0.00cm) {Carga, Origem e Destino\\14t de São Paulo até Rio Branco};
-  \node[clnode] (mB) at (5.10cm,-0.00cm) {Geocodificação};
-  \node[clnode] (mC) at (10.20cm,1.40cm) {Distância rodoviária\\3.491,431 km};
-  \node[clnode] (mD) at (5.10cm,-2.80cm) {Rendimento do veículo\\2,3 km/L de Diesel};
-  \node[clnode] (mE) at (10.20cm,-1.40cm) {Consumo de Diesel S10\\1.518,014 L};
-  \node[clnode] (mM) at (0.00cm,-2.80cm) {Fator de emissão do Diesel\\2,68 kg CO₂e/L};
-  \node[clnode] (mG) at (15.30cm,-0.00cm) {Emissões TTW\\4.068,28 kg CO₂e};
-  \draw[clarrow] (mP) -- (mF);
+  \node[clnode] (mA) at (0.00cm,0.00cm) {Carga, origem e destino\\14t de São Paulo até Rio Branco};
+  \node[clnode] (mB) at (4.60cm,1.70cm) {Geocodificação};
+  \node[clnode] (mC) at (9.20cm,1.70cm) {Distância rodoviária\\3.491,431 km};
+  \node[clnode] (mD) at (4.60cm,-1.70cm) {Rendimento do veículo\\2,3 km/L de Diesel};
+  \node[clnode] (mE) at (10.00cm,0.00cm) {Consumo de Diesel S10\\1.518,014 L};
+  \node[clnode] (mP) at (15.00cm,3.00cm) {Preço do Diesel\\R\$ 8,115/L};
+  \node[clnode] (mF) at (15.00cm,1.30cm) {Custo modelado do combustível\\R\$ 12.318,68};
+  \node[clnode] (mM) at (15.00cm,-3.00cm) {Fator de emissão do Diesel\\2,68 kg CO\textsubscript{2}e/L};
+  \node[clnode] (mG) at (15.00cm,-1.30cm) {Emissões TTW\\4.068,28 kg CO\textsubscript{2}e};
   \draw[clarrow] (mA) -- (mB);
   \draw[clarrow] (mA) -- (mD);
   \draw[clarrow] (mB) -- (mC);
+  \draw[clarrow] (mC) -- (mE);
   \draw[clarrow] (mD) -- (mE);
+  \draw[clarrow] (mE) -- (mF);
+  \draw[clarrow] (mP) -- (mF);
   \draw[clarrow] (mE) -- (mG);
   \draw[clarrow] (mM) -- (mG);
 \end{tikzpicture}%
@@ -2301,7 +2266,8 @@ com dados observados.
 
 Quando a matriz não apresenta uma distância entre dois portos, a
 implementação usa como fallback os dados de distância marítima publicados
-pelo \href{https://www.geografos.com.br/}{Geógrafos}.
+pelo \href{https://www.geografos.com.br/}{Geógrafos}
+\parencite{geografos2026}.
 
 \hypertarget{dados-da-antaq}{%
 \paragraph{4.4.2.1 Dados da ANTAQ}\label{dados-da-antaq}}
@@ -2400,17 +2366,19 @@ também é salva no Supabase Storage como o arquivo JSON
 \begin{center}
 \resizebox{\linewidth}{!}{%
 \begin{tikzpicture}
-  \node[clnode] (mA) at (0.00cm,1.40cm) {Carga e Atracação\\ANTAQ};
-  \node[clnode] (mB) at (5.10cm,1.40cm) {Reconstrução das viagens\\e da carga a bordo};
-  \node[clnode] (mC) at (10.20cm,-0.00cm) {Recortes completos\\entre portos ordenados};
-  \node[clnode] (mD) at (0.00cm,-1.40cm) {EU MRV\\intensidade por IMO};
-  \node[clnode] (mE) at (5.10cm,-1.40cm) {Intensidade individual\\ou referência robusta};
-  \node[clnode] (mF) at (15.30cm,-0.00cm) {SeaMatrix\\distância, intensidade e cobertura};
+  \node[clnode] (mA) at (0.00cm,1.70cm) {Carga e Atracação\\ANTAQ};
+  \node[clnode] (mB) at (5.10cm,1.70cm) {Reconstrução das viagens\\e da carga a bordo};
+  \node[clnode] (mC) at (10.20cm,1.70cm) {Recortes completos\\entre portos ordenados};
+  \node[clnode] (mD) at (0.00cm,-1.70cm) {EU MRV\\intensidade por IMO};
+  \node[clnode] (mE) at (5.10cm,-1.70cm) {Intensidade individual\\ou referência robusta};
+  \node[clnode] (mT) at (10.20cm,-1.70cm) {Trabalho de transporte\\e consumo por recorte};
+  \node[clnode] (mF) at (15.30cm,-1.70cm) {SeaMatrix\\distância, intensidade\\e cobertura};
   \draw[clarrow] (mA) -- (mB);
   \draw[clarrow] (mB) -- (mC);
   \draw[clarrow] (mD) -- (mE);
-  \draw[clarrow] (mC) -- (mF);
-  \draw[clarrow] (mE) -- (mF);
+  \draw[clarrow] (mC) -- (mT);
+  \draw[clarrow] (mE) -- (mT);
+  \draw[clarrow] (mT) -- (mF);
 \end{tikzpicture}%
 }
 \end{center}
@@ -2455,6 +2423,7 @@ Manaus & 5.867,445 & 6.585,233 & 5.560,801 & 5.768,673 &
 preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em
 19 de julho de 2026.}
 
+\Needspace{14\baselineskip}
 A Tabela 14 apresenta a intensidade média, ponderada pelo trabalho de
 transporte.
 
@@ -2623,7 +2592,7 @@ portuárias}\label{operauxe7uxf5es-portuuxe1rias-1}}
 A rotina de operações portuárias recebe a carga, os dois portos e o
 número de escalas para realizar o procedimento descrito na Seção 3.3.3.
 O resultado da execução foi 4,820~L de diesel para as operações
-quantificadas, equivalentes a R\$~34,25 e 12,92~kg~CO₂e.
+quantificadas, equivalentes a R\$~34,25 e 12,92~kg~CO\textsubscript{2}e.
 
 \hypertarget{consulta-da-ligauxe7uxe3o-maruxedtima}{%
 \subsection{4.5 Consulta da ligação
@@ -2761,11 +2730,11 @@ R\$~5.400,02 a menos (43,84\%)\strut
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Emissões operacionais TTW\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-4.068,28~kg~CO₂e\strut
+4.068,28~kg~CO\textsubscript{2}e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.041,62~kg~CO₂e\strut
+3.041,62~kg~CO\textsubscript{2}e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-1.026,66~kg~CO₂e a menos (25,24\%)\strut
+1.026,66~kg~CO\textsubscript{2}e a menos (25,24\%)\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
@@ -2971,7 +2940,7 @@ para produzir uma equivalência artificial.
 emissões da
 Aliança}}{5.1 Calculadora de emissões da Aliança}}\label{calculadora-de-emissuxf5es-da-alianuxe7a}}
 
-Na calculadora da Aliança, o cenário informado foi São
+Na calculadora da Aliança \parencite{alianca2026}, o cenário informado foi São
 Paulo--Abaetetuba, com um contêiner seco de 40 pés e 20 t de carga. O
 mesmo cenário foi executado no CabotageLens com 20 t e 2 TEU,
 equivalentes a um contêiner de 40 pés. As duas alternativas multimodais
@@ -3001,11 +2970,11 @@ Etapa\strut
 \end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
 Aliança: distância\strut
 \end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-Aliança: CO₂ TTW\strut
+Aliança: CO\textsubscript{2} TTW\strut
 \end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
 CabotageLens: distância\strut
 \end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-CabotageLens: CO₂e TTW\strut
+CabotageLens: CO\textsubscript{2}e TTW\strut
 \end{minipage}\tabularnewline
 \midrule
 \endhead
@@ -3108,7 +3077,7 @@ A distância total multimodal soma apenas os dois acessos rodoviários e a
 etapa marítima; as operações portuárias não acrescentam distância. A
 Aliança não as separa: os três trechos exibidos pela ferramenta somam
 exatamente o total multimodal de 0,975 t. No CabotageLens, essas
-operações aparecem como uma etapa própria, com 0,026 t de CO₂e TTW, e
+operações aparecem como uma etapa própria, com 0,026 t de CO\textsubscript{2}e TTW, e
 são incluídas no total. A tabela compara apenas TTW, que é o escopo
 adotado pelo CabotageLens; a calculadora da Aliança também exibe valores
 WTW, mas eles não são usados nesta comparação.
@@ -3126,7 +3095,7 @@ sinal coerente com as emissões totais mostradas.
 emissões da
 Log-In}}{5.2 Calculadora de emissões da Log-In}}\label{calculadora-de-emissuxf5es-da-log-in}}
 
-A captura da calculadora da Log-In refere-se ao cenário São Paulo--Rio
+A captura da calculadora da Log-In \parencite{login2026} refere-se ao cenário São Paulo--Rio
 Branco e mostra uma alternativa rodoviária de 3.032 km. A alternativa
 por cabotagem é composta por três trechos de 89,9 km, 6.112 km e 1.394
 km, compatíveis com a estrutura São Paulo--Santos--Manaus--Rio Branco. O
@@ -3153,7 +3122,7 @@ Log-In: emissões de GEE\strut
 \end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
 CabotageLens: distância\strut
 \end{minipage} & \begin{minipage}[b]{0.17\columnwidth}\raggedleft
-CabotageLens: CO₂e TTW\strut
+CabotageLens: CO\textsubscript{2}e TTW\strut
 \end{minipage}\tabularnewline
 \midrule
 \endhead
@@ -3214,7 +3183,8 @@ uma equivalência direta entre os dois sistemas.
 de frete da
 ANTT}}{5.3 Calculadora de piso mínimo de frete da ANTT}}\label{calculadora-de-piso-muxednimo-de-frete-da-antt}}
 
-Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o
+Na calculadora da Agência Nacional de Transportes Terrestres (ANTT)
+\parencite{anttfrete2026}, o
 cenário foi informado como carga conteinerizada, cinco eixos e 3.491 km.
 O resultado oficial exibido foi R\$ 21.308,12. Para a mesma ligação São
 Paulo--Rio Branco, o CabotageLens calculou 3.491,431 km, selecionou
@@ -3275,6 +3245,7 @@ de grandeza, pois o piso mínimo também reúne outras parcelas do frete
 além do combustível. Assim, os valores são apresentados lado a lado para
 contextualização, e não como cotações equivalentes.
 
+\clearpage
 \hypertarget{conclusuxf5es}{%
 \section{6. Conclusões}\label{conclusuxf5es}}
 
@@ -3291,7 +3262,7 @@ comparar apenas o trecho marítimo com uma viagem rodoviária completa.
 
 No exemplo de uma remessa de 14~t entre São Paulo e Rio Branco, a
 alternativa multimodal percorre 117,24\% mais quilômetros do que a
-rodoviária direta. Mesmo assim, emite 25,24\% menos CO₂e operacional e
+rodoviária direta. Mesmo assim, emite 25,24\% menos CO\textsubscript{2}e operacional e
 apresenta custo modelado do combustível 43,84\% menor. O resultado
 mostra que a distância total, isoladamente, não é suficiente para
 comparar os modais: os acessos rodoviários, as operações portuárias e a
@@ -3356,7 +3327,7 @@ Os principais limites de uso são:
   registrada confirma uma sequência observada, mas não garante
   frequência futura, espaço disponível ou serviço comercial regular.
 \item
-  \textbf{Escopo do resultado:} as emissões são operacionais TTW de CO₂e
+  \textbf{Escopo do resultado:} as emissões são operacionais TTW de CO\textsubscript{2}e
   e os valores monetários representam o custo modelado do combustível.
   Eles não representam emissões WTW, ciclo de vida completo, tarifa de
   frete, contrato de armador ou análise comercial completa.
@@ -3366,17 +3337,12 @@ Esses limites não anulam a comparação; eles definem a forma correta de
 utilizá-la. Um resultado favorável à cabotagem em determinado cenário
 não demonstra superioridade universal, mas oferece uma base explícita e
 verificável para a análise inicial de alternativas logísticas
-{[}competitiveness2024; modalshiftreview2020{]}.
+\parencite{competitiveness2024,modalshiftreview2020}.
 
-\hypertarget{referuxeancias}{%
-\section{Referências}\label{referuxeancias}}
-
-As citações permanecem identificadas por suas chaves, entre colchetes,
-para facilitar a validação e a posterior sincronização com o LaTeX. Os
-dados bibliográficos completos estão em
-\href{references.bib}{\texttt{docs/references.bib}}, e os limites de uso
-de cada fonte estão registrados no
-\href{tf_support/writing/tf_literature_citation_map.md}{mapa de citações
-da literatura}.
+\clearpage
+\begingroup
+\small
+\printbibliography[heading=bibintoc,title={Referências}]
+\endgroup
 
 \end{document}
