@@ -259,11 +259,11 @@ O cenário sempre considera duas operações portuárias: uma no porto de embarq
 $$
 V_{\mathrm{diesel,porto}}
 =2\times N_{\mathrm{TEU}}\times
-\left(a_{\mathrm{RTG}}\,c_{\mathrm{RTG}}
-+a_{\mathrm{caminhao}}\,c_{\mathrm{caminhao}}\right).
+\left(a_{\mathrm{RTG}}\times\,c_{\mathrm{RTG}}
++a_{\mathrm{caminhao}}\times\,c_{\mathrm{caminhao}}\right).
 $$
 
-Nessa expressão, $V_{\mathrm{diesel,porto}}$ é o volume total de diesel das duas operações portuárias, em litros; $N_{\mathrm{TEU}}$ é a quantidade de TEUs da remessa; $a$ é o número de movimentos por TEU; e $c$ é o consumo de diesel, em litros por movimento. O primeiro termo ($a_{\mathrm{RTG}}\,c_{\mathrm{RTG}}$) calcula o diesel do RTG e o segundo calcula o diesel do caminhão interno. A multiplicação por 2 leva esse consumo para os dois terminais. O resultado é usado posteriormente no cálculo das emissões operacionais e do custo modelado do combustível.
+Nessa expressão, $V_{\mathrm{diesel,porto}}$ é o volume total de diesel das duas operações portuárias, em litros; $N_{\mathrm{TEU}}$ é a quantidade de TEUs da remessa; $a$ é o número de movimentos por TEU; e $c$ é o consumo de diesel, em litros por movimento. O primeiro termo ($a_{\mathrm{RTG}}\times\,c_{\mathrm{RTG}}$) calcula o diesel do RTG e o segundo ($a_{\mathrm{caminhao}}\times\,c_{\mathrm{caminhao}}$) calcula o diesel do caminhão interno. A multiplicação por 2 leva esse consumo para os dois terminais. O resultado é usado posteriormente no cálculo das emissões operacionais e do custo modelado do combustível.
 
 No exemplo, a remessa de 14 t equivale a 1 TEU. O RTG realiza quatro movimentos por contêiner, com consumo de 0,355148 L por movimento, e o caminhão interno realiza dois movimentos, com consumo de 0,494671 L por movimento. Aplicando diretamente a fórmula:
 
@@ -307,7 +307,7 @@ Para saber quanto foi movimentado no porto, o sistema reúne as linhas com o mes
 | `Tipo Navegação` | Mantém somente os registros de cabotagem. | `Cabotagem` nas quatro escalas. |
 | `TEU` | Ajuda a identificar a carga conteinerizada e registra a quantidade de contêineres em unidade equivalente a 20 pés. | **Desembarcados / embarcados:** Santos: 0/866; Suape: 804/881; Pecém: 541/187; Manaus: 1.639/621. |
 | `Natureza da Carga` e `Carga Geral Acondicionamento` | Complementam a identificação da carga conteinerizada quando necessário. | `Carga Conteinerizada` e `Conteinerizada` em todas as linhas da viagem. |
-| `VLPesoCargaBruta` | Informa a massa embarcada ou desembarcada, em toneladas. | **Desembarcados / embarcados:**</br>Santos: 0/9.881,860;</br>Suape: 8.002,620/11.862,199;</br>Pecém: 7.624,347/3.231,914;</br>Manaus: 19.897,560/7.571,660 t. |
+| `VLPesoCargaBruta` | Informa a massa embarcada ou desembarcada, em toneladas. | **Desembarcados / embarcados:**<br>Santos: 0 / 9.881,860 t;<br>Suape: 8.002,620 / 11.862,199 t;<br>Pecém: 7.624,347 / 3.231,914 t;<br>Manaus: 19.897,560 / 7.571,660 t. |
 | `Sentido` | Indica se a massa foi embarcada ou desembarcada na escala. | `Desembarcados` e `Embarcados`. |
 | `Origem` e `Destino` | Preservam os códigos dos portos de origem e destino declarados para cada movimento de carga; não definem, sozinhos, o itinerário completo do navio. | Santos; Suape; Pecém; e Manaus. |
 
@@ -625,7 +625,7 @@ flowchart TB
     B["av prof Luciano Gualberto, SP"] --> O
     C["05508-010"] --> O
     D["av prof luciano galberto"] --> O
-    O -->R["Ponto resolvido:<br/>Latitude: -23,558808°<br/>Longitude: -46,730357°"]
+    O -->R["Ponto resolvido:<br/>Lat.: -23,558808°<br/>Long.: -46,730357°"]
 ```
 
 Após a geocodificação de um local, suas coordenadas são armazenadas no banco de dados Supabase/PostgreSQL. Se o mesmo ponto for usado novamente, o sistema reutiliza esse resultado em vez de realizar outra geocodificação.

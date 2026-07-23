@@ -742,18 +742,19 @@ pelos dois terminais, a fórmula já usa a multiplicação por 2:
 \[
 V_{\mathrm{diesel,porto}}
 =2\times N_{\mathrm{TEU}}\times
-\left(a_{\mathrm{RTG}}\,c_{\mathrm{RTG}}
-+a_{\mathrm{caminhao}}\,c_{\mathrm{caminhao}}\right).
+\left(a_{\mathrm{RTG}}\times\,c_{\mathrm{RTG}}
++a_{\mathrm{caminhao}}\times\,c_{\mathrm{caminhao}}\right).
 \]
 
 Nessa expressão, \(V_{\mathrm{diesel,porto}}\) é o volume total de
 diesel das duas operações portuárias, em litros; \(N_{\mathrm{TEU}}\) é
 a quantidade de TEUs da remessa; \(a\) é o número de movimentos por TEU;
 e \(c\) é o consumo de diesel, em litros por movimento. O primeiro termo
-(\(a_{\mathrm{RTG}}\,c_{\mathrm{RTG}}\)) calcula o diesel do RTG e o
-segundo calcula o diesel do caminhão interno. A multiplicação por 2 leva
-esse consumo para os dois terminais. O resultado é usado posteriormente
-no cálculo das emissões operacionais e do custo modelado do combustível.
+(\(a_{\mathrm{RTG}}\times\,c_{\mathrm{RTG}}\)) calcula o diesel do RTG e
+o segundo (\(a_{\mathrm{caminhao}}\times\,c_{\mathrm{caminhao}}\))
+calcula o diesel do caminhão interno. A multiplicação por 2 leva esse
+consumo para os dois terminais. O resultado é usado posteriormente no
+cálculo das emissões operacionais e do custo modelado do combustível.
 
 No exemplo, a remessa de 14~t equivale a 1~TEU. O RTG realiza quatro
 movimentos por contêiner, com consumo de 0,355148~L por movimento, e o
@@ -889,9 +890,11 @@ linhas da viagem.\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Informa a massa embarcada ou desembarcada, em toneladas.\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-\textbf{Desembarcados / embarcados:}Santos: 0/9.881,860;Suape:
-8.002,620/11.862,199;Pecém: 7.624,347/3.231,914;Manaus:
-19.897,560/7.571,660~t.\strut
+\textbf{Desembarcados / embarcados:}\newline
+Santos: 0 / 9.881,860 t;\newline
+Suape: 8.002,620 / 11.862,199 t;\newline
+Pecém: 7.624,347 / 3.231,914 t;\newline
+Manaus: 19.897,560 / 7.571,660 t.\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 \texttt{Sentido}\strut
@@ -1037,9 +1040,9 @@ distância está em milhas náuticas (nm):
   \node[clnode] (mU) at (5.10cm,-0.00cm) {Suape};
   \node[clnode] (mP) at (10.20cm,-0.00cm) {Pecém};
   \node[clnode] (mM) at (15.30cm,-0.00cm) {Manaus};
-  \node[align=center, text width=4.30cm, font=\scriptsize] at (2.55cm,1.45cm) {Distância: 1.259,179 nm\\Carga a bordo: 12.858,754 t};
-  \node[align=center, text width=4.30cm, font=\scriptsize] at (7.65cm,1.45cm) {Distância: 507,806 nm\\Carga a bordo: 16.718,333 t};
-  \node[align=center, text width=4.30cm, font=\scriptsize] at (12.75cm,1.45cm) {Distância: 1.185,594 nm\\Carga a bordo: 12.325,900 t};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (2.55cm,1.45cm) {1.259,179 nm\\Carga a bordo: 12.858,754 t};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (7.65cm,1.45cm) {507,806 nm\\Carga a bordo: 16.718,333 t};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (12.75cm,1.45cm) {1.185,594 nm\\Carga a bordo: 12.325,900 t};
   \draw[clarrow] (mS) -- (mU);
   \draw[clarrow] (mU) -- (mP);
   \draw[clarrow] (mP) -- (mM);
@@ -1531,7 +1534,7 @@ Fator de emissão\strut
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Operações portuárias\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-Mesma base de \textcite{ipcc2006}.\strut
+\textcite{ipcc2006}.\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
 2,68~kg~CO\textsubscript{2}e/L de diesel\strut
 \end{minipage}\tabularnewline
@@ -1992,7 +1995,7 @@ local:
   \node[clnode] (mB) at (-2.60cm,0.00cm) {av prof Luciano Gualberto, SP};
   \node[clnode] (mC) at (2.60cm,0.00cm) {05508-010};
   \node[clnode] (mD) at (7.80cm,0.00cm) {av prof luciano galberto};
-  \node[clnode] (mR) at (0.00cm,-6.00cm) {Ponto resolvido:\\Latitude: -23,558808°\\Longitude: -46,730357°};
+  \node[clnode] (mR) at (0.00cm,-6.00cm) {Ponto resolvido:\\Lat.: -23,558808°\\Long.: -46,730357°};
   \draw[clarrow] (mA) -- (mO);
   \draw[clarrow] (mB) -- (mO);
   \draw[clarrow] (mC) -- (mO);
@@ -2355,9 +2358,10 @@ matricial}\label{compilauxe7uxe3o-na-estrutura-matricial}}
 
 Os resultados são reunidos na estrutura \texttt{SeaMatrix}. Para cada
 par ordenado de portos, ela mantém a distância representativa dos
-recortes completos, ponderada pela carga média a bordo e, a intensidade,
-ponderada pelo trabalho de transporte. Também registra a quantidade de
-recortes elegíveis e a procedência dos dados. A matriz é direcional:
+recortes completos após a verificação de P95, ponderada pela carga média
+a bordo, e a intensidade, ponderada pelo trabalho de transporte de todos
+os recortes elegíveis. Também registra a quantidade de recortes, o limite
+P95 quando aplicável e a procedência dos dados. A matriz é direcional:
 Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem
 viagens, cargas e distâncias observadas diferentes. A \texttt{SeaMatrix}
 também é salva no Supabase Storage como o arquivo JSON
@@ -2464,12 +2468,12 @@ e os indicadores de cobertura apresentados nas seções anteriores.
 \FunctionTok{\{}
     \DataTypeTok{"Porto de Santos"}\FunctionTok{:} \FunctionTok{\{}
         \DataTypeTok{"Porto de Salvador"}\FunctionTok{:} \FunctionTok{\{}
-            \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{3092.510}\FunctionTok{,}
+            \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{2516.136}\FunctionTok{,}
             \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{9.605744}\FunctionTok{,}
             \ErrorTok{...}
         \FunctionTok{\},}
     \DataTypeTok{"Porto de Suape"}\FunctionTok{:} \FunctionTok{\{}
-        \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{3035.287}\FunctionTok{,}
+        \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{2912.073}\FunctionTok{,}
         \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{8.729368}\FunctionTok{,}
         \ErrorTok{...}
     \FunctionTok{\},}
@@ -3007,7 +3011,7 @@ Navegação: Santos--Vila do Conde\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 0,694 t\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-4.495,000 km*\strut
+4.495,000 km\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 0,918 t\strut
 \end{minipage}\tabularnewline
@@ -3058,20 +3062,12 @@ Acesso rodoviário final: Vila do Conde--Abaetetuba\strut
 \bottomrule
 \end{longtable}
 
-* No recorte atual da Agência Nacional de Transportes Aquaviários
-(ANTAQ), não há uma viagem observada entre Santos e Vila do Conde. A
-distância marítima usada nesta comparação é de 4.495 km, ou 2.427 milhas
-náuticas, conforme os dados publicados pelo
-\href{https://www.geografos.com.br/}{Geógrafos}. A intensidade de 6,07
-g/(t·nm) continua vindo da classe de navio \texttt{container\_feeder}.
-
 Na rodovia direta, as distâncias são próximas: 2.807 km na Aliança e
 2.835,762 km no CabotageLens. Na cadeia multimodal, a Aliança informa
 4.869 km para a navegação e 125 km para o acesso final, enquanto o
 CabotageLens usa 4.495 km e 33,950 km, respectivamente. A diferença
 restante decorre sobretudo do acesso final e da referência de distância
-adotada para cada porto. O CabotageLens registra que a distância marítima
-é externa e não a apresenta como uma viagem observada.
+adotada para cada porto.
 
 A distância total multimodal soma apenas os dois acessos rodoviários e a
 etapa marítima; as operações portuárias não acrescentam distância. A
@@ -3301,43 +3297,6 @@ documentação e regras de cálculo podem ser consultados no repositório
 público do projeto}. Dessa forma, outras pessoas podem executar cenários
 próprios, conferir as premissas adotadas e reproduzir a lógica de cálculo,
 dentro dos limites de dados e escopo descritos neste trabalho.
-
-\hypertarget{alcance-e-limites-de-uso}{%
-\subsection{6.3 Alcance e limites de
-uso}\label{alcance-e-limites-de-uso}}
-
-O CabotageLens é um instrumento de triagem e comparação auditável. Ele
-torna explícitos os dados, as fontes de intensidade, os preços e as
-aproximações que formam cada resultado. A decisão logística final ainda
-exige informações sobre serviço, prazo, capacidade, terminais, contratos
-e fretes comerciais.
-
-Os principais limites de uso são:
-
-\begin{itemize}
-\item
-  \textbf{Dados e intensidade marítima:} as viagens da ANTAQ representam
-  o período observado em 2025. Quando não há intensidade individual
-  utilizável no EU MRV, o sistema usa uma referência documentada de
-  classe ou tipo de navio; ela não equivale a uma medição direta do
-  consumo daquele navio.
-\item
-  \textbf{Distância e oferta de serviço:} algumas distâncias marítimas
-  usam a aproximação de Haversine, identificada na saída. Uma viagem
-  registrada confirma uma sequência observada, mas não garante
-  frequência futura, espaço disponível ou serviço comercial regular.
-\item
-  \textbf{Escopo do resultado:} as emissões são operacionais TTW de CO\textsubscript{2}e
-  e os valores monetários representam o custo modelado do combustível.
-  Eles não representam emissões WTW, ciclo de vida completo, tarifa de
-  frete, contrato de armador ou análise comercial completa.
-\end{itemize}
-
-Esses limites não anulam a comparação; eles definem a forma correta de
-utilizá-la. Um resultado favorável à cabotagem em determinado cenário
-não demonstra superioridade universal, mas oferece uma base explícita e
-verificável para a análise inicial de alternativas logísticas
-\parencite{competitiveness2024,modalshiftreview2020}.
 
 \clearpage
 \begingroup

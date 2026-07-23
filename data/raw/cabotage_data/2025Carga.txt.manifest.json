@@ -1,0 +1,22 @@
+{
+  "source_path": "data/raw/cabotage_data/2025Carga.txt",
+  "original_object_path": "data/raw/cabotage_data/2025Carga.txt",
+  "storage_object_path": "data/raw/cabotage_data/2025Carga.txt",
+  "transformed": true,
+  "compressed": false,
+  "payload_size_bytes": 39016345,
+  "processed_rows": 2464613,
+  "kept_rows": 441710,
+  "kept_columns": [
+    "IDAtracacao",
+    "Tipo Navegação",
+    "TEU",
+    "Natureza da Carga",
+    "Carga Geral Acondicionamento",
+    "VLPesoCargaBruta",
+    "Sentido",
+    "Origem",
+    "Destino"
+  ],
+  "transformation": "filter_containerized_cabotage_and_keep_required_columns"
+}
