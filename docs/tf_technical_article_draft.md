@@ -52,7 +52,9 @@ O transporte de cargas no Brasil é fortemente concentrado nas rodovias. Em 2015
 
 Além do papel predominante na matriz, o transporte rodoviário de cargas depende, principalmente, do diesel e contribui para as emissões de gases de efeito estufa do setor. Por isso, políticas de transporte buscam transferir parte das viagens longas para modais mais eficientes. Tomemos de exemplo a [Comissão Europeia (2011)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52011DC0144), que no Livro Branco dos Transportes definiu a meta de transferir, até 2030, 30% das cargas rodoviárias transportadas por mais de 300 km para ferrovias ou vias aquaviárias e, até 2050, mais de 50%. Nesse contexto, a cabotagem — o transporte marítimo entre portos do mesmo país utilizando a navegação pela costa nacional ou por vias interiores — é uma alternativa possível para parte das cargas de longa distância no Brasil (Carvalho, 2022).
 
-Para saber se a cabotagem faz sentido em uma ligação específica, a comparação precisa ser porta a porta. Uma comparação porta a porta começa no local onde a carga está e termina no local em que ela será entregue. As duas alternativas precisam prestar exatamente o mesmo serviço: transportar a mesma massa entre esses dois pontos. No caminho rodoviário, o caminhão percorre todo o trajeto por estrada. Na alternativa com cabotagem, a carga segue de caminhão até o porto de embarque, é transportada pelo navio entre os portos e, em seguida, segue de caminhão do porto de desembarque até o destino final. Por isso, a análise soma distância, consumo, emissões e custo de todas essas etapas, em vez de comparar apenas o trecho marítimo com a viagem rodoviária completa. Os portos escolhidos, as distâncias de acesso, a carga e as operações de transbordo podem mudar o resultado (Svindland e Hjelle, 2019; Raza, Svanberg e Wiegmans, 2020).
+Para saber se a cabotagem faz sentido em uma ligação específica, a comparação precisa ser porta a porta. Uma comparação porta a porta começa no local onde a carga está e termina no local em que ela será entregue. As duas alternativas precisam prestar exatamente o mesmo serviço: transportar a mesma massa entre esses dois pontos. No caminho rodoviário, o caminhão percorre todo o trajeto por estrada. Na alternativa com cabotagem, a carga segue de caminhão até o porto de embarque, é transportada pelo navio entre os portos e, em seguida, segue de caminhão do porto de desembarque até o destino final. Por isso, a análise soma distância, consumo, emissões e custo de todas essas etapas, em vez de comparar apenas o trecho marítimo com a viagem rodoviária completa.
+
+Os consumos associados às operações de movimentação de carga nos portos também podem ser deixados de lado quando a avaliação se concentra apenas nos deslocamentos rodoviário e marítimo. Este estudo busca incorporar também esse componente à comparação porta a porta, com base em referências sobre carga e descarga em terminais e sobre o consumo de energia nas operações portuárias (Nguyen, Woo e Kim, 2022; Papaioannou et al., 2017; Dados Relatório 2, 2024).
 
 É para tornar essa comparação possível que foi desenvolvido o CabotageLens. O usuário informa a origem, o destino e a massa da carga, e o sistema constrói as duas alternativas de transporte. Para cada uma, apresenta a distância total, o consumo de combustível, as emissões operacionais e o custo modelado do combustível. Ao reunir essas informações em uma mesma base de comparação, a ferramenta permite avaliar, para cada ligação, como a alternativa com cabotagem se diferencia da rota feita inteiramente por estrada. Com isso, a comparação deixa de ser uma escolha abstrata entre caminhão e navio e passa a considerar a operação logística completa.
 
@@ -62,7 +64,7 @@ A literatura mostra que a cabotagem pode ser relevante em viagens longas, mas o 
 
 Estudos de *short sea shipping* (navegação marítima de curta distância) também mostram que a substituição do transporte rodoviário pelo transporte marítimo não significa uma vantagem ambiental automática. O resultado depende do tipo de navio, de sua utilização, das distâncias e da carga à qual o consumo é atribuído (Svindland e Hjelle, 2019). Por isso, a unidade analisada deve ser a remessa completa, e não um navio e um caminhão considerados isoladamente (Raza, Svanberg e Wiegmans, 2020).
 
-Um princípio metodológico do estudo é dar preferência a dados públicos, oficiais, observados e auditáveis. A Agência Nacional de Transportes Aquaviários (ANTAQ), órgão federal que regula e acompanha o transporte aquaviário brasileiro, fornece os registros de escalas e de movimentação de carga. A base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) publica indicadores anuais de consumo e atividade dos navios. Essas fontes permitem relacionar uma operação registrada no Brasil ao desempenho do navio identificado pelo número da Organização Marítima Internacional (IMO), uma identificação permanente da embarcação. Os campos utilizados, os arquivos de origem e a forma de reconstruir as viagens são apresentados na Seção 3.3 (ANTAQ, 2025; EMSA, 2026).
+Um princípio metodológico do estudo é dar preferência a dados públicos, oficiais, observados e auditáveis. A [Agência Nacional de Transportes Aquaviários (ANTAQ)](https://estatistica.antaq.gov.br/ea/sense/download.html), órgão federal que regula e acompanha o transporte aquaviário brasileiro, fornece os registros de escalas e de movimentação de carga. A base europeia de [Monitoramento, Reporte e Verificação da União Europeia (EU MRV)](https://mrv.emsa.europa.eu/) publica indicadores anuais de consumo e atividade dos navios. Essas fontes permitem relacionar uma operação registrada no Brasil ao desempenho do navio identificado pelo número da Organização Marítima Internacional (IMO), uma identificação permanente da embarcação. Os campos utilizados, os arquivos de origem e a forma de reconstruir as viagens são apresentados na Seção 4.3 (ANTAQ, 2025; EMSA, 2026).
 
 O cálculo de emissões adota a fronteira operacional *tank-to-wheel* (TTW, do tanque à roda), pois o objetivo é comparar as emissões diretamente associadas ao transporte da mesma remessa. Em um caminhão a diesel, por exemplo, isso corresponde às emissões liberadas pelo escapamento durante a viagem. As fronteiras *well-to-wheel* (WTW, do poço à roda) e de avaliação de ciclo de vida (*life-cycle assessment*, LCA) ampliariam a análise para etapas que ocorrem antes ou além do deslocamento (Costa, Mendes e Silva, 2024; Roux et al., 2024), mas não foram adotadas no presente estudo.
 
@@ -306,6 +308,12 @@ A tabela de Carga é um registro de movimentações, não um itinerário pronto.
 
 Para saber quanto foi movimentado no porto, o sistema reúne as linhas com o mesmo `IDAtracacao` e soma separadamente os desembarques e os embarques. A carga embarcada entra no navio naquele porto e segue para o trecho seguinte; a carga desembarcada deixa o navio naquele porto. Por isso, os valores da Tabela 4 são apresentados na ordem **desembarcados / embarcados**. Eles mostram o movimento ocorrido na escala, e não a carga total que o navio levava ao partir.
 
+A Figura 2 apresenta parte do arquivo bruto de Carga. A repetição do mesmo `IDAtracacao` em várias linhas mostra que uma única escala pode reunir diferentes movimentações de embarque e desembarque.
+
+![Recorte do arquivo de Carga da ANTAQ de 2025.](images/antaq_2025_carga_recorte.png)
+
+*Figura 2 — Captura de tela de parte do arquivo `2025Carga.txt`, com movimentações de carga associadas às atracações `1618801` e `1625119`. Fonte: Agência Nacional de Transportes Aquaviários (ANTAQ), 2025.*
+
 **Tabela 4 — Campos do arquivo `2025Carga.txt` usados para reconstruir os movimentos de carga.**
 
 | Coluna | Uso na avaliação | Valor na viagem `voyage_9612791_00011` |
@@ -325,6 +333,12 @@ Para reconstruir a carga a bordo, o sistema lê os desembarques e embarques na o
 ###### 3.3.4.1.2 Tabela de Atracação da ANTAQ
 
 A tabela de Atracação é o registro cronológico das escalas. Cada linha informa que determinado navio esteve em um porto ou terminal, em quais datas chegou e saiu e qual é o seu número IMO, identificador único do navio usado internacionalmente. Ela não informa a massa movimentada. Ao ligar seu `IDAtracacao` aos movimentos da tabela de Carga e ordenar as datas de atracação, o sistema transforma os registros isolados na sequência Santos → Suape → Pecém → Manaus.
+
+A Figura 3 apresenta parte do arquivo bruto de Atracação. Cada linha identifica uma escala e reúne o porto, as datas e o número IMO necessários para ordenar as escalas do mesmo navio.
+
+![Recorte do arquivo de Atracação da ANTAQ de 2025.](images/antaq_2025_atracacao_recorte.png)
+
+*Figura 3 — Captura de tela de parte do arquivo `2025Atracacao.txt`, com escalas observadas dos navios utilizados no exemplo. Fonte: Agência Nacional de Transportes Aquaviários (ANTAQ), 2025.*
 
 **Tabela 5 — Campos do arquivo `2025Atracacao.txt` usados para identificar e ordenar as escalas dos navios.**
 
