@@ -1,0 +1,5088 @@
+{
+  "source_files": [
+    "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\cabotage-lens\\data\\raw\\cabotage_data\\2018-v275-29032026-EU MRV Publication of information.xlsx",
+    "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\cabotage-lens\\data\\raw\\cabotage_data\\2019-v227-28052025-EU MRV Publication of information.xlsx",
+    "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\cabotage-lens\\data\\raw\\cabotage_data\\2020-v208-04022026-EU MRV Publication of information.xlsx",
+    "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\cabotage-lens\\data\\raw\\cabotage_data\\2021-v217-17032026-EU MRV Publication of information.xlsx",
+    "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\cabotage-lens\\data\\raw\\cabotage_data\\2022-v241-06022026-EU MRV Publication of information.xlsx",
+    "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\cabotage-lens\\data\\raw\\cabotage_data\\2023-v90-11062026-EU MRV Publication of information.xlsx",
+    "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\cabotage-lens\\data\\raw\\cabotage_data\\2024-v230-11072026-EU MRV Publication of information.xlsx",
+    "C:\\Users\\Cliente\\Documents\\workspaces\\personal\\cabotage-lens\\data\\raw\\cabotage_data\\2025-v18-23072026-EU MRV Publication of information.xlsx"
+  ],
+  "requested_imos": [
+    "1013171",
+    "1016654",
+    "1016666",
+    "1016692",
+    "1094993",
+    "9085522",
+    "9120853",
+    "9122473",
+    "9141297",
+    "9143556",
+    "9146467",
+    "9146479",
+    "9153862",
+    "9166780",
+    "9168867",
+    "9193317",
+    "9196852",
+    "9197545",
+    "9198587",
+    "9202168",
+    "9208186",
+    "9214214",
+    "9216731",
+    "9219795",
+    "9222297",
+    "9222302",
+    "9224300",
+    "9225653",
+    "9226932",
+    "9227027",
+    "9227273",
+    "9229300",
+    "9229829",
+    "9230232",
+    "9241190",
+    "9243162",
+    "9243174",
+    "9244946",
+    "9246580",
+    "9246592",
+    "9246607",
+    "9247546",
+    "9247766",
+    "9250983",
+    "9251688",
+    "9251690",
+    "9252541",
+    "9253026",
+    "9253208",
+    "9253210",
+    "9256418",
+    "9256470",
+    "9256482",
+    "9259393",
+    "9261889",
+    "9262118",
+    "9267637",
+    "9267649",
+    "9278155",
+    "9283186",
+    "9283203",
+    "9283215",
+    "9283239",
+    "9285691",
+    "9285988",
+    "9286267",
+    "9288409",
+    "9292137",
+    "9293765",
+    "9294161",
+    "9295361",
+    "9299537",
+    "9299795",
+    "9302102",
+    "9304459",
+    "9306196",
+    "9307243",
+    "9309277",
+    "9310109",
+    "9311854",
+    "9312559",
+    "9312573",
+    "9313199",
+    "9314935",
+    "9316141",
+    "9318498",
+    "9323510",
+    "9323522",
+    "9324837",
+    "9327669",
+    "9327798",
+    "9330068",
+    "9330707",
+    "9332860",
+    "9332872",
+    "9333838",
+    "9336050",
+    "9336062",
+    "9337664",
+    "9337688",
+    "9343974",
+    "9344643",
+    "9344655",
+    "9344681",
+    "9346304",
+    "9347554",
+    "9347566",
+    "9347578",
+    "9347592",
+    "9348053",
+    "9348065",
+    "9349540",
+    "9350020",
+    "9351218",
+    "9351799",
+    "9356141",
+    "9356153",
+    "9357949",
+    "9360910",
+    "9362334",
+    "9362437",
+    "9367188",
+    "9369734",
+    "9372810",
+    "9372860",
+    "9393022",
+    "9395953",
+    "9398216",
+    "9398228",
+    "9399753",
+    "9400083",
+    "9400289",
+    "9401104",
+    "9407160",
+    "9409209",
+    "9410260",
+    "9418377",
+    "9437385",
+    "9437933",
+    "9441867",
+    "9443023",
+    "9443035",
+    "9444845",
+    "9450351",
+    "9450375",
+    "9450387",
+    "9450612",
+    "9453365",
+    "9458999",
+    "9464247",
+    "9465095",
+    "9470882",
+    "9471886",
+    "9471898",
+    "9478494",
+    "9480203",
+    "9491472",
+    "9506394",
+    "9525314",
+    "9525376",
+    "9525388",
+    "9525950",
+    "9526887",
+    "9526899",
+    "9526904",
+    "9526916",
+    "9526928",
+    "9526930",
+    "9526942",
+    "9526954",
+    "9526966",
+    "9526978",
+    "9527025",
+    "9527037",
+    "9527049",
+    "9527051",
+    "9527063",
+    "9531909",
+    "9539494",
+    "9565338",
+    "9565546",
+    "9571296",
+    "9595448",
+    "9602875",
+    "9603219",
+    "9603221",
+    "9603233",
+    "9605152",
+    "9605231",
+    "9605243",
+    "9605279",
+    "9612765",
+    "9612777",
+    "9612789",
+    "9612791",
+    "9618276",
+    "9618288",
+    "9618305",
+    "9618317",
+    "9619426",
+    "9619438",
+    "9619440",
+    "9619452",
+    "9619464",
+    "9622203",
+    "9622215",
+    "9622227",
+    "9622239",
+    "9622241",
+    "9622253",
+    "9623673",
+    "9624299",
+    "9625384",
+    "9625396",
+    "9625528",
+    "9625530",
+    "9627899",
+    "9627904",
+    "9628154",
+    "9629043",
+    "9629079",
+    "9629110",
+    "9629457",
+    "9629469",
+    "9630406",
+    "9630420",
+    "9631125",
+    "9632480",
+    "9633939",
+    "9633941",
+    "9633965",
+    "9637155",
+    "9641223",
+    "9641235",
+    "9649835",
+    "9654464",
+    "9672088",
+    "9672105",
+    "9686912",
+    "9687526",
+    "9687564",
+    "9687576",
+    "9694581",
+    "9694593",
+    "9695028",
+    "9697002",
+    "9698654",
+    "9701140",
+    "9702065",
+    "9702077",
+    "9702089",
+    "9702261",
+    "9702273",
+    "9704960",
+    "9704984",
+    "9704996",
+    "9706190",
+    "9706308",
+    "9706310",
+    "9709207",
+    "9710244",
+    "9710426",
+    "9710438",
+    "9713351",
+    "9717204",
+    "9717216",
+    "9717228",
+    "9718947",
+    "9719874",
+    "9720196",
+    "9720201",
+    "9720457",
+    "9720483",
+    "9720495",
+    "9720512",
+    "9722663",
+    "9722675",
+    "9723241",
+    "9723253",
+    "9725134",
+    "9727613",
+    "9727625",
+    "9729075",
+    "9729099",
+    "9731913",
+    "9731951",
+    "9732606",
+    "9735218",
+    "9745653",
+    "9756729",
+    "9756731",
+    "9767998",
+    "9768007",
+    "9770749",
+    "9770751",
+    "9770763",
+    "9777175",
+    "9778076",
+    "9778088",
+    "9778090",
+    "9778399",
+    "9784661",
+    "9785457",
+    "9785469",
+    "9786712",
+    "9786724",
+    "9786736",
+    "9793894",
+    "9793911",
+    "9793923",
+    "9793935",
+    "9793947",
+    "9793959",
+    "9793961",
+    "9813802",
+    "9827255",
+    "9837640",
+    "9845659",
+    "9845673",
+    "9850599",
+    "9850795",
+    "9850800",
+    "9850812",
+    "9850836",
+    "9850874",
+    "9850898",
+    "9852365",
+    "9881653",
+    "9926192",
+    "9928188",
+    "9928205",
+    "9928920",
+    "9936513",
+    "9936525",
+    "9937323",
+    "9937335",
+    "9938248",
+    "9938250",
+    "9938262",
+    "9938274",
+    "9938286",
+    "9938298",
+    "9943085",
+    "9945473",
+    "9945837",
+    "9945849",
+    "9945851",
+    "9945863",
+    "9945875",
+    "9945887",
+    "9950090",
+    "9953391",
+    "9953561",
+    "9961960",
+    "9961972",
+    "9962598",
+    "9968853",
+    "9968865",
+    "9969065",
+    "9969089",
+    "9969869",
+    "9969998",
+    "9970002",
+    "9974474",
+    "9974486",
+    "9974503",
+    "9974541",
+    "9975583",
+    "9976070",
+    "9976202",
+    "9976410",
+    "9976422",
+    "9976434",
+    "9976458",
+    "9976460",
+    "9976472",
+    "9976501",
+    "9976513",
+    "9976719",
+    "9978949",
+    "9978951",
+    "9979278",
+    "9983401",
+    "9991202",
+    "9996018",
+    "9997919",
+    "9997921",
+    "9997933",
+    "9997945"
+  ],
+  "matched_imos": [
+    "1016654",
+    "1016666",
+    "1016692",
+    "9085522",
+    "9120853",
+    "9122473",
+    "9141297",
+    "9143556",
+    "9146467",
+    "9146479",
+    "9153862",
+    "9166780",
+    "9193317",
+    "9196852",
+    "9197545",
+    "9198587",
+    "9214214",
+    "9222297",
+    "9222302",
+    "9224300",
+    "9225653",
+    "9226932",
+    "9227027",
+    "9227273",
+    "9229300",
+    "9229829",
+    "9243162",
+    "9243174",
+    "9244946",
+    "9247546",
+    "9247766",
+    "9250983",
+    "9251688",
+    "9251690",
+    "9252541",
+    "9253026",
+    "9256418",
+    "9256470",
+    "9256482",
+    "9261889",
+    "9262118",
+    "9267637",
+    "9267649",
+    "9278155",
+    "9283186",
+    "9283203",
+    "9283215",
+    "9283239",
+    "9285691",
+    "9285988",
+    "9286267",
+    "9288409",
+    "9292137",
+    "9293765",
+    "9294161",
+    "9295361",
+    "9299537",
+    "9299795",
+    "9304459",
+    "9306196",
+    "9307243",
+    "9309277",
+    "9312559",
+    "9312573",
+    "9313199",
+    "9314935",
+    "9323510",
+    "9323522",
+    "9324837",
+    "9330068",
+    "9330707",
+    "9332860",
+    "9332872",
+    "9333838",
+    "9337664",
+    "9337688",
+    "9343974",
+    "9344643",
+    "9344655",
+    "9344681",
+    "9346304",
+    "9347554",
+    "9347566",
+    "9347578",
+    "9347592",
+    "9348053",
+    "9348065",
+    "9349540",
+    "9350020",
+    "9351218",
+    "9357949",
+    "9360910",
+    "9362334",
+    "9362437",
+    "9367188",
+    "9369734",
+    "9372860",
+    "9393022",
+    "9398216",
+    "9398228",
+    "9399753",
+    "9400083",
+    "9400289",
+    "9401104",
+    "9407160",
+    "9409209",
+    "9410260",
+    "9437385",
+    "9443023",
+    "9443035",
+    "9444845",
+    "9450351",
+    "9450375",
+    "9450387",
+    "9450612",
+    "9453365",
+    "9458999",
+    "9465095",
+    "9470882",
+    "9478494",
+    "9480203",
+    "9491472",
+    "9525314",
+    "9525376",
+    "9525388",
+    "9526899",
+    "9526904",
+    "9526916",
+    "9526928",
+    "9526930",
+    "9526942",
+    "9526954",
+    "9526966",
+    "9526978",
+    "9527025",
+    "9527037",
+    "9527049",
+    "9527051",
+    "9527063",
+    "9539494",
+    "9571296",
+    "9595448",
+    "9602875",
+    "9603221",
+    "9603233",
+    "9605152",
+    "9605231",
+    "9605243",
+    "9605279",
+    "9612765",
+    "9612791",
+    "9618276",
+    "9618288",
+    "9618305",
+    "9618317",
+    "9619426",
+    "9619438",
+    "9619440",
+    "9619452",
+    "9619464",
+    "9622203",
+    "9622215",
+    "9622227",
+    "9622239",
+    "9622241",
+    "9622253",
+    "9623673",
+    "9625384",
+    "9625396",
+    "9625528",
+    "9627899",
+    "9627904",
+    "9628154",
+    "9629457",
+    "9629469",
+    "9630406",
+    "9630420",
+    "9631125",
+    "9632480",
+    "9633939",
+    "9633941",
+    "9633965",
+    "9637155",
+    "9641223",
+    "9641235",
+    "9649835",
+    "9654464",
+    "9686912",
+    "9687526",
+    "9687564",
+    "9687576",
+    "9694581",
+    "9695028",
+    "9702065",
+    "9702077",
+    "9702089",
+    "9702261",
+    "9702273",
+    "9704960",
+    "9704984",
+    "9704996",
+    "9706190",
+    "9706308",
+    "9706310",
+    "9709207",
+    "9710244",
+    "9710426",
+    "9710438",
+    "9713351",
+    "9717204",
+    "9717216",
+    "9717228",
+    "9718947",
+    "9719874",
+    "9720196",
+    "9720201",
+    "9720457",
+    "9720483",
+    "9720495",
+    "9720512",
+    "9722663",
+    "9722675",
+    "9723241",
+    "9723253",
+    "9725134",
+    "9727613",
+    "9727625",
+    "9729075",
+    "9729099",
+    "9731913",
+    "9731951",
+    "9732606",
+    "9735218",
+    "9745653",
+    "9756729",
+    "9756731",
+    "9767998",
+    "9768007",
+    "9770749",
+    "9770751",
+    "9770763",
+    "9778076",
+    "9778088",
+    "9778090",
+    "9785457",
+    "9785469",
+    "9786724",
+    "9793911",
+    "9793947",
+    "9845659",
+    "9845673",
+    "9850800",
+    "9928188",
+    "9950090",
+    "9953391",
+    "9953561",
+    "9962598",
+    "9969089",
+    "9969998",
+    "9974474",
+    "9974486",
+    "9974503",
+    "9974541",
+    "9975583",
+    "9976202",
+    "9978949",
+    "9978951",
+    "9983401"
+  ],
+  "unmatched_imos": [
+    "1013171",
+    "1094993",
+    "9168867",
+    "9202168",
+    "9208186",
+    "9216731",
+    "9219795",
+    "9230232",
+    "9241190",
+    "9246580",
+    "9246592",
+    "9246607",
+    "9253208",
+    "9253210",
+    "9259393",
+    "9302102",
+    "9310109",
+    "9311854",
+    "9316141",
+    "9318498",
+    "9327669",
+    "9327798",
+    "9336050",
+    "9336062",
+    "9351799",
+    "9356141",
+    "9356153",
+    "9372810",
+    "9395953",
+    "9418377",
+    "9437933",
+    "9441867",
+    "9464247",
+    "9471886",
+    "9471898",
+    "9506394",
+    "9525950",
+    "9526887",
+    "9531909",
+    "9565338",
+    "9565546",
+    "9603219",
+    "9612777",
+    "9612789",
+    "9624299",
+    "9625530",
+    "9629043",
+    "9629079",
+    "9629110",
+    "9672088",
+    "9672105",
+    "9694593",
+    "9697002",
+    "9698654",
+    "9701140",
+    "9777175",
+    "9778399",
+    "9784661",
+    "9786712",
+    "9786736",
+    "9793894",
+    "9793923",
+    "9793935",
+    "9793959",
+    "9793961",
+    "9813802",
+    "9827255",
+    "9837640",
+    "9850599",
+    "9850795",
+    "9850812",
+    "9850836",
+    "9850874",
+    "9850898",
+    "9852365",
+    "9881653",
+    "9926192",
+    "9928205",
+    "9928920",
+    "9936513",
+    "9936525",
+    "9937323",
+    "9937335",
+    "9938248",
+    "9938250",
+    "9938262",
+    "9938274",
+    "9938286",
+    "9938298",
+    "9943085",
+    "9945473",
+    "9945837",
+    "9945849",
+    "9945851",
+    "9945863",
+    "9945875",
+    "9945887",
+    "9961960",
+    "9961972",
+    "9968853",
+    "9968865",
+    "9969065",
+    "9969869",
+    "9970002",
+    "9976070",
+    "9976410",
+    "9976422",
+    "9976434",
+    "9976458",
+    "9976460",
+    "9976472",
+    "9976501",
+    "9976513",
+    "9976719",
+    "9979278",
+    "9991202",
+    "9996018",
+    "9997919",
+    "9997921",
+    "9997933",
+    "9997945"
+  ],
+  "match_count": 268,
+  "record_count": 268,
+  "ships": [
+    {
+      "imo": "1016654",
+      "ship_name": "MSC LEILA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.37,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.37,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "1016666",
+      "ship_name": "MSC INSA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.83,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.83,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "1016692",
+      "ship_name": "MSC ADELE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.5,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.5,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9085522",
+      "ship_name": "KURE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.8,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.8,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9120853",
+      "ship_name": "MSC FIE X",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.81,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.81,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9122473",
+      "ship_name": "DHANU",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 89.25,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 89.25,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9141297",
+      "ship_name": "MSC ROCHELLE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.45,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.45,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9143556",
+      "ship_name": "DUSSELDORF EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.31,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.31,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9146467",
+      "ship_name": "MSC YUKTA X",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.5,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.5,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9146479",
+      "ship_name": "MSC VILDA X",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.54,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.54,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9153862",
+      "ship_name": "EPAMINONDAS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.47,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.47,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9166780",
+      "ship_name": "MSC ELLEN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.37,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.37,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9193317",
+      "ship_name": "AMSTERDAM EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.64,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.64,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9196852",
+      "ship_name": "MSC ALMA VII",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.79,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.79,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9197545",
+      "ship_name": "MSC ILLINOIS VII",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.38,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.38,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9198587",
+      "ship_name": "MSC CHIARA X",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.46,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.46,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9214214",
+      "ship_name": "GSL ARCADIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.76,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.76,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9222297",
+      "ship_name": "CMA CGM BERLIOZ",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2020,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.4,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.4,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2020-v208-04022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2020"
+        }
+      ]
+    },
+    {
+      "imo": "9222302",
+      "ship_name": "MSC PETRA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.93,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.93,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9224300",
+      "ship_name": "SEASPAN HAMBURG",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.14,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.14,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9225653",
+      "ship_name": "MSC ALESSIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.62,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.62,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9226932",
+      "ship_name": "MSC BARBARA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.13,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.13,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9227027",
+      "ship_name": "SEASPAN DALIAN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 12.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 12.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9227273",
+      "ship_name": "IRENES RESOLVE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.19,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.19,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9229300",
+      "ship_name": "MSC CATHERINE VI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9229829",
+      "ship_name": "DALIAN EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.75,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.75,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9243162",
+      "ship_name": "VELIKA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.49,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.49,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9243174",
+      "ship_name": "MIRADOR EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.99,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.99,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9244946",
+      "ship_name": "MSC KALAMATA VII",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.06,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.06,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9247546",
+      "ship_name": "ENSENADA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.15,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.15,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9247766",
+      "ship_name": "ATHENS GLORY",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.01,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.01,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9250983",
+      "ship_name": "MSC DAMLA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 67.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 67.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9251688",
+      "ship_name": "MSC VANESSA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2020,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 8.88,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 8.88,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2020-v208-04022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2020"
+        }
+      ]
+    },
+    {
+      "imo": "9251690",
+      "ship_name": "MSC LUDOVICA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.98,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.98,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9252541",
+      "ship_name": "MSC MAGNUM VII",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.58,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.58,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9253026",
+      "ship_name": "ANNIE B",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.32,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.32,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9256418",
+      "ship_name": "MSC PROSPERITY II",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 11.89,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 11.89,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9256470",
+      "ship_name": "MSC QINGDAO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.78,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.78,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9256482",
+      "ship_name": "GSL NINGBO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.2,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.2,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9261889",
+      "ship_name": "CMA CGM FORT ST LOUIS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.97,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.97,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9262118",
+      "ship_name": "XIN CHONG QING",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.87,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.87,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9267637",
+      "ship_name": "MSC PEGASUS VII",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.69,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.69,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9267649",
+      "ship_name": "MSC PHOENIX",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2020,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.71,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.71,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2020-v208-04022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2020"
+        }
+      ]
+    },
+    {
+      "imo": "9278155",
+      "ship_name": "MSC NERISSA V",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.34,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.34,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9283186",
+      "ship_name": "MAERSK MONTE LINZOR",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.4,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.4,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9283203",
+      "ship_name": "MAERSK MONTE PASCOAL",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.56,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.56,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9283215",
+      "ship_name": "MAERSK MONTE ROSA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.17,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.17,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9283239",
+      "ship_name": "MONTE VERDE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.36,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.36,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9285691",
+      "ship_name": "MSC VANCOUVER",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.83,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.83,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9285988",
+      "ship_name": "EUROPE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.03,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.03,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9286267",
+      "ship_name": "MSC GREENWICH",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.1,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.1,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9288409",
+      "ship_name": "MSC YAMUNA VI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.54,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.54,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9292137",
+      "ship_name": "ALIANCA LEBLON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 13.57,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 13.57,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9293765",
+      "ship_name": "PHOEBE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2020,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.78,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.78,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2020-v208-04022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2020"
+        }
+      ]
+    },
+    {
+      "imo": "9294161",
+      "ship_name": "MAERSK JALAN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.42,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.42,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9295361",
+      "ship_name": "SANTA VANESSA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.18,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.18,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9299537",
+      "ship_name": "MSC CHARLESTON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.07,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.07,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9299795",
+      "ship_name": "CMA CGM LA TRAVIATA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.03,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.03,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9304459",
+      "ship_name": "MSC LISBON IX",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.11,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.11,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9306196",
+      "ship_name": "PALENA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.29,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.29,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9307243",
+      "ship_name": "LE HAVRE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.17,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.17,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9309277",
+      "ship_name": "MONA LISA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 8.52,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 8.52,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9312559",
+      "ship_name": "XIN CHANG SHA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.92,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.92,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9312573",
+      "ship_name": "XIN WEI HAI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.96,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.96,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9313199",
+      "ship_name": "CSTAR FEVRONIYA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 44.98,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 44.98,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9314935",
+      "ship_name": "AS CAROLINA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2020,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.53,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.53,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2020-v208-04022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2020"
+        }
+      ]
+    },
+    {
+      "imo": "9323510",
+      "ship_name": "HMM BANGKOK",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.56,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.56,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9323522",
+      "ship_name": "HMM JAKARTA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.82,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.82,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9324837",
+      "ship_name": "NAVIOS VERMILION",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.51,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.51,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9330068",
+      "ship_name": "MSC SURABAYA VIII",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.58,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.58,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9330707",
+      "ship_name": "HYUNDAI FORWARD",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.8,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.8,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9332860",
+      "ship_name": "BF HAMBURG",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.24,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.24,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9332872",
+      "ship_name": "LE HAVRE EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.59,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.59,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9333838",
+      "ship_name": "MOL EXPERIENCE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.32,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.32,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9337664",
+      "ship_name": "NYK DEMETER",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.36,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.36,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9337688",
+      "ship_name": "NYK DIANA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.0,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.0,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9343974",
+      "ship_name": "MAERSK JAIPUR",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.8,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.8,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9344643",
+      "ship_name": "SAN ALBERTO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 9.25,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 9.25,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9344655",
+      "ship_name": "CMA CGM BALBOA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 18.67,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 18.67,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9344681",
+      "ship_name": "MAERSK VENEZIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 10.04,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 10.04,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9346304",
+      "ship_name": "HYUNDAI BRAVE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.73,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.73,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9347554",
+      "ship_name": "HYUNDAI FAITH",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.6,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.6,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9347566",
+      "ship_name": "HYUNDAI FORCE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.52,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.52,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9347578",
+      "ship_name": "HYUNDAI DYNASTY",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.65,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.65,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9347592",
+      "ship_name": "HYUNDAI INTEGRAL",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.99,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.99,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9348053",
+      "ship_name": "MAERSK MONTE AZUL",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 8.64,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 8.64,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9348065",
+      "ship_name": "MONTE ALEGRE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.91,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.91,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9349540",
+      "ship_name": "JAZAN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.54,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.54,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9350020",
+      "ship_name": "APL NEW JERSEY",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.4,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.4,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9351218",
+      "ship_name": "MSC STRAIT II",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 28.5,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 28.5,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9357949",
+      "ship_name": "MONTE TAMARO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.75,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.75,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9360910",
+      "ship_name": "SEATTLE C",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.96,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.96,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9362334",
+      "ship_name": "MARFRET GUYANE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 12.25,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 12.25,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9362437",
+      "ship_name": "CMA CGM PLATON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.82,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.82,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9367188",
+      "ship_name": "BREMEN BELLE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.54,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.54,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9369734",
+      "ship_name": "MSC BREMEN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.78,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.78,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9372860",
+      "ship_name": "CMA CGM SPIRIT",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.97,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.97,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9393022",
+      "ship_name": "MSC SHAY",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.57,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.57,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9398216",
+      "ship_name": "MSC ANTONIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.87,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.87,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9398228",
+      "ship_name": "MSC NOA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.47,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.47,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9399753",
+      "ship_name": "SONGA ANTOFAGASTA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 9.8,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 9.8,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9400083",
+      "ship_name": "MAIPO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.99,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.99,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9400289",
+      "ship_name": "NAVARINO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.44,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.44,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9401104",
+      "ship_name": "MSC SOLA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.57,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.57,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9407160",
+      "ship_name": "SEASPAN EMPIRE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 11.07,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 11.07,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9409209",
+      "ship_name": "CMA CGM MAUPASSANT",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.45,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.45,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9410260",
+      "ship_name": "AS SAMANTA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 110.39,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 110.39,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9437385",
+      "ship_name": "SEASPAN LONCOMILLA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 8.7,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 8.7,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9443023",
+      "ship_name": "EXPRESS BRAZIL",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 12.76,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 12.76,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9443035",
+      "ship_name": "EXPRESS FRANCE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 16.6,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 16.6,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9444845",
+      "ship_name": "SANTA INES",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.38,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.38,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9450351",
+      "ship_name": "MSC JUSTICE VIII",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 24.86,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 24.86,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9450375",
+      "ship_name": "C HAMBURG",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.66,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.66,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9450387",
+      "ship_name": "BREMEN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.46,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.46,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9450612",
+      "ship_name": "CMA CGM LA SCALA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2020,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.38,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.38,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2020-v208-04022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2020"
+        }
+      ]
+    },
+    {
+      "imo": "9453365",
+      "ship_name": "SPYROS V",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.61,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.61,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9458999",
+      "ship_name": "BROOKLYN BRIDGE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.04,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.04,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9465095",
+      "ship_name": "NORTHERN JAVELIN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9470882",
+      "ship_name": "EF ELDRA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 10.0,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 10.0,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9478494",
+      "ship_name": "NAVIOS DOMINO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.65,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.65,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9480203",
+      "ship_name": "MSC CADIZ",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.26,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.26,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9491472",
+      "ship_name": "SOUTH",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 12.02,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 12.02,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9525314",
+      "ship_name": "MAERSK CAPE COAST",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.03,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.03,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9525376",
+      "ship_name": "MAERSK CHAMBAL",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.48,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.48,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9525388",
+      "ship_name": "SAFMARINE CHACHAI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 8.64,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 8.64,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9526899",
+      "ship_name": "MAERSK LA PAZ",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.5,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.5,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9526904",
+      "ship_name": "MAERSK LUZ",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.2,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.2,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9526916",
+      "ship_name": "MAERSK LETICIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.07,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.07,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9526928",
+      "ship_name": "MAERSK LAVRAS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.74,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.74,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9526930",
+      "ship_name": "MAERSK LEBU",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.01,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.01,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9526942",
+      "ship_name": "MAERSK LAGUNA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.32,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.32,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9526954",
+      "ship_name": "MAERSK LOTA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9526966",
+      "ship_name": "MAERSK LEON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.33,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.33,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9526978",
+      "ship_name": "MAERSK LABERINTO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.86,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.86,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9527025",
+      "ship_name": "MAERSK LINS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.4,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.4,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9527037",
+      "ship_name": "MAERSK LONDRINA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.8,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.8,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9527049",
+      "ship_name": "MAERSK LANCO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.06,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.06,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9527051",
+      "ship_name": "MAERSK LAMANAI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.15,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.15,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9527063",
+      "ship_name": "MAERSK LABREA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.61,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.61,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9539494",
+      "ship_name": "CMA CGM LOME",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 9.5,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 9.5,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9571296",
+      "ship_name": "LOG-IN ENDURANCE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2019,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 11.32,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 11.32,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2019-v227-28052025-EU MRV Publication of information.xlsx",
+          "source_sheet": "2019"
+        }
+      ]
+    },
+    {
+      "imo": "9595448",
+      "ship_name": "EVER LADEN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.83,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.83,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9602875",
+      "ship_name": "SEBASTIAO CABOTO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 230.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 230.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9603221",
+      "ship_name": "FERNAO DE MAGALHAES",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 228.83,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 228.83,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9603233",
+      "ship_name": "AMERICO VESPUCIO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 49.0,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 49.0,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9605152",
+      "ship_name": "MSC LAGOS X",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.44,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.44,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9605231",
+      "ship_name": "MSC DAKAR X",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.81,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.81,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9605243",
+      "ship_name": "MSC NAIROBI X",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.43,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.43,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9605279",
+      "ship_name": "MSC AMALFI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.15,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.15,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9612765",
+      "ship_name": "NILEDUTCH BREDA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 8.19,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 8.19,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9612791",
+      "ship_name": "NILEDUTCH ANTWERPEN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.43,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.43,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9618276",
+      "ship_name": "RUBY TOWER",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.39,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.39,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9618288",
+      "ship_name": "EMERALD TOWER",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.55,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.55,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9618305",
+      "ship_name": "MSC ATHENS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.83,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.83,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9618317",
+      "ship_name": "MSC ATHOS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.85,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.85,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9619426",
+      "ship_name": "MSC ALTAMIRA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.78,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.78,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9619438",
+      "ship_name": "MSC ALBANY",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.68,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.68,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9619440",
+      "ship_name": "MSC ANCHORAGE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.52,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.52,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9619452",
+      "ship_name": "MSC ARICA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.95,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.95,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9619464",
+      "ship_name": "MSC AGADIR",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9622203",
+      "ship_name": "SAN NICOLAS MAERSK",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.67,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.67,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9622215",
+      "ship_name": "SAN MARCO MAERSK",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.71,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.71,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9622227",
+      "ship_name": "SAN LORENZO MAERSK",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.57,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.57,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9622239",
+      "ship_name": "SAN AUGUSTIN MAERSK",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.47,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.47,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9622241",
+      "ship_name": "SAN ANTONIO MAERSK",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.64,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.64,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9622253",
+      "ship_name": "SAN RAPHAEL MAERSK",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.63,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.63,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9623673",
+      "ship_name": "RDO FORTUNE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9625384",
+      "ship_name": "BARTOLOMEU DIAS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 19.33,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 19.33,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9625396",
+      "ship_name": "VICENTE PINZON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 17.65,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 17.65,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9625528",
+      "ship_name": "HYUNDAI PRESTIGE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.0,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.0,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9627899",
+      "ship_name": "TOCONAO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.89,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.89,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9627904",
+      "ship_name": "TRAIGUEN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.84,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.84,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9628154",
+      "ship_name": "VALOR",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.38,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.38,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9629457",
+      "ship_name": "CARDIFF",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.06,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.06,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9629469",
+      "ship_name": "SWANSEA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 0.15,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 0.15,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9630406",
+      "ship_name": "SEASPAN ZAMBEZI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.13,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.13,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9630420",
+      "ship_name": "XIAMEN EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.22,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.22,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9631125",
+      "ship_name": "LORI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.84,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.84,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9632480",
+      "ship_name": "MAERSK RUBICON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.12,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.12,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9633939",
+      "ship_name": "CAP SAN ARTEMISSIO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.17,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.17,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9633941",
+      "ship_name": "CAP SAN MALEAS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.0,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.0,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9633965",
+      "ship_name": "CAP SAN TAINARO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.67,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.67,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9637155",
+      "ship_name": "HMM PLATINUM",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.55,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.55,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9641223",
+      "ship_name": "PANAMA EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.83,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.83,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9641235",
+      "ship_name": "COSTA RICA EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.87,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.87,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9649835",
+      "ship_name": "CMA CGM SANTOS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.41,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.41,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9654464",
+      "ship_name": "WIELAND",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.67,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.67,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9686912",
+      "ship_name": "JAMAICA EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.01,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.01,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9687526",
+      "ship_name": "COPIAPO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.98,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.98,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9687564",
+      "ship_name": "CORCOVADO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.3,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.3,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9687576",
+      "ship_name": "CISNES",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.79,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.79,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9694581",
+      "ship_name": "MAERSK GANGES",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.16,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.16,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9695028",
+      "ship_name": "MSC SOFIA PAZ",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.92,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.92,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9702065",
+      "ship_name": "MSC LETIZIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.05,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.05,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9702077",
+      "ship_name": "MSC MELINE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.35,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.35,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9702089",
+      "ship_name": "MSC VITA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.7,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.7,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9702261",
+      "ship_name": "MSC SARA ELENA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.24,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.24,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9702273",
+      "ship_name": "MSC ANTONELLA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.95,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.95,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9704960",
+      "ship_name": "MSC LILY",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.91,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.91,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9704984",
+      "ship_name": "MSC NAOMI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.4,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.4,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9704996",
+      "ship_name": "MSC JULIE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.27,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.27,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9706190",
+      "ship_name": "CAPE AKRITAS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.42,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.42,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9706308",
+      "ship_name": "CMA CGM AMAZON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.35,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.35,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9706310",
+      "ship_name": "MSC ADONIS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.8,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.8,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9709207",
+      "ship_name": "CMA CGM MARSEILLE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 9.74,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 9.74,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9710244",
+      "ship_name": "ANTHEA Y",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.43,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.43,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9710426",
+      "ship_name": "MSC ANZU",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.03,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.03,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9710438",
+      "ship_name": "MSC CHANNE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.38,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.38,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9713351",
+      "ship_name": "MOL BELIEF",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.0,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.0,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9717204",
+      "ship_name": "MAERSK SAN JUAN",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.37,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.37,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9717216",
+      "ship_name": "MAERSK SAN LAZARO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.49,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.49,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9717228",
+      "ship_name": "MAERSK SAN VINCENT",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.48,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.48,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9718947",
+      "ship_name": "ATACAMA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2018,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.83,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.83,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2018-v275-29032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2018"
+        }
+      ]
+    },
+    {
+      "imo": "9719874",
+      "ship_name": "CAPE PIONEER",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.66,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.66,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9720196",
+      "ship_name": "MSC GISELLE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.69,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.69,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9720201",
+      "ship_name": "MSC DOMITILLE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.72,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.72,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9720457",
+      "ship_name": "MSC SILVIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.11,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.11,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9720483",
+      "ship_name": "MSC CHLOE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.17,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.17,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9720495",
+      "ship_name": "MSC BRANKA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.49,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.49,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9720512",
+      "ship_name": "MSC MICHELA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.8,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.8,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9722663",
+      "ship_name": "CMA CGM COLUMBIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.62,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.62,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9722675",
+      "ship_name": "CMA CGM NIAGARA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.95,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.95,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9723241",
+      "ship_name": "CZECH",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.14,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.14,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9723253",
+      "ship_name": "BREMERHAVEN EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.99,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.99,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9725134",
+      "ship_name": "HYUNDAI JUPITER",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.97,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.97,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9727613",
+      "ship_name": "CAPE KORTIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.22,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.22,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9727625",
+      "ship_name": "CAPE SOUNIO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.38,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.38,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9729075",
+      "ship_name": "CMA CGM RODOLPHE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.05,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.05,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9729099",
+      "ship_name": "CMA CGM LISA MARIE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.25,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.25,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9731913",
+      "ship_name": "COSCO SHIPPING DANUBE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.22,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.22,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9731951",
+      "ship_name": "COSCO SHIPPING RHINE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2021,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.12,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.12,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2021-v217-17032026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2021"
+        }
+      ]
+    },
+    {
+      "imo": "9732606",
+      "ship_name": "CMA CGM YUKON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.3,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.3,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9735218",
+      "ship_name": "MSC ELMA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.23,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.23,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9745653",
+      "ship_name": "MSC ROMANE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.08,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.08,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9756729",
+      "ship_name": "MSC AVNI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.03,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.03,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9756731",
+      "ship_name": "MSC CARLOTTA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.06,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.06,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9767998",
+      "ship_name": "VUNG TAU EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.93,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.93,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9768007",
+      "ship_name": "LAEM CHABANG EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.26,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.26,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9770749",
+      "ship_name": "MSC BIANCA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.14,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.14,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9770751",
+      "ship_name": "MSC AINO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.84,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.84,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9770763",
+      "ship_name": "MSC GAYANE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.0,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.0,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9778076",
+      "ship_name": "MSC SHUBA B",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.97,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.97,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9778088",
+      "ship_name": "MSC MADHU B",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.98,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.98,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9778090",
+      "ship_name": "MSC YASHI B",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.19,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.19,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9785457",
+      "ship_name": "MSC RAYSHMI",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.84,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.84,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9785469",
+      "ship_name": "MSC EUGENIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.71,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.71,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9786724",
+      "ship_name": "PARANAGUA EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2022,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 6.03,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 6.03,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2022-v241-06022026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2022"
+        }
+      ]
+    },
+    {
+      "imo": "9793911",
+      "ship_name": "SANTA CATARINA EXPRESS",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 4.99,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 4.99,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9793947",
+      "ship_name": "MSC SIYA B",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.61,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.61,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9845659",
+      "ship_name": "CMA CGM KOUROU",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 10.35,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 10.35,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9845673",
+      "ship_name": "CMA CGM SINNAMARY",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 10.45,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 10.45,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9850800",
+      "ship_name": "EVER FAME",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.77,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.77,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9928188",
+      "ship_name": "MAERSK ACADIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2023,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.57,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.57,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2023-v90-11062026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2023"
+        }
+      ]
+    },
+    {
+      "imo": "9950090",
+      "ship_name": "CAPE BYRON",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 8.65,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 8.65,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9953391",
+      "ship_name": "IRENES WISDOM",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.11,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.11,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9953561",
+      "ship_name": "IRENES RULE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 5.87,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 5.87,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9962598",
+      "ship_name": "MSC LORENZA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.2,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.2,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9969089",
+      "ship_name": "CMA CGM MERCANTOUR",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2024,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.95,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.95,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2024-v230-11072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2024 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9969998",
+      "ship_name": "CATHERINE C",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.44,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.44,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9974474",
+      "ship_name": "MSC IVORY COAST",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.18,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.18,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9974486",
+      "ship_name": "MSC TOGO",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.24,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.24,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9974503",
+      "ship_name": "MSC GHANA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.9,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.9,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9974541",
+      "ship_name": "MSC NIGERIA",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.88,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.88,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9975583",
+      "ship_name": "MSC LE HAVRE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 3.0,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 3.0,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9976202",
+      "ship_name": "SEATRADE CHILE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 7.24,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 7.24,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9978949",
+      "ship_name": "MSC MUGE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 2.2,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 2.2,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9978951",
+      "ship_name": "MSC HORTENSE",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 1.97,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 1.97,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    },
+    {
+      "imo": "9983401",
+      "ship_name": "MAYA BAY",
+      "ship_type": "Container ship",
+      "records": [
+        {
+          "reporting_period": 2025,
+          "average_fuel_consumption_per_transport_work_g_per_tonne_nmile": 13.11,
+          "average_fuel_consumption_per_transport_work_dwt_g_per_tonne_nmile": null,
+          "average_fuel_consumption_per_transport_work_mass_g_per_tonne_nmile": 13.11,
+          "fuel_consumption_per_transport_work_source": "mass_fallback",
+          "source_file": "2025-v18-23072026-EU MRV Publication of information.xlsx",
+          "source_sheet": "2025 Full ERs"
+        }
+      ]
+    }
+  ]
+}

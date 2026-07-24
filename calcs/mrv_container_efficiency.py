@@ -18,6 +18,7 @@ import argparse
 import json
 import logging
 import re
+import sys
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,16 +26,16 @@ from typing import Any
 
 import pandas as pd
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from calcs.mrv_workbooks import discover_mrv_workbooks
+
 NM_TO_KM = 1.852
 KG_PER_TONNE = 1000.0
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-RAW_FILES: tuple[Path, ...] = (
-    REPO_ROOT / "data" / "raw" / "cabotage_data" / "2021-v216-06022026-EU MRV Publication of information.xlsx",
-    REPO_ROOT / "data" / "raw" / "cabotage_data" / "2022-v241-06022026-EU MRV Publication of information.xlsx",
-    REPO_ROOT / "data" / "raw" / "cabotage_data" / "2023-v85-08022026-EU MRV Publication of information.xlsx",
-    REPO_ROOT / "data" / "raw" / "cabotage_data" / "2024-v184-03032026-EU MRV Publication of information.xlsx",
-)
+MRV_RAW_DIR = REPO_ROOT / "data" / "raw" / "cabotage_data"
 
 OUTPUT_DIR = REPO_ROOT / "data" / "processed" / "cabotage_data"
 OUTPUT_CLASS_EFFICIENCY_JSON = OUTPUT_DIR / "container_ship_efficiency_classes.json"
@@ -452,15 +453,16 @@ def main() -> int:
     if aux_main_ratio <= 0:
         raise ValueError("--aux-main-ratio must be > 0")
 
-    missing_files = [str(path) for path in RAW_FILES if not path.exists()]
-    if missing_files:
-        print("Missing MRV workbooks:")
-        for item in missing_files:
-            print(f"  - {item}")
+    raw_files = discover_mrv_workbooks(MRV_RAW_DIR)
+    if not raw_files:
+        print(f"No EU MRV workbooks found in: {MRV_RAW_DIR}")
         return 1
 
-    print("Loading MRV workbooks...")
-    frames = [_load_mrv_rows(path) for path in RAW_FILES]
+    print(
+        "Loading MRV workbooks: "
+        + ", ".join(path.name.split("-", 1)[0] for path in raw_files)
+    )
+    frames = [_load_mrv_rows(path) for path in raw_files]
     df = pd.concat(frames, ignore_index=True)
     print(f"Loaded rows: {len(df):,}")
 

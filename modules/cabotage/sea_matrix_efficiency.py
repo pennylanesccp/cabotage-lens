@@ -163,6 +163,7 @@ def enrich_sea_matrix_with_efficiency(
     possible_pairs_only: bool = True,
     matched_pairs_only: bool = True,
     prefer_local_voyage_inputs: bool = False,
+    prefer_local_mrv_inputs: bool = False,
     audit_voyage_ids: Iterable[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     sea_matrix_candidate = Path(sea_matrix_path)
@@ -171,8 +172,12 @@ def enrich_sea_matrix_with_efficiency(
         if sea_matrix_candidate.is_file()
         else resolve_data_asset_path(sea_matrix_candidate)
     )
-    mrv_resolved = resolve_data_asset_path(mrv_json_path)
-    class_efficiency_resolved = resolve_data_asset_path(class_efficiency_json_path)
+    if prefer_local_mrv_inputs:
+        mrv_resolved = Path(mrv_json_path).resolve()
+        class_efficiency_resolved = Path(class_efficiency_json_path).resolve()
+    else:
+        mrv_resolved = resolve_data_asset_path(mrv_json_path)
+        class_efficiency_resolved = resolve_data_asset_path(class_efficiency_json_path)
     if prefer_local_voyage_inputs:
         voyages_resolved = Path(voyages_csv_path).resolve()
         stops_resolved = Path(stops_csv_path).resolve()

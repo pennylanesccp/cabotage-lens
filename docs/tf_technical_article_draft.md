@@ -4,13 +4,14 @@
 
 ## Sumário
 
-1. Introdução
-2. Revisão da literatura e fundamentação metodológica
-3. Metodologia
-4. Implementação computacional
-5. Comparações com ferramentas externas
-6. Conclusões
-7. Referências
+1. Objetivo
+2. Introdução
+3. Revisão da literatura e fundamentação metodológica
+4. Metodologia
+5. Implementação computacional
+6. Comparações com ferramentas externas
+7. Conclusões
+8. Referências
 
 ## Dicionário de termos
 

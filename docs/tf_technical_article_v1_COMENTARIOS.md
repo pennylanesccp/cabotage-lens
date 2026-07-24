@@ -106,7 +106,7 @@ Total identificado: 15 comentários textuais e 1 destaque sem comentário textua
 ### CM13. Linha 14
 
 - **Trecho associado:** “a classe do navio, que é o grupo mais específico disponível.”
-- **Comentário:** “o que é a classe do navio?”
+- **Comentário:** “?”
 - **Referência no fonte editável:** `docs/tf_technical_article.tex:1205-1212`
 
 ### CM14. Linhas 43-45

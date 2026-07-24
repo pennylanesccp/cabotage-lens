@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from dataclasses import dataclass
@@ -19,10 +20,10 @@ from calcs.mrv_container_efficiency import (
     _find_column,
     _normalize_text,
 )
+from calcs.mrv_workbooks import MRV_FILE_GLOB, discover_mrv_workbooks
 
 
 MRV_RAW_DIR = REPO_ROOT / "data" / "raw" / "cabotage_data"
-MRV_FILE_GLOB = "*EU MRV Publication of information.xlsx"
 DEFAULT_ANTAQ_JSON = (
     REPO_ROOT / "data" / "processed" / "cabotage_data" / "antaq_cabotage_observed_voyages.json"
 )
@@ -157,7 +158,7 @@ def _load_mrv_efficiency_rows(path: Path) -> pd.DataFrame:
 
 
 def _discover_mrv_workbooks() -> list[Path]:
-    return sorted(MRV_RAW_DIR.glob(MRV_FILE_GLOB))
+    return discover_mrv_workbooks(MRV_RAW_DIR)
 
 
 def _load_requested_imos(args: argparse.Namespace) -> list[str]:
@@ -176,8 +177,27 @@ def _load_requested_imos(args: argparse.Namespace) -> list[str]:
             if imo:
                 requested.add(imo)
 
+    if args.from_voyages_csv is not None:
+        with args.from_voyages_csv.open(
+            "r",
+            encoding="utf-8-sig",
+            newline="",
+        ) as handle:
+            reader = csv.DictReader(handle)
+            if reader.fieldnames is None or "imo" not in reader.fieldnames:
+                raise ValueError(
+                    f"Voyages CSV must contain an 'imo' column: {args.from_voyages_csv}"
+                )
+            for voyage in reader:
+                imo = str(voyage.get("imo", "")).strip()
+                if imo:
+                    requested.add(imo)
+
     if not requested:
-        raise ValueError("Provide at least one IMO via --imo, --imo-file, or --from-antaq-json.")
+        raise ValueError(
+            "Provide at least one IMO via --imo, --imo-file, "
+            "--from-antaq-json, or --from-voyages-csv."
+        )
 
     return sorted(requested)
 
@@ -262,6 +282,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "Optional ANTAQ voyages JSON to import unique IMOs from, for example "
             f"{DEFAULT_ANTAQ_JSON}."
         ),
+    )
+    parser.add_argument(
+        "--from-voyages-csv",
+        type=Path,
+        help="Optional normalized ANTAQ voyages CSV from which to import unique IMOs.",
     )
     parser.add_argument(
         "--container-only",

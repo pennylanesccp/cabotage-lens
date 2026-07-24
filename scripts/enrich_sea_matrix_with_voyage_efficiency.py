@@ -110,6 +110,14 @@ def _build_parser() -> argparse.ArgumentParser:
             "more than one voyage. Requires --log-level DEBUG."
         ),
     )
+    parser.add_argument(
+        "--prefer-local-mrv-inputs",
+        action="store_true",
+        help=(
+            "Read the specified MRV IMO and vessel-class artifacts directly from "
+            "local disk instead of resolving them through the remote data cache."
+        ),
+    )
     return parser
 
 
@@ -129,6 +137,7 @@ def main() -> int:
         default_ship_type=args.default_ship_type,
         possible_pairs_only=not bool(args.keep_all_matrix_pairs),
         matched_pairs_only=not bool(args.keep_unmatched_pairs),
+        prefer_local_mrv_inputs=bool(args.prefer_local_mrv_inputs),
         audit_voyage_ids=args.audit_voyage_id,
     )
     output_path = write_enriched_sea_matrix(payload, output_path=args.output_json)

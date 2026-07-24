@@ -1284,6 +1284,7 @@ class SeaMatrixEfficiencyTests(unittest.TestCase):
                 possible_pairs_only=possible_pairs_only,
                 matched_pairs_only=True,
                 prefer_local_voyage_inputs=True,
+                prefer_local_mrv_inputs=True,
                 audit_voyage_ids=audit_voyage_ids,
             )
 
