@@ -161,7 +161,7 @@ V_{\mathrm{diesel,rod}}
 \end{aligned}
 $$
 
-Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multiplica esse consumo pelo número necessário de viagens carregadas. Os litros calculados são convertidos em custo na Seção 3.2.2 e em emissões operacionais na Seção 3.2.3.
+Quando a carga exige mais de uma viagem do veículo escolhido, o sistema multiplica esse consumo pelo número necessário de viagens carregadas. Os litros calculados são convertidos em custo na Seção 4.2.2 e em emissões operacionais na Seção 4.2.3.
 
 #### 4.2.2 Custo estimado do combustível
 
@@ -239,7 +239,7 @@ A Tabela 3 reúne os resultados da alternativa rodoviária para a mesma remessa 
 | **Custo modelado do combustível** | R\$ 12.318,68 |
 | **Emissões operacionais TTW** | 4.068,28 kg CO₂e |
 
-### 3.3 Alternativa multimodal
+### 4.3 Alternativa multimodal
 
 A alternativa multimodal também precisa transportar a remessa do ponto inicial ao ponto final. Ela é formada por três partes: o acesso rodoviário até o porto de embarque, a navegação entre os portos e o acesso rodoviário após o desembarque. Portanto, o combustível é consumido não só pelo navio, em cada subtrecho marítimo, mas também nos deslocamentos da origem até o porto de embarque e do porto de desembarque até o destino final. Além disso, o sistema calcula separadamente o consumo da movimentação de carga nos terminais portuários.
 
@@ -247,7 +247,7 @@ Os próximos subitens mostram como esses componentes são formados: a escolha do
 
 #### 4.3.1 Escolha dos portos
 
-O sistema associa a origem ao porto mais próximo disponível na base portuária e faz o mesmo para o destino. Esses dois portos definem a ligação marítima que será pesquisada. A forma como essa proximidade é calculada e usada para selecionar os portos é apresentada na Seção 4.4.3.1. Essa regra fornece uma forma objetiva de montar o cenário, mas não afirma se o porto é necessariamente a melhor escolha comercial ou operacional. Um porto mais distante pode ser preferível na prática por motivos como frequência de navios, contrato, terminal, custo ou disponibilidade de espaço, fatores que não são decididos por essa seleção geográfica.
+O sistema associa a origem ao porto mais próximo disponível na base portuária e faz o mesmo para o destino. Esses dois portos definem a ligação marítima que será pesquisada. A forma como essa proximidade é calculada e usada para selecionar os portos é apresentada na Seção 5.4.3.1. Essa regra fornece uma forma objetiva de montar o cenário, mas não afirma se o porto é necessariamente a melhor escolha comercial ou operacional. Um porto mais distante pode ser preferível na prática por motivos como frequência de navios, contrato, terminal, custo ou disponibilidade de espaço, fatores que não são decididos por essa seleção geográfica.
 
 #### 4.3.2 Acessos rodoviários: *first mile* e *last mile*
 
@@ -724,7 +724,7 @@ flowchart LR
 
 Após calcular a rota rodoviária direta, o sistema monta a alternativa multimodal. Essa etapa reutiliza os veículos representativos do transporte rodoviário, os endereços já geocodificados, os preços de diesel por unidade federativa e a cotação do VLSFO.
 
-#### 4.4.1 Consulta e conversão do preço do VLSFO
+#### 5.4.1 Consulta e conversão do preço do VLSFO
 
 Antes de avaliar a alternativa multimodal, o pipeline busca a cotação mais recente disponível do VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre) na [Ship & Bunker](https://shipandbunker.com/prices/br-brazil). A biblioteca Python `requests` acessa a página brasileira do serviço e obtém o preço do VLSFO em dólares por tonelada métrica (US$/mt).
 
@@ -745,13 +745,13 @@ $$
 
 Nas duas linhas, $P_{\mathrm{VLSFO}}$ representa o preço do VLSFO e o sobrescrito informa a unidade em que ele está expresso. Esse é o valor entregue ao avaliador para calcular o custo do combustível marítimo. A fonte, os valores e a regra de custo estão detalhados na Seção 4.3.6 e na Tabela 8.
 
-#### 4.4.2 Matriz marítima
+#### 5.4.2 Matriz marítima
 
 Antes de definir os portos de um novo cenário, o sistema prepara a referência marítima com base em viagens de cabotagem que realmente ocorreram. O produto dessa preparação é uma matriz marítima construída com dados observados.
 
 Quando a matriz não apresenta uma distância entre dois portos, a implementação usa como fallback os dados de distância marítima publicados pelo [Geógrafos](https://www.geografos.com.br/).
 
-##### 4.4.2.1 Dados da ANTAQ
+##### 5.4.2.1 Dados da ANTAQ
 
 A rotina de atualização acessa o [Painel Estatístico Aquaviário da ANTAQ](https://estatistica.antaq.gov.br/ea/sense/download.html), portal oficial de download das tabelas públicas. A biblioteca Python `requests` realiza as consultas e baixa os arquivos em formato TXT. A biblioteca Python Beautiful Soup lê a página e seus arquivos de apoio para localizar os endereços de download disponibilizados pela ANTAQ. São obtidas as tabelas de Carga, Atracação e Tempos de Atracação. Os campos de Carga e Atracação usados na reconstrução estão detalhados na Seção 4.3.4.1, nas Tabelas 4 e 5.
 
@@ -759,7 +759,7 @@ A atualização também sincroniza os dados necessários e os artefatos gerados 
 
 ##### 5.4.2.2 Reconstrução das viagens
 
-Para implementar a lógica apresentada na Seção 3.3.4.1.3, a função de reconstrução reúne os registros de cabotagem conteinerizada e relaciona cada movimentação de carga à escala correspondente. A tabela de Atracação fornece o porto, a data e o número da Organização Marítima Internacional (IMO) do navio; a tabela de Carga informa o que foi embarcado e desembarcado.
+Para implementar a lógica apresentada na Seção 4.3.4.1.3, a função de reconstrução reúne os registros de cabotagem conteinerizada e relaciona cada movimentação de carga à escala correspondente. A tabela de Atracação fornece o porto, a data e o número da Organização Marítima Internacional (IMO) do navio; a tabela de Carga informa o que foi embarcado e desembarcado.
 
 Em seguida, as escalas do mesmo navio são reunidas em ordem cronológica. A carga a bordo também é reconstruída em cada escala. O sistema calcula o saldo entre o que embarcou e o que desembarcou do navio e aplica esse saldo ao subtrecho seguinte. Quando o recorte de dados começa com o navio já carregado, é calculada a carga inicial mínima necessária para evitar valores negativos. A partir dessa reconstrução, em cada viagem, o sistema identifica os pares de portos em que o navio atracou primeiro na origem e, posteriormente, no destino. A parte da viagem entre essas duas escalas forma um recorte completo, direto ou com escalas intermediárias. Por exemplo, Santos–Suape–Pecém–Manaus contribui para Santos–Manaus com seus três subtrechos; Manaus–Suape–Santos não contribui, pois está no sentido contrário.
 
@@ -771,11 +771,11 @@ O resultado da reconstrução também é gravado em tabelas criadas no banco de 
 
 ##### 5.4.2.3 Dados da EU MRV
 
-Os arquivos anuais da base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) são obtidos no [THETIS-MRV, da Agência Europeia de Segurança Marítima](https://mrv.emsa.europa.eu/) e armazenados no Supabase Storage. Os campos e o exemplo de correspondência por IMO estão apresentados na Seção 3.3.4.2 e na Tabela 6.
+Os arquivos anuais da base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV) são obtidos no [THETIS-MRV, da Agência Europeia de Segurança Marítima](https://mrv.emsa.europa.eu/) e armazenados no Supabase Storage. Os campos e o exemplo de correspondência por IMO estão apresentados na Seção 4.3.4.2 e na Tabela 6.
 
-##### 4.4.2.4 Cálculo do trabalho de transporte
+##### 5.4.2.4 Cálculo do trabalho de transporte
 
-Como explicado na Seção 3.3.4.2, o sistema procura primeiro o IMO do navio observado na ANTAQ. Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem.
+Como explicado na Seção 4.3.4.2, o sistema procura primeiro o IMO do navio observado na ANTAQ. Se não houver indicador individual utilizável, ou se ele for classificado como atípico, é aplicada uma referência robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A carga a bordo, a distância e a intensidade permitem calcular o trabalho de transporte e o consumo estimado de cada viagem.
 
 ##### 5.4.2.5 Compilação na estrutura matricial
 
@@ -791,7 +791,7 @@ flowchart LR
 
 As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e, as colunas, o porto de destino.
 
-A Tabela 13 apresenta a distância representativa de cada sentido. Quando há 20 ou mais recortes, as distâncias acima do P95 são retiradas antes da média ponderada pela carga média a bordo, conforme explicado na Seção 3.3.4.4. Nota-se que a distância de ida pode ser diferente da distância de volta, uma vez que cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias observadas. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
+A Tabela 13 apresenta a distância representativa de cada sentido. Quando há 20 ou mais recortes, as distâncias acima do P95 são retiradas antes da média ponderada pela carga média a bordo, conforme explicado na Seção 4.3.4.4. Nota-se que a distância de ida pode ser diferente da distância de volta, uma vez que cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias observadas. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
 
 **Tabela 13 — Distância marítima representativa após a triagem P95, ponderada pela carga média a bordo, na matriz marítima (km).**
 
@@ -811,11 +811,11 @@ A Tabela 14 apresenta a intensidade média, ponderada pelo trabalho de transport
 
 | Origem / destino | Santos | Salvador | Suape | Pecém | Manaus |
 | :-- | --: | --: | --: | --: | --: |
-| Santos | — | 9,605744 | 8,729368 | 9,745651 | 9,009824 |
-| Salvador | 9,338150 | — | 8,558943 | 10,183560 | 9,322050 |
-| Suape | 9,292748 | 9,984933 | — | 9,551157 | 9,034616 |
-| Pecém | 9,643543 | 9,716983 | 8,681143 | — | 9,092814 |
-| Manaus | 9,098669 | 9,322050 | 9,178646 | 9,055626 | — |
+| Santos | — | 6,152554 | 6,680958 | 7,280740 | 7,006102 |
+| Salvador | 6,593389 | — | 6,927173 | 8,379871 | 6,624583 |
+| Suape | 6,421161 | 6,294919 | — | 6,546223 | 6,984032 |
+| Pecém | 6,852916 | 6,663381 | 7,003180 | — | 6,967572 |
+| Manaus | 6,865533 | 6,624583 | 6,955700 | 7,197945 | — |
 
 *Fonte: elaboração própria a partir de viagens de cabotagem observadas pela ANTAQ e das intensidades do EU MRV, consolidadas na matriz marítima direcional atualizada em 23 de julho de 2026.*
 
@@ -828,12 +828,12 @@ O trecho abaixo representa, de forma simplificada, como a matriz pode ser consul
     "Porto de Santos": {
         "Porto de Salvador": {
             "distancia_km": 2516.136,
-            "intensidade_g_por_t_nm": 9.605744,
+            "intensidade_g_por_t_nm": 6.152554,
             ...
         },
     "Porto de Suape": {
         "distancia_km": 2912.073,
-        "intensidade_g_por_t_nm": 8.729368,
+        "intensidade_g_por_t_nm": 6.680958,
         ...
     },
     "Porto de Manaus": {
@@ -849,15 +849,15 @@ O trecho abaixo representa, de forma simplificada, como a matriz pode ser consul
 
 #### 5.4.3 Escolha dos portos e acessos rodoviários
 
-##### 4.4.3.1 Escolha dos portos
+##### 5.4.3.1 Escolha dos portos
 
 A definição dos portos de embarque e desembarque começa pela função `find_nearest_port`. Ela usa a distância de Haversine, um cálculo geométrico realizado a partir das latitudes e longitudes, que estima a menor distância sobre a superfície da Terra entre dois pontos. Esse cálculo é rápido, executado localmente e não representa uma rota por estrada. A função mede a distância entre o ponto de origem ou destino e cada porto disponível e seleciona o porto com a menor distância. O pipeline executa a função uma vez para as coordenadas da origem, definindo o porto de embarque, e outra vez para as coordenadas do destino, definindo o porto de desembarque.
 
 A distância de Haversine, porém, é usada apenas nessa escolha inicial. Ela não entra nos cálculos de consumo, custo ou emissões.
 
-##### 4.4.3.2 Acessos rodoviários: *first mile* e *last mile*
+##### 5.4.3.2 Acessos rodoviários: *first mile* e *last mile*
 
-Após escolher os dois portos e suas respectivas coordenadas, o sistema calcula a distância real dos dois acessos rodoviários — origem → porto de embarque e porto de desembarque → destino — pelo mesmo procedimento exposto na Seção 4.3.1.
+Após escolher os dois portos e suas respectivas coordenadas, o sistema calcula a distância real dos dois acessos rodoviários — origem → porto de embarque e porto de desembarque → destino — pelo mesmo procedimento exposto na Seção 5.3.1.
 
 Essa sequência reduz consultas desnecessárias aos provedores de rota. Em vez de solicitar uma rota rodoviária para cada porto candidato de uma coordenada, o sistema faz uma única consulta para o acesso do porto já selecionado. Assim, a distância usada no cálculo continua sendo rodoviária, enquanto a distância de Haversine é usada apenas como um filtro rápido para definir qual porto consultar.
 
@@ -876,13 +876,13 @@ No exemplo São Paulo–Rio Branco, a seleção geográfica indicou o Porto de S
 
 A diferença entre as duas colunas é esperada: Haversine mede a separação geométrica entre os pontos, enquanto a distância rodoviária acompanha o caminho percorrido pela malha viária. Apenas a última é usada nos cálculos da alternativa multimodal.
 
-#### 4.4.4 Operações portuárias
+#### 5.4.4 Operações portuárias
 
 A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas para realizar o procedimento descrito na Seção 3.3.3. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,92 kg CO₂e.
 
 ### 4.5 Consulta da ligação marítima
 
-Com os portos de embarque e desembarque já definidos, o avaliador consulta a matriz preparada na Seção 4.4.2. Nessa etapa, ele não escolhe um novo corredor nem reconstrói as viagens históricas: apenas recupera os valores representativos do par de portos selecionado e os aplica à carga do cenário.
+Com os portos de embarque e desembarque já definidos, o avaliador consulta a matriz preparada na Seção 5.4.2. Nessa etapa, ele não escolhe um novo corredor nem reconstrói as viagens históricas: apenas recupera os valores representativos do par de portos selecionado e os aplica à carga do cenário.
 
 #### 5.5.1 Consulta da ligação marítima no cenário
 
@@ -896,7 +896,7 @@ No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos
 | Forma dos recortes | 1 direto e 88 com escalas intermediárias | Não há corredor obrigatório nem seleção do percurso mais curto |
 | Amostra da distância | 87 recortes em 20 corredores; P95 de 6.975,000 km | Os 2 recortes acima do P95 permanecem auditáveis, mas não entram na média de distância |
 | Distância marítima | 6.094,975 km, ou 3.291,023 nm | Média da distância total, ponderada pela carga média a bordo dos 87 recortes até o P95 |
-| Intensidade marítima | 9,009824 g/(t·nm) | Média ponderada pelo trabalho de transporte dos 89 recortes |
+| Intensidade marítima | 7,006102 g/(t·nm) | Média ponderada pelo trabalho de transporte dos 89 recortes |
 | Origem das intensidades | 19 por IMO; 49 por tipo sem IMO utilizável; 21 por tipo após tratamento de valor atípico | A fonte permanece identificada para cada recorte |
 | Aviso de distância | 1 subtrecho aproximado por haversine entre 391 subtrechos | A aproximação permanece identificada na amostra de distância usada no cenário |
 
@@ -923,7 +923,7 @@ O resultado não guarda apenas os totais de custo e emissão. A cada execução,
 | Rota rodoviária direta | 3.491,431 km; resultado originalmente obtido do ORS e reutilizado na execução | Permite conferir a distância usada na alternativa direta |
 | Portos selecionados | Santos (SP) e Manaus (AM) | Mostra onde começam e terminam os acessos marítimos e rodoviários |
 | Ligação marítima | 89 viagens completas em 22 corredores; 87 recortes até o P95 para a distância | Identifica a base da intensidade e da distância marítimas |
-| Intensidade marítima | 9,009824 g/(t·nm); fontes por IMO e por tipo identificadas | Diferencia medição individual de estimativa de grupo |
+| Intensidade marítima | 7,006102 g/(t·nm); fontes por IMO e por tipo identificadas | Diferencia medição individual de estimativa de grupo |
 | Operações portuárias | RTG e caminhão interno do terminal | Identifica os equipamentos considerados no cálculo |
 | Preços de combustível | Diesel S10 da ANP e VLSFO da Ship & Bunker, com data e valor usados | Permite atualizar ou repetir o componente de custo |
 | Avisos de qualidade | Um subtrecho marítimo aproximado por haversine | Sinaliza a aproximação sem ocultá-la no total |
@@ -940,7 +940,7 @@ Para disponibilizar o cálculo sem exigir instalação local, o CabotageLens é 
 
 #### 5.8.1 Página Router
 
-A página Router executa a comparação para a origem, o destino e a carga informados no cenário. A Figura 6 mostra os campos da barra lateral usados nessa definição. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, segue para Manaus e considera uma carga de 14 t.
+A página Router executa a comparação para a origem, o destino e a carga informados no cenário. A Figura 10 mostra os campos da barra lateral usados nessa definição. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, segue para Manaus e considera uma carga de 14 t.
 
 ![Campos da barra lateral da página Router usados para definir o cenário.](images/router-scenario.png)
 
@@ -956,7 +956,7 @@ Os resultados detalhados, os avisos, os logs e os demais registros gerados duran
 
 #### 5.8.2 Página Mapa de calor
 
-O Mapa de calor amplia a comparação realizada na página Router. Em vez de avaliar apenas uma ligação entre origem e destino, o usuário informa uma origem e a massa da carga, e o sistema compara esse cenário com 608 municípios brasileiros de população superior a 50 mil habitantes. Para cada município, são calculadas as mesmas duas alternativas descritas na Seção 3: a rodovia direta e a cadeia rodoviária–cabotagem–rodoviária. A Figura 8 mostra os campos usados para definir o cenário. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, e considera uma carga de 14 t.
+O Mapa de calor amplia a comparação realizada na página Router. Em vez de avaliar apenas uma ligação entre origem e destino, o usuário informa uma origem e a massa da carga, e o sistema compara esse cenário com 608 municípios brasileiros de população superior a 50 mil habitantes. Para cada município, são calculadas as mesmas duas alternativas descritas na Seção 4: a rodovia direta e a cadeia rodoviária–cabotagem–rodoviária. A Figura 12 mostra os campos usados para definir o cenário. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, e considera uma carga de 14 t.
 
 ![Campos de origem e carga da página Mapa de calor.](images/heatmap-scenario.png)
 
@@ -964,17 +964,17 @@ O Mapa de calor amplia a comparação realizada na página Router. Em vez de ava
 
 O resultado permite visualizar, em diferentes partes do país, onde a alternativa multimodal com cabotagem apresenta vantagem em relação à rodovia direta. O usuário pode escolher se o mapa representa custo modelado do combustível ou emissões operacionais. Em cada destino, um valor positivo indica que a alternativa multimodal teve menor custo ou menor emissão; um valor negativo indica que a rodovia direta apresentou o menor resultado para o indicador selecionado.
 
-As cores e a altura da superfície facilitam a leitura espacial dessas diferenças. Os resultados são calculados para os municípios do conjunto de destinos; as áreas entre eles são uma interpolação visual para tornar o padrão mais legível no mapa. Portanto, cada área colorida não representa uma nova rota calculada, mas a visualização dos resultados obtidos para os destinos próximos. A Figura 9 ilustra essa representação para o cenário informado.
+As cores e a altura da superfície facilitam a leitura espacial dessas diferenças. Os resultados são calculados para os municípios do conjunto de destinos; as áreas entre eles são uma interpolação visual para tornar o padrão mais legível no mapa. Portanto, cada área colorida não representa uma nova rota calculada, mas a visualização dos resultados obtidos para os destinos próximos. A Figura 13 ilustra essa representação para o cenário informado.
 
 ![Mapa de calor produzido para o cenário de origem em São Paulo e carga de 14 t.](images/heatmap-map.png)
 
-*Figura 9 — Representação espacial dos resultados calculados na página Mapa de calor. Fonte: elaboração própria.*
+*Figura 13 — Representação espacial dos resultados calculados na página Mapa de calor. Fonte: elaboração própria.*
 
 ## 6. Comparações com ferramentas externas
 
 As ferramentas externas permitem confrontar o resultado do CabotageLens com estimativas já disponíveis ao público. Em cada caso, são apresentadas as distâncias, as emissões ou os valores de custo disponíveis na respectiva ferramenta. Quando a rota, o porto ou outro parâmetro difere, a diferença permanece explícita; os resultados não são ajustados para produzir uma equivalência artificial.
 
-### 5.1 [Calculadora de emissões da Aliança](https://www.alianca.com.br/calculadora-de-co2)
+### 6.1 [Calculadora de emissões da Aliança](https://www.alianca.com.br/calculadora-de-co2)
 
 Na calculadora da Aliança, o cenário informado foi São Paulo–Abaetetuba, com um contêiner seco de 40 pés e 20 t de carga. O mesmo cenário foi executado no CabotageLens com 20 t e 2 TEU, equivalentes a um contêiner de 40 pés. As duas alternativas multimodais utilizam Santos como porto de embarque e Vila do Conde como porto de desembarque.
 
@@ -1008,7 +1008,7 @@ A captura da calculadora da Log-In refere-se ao cenário São Paulo–Rio Branco
 
 ![Resultado da calculadora de emissões da Log-In.](comparacao_externa/loginlogistica.png)
 
-*Figura 11 — Resultado da calculadora de emissões da Log-In. Fonte: captura de tela fornecida pelo autor.*
+*Figura 15 — Resultado da calculadora de emissões da Log-In. Fonte: captura de tela fornecida pelo autor.*
 
 **Tabela 20 — Emissões no cenário de referência São Paulo–Rio Branco.**
 
@@ -1018,7 +1018,7 @@ A captura da calculadora da Log-In refere-se ao cenário São Paulo–Rio Branco
 | Multimodal | 7.595,9 km | 2,9 t | 7.584,836 km | 2,754 t |
 | Redução em relação à rodovia | — | 0,2 t | — | 1,314 t |
 
-No resultado multimodal, as duas ferramentas estão próximas. A distância da Log-In é 11,064 km maior, uma diferença de 0,15%, e a emissão de GEE informada é 0,142 t menor, ou 4,7% em relação ao CabotageLens. Essa proximidade é positiva porque os valores divulgados pelas duas ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
+No resultado multimodal, as duas ferramentas estão próximas. A distância da Log-In é 11,064 km maior, uma diferença de 0,15%, e a emissão de GEE informada é 0,146 t maior, ou 5,3% em relação ao CabotageLens. Essa proximidade é positiva porque os valores divulgados pelas duas ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
 
 Na alternativa rodoviária, porém, a distância da Log-In não corresponde à rota porta a porta São Paulo–Rio Branco previamente calculada. A ferramenta informa 3.032 km, enquanto o CabotageLens obteve 3.491,431 km e a conferência independente no Google Maps indicou 3.497 km, como apresentado na Seção 5.3.1.1. Essa diferença de 459,431 km, ou 13,2%, contribui para que a emissão rodoviária informada pela Log-In seja menor. Por isso, a comparação rodoviária não deve ser interpretada como uma equivalência direta entre os dois sistemas.
 
@@ -1040,7 +1040,7 @@ Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário
 
 Os dois valores têm finalidades diferentes: o resultado da ANTT é o piso mínimo de frete, enquanto o CabotageLens isola o custo operacional de combustível. Por isso, não se espera que sejam iguais. Ainda assim, o combustível calculado pelo sistema, R$ 12.318,68, representa 57,8% do piso de R$ 21.308,12. Essa proporção é um sinal de coerência de ordem de grandeza, pois o piso mínimo também reúne outras parcelas do frete além do combustível. Assim, os valores são apresentados lado a lado para contextualização, e não como cotações equivalentes.
 
-## 6. Conclusões
+## 7. Conclusões
 
 ### 6.1 Resultados da comparação
 
@@ -1048,7 +1048,7 @@ Este trabalho apresentou o CabotageLens, uma ferramenta para comparar duas forma
 
 No exemplo de uma remessa de 14 t entre São Paulo e Rio Branco, a alternativa multimodal percorre 117,24% mais quilômetros do que a rodoviária direta. Mesmo assim, emite 32,30% menos CO₂e operacional e apresenta custo modelado do combustível 46,69% menor. O resultado mostra que a distância total, isoladamente, não é suficiente para comparar os modais: os acessos rodoviários, as operações portuárias e a navegação precisam ser avaliados na mesma cadeia logística.
 
-### 6.2 Contribuição metodológica
+### 7.2 Contribuição metodológica
 
 A principal contribuição do CabotageLens está na construção da perna marítima com dados observados. Em vez de fixar um corredor entre dois portos, o sistema reconstrói as viagens registradas pela Agência Nacional de Transportes Aquaviários (ANTAQ), preserva as escalas intermediárias e calcula a carga a bordo em cada subtrecho. Sempre que possível, a intensidade vem do mesmo número IMO na base europeia de Monitoramento, Reporte e Verificação da União Europeia (EU MRV). Quando essa correspondência não está disponível ou é considerada atípica, o cálculo usa uma referência estatística de navios semelhantes e informa a fonte adotada.
 
