@@ -499,9 +499,19 @@ Desse modo, os subtrechos Santos–Suape, Suape–Pecém e Pecém–Manaus são 
 
 ##### 4.3.4.2 Intensidade de combustível do navio
 
-Após reconstruir o percurso e a carga a bordo, é preciso estimar quanto combustível foi necessário para realizar esse transporte. Conforme fundamentado na Seção 3.1, o sistema usa a **intensidade de combustível** para obter uma estimativa média e comparável, em vez de simular as condições particulares de uma única viagem. Essa intensidade é a quantidade de combustível associada ao transporte de uma tonelada por uma milha náutica. A unidade é grama por tonelada-milha náutica, ou $\mathrm{g/(t\cdot nm)}$.
+Após reconstruir o percurso e a carga a bordo, é preciso estimar quanto combustível foi necessário para realizar esse transporte. Conforme fundamentado na Seção 3.1, o sistema usa a **intensidade de combustível** para obter uma estimativa média e comparável, ao invés de simular as condições particulares de uma única viagem. Essa intensidade é a quantidade de combustível associada ao transporte de uma tonelada por uma milha náutica. A unidade é grama por tonelada-milha náutica, ou $\mathrm{g/(t\cdot nm)}$.
 
-Esse indicador é uma razão, e não o consumo total de uma viagem. Uma intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$, por exemplo, significa que, em média, são associados 7,43 g de combustível a cada tonelada transportada por uma milha náutica. Assim, ele permite comparar navios e viagens de tamanhos diferentes. O consumo total de cada viagem só é obtido posteriormente, ao multiplicar essa intensidade pelo trabalho de transporte reconstruído, conforme a Seção 3.3.4.3.
+Segundo a EU MRV, esse indicador é construido a partir de um processo padronizado. Para cada navio, a companhia define um plano de monitoramento que descreve os métodos e as fontes de dados utilizados. Esse plano é avaliado por um verificador acreditado e, quando aplicável, aprovado pela autoridade responsável. Durante o período de reporte, são registrados por viagem o combustível consumido, a distância percorrida, o tempo no mar e a carga transportada. Ao final do ano, esses registros são consolidados em um relatório de emissões do navio, que também passa por verificação antes de ser submetido pelo sistema THETIS-MRV (EUROPEAN COMMISSION, 2025, p. 9, 30–32 e 54–55).
+
+O trabalho de transporte de cada viagem é o produto entre a carga transportada e a distância percorrida. A intensidade anual não é uma média aritmética das intensidades das viagens, mas a razão entre o combustível total consumido no ano e o trabalho de transporte total:
+
+$$
+W_v=m_vd_v
+\qquad\text{e}\qquad
+I_{f,\mathrm{anual}}=\frac{F_{\mathrm{anual}}}{\sum_v W_v},
+$$
+
+em que $m_v$ é a massa de carga da viagem $v$, $d_v$ é a distância percorrida, $W_v$ é o respectivo trabalho de transporte e $F_{\mathrm{anual}}$ é o combustível total consumido pelo navio no período. Uma intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$, por exemplo, significa que, em média, são associados 7,43 g de combustível a cada tonelada transportada por uma milha náutica. Assim, ele permite comparar navios e viagens de tamanhos diferentes. O consumo total de cada viagem só é obtido posteriormente, ao multiplicar essa intensidade pelo trabalho de transporte reconstruído, conforme a Seção 3.3.4.3.
 
 ###### 4.3.4.2.1 Valor individual do navio no EU MRV
 

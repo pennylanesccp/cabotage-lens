@@ -188,8 +188,32 @@ VLSFO & \textit{Very low sulphur fuel oil}, óleo combustível naval de baixíss
 
 \clearpage
 
+\hypertarget{objetivo}{%
+\section{1. Objetivo}\label{objetivo}}
+
+O objetivo geral deste trabalho é desenvolver e apresentar o
+CabotageLens como um sistema computacional auditável para comparar, porta
+a porta, duas alternativas de transporte de uma mesma remessa no Brasil:
+a rodoviária direta e a multimodal composta por acessos rodoviários,
+operações portuárias e cabotagem. Para uma origem, um destino e uma massa
+de carga definidos, o sistema estima as distâncias percorridas, o consumo
+de Diesel S10 e VLSFO, as emissões operacionais TTW e o custo modelado do
+combustível, mantendo identificáveis os dados, parâmetros, aproximações e
+critérios empregados.
+
+Para alcançar esse objetivo geral, o trabalho tem como objetivos
+específicos: estabelecer uma base funcional comum para as duas
+alternativas; estruturar os cálculos de distância, combustível, emissões
+operacionais e custo modelado do combustível; estimar rota e consumo de
+combustível a partir de dados reais de navegação; implementar essas
+regras em uma aplicação web; e demonstrar sua aplicação para uma remessa
+de 14 toneladas de São Paulo, SP até Rio Branco, AC. A avaliação
+permanece restrita ao escopo operacional e metodológico declarado, sem
+representar fretes comerciais, disponibilidade futura do serviço ou uma
+avaliação WTW ou de ciclo de vida.
+
 \hypertarget{introduuxe7uxe3o}{%
-\section{1. Introdução}\label{introduuxe7uxe3o}}
+\section{2. Introdução}\label{introduuxe7uxe3o}}
 
 O transporte de cargas no Brasil é fortemente concentrado nas rodovias.
 Em 2015, o modal rodoviário respondeu por 65\% da atividade de
@@ -233,9 +257,15 @@ embarque, é transportada pelo navio entre os portos e, em seguida, segue
 de caminhão do porto de desembarque até o destino final. Por isso, a
 análise soma distância, consumo, emissões e custo de todas essas etapas,
 em vez de comparar apenas o trecho marítimo com a viagem rodoviária
-completa. Os portos escolhidos, as distâncias de acesso, a carga e as
-operações de transbordo podem mudar o resultado
-\parencite{shortsea2019,modalshiftreview2020}.
+completa.
+
+Os consumos associados às operações de movimentação de carga nos portos
+também podem ser deixados de lado quando a avaliação se concentra apenas
+nos deslocamentos rodoviário e marítimo. Este estudo busca incorporar
+também esse componente à comparação porta a porta, com base em
+referências sobre carga e descarga em terminais e sobre o consumo de
+energia nas operações portuárias
+\parencite{shipops2022,rtg2017,workbookdados}.
 
 É para tornar essa comparação possível que foi desenvolvido o
 CabotageLens. O usuário informa a origem, o destino e a massa da carga,
@@ -249,7 +279,7 @@ comparação deixa de ser uma escolha abstrata entre caminhão e navio e
 passa a considerar a operação logística completa.
 
 \hypertarget{revisuxe3o-da-literatura-e-fundamentauxe7uxe3o-metodoluxf3gica}{%
-\section{2. Revisão da literatura e fundamentação
+\section{3. Revisão da literatura e fundamentação
 metodológica}\label{revisuxe3o-da-literatura-e-fundamentauxe7uxe3o-metodoluxf3gica}}
 
 A literatura mostra que a cabotagem pode ser relevante em viagens
@@ -271,17 +301,16 @@ Por isso, a unidade analisada deve ser a remessa completa, e não um
 navio e um caminhão considerados isoladamente
 \parencite{modalshiftreview2020}.
 
-Um princípio metodológico do estudo é dar preferência a dados públicos,
-oficiais, observados e auditáveis. A Agência Nacional de Transportes
-Aquaviários (ANTAQ), órgão federal que regula e acompanha o transporte
-aquaviário brasileiro, fornece os registros de escalas e de movimentação
-de carga. A base europeia de Monitoramento, Reporte e Verificação da
-União Europeia (EU MRV) publica indicadores anuais de consumo e
-atividade dos navios. Essas fontes permitem relacionar uma operação
-registrada no Brasil ao desempenho do navio identificado pelo número da
-Organização Marítima Internacional (IMO), uma identificação permanente
-da embarcação. Os campos utilizados, os arquivos de origem e a forma de
-reconstruir as viagens são apresentados na Seção 3.3
+Para transformar essas exigências em uma avaliação reproduzível, o
+estudo combina duas fontes complementares. A
+\href{https://estatistica.antaq.gov.br/ea/sense/download.html}{Agência
+Nacional de Transportes Aquaviários (ANTAQ)} fornece registros
+observados de escalas e movimentações de carga no Brasil. O
+\href{https://mrv.emsa.europa.eu/}{Monitoramento, Reporte e Verificação
+da União Europeia (EU MRV)} fornece indicadores anuais de consumo e
+atividade por navio. O número IMO permite relacionar os registros das
+duas bases. Os arquivos, os campos utilizados e o procedimento de
+reconstrução são apresentados na Seção 4.3
 \parencite{antaq2025,emsa2026}.
 
 O cálculo de emissões adota a fronteira operacional \emph{tank-to-wheel}
@@ -350,34 +379,34 @@ no navio ou disponibilidade comercial futura.
 
 \begin{longtable}[]{@{}lll@{}}
 \toprule
-\begin{minipage}[b]{0.07\columnwidth}\raggedright
+\begin{minipage}[b]{0.10\columnwidth}\raggedright
 Dimensão\strut
-\end{minipage} & \begin{minipage}[b]{0.39\columnwidth}\raggedright
+\end{minipage} & \begin{minipage}[b]{0.36\columnwidth}\raggedright
 Incluído\strut
 \end{minipage} & \begin{minipage}[b]{0.45\columnwidth}\raggedright
 Não incluído no cálculo\strut
 \end{minipage}\tabularnewline
 \midrule
 \endhead
-\begin{minipage}[t]{0.07\columnwidth}\raggedright
+\begin{minipage}[t]{0.10\columnwidth}\raggedright
 Emissões\strut
-\end{minipage} & \begin{minipage}[t]{0.39\columnwidth}\raggedright
+\end{minipage} & \begin{minipage}[t]{0.36\columnwidth}\raggedright
 Emissões operacionais TTW de CO\textsubscript{2}e por remessa\strut
 \end{minipage} & \begin{minipage}[t]{0.45\columnwidth}\raggedright
 WTW, LCA, fabricação de caminhões, navios e equipamentos portuários e
 inventário completo de poluentes locais\strut
 \end{minipage}\tabularnewline
-\begin{minipage}[t]{0.07\columnwidth}\raggedright
+\begin{minipage}[t]{0.10\columnwidth}\raggedright
 Custo\strut
-\end{minipage} & \begin{minipage}[t]{0.39\columnwidth}\raggedright
+\end{minipage} & \begin{minipage}[t]{0.36\columnwidth}\raggedright
 Estimativa do custo modelado do combustível\strut
 \end{minipage} & \begin{minipage}[t]{0.45\columnwidth}\raggedright
 Frete comercial, negociação, seguro, estoque, multas por permanência e
 reserva de espaço no navio\strut
 \end{minipage}\tabularnewline
-\begin{minipage}[t]{0.07\columnwidth}\raggedright
+\begin{minipage}[t]{0.10\columnwidth}\raggedright
 Serviço\strut
-\end{minipage} & \begin{minipage}[t]{0.39\columnwidth}\raggedright
+\end{minipage} & \begin{minipage}[t]{0.36\columnwidth}\raggedright
 Sequências de portos realmente registradas no período analisado\strut
 \end{minipage} & \begin{minipage}[t]{0.45\columnwidth}\raggedright
 Garantia de frequência, espaço no navio ou disponibilidade comercial
@@ -386,19 +415,60 @@ futura\strut
 \bottomrule
 \end{longtable}
 
+\hypertarget{finalidade-comparativa-e-uso-de-paruxe2metros-histuxf3ricos}{%
+\subsection{3.1 Finalidade comparativa e uso de parâmetros
+históricos}\label{finalidade-comparativa-e-uso-de-paruxe2metros-histuxf3ricos}}
+
+Definidas a unidade de comparação e as fronteiras do estudo, é
+necessário estabelecer um nível de detalhamento compatível com sua
+finalidade. O CabotageLens busca comparar diferentes cenários em uma
+base comum, e não reproduzir as condições instantâneas de uma viagem
+específica. Por isso, combina os dados próprios de cada cenário ---
+origem, destino, carga e percurso --- com parâmetros históricos ou
+representativos de desempenho.
+
+O mesmo princípio é aplicado às duas alternativas. Na perna rodoviária,
+a distância calculada é combinada a uma eficiência definida por número
+de eixos a partir da referência da
+\href{http://www.antt.gov.br/}{Agência Nacional de Transportes
+Terrestres (ANTT)}. Na perna marítima, o percurso e a carga reconstruídos
+são combinados ao indicador anual correspondente ao navio. Assim,
+nenhuma das alternativas recebe um nível de precisão incompatível com
+os dados disponíveis \parencite{antt2025,antaq2025,emsa2026}.
+
+Para a navegação, adoção de indicadores médios evita que a comparação
+fique condicionada às circunstâncias de uma única viagem e oferece uma
+referência rastreável para diferentes cenários. Incorporar diretamente
+calado ou deslocamento, velocidade, trim, vento, ondas, correntes,
+condição do casco e do propulsor e regimes das máquinas produziria uma
+estimativa localizada, válida para uma combinação específica de navio,
+rota e momento operacional. Porém, como o estudo busca comparar os
+modais a partir de desempenhos médios, e não reproduzir as condições
+particulares de uma viagem, o modelo utiliza um indicador anual que
+reúne o desempenho do navio ao longo do período monitorado.
+
+Os resultados devem, portanto, ser interpretados como estimativas médias
+de consumo e emissões operacionais TTW. Eles não representam o consumo
+exato de uma viagem específica nem demonstram que a cabotagem é sempre
+ambientalmente superior. A conclusão permanece condicionada à rota, aos
+acessos terrestres, à carga, ao navio representado e às demais premissas
+do modelo \parencite{shortsea2019}. A Seção 4 apresenta como os
+parâmetros rodoviários e marítimos são obtidos, aplicados e identificados
+quando exigem estimativas por grupo.
+
 \hypertarget{metodologia}{%
-\section{3. Metodologia}\label{metodologia}}
+\section{4. Metodologia}\label{metodologia}}
 
 Esta seção descreve como o CabotageLens constrói e compara as
-alternativas de transporte. A Seção 3.1 define o serviço que as duas
-alternativas precisam atender. Em seguida, a Seção 3.2 calcula a
-alternativa rodoviária e a Seção 3.3 monta a alternativa com cabotagem,
+alternativas de transporte. A Seção 4.1 define o serviço que as duas
+alternativas precisam atender. Em seguida, a Seção 4.2 calcula a
+alternativa rodoviária e a Seção 4.3 monta a alternativa com cabotagem,
 incluindo os acessos terrestres, as operações portuárias e a navegação.
-A Seção 3.4 reúne os resultados do exemplo. A Seção 4 apresenta a
+A Seção 4.4 reúne os resultados do exemplo. A Seção 5 apresenta a
 implementação dessas regras no sistema.
 
 \hypertarget{serviuxe7o-comparado-e-alternativas-loguxedsticas}{%
-\subsection{3.1 Serviço comparado e alternativas
+\subsection{4.1 Serviço comparado e alternativas
 logísticas}\label{serviuxe7o-comparado-e-alternativas-loguxedsticas}}
 
 Para que a comparação seja válida, as duas alternativas devem prestar o
@@ -436,6 +506,8 @@ precisam ser movimentados nos terminais.
 \textbf{Quadro 2 --- Principais símbolos usados nas fórmulas do
 sistema.}
 
+\begingroup
+\setlength{\tabcolsep}{3pt}
 \begin{longtable}[]{@{}lll@{}}
 \toprule
 Grandeza & Símbolo & Unidade usual\tabularnewline
@@ -458,23 +530,24 @@ Movimentos por TEU & \(a\) & movimentos/TEU\tabularnewline
 Consumo por movimento & \(c\) & L/movimento\tabularnewline
 \bottomrule
 \end{longtable}
+\endgroup
 
 \emph{Os subscritos identificam a etapa, o combustível ou o conjunto de
 dados. Os índices e conjuntos específicos são definidos junto às
 fórmulas em que aparecem.}
 
 \hypertarget{alternativa-rodoviuxe1ria}{%
-\subsection{3.2 Alternativa
+\subsection{4.2 Alternativa
 rodoviária}\label{alternativa-rodoviuxe1ria}}
 
 O cálculo rodoviário começa pela distância terrestre total entre a
 origem e o destino. O sistema obtém uma rota rodoviária em quilômetros e
 utiliza essa distância para representar o percurso do caminhão. A forma
 como essa rota é consultada e transformada em distância está descrita na
-Seção~4.3.1.
+Seção~5.3.1.
 
 \hypertarget{escolha-do-veuxedculo-e-consumo-de-diesel}{%
-\subsubsection{3.2.1 Escolha do veículo e consumo de
+\subsubsection{4.2.1 Escolha do veículo e consumo de
 diesel}\label{escolha-do-veuxedculo-e-consumo-de-diesel}}
 
 A massa transportada define o veículo representativo. O modelo utiliza
@@ -483,7 +556,8 @@ os rendimentos médios por número de eixos publicados pela
 oficiais foram obtidos na tabela da Política Nacional de Pisos Mínimos
 do Transporte Rodoviário de Cargas, disponibilizada no
 \href{https://anttlegis.antt.gov.br/action/UrlPublicasAction.php?acao=abrirAtoPublico\&cod_menu=9230\&cod_modulo=623\&num_ato=00000001\&seq_ato=ATT\&sgl_orgao=SUROC\%2FANTT\%2FMT\&sgl_tipo=POR\&vlr_ano=2025}{portal
-de legislação da ANTT (ANTTlegis)} \parencite{antt2025}. A tabela de referência adotada no
+de legislação da Agência Nacional de Transportes Terrestres (ANTTlegis)}
+\parencite{antt2025}. A tabela de referência adotada no
 modelo associa a faixa de carga ao número de eixos e relaciona cada
 configuração à eficiência básica em quilômetros por litro (km/L). A
 seleção automática é uma regra de modelagem para estimar consumo; não é
@@ -537,11 +611,11 @@ V_{\mathrm{diesel,rod}}
 
 Quando a carga exige mais de uma viagem do veículo escolhido, o sistema
 multiplica esse consumo pelo número necessário de viagens carregadas. Os
-litros calculados são convertidos em custo na Seção~3.2.2 e em emissões
-operacionais na Seção~3.2.3.
+litros calculados são convertidos em custo na Seção~4.2.2 e em emissões
+operacionais na Seção~4.2.3.
 
 \hypertarget{custo-estimado-do-combustuxedvel}{%
-\subsubsection{3.2.2 Custo estimado do
+\subsubsection{4.2.2 Custo estimado do
 combustível}\label{custo-estimado-do-combustuxedvel}}
 
 Após estimar o consumo em litros, o sistema calcula o custo do diesel da
@@ -563,7 +637,7 @@ P_{\mathrm{diesel}}
 =\frac{P_{\mathrm{diesel,origem}}+P_{\mathrm{diesel,destino}}}{2}.
 \]
 
-O custo estimado é o consumo calculado na Seção 3.2.1 multiplicado pelo
+O custo estimado é o consumo calculado na Seção 4.2.1 multiplicado pelo
 preço do litro:
 
 \[
@@ -600,11 +674,11 @@ C_{\mathrm{rod}}
 \]
 
 \hypertarget{emissuxf5es-operacionais-da-perna-rodoviuxe1ria}{%
-\subsubsection{3.2.3 Emissões operacionais da perna
+\subsubsection{4.2.3 Emissões operacionais da perna
 rodoviária}\label{emissuxf5es-operacionais-da-perna-rodoviuxe1ria}}
 
 As emissões da alternativa rodoviária são calculadas a partir do diesel
-consumido na Seção~3.2.1. A fronteira adotada é \emph{tank-to-wheel}
+consumido na Seção~4.2.1. A fronteira adotada é \emph{tank-to-wheel}
 (TTW, do tanque à roda): ela considera somente as emissões geradas pela
 queima do combustível durante o transporte. O sistema aplica o fator
 2,68~kg~CO\textsubscript{2}e por litro de diesel, baseado nas Diretrizes de 2006 do
@@ -624,7 +698,7 @@ E_{\mathrm{rod}}
 Nessa expressão, \(E_{\mathrm{rod}}\) é a emissão operacional da rota,
 em kg~CO\textsubscript{2}e; \(V_{\mathrm{diesel,rod}}\) é o volume de diesel, em litros;
 e \(FE_{\mathrm{diesel}}\) é o fator de emissão, em kg~CO\textsubscript{2}e/L. No
-exemplo São Paulo--Rio Branco, os 1.518,014~L estimados na Seção~3.2.1
+exemplo São Paulo--Rio Branco, os 1.518,014~L estimados na Seção~4.2.1
 resultam em:
 
 \[
@@ -637,7 +711,7 @@ E_{\mathrm{rod}}
 \]
 
 \hypertarget{resultado-consolidado-da-alternativa-rodoviuxe1ria}{%
-\subsubsection{3.2.4 Resultado consolidado da alternativa
+\subsubsection{4.2.4 Resultado consolidado da alternativa
 rodoviária}\label{resultado-consolidado-da-alternativa-rodoviuxe1ria}}
 
 A Tabela 3 reúne os resultados da alternativa rodoviária para a mesma
@@ -664,7 +738,7 @@ Item & Valor no exemplo\tabularnewline
 \end{longtable}
 
 \hypertarget{alternativa-multimodal}{%
-\subsection{3.3 Alternativa multimodal}\label{alternativa-multimodal}}
+\subsection{4.3 Alternativa multimodal}\label{alternativa-multimodal}}
 
 A alternativa multimodal também precisa transportar a remessa do ponto
 inicial ao ponto final. Ela é formada por três partes: o acesso
@@ -683,13 +757,13 @@ navegação e a carga a bordo; a intensidade define o consumo do navio; e
 a agregação reúne combustível, emissões, custo e operações portuárias.
 
 \hypertarget{escolha-dos-portos}{%
-\subsubsection{3.3.1 Escolha dos portos}\label{escolha-dos-portos}}
+\subsubsection{4.3.1 Escolha dos portos}\label{escolha-dos-portos}}
 
 O sistema associa a origem ao porto mais próximo disponível na base
 portuária e faz o mesmo para o destino. Esses dois portos definem a
 ligação marítima que será pesquisada. A forma como essa proximidade é
 calculada e usada para selecionar os portos é apresentada na
-Seção~4.4.3.1. Essa regra fornece uma forma objetiva de montar o
+Seção~5.4.3.1. Essa regra fornece uma forma objetiva de montar o
 cenário, mas não afirma se o porto é necessariamente a melhor escolha
 comercial ou operacional. Um porto mais distante pode ser preferível na
 prática por motivos como frequência de navios, contrato, terminal, custo
@@ -697,19 +771,122 @@ ou disponibilidade de espaço, fatores que não são decididos por essa
 seleção geográfica.
 
 \hypertarget{acessos-rodoviuxe1rios-first-mile-e-last-mile}{%
-\subsubsection{\texorpdfstring{3.3.2 Acessos rodoviários: \emph{first
+\subsubsection{\texorpdfstring{4.3.2 Acessos rodoviários: \emph{first
 mile} e \emph{last
-mile}}{3.3.2 Acessos rodoviários: first mile e last mile}}\label{acessos-rodoviuxe1rios-first-mile-e-last-mile}}
+mile}}{4.3.2 Acessos rodoviários: first mile e last mile}}\label{acessos-rodoviuxe1rios-first-mile-e-last-mile}}
 
-O primeiro acesso, chamado de \emph{first mile}, leva a carga da origem
-até o porto de embarque. O segundo, chamado de \emph{last mile}, leva a
-carga do porto de desembarque até o destino final. Para cada um deles, o
-sistema obtém uma distância rodoviária, aplica a regra de veículo,
-eficiência e consumo de diesel da Seção~3.2.1 e converte o consumo em
-emissões conforme a Seção~3.2.3.
+O primeiro acesso, chamado de \emph{first mile}, é o deslocamento da
+carga entre a origem até o porto de embarque. Já o segundo, chamado de
+\emph{last mile}, se refere à ida da carga do porto de desembarque até o
+destino final. Para cada um deles, o sistema obtém uma distância
+rodoviária, aplica a regra de veículo, eficiência e consumo de diesel da
+Seção~4.2.1 e converte o consumo em emissões conforme a Seção~4.2.3.
+
+O consumo dos dois acessos é calculado pela mesma expressão. O índice
+\(i\) identifica o acesso e assume \(\mathrm{first}\) ou
+\(\mathrm{last}\):
+
+\[
+V_{\mathrm{diesel},i}
+=N_{\mathrm{viagens},i}
+\frac{D_i}{\eta_i},
+\qquad
+i\in\{\mathrm{first},\mathrm{last}\}.
+\]
+
+No exemplo São Paulo--Rio Branco, os valores das variáveis são:
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule
+\begin{minipage}[b]{0.16\columnwidth}\raggedright
+Variável\strut
+\end{minipage} & \begin{minipage}[b]{0.27\columnwidth}\raggedright
+Grandeza\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright
+\emph{First mile}\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright
+\emph{Last mile}\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.16\columnwidth}\raggedright
+\(V_{\mathrm{diesel},i}\)\strut
+\end{minipage} & \begin{minipage}[t]{0.27\columnwidth}\raggedright
+Volume de diesel do acesso, em litros; é o resultado procurado.\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright
+\(V_{\mathrm{diesel,first}}\)\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright
+\(V_{\mathrm{diesel,last}}\)\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.16\columnwidth}\raggedright
+\(D_i\)\strut
+\end{minipage} & \begin{minipage}[t]{0.27\columnwidth}\raggedright
+Distância rodoviária do acesso.\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright
+86,170~km, entre São Paulo e o Porto de Santos.\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright
+1.403,691~km, entre o Porto de Manaus e Rio Branco.\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.16\columnwidth}\raggedright
+\(\eta_i\)\strut
+\end{minipage} & \begin{minipage}[t]{0.27\columnwidth}\raggedright
+Eficiência do veículo selecionado para a remessa de 14~t.\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright
+2,3~km/L; carreta de cinco eixos.\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright
+2,3~km/L; carreta de cinco eixos.\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.16\columnwidth}\raggedright
+\(N_{\mathrm{viagens},i}\)\strut
+\end{minipage} & \begin{minipage}[t]{0.27\columnwidth}\raggedright
+Número de viagens carregadas necessárias; a remessa cabe em um único
+veículo.\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright
+1 viagem.\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright
+1 viagem.\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+Substituindo:
+
+\begin{itemize}
+\item
+  para \emph{first mile}:
+\end{itemize}
+
+\[
+\begin{aligned}
+V_{\mathrm{diesel,first}}
+&=1\times\frac{86{,}170\ \mathrm{km}}{2{,}3\ \mathrm{km/L}}
+=37{,}465\ \mathrm{L}\\
+\end{aligned}
+\]
+
+\begin{itemize}
+\item
+  para \emph{last mile}:
+\end{itemize}
+
+\[
+\begin{aligned}
+V_{\mathrm{diesel,last}}
+&=1\times\frac{1.403{,}691\ \mathrm{km}}{2{,}3\ \mathrm{km/L}}
+=610{,}300\ \mathrm{L}
+\end{aligned}
+\]
+
+Portanto, o \emph{first mile} consome 37,465~L de diesel e o
+\emph{last mile}, 610,300~L. A carga entra nesse cálculo ao definir o
+veículo e o número de viagens necessárias. Se a massa exigisse mais de
+uma viagem, cada consumo seria multiplicado pelo respectivo número de
+viagens carregadas. Esses volumes permanecem separados do consumo das
+operações portuárias e da navegação e são posteriormente convertidos em
+custo e emissões.
 
 \hypertarget{operauxe7uxf5es-portuuxe1rias}{%
-\subsubsection{3.3.3 Operações
+\subsubsection{4.3.3 Operações
 portuárias}\label{operauxe7uxf5es-portuuxe1rias}}
 
 As operações portuárias são as movimentações realizadas dentro do
@@ -728,16 +905,61 @@ internamente no terminal. Estudos sobre carga e descarga em portos e
 sobre o uso energético de RTGs fundamentam a representação da operação
 por equipamento a seguir \parencite{shipops2022,rtg2017}.
 
-O cálculo segue uma sequência simples: a carga informada é convertida em
-contêineres equivalentes a 20 pés (TEU); cada TEU gera uma quantidade
-definida de movimentos por equipamento; e cada movimento é convertido em
-litros de diesel. Os movimentos por contêiner e os consumos por
-movimento vêm do cenário de referência parametrizado com dados de Santos
-\parencite{workbookdados}.
+\hypertarget{origem-e-tratamento-dos-parametros-operacionais}{%
+\paragraph{4.3.3.1 Origem e tratamento dos parâmetros
+operacionais}\label{origem-e-tratamento-dos-parametros-operacionais}}
 
-O cenário sempre considera duas operações portuárias: uma no porto de
-embarque e outra no porto de desembarque. Como a mesma remessa passa
-pelos dois terminais, a fórmula já usa a multiplicação por 2:
+Os estudos citados acima fundamentam a separação do consumo por
+equipamento, mas não fornecem os valores numéricos empregados no
+exemplo. Esses valores foram extraídos da planilha técnica elaborada
+pelo Professor Doutor Gustavo Adolfo Alves da Costa em 2023 como
+material de apoio à sua pesquisa de doutorado sobre competitividade e
+sustentabilidade da cabotagem \parencite{workbookdados}. A planilha reúne
+os componentes da comparação multimodal posteriormente apresentada por
+Costa, Mendes e Gomes da Cruz \parencite{competitiveness2024}.
+
+No material fornecido, o consumo é informado em litros por contêiner e
+acompanhado do respectivo número de movimentos:
+
+\begin{itemize}
+\item
+  RTG: 1,4 e 1,441185~L por contêiner, com 4 movimentos;
+\item
+  Caminhão interno: 0,975000 e 1,003682~L por contêiner, com 2
+  movimentos.
+\end{itemize}
+
+O consumo por movimento de cada equipamento é obtido pela divisão do
+consumo por contêiner pelo respectivo número de movimentos. Como há dois
+cenários para cada equipamento, o modelo adota a média dos dois
+resultados:
+
+\[
+\begin{aligned}
+c_{\mathrm{RTG}}
+&=\frac{1}{2}\left(\frac{1{,}400000}{4}+\frac{1{,}441185}{4}\right)
+=0{,}355148\ \mathrm{L/movimento},\\
+c_{\mathrm{caminhao}}
+&=\frac{1}{2}\left(\frac{0{,}975000}{2}+\frac{1{,}003682}{2}\right)
+=0{,}494671\ \mathrm{L/movimento}.
+\end{aligned}
+\]
+
+Para aplicar esses fatores à carga analisada, o modelo utiliza o TEU como
+unidade operacional. A massa da remessa é convertida em TEU e cada
+unidade recebe o número de movimentos definido para cada equipamento.
+
+\hypertarget{calculo-do-consumo-modelado-das-operacoes-portuarias}{%
+\paragraph{4.3.3.2 Cálculo do consumo modelado das operações
+portuárias}\label{calculo-do-consumo-modelado-das-operacoes-portuarias}}
+
+O cálculo combina a quantidade de TEUs, o número de movimentos por
+equipamento e o respectivo consumo de diesel por movimento.
+
+Na comparação porta a porta deste estudo, são consideradas duas operações
+portuárias: uma no terminal de embarque e outra no terminal de
+desembarque. Como a mesma remessa passa pelos dois terminais, a fórmula
+inclui a multiplicação por 2:
 
 \[
 V_{\mathrm{diesel,porto}}
@@ -756,26 +978,25 @@ calcula o diesel do caminhão interno. A multiplicação por 2 leva esse
 consumo para os dois terminais. O resultado é usado posteriormente no
 cálculo das emissões operacionais e do custo modelado do combustível.
 
-No exemplo, a remessa de 14~t equivale a 1~TEU. O RTG realiza quatro
-movimentos por contêiner, com consumo de 0,355148~L por movimento, e o
-caminhão interno realiza dois movimentos, com consumo de 0,494671~L por
-movimento. Aplicando diretamente a fórmula:
+No exemplo, a remessa de 14~t equivale a 1~TEU. Substituindo os fatores
+obtidos anteriormente na fórmula:
 
 \[
 \begin{aligned}
 V_{\mathrm{diesel,porto}}
 &=2\times1\times
 \left[(4\times0{,}355148)+(2\times0{,}494671)\right]\\
-&=2\times(1{,}421+0{,}989)\\
-&=4{,}820\ \mathrm{L}.
+&=2\times2{,}409934\\
+&=4{,}819868\ \mathrm{L}\approx4{,}820\ \mathrm{L}.
 \end{aligned}
 \]
 
-Assim, no exemplo São Paulo--Rio Branco, as operações portuárias em
-Santos e Manaus totalizam 4,820~L de diesel.
+Assim, no exemplo São Paulo--Rio Branco, o consumo modelado é de
+2,410~L de diesel por TEU em cada terminal e totaliza 4,820~L nas duas
+operações portuárias.
 
 \hypertarget{consumo-de-combustuxedvel-na-perna-maruxedtima}{%
-\subsubsection{3.3.4 Consumo de combustível na perna
+\subsubsection{4.3.4 Consumo de combustível na perna
 marítima}\label{consumo-de-combustuxedvel-na-perna-maruxedtima}}
 
 A perna marítima corresponde ao deslocamento da remessa por cabotagem
@@ -785,49 +1006,64 @@ combustível de baixíssimo teor de enxofre) associado a esse deslocamento.
 
 A estimativa não parte de um corredor previamente definido. Ela é
 construída com registros observados de escalas e movimentações de carga
-da Agência Nacional de Transportes Aquaviários (ANTAQ) e com indicadores
-de intensidade de combustível do Monitoramento, Reporte e Verificação da
-União Europeia (EU MRV).
+da
+\href{https://estatistica.antaq.gov.br/ea/sense/download.html}{Agência
+Nacional de Transportes Aquaviários (ANTAQ)} e com indicadores de
+intensidade de combustível do
+\href{https://mrv.emsa.europa.eu/}{Monitoramento, Reporte e Verificação
+da União Europeia (EU MRV)}.
 
-A seção está organizada em quatro etapas. Primeiro, apresenta como os
-registros da ANTAQ são reunidos para reconstruir cada viagem e seus
-subtrechos. Em seguida, explica como é definida a intensidade de
-combustível de cada navio. Depois, mostra como as viagens válidas são
-consolidadas para obter a intensidade representativa da ligação. Por
-fim, descreve o cálculo da distância marítima representativa,
-considerando os corredores observados e tratando percursos
-excepcionalmente longos de forma consistente.
+A seção apresenta quatro etapas metodológicas, seguidas por dois
+exemplos numéricos. Primeiro, mostra como os registros da ANTAQ são
+reunidos para reconstruir cada viagem e seus subtrechos. Em seguida,
+explica como é definida a intensidade de combustível de cada navio, como
+as viagens válidas formam a intensidade representativa da ligação e como
+se calcula a distância marítima representativa. Ao final, cinco viagens
+ilustram a formação dessas médias e o resultado completo é aplicado à
+remessa simulada.
 
 \hypertarget{atividade-observada-na-antaq-e-reconstruuxe7uxe3o-das-viagens}{%
-\paragraph{3.3.4.1 Atividade observada na ANTAQ e reconstrução das
+\paragraph{4.3.4.1 Atividade observada na ANTAQ e reconstrução das
 viagens}\label{atividade-observada-na-antaq-e-reconstruuxe7uxe3o-das-viagens}}
 
-Para executar essa reconstrução, o sistema parte dos arquivos brutos da
-ANTAQ, que não trazem uma viagem pronta, como ``Santos--Manaus''. Cada
-linha registra apenas um evento: uma escala em um porto e uma
-movimentação de carga. Antes de combinar esses registros, o sistema
-mantém apenas as movimentações de cabotagem e carga conteinerizada
-vinculadas a uma atracação e a um navio identificado pelo número IMO. Ao
-reunir os registros do mesmo navio, ordenar as escalas e calcular a carga
-a bordo, transforma esses eventos isolados em uma viagem observada.
+Para calcular a perna marítima, o sistema combina duas tabelas
+disponibilizadas pela ANTAQ: Atracação e Carga. Nenhuma delas apresenta
+isoladamente uma viagem completa, como ``Santos--Manaus''. As informações
+necessárias para a análise de uma viagem completa foi dividida entre
+essas tabelas e estão distribuídas da seguinte forma:
 
-Para reconstruir uma viagem, o sistema combina duas tabelas que cumprem
-papéis diferentes. A tabela de Carga mostra o que entrou e o que saiu do
-navio em cada escala. A tabela de Atracação mostra onde e quando essa
-escala ocorreu e qual navio a realizou. O campo \texttt{IDAtracacao}
-(código único de identificação da atracação) aparece nos dois arquivos e
-faz a ligação entre eles.
+\begin{itemize}
+\item
+  Na tabela de Atracação, cada linha registra uma \textbf{escala} de determinado
+  navio em um porto ou terminal, com suas datas e seu número IMO (ver
+  Seção 4.3.4.1.2).
+\item
+  Na tabela de Carga, cada linha registra uma parcela de
+  \textbf{carga movimentada} durante uma atracação, com informações como massa,
+  quantidade em TEU e sentido da movimentação (ver Seção 4.3.4.1.1).
+\end{itemize}
+
+Como a viagem não está registrada como uma unidade pronta, ela precisa
+ser reconstruída a partir dessas duas tabelas.
+
+A reconstrução é apresentada nas subseções seguintes na ordem em que os
+dados são tratados. Primeiro, o sistema mantém somente as movimentações
+de carga conteinerizada em cabotagem e as atracações de navios
+identificados pelo número IMO. Depois, agrupa os registros da tabela de
+Carga pelo campo \texttt{IDAtracacao} e os associa à escala correspondente
+na tabela de Atracação. Com as escalas de cada navio ordenadas
+cronologicamente, o sistema pode formar os subtrechos da viagem e calcular
+a carga a bordo entre portos consecutivos.
 
 \hypertarget{tabela-de-carga-da-antaq}{%
-\subparagraph{3.3.4.1.1 Tabela de Carga da
+\subparagraph{4.3.4.1.1 Tabela de Carga da
 ANTAQ}\label{tabela-de-carga-da-antaq}}
 
-A tabela de Carga é um registro de movimentações, não um itinerário
-pronto. Cada linha representa uma parcela de carga movimentada em
-determinada escala: informa a massa, a quantidade de contêineres e se
-ela foi embarcada ou desembarcada. Uma mesma escala pode ter várias
-linhas, pois o navio pode descarregar e carregar mercadorias associadas
-a diferentes pares de origem e destino.
+Na primeira etapa, a tabela de Carga detalha as movimentações ocorridas
+em cada escala. Cada linha informa a massa, a quantidade de contêineres e
+se determinada parcela foi embarcada ou desembarcada. Uma mesma escala
+pode ter várias linhas, pois o navio pode descarregar e carregar
+mercadorias associadas a diferentes pares de origem e destino.
 
 Para saber quanto foi movimentado no porto, o sistema reúne as linhas
 com o mesmo \texttt{IDAtracacao} e soma separadamente os desembarques e
@@ -836,6 +1072,19 @@ para o trecho seguinte; a carga desembarcada deixa o navio naquele
 porto. Por isso, os valores da Tabela 4 são apresentados na ordem
 \textbf{desembarcados / embarcados}. Eles mostram o movimento ocorrido
 na escala, e não a carga total que o navio levava ao partir.
+
+A Figura 2 apresenta parte do arquivo bruto de Carga. A repetição do
+mesmo \texttt{IDAtracacao} em várias linhas mostra que uma única escala
+pode reunir diferentes movimentações de embarque e desembarque.
+
+\begin{center}
+\includegraphics[width=0.94\linewidth]{images/antaq_2025_carga_recorte.png}
+\end{center}
+
+\emph{Figura 2 --- Captura de tela de parte do arquivo
+\texttt{2025Carga.txt}, com movimentações de carga associadas às
+atracações \texttt{1618801} e \texttt{1625119}. Fonte: Agência Nacional
+de Transportes Aquaviários (ANTAQ), 2025.}
 
 \textbf{Tabela 4 --- Campos do arquivo \texttt{2025Carga.txt} usados
 para reconstruir os movimentos de carga.}
@@ -920,17 +1169,8 @@ Santos; Suape; Pecém; e Manaus.\strut
 Nacional de Transportes Aquaviários (ANTAQ), Painel Estatístico
 Aquaviário}.}
 
-Para reconstruir a carga a bordo, o sistema lê os desembarques e
-embarques na ordem das escalas. A primeira escala disponível pode
-ocorrer com o navio já carregado. Se o saldo acumulado de embarques
-menos desembarques ficar negativo em algum ponto, isso indica que havia
-carga a bordo antes do primeiro registro observado. Nesses casos, o
-sistema inclui apenas a carga inicial mínima necessária para manter o
-saldo não negativo e continua a reconstrução dos subtrechos. Se isso não
-ocorrer, a carga inicial é considerada zero.
-
 \hypertarget{tabela-de-atracauxe7uxe3o-da-antaq}{%
-\subparagraph{3.3.4.1.2 Tabela de Atracação da
+\subparagraph{4.3.4.1.2 Tabela de Atracação da
 ANTAQ}\label{tabela-de-atracauxe7uxe3o-da-antaq}}
 
 A tabela de Atracação é o registro cronológico das escalas. Cada linha
@@ -940,6 +1180,19 @@ navio usado internacionalmente. Ela não informa a massa movimentada. Ao
 ligar seu \texttt{IDAtracacao} aos movimentos da tabela de Carga e
 ordenar as datas de atracação, o sistema transforma os registros
 isolados na sequência Santos → Suape → Pecém → Manaus.
+
+A Figura 3 apresenta parte do arquivo bruto de Atracação. Cada linha
+identifica uma escala e reúne o porto, as datas e o número IMO
+necessários para ordenar as escalas do mesmo navio.
+
+\begin{center}
+\includegraphics[width=0.94\linewidth]{images/antaq_2025_atracacao_recorte.png}
+\end{center}
+
+\emph{Figura 3 --- Captura de tela de parte do arquivo
+\texttt{2025Atracacao.txt}, com escalas observadas dos navios utilizados
+no exemplo. Fonte: Agência Nacional de Transportes Aquaviários (ANTAQ),
+2025.}
 
 \textbf{Tabela 5 --- Campos do arquivo \texttt{2025Atracacao.txt} usados
 para identificar e ordenar as escalas dos navios.}
@@ -1021,17 +1274,17 @@ Nacional de Transportes Aquaviários (ANTAQ), Painel Estatístico
 Aquaviário}.}
 
 \hypertarget{reconstruuxe7uxe3o-das-viagens}{%
-\paragraph{3.3.4.1.3 Reconstrução das
+\paragraph{4.3.4.1.3 Reconstrução das
 viagens}\label{reconstruuxe7uxe3o-das-viagens}}
 
-A integração das duas tabelas mostra, portanto, a ordem das escalas e a
-mudança de carga em cada uma delas. Ela não descreve apenas uma ligação
-abstrata Santos--Manaus: registra o que entrou e saiu do navio em
-Santos, Suape, Pecém e Manaus. A Figura 2 mostra o resultado da
-reconstrução para a parte de ida da viagem
-\texttt{voyage\_9612791\_00011}; em cada seta, a carga é aquela que
-estava a bordo enquanto o navio navegava para o porto seguinte e a
-distância está em milhas náuticas (nm):
+A integração das tabelas de Atracação e Carga permite identificar as
+escalas pertencentes ao mesmo navio e ordená-las cronologicamente. O
+sistema forma um subtrecho entre cada par de escalas consecutivas e
+consulta sua distância na matriz marítima. Assim, a viagem deixa de ser
+uma ligação abstrata Santos--Manaus e passa a ser representada pela
+sequência observada Santos → Suape → Pecém → Manaus. A Figura 4 mostra
+essa parte da viagem \texttt{voyage\_9612791\_00011}; cada seta apresenta
+somente a distância do subtrecho, em milhas náuticas (nm):
 
 \begin{center}
 \resizebox{\linewidth}{!}{%
@@ -1040,9 +1293,9 @@ distância está em milhas náuticas (nm):
   \node[clnode] (mU) at (5.10cm,-0.00cm) {Suape};
   \node[clnode] (mP) at (10.20cm,-0.00cm) {Pecém};
   \node[clnode] (mM) at (15.30cm,-0.00cm) {Manaus};
-  \node[align=center, text width=4.30cm, font=\scriptsize] at (2.55cm,1.45cm) {1.259,179 nm\\Carga a bordo: 12.858,754 t};
-  \node[align=center, text width=4.30cm, font=\scriptsize] at (7.65cm,1.45cm) {507,806 nm\\Carga a bordo: 16.718,333 t};
-  \node[align=center, text width=4.30cm, font=\scriptsize] at (12.75cm,1.45cm) {1.185,594 nm\\Carga a bordo: 12.325,900 t};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (2.55cm,1.45cm) {1.259,179 nm};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (7.65cm,1.45cm) {507,806 nm};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (12.75cm,1.45cm) {1.185,594 nm};
   \draw[clarrow] (mS) -- (mU);
   \draw[clarrow] (mU) -- (mP);
   \draw[clarrow] (mP) -- (mM);
@@ -1050,40 +1303,288 @@ distância está em milhas náuticas (nm):
 }
 \end{center}
 
-\emph{Figura 2 --- Parte de ida reconstruída da viagem
-\texttt{voyage\_9612791\_00011}. Fonte: elaboração própria com dados de
-Carga e Atracação da ANTAQ e distâncias da matriz marítima do sistema.}
+\emph{Figura 4 --- Sequência de escalas e distâncias da parte de ida da
+viagem \texttt{voyage\_9612791\_00011}. Fonte: elaboração própria com
+dados de Carga e Atracação da ANTAQ e distâncias da matriz marítima do
+sistema.}
+
+\hypertarget{carga-a-bordo}{%
+\paragraph{4.3.4.1.4 Carga a bordo}\label{carga-a-bordo}}
+
+A carga a bordo de cada subtrecho é a massa transportada pelo navio. Para
+a escala \(k\), o sistema calcula:
+
+\[
+B_k=B_{k-1}+E_k-D_k,
+\]
+
+em que \(B_k\) é a carga total a bordo após a escala \(k\);
+\(B_{k-1}\) é a carga existente antes dessa escala; \(E_k\) é a massa
+embarcada; e \(D_k\) é a massa desembarcada. O mesmo procedimento é
+realizado separadamente para a massa, em toneladas, e para a quantidade
+de carga, em TEU.
+
+Em algumas viagens, o saldo acumulado de embarques menos desembarques,
+quando calculado a partir de zero, fica negativo em uma ou mais escalas.
+Como a carga a bordo não pode ser negativa, o sistema usa o menor valor
+desse saldo para determinar a carga inicial mínima compatível com os
+registros:
+
+\[
+B_0=
+\max\left(
+0,\,
+-\min_{1\leq k\leq n}
+\left[
+\sum_{i=1}^{k}(E_i-D_i)
+\right]
+\right).
+\]
+
+Assim, \(B_0\) é a menor carga inicial capaz de manter todos os saldos da
+viagem iguais ou superiores a zero. Se o saldo acumulado nunca ficar
+negativo, \(B_0\) é igual a zero.
+
+\hypertarget{carga-a-bordo-para-a-viagem-voyage-9612791-00011}{%
+\subparagraph{\texorpdfstring{4.3.4.1.4.1 Carga a bordo para a viagem
+\texttt{voyage\_9612791\_00011}}{4.3.4.1.4.1 Carga a bordo para a viagem voyage\_9612791\_00011}}\label{carga-a-bordo-para-a-viagem-voyage-9612791-00011}}
+
+A viagem \texttt{voyage\_9612791\_00011} permite mostrar esse
+procedimento passo a passo. Para cada escala \(k\), calcula-se primeiro o
+saldo da escala, \(\Delta_k=E_k-D_k\), e depois o saldo acumulado
+provisório, \(S_k=\sum_{i=1}^{k}(E_i-D_i)\), considerando inicialmente
+\(B_0=0\). Os valores de embarque e desembarque vêm da Tabela 4; os dois
+saldos são calculados a partir deles.
+
+\textbf{Detalhamento do saldo de carga por escala na viagem
+\texttt{voyage\_9612791\_00011}.}
+
+\begin{longtable}[]{@{}llllll@{}}
+\toprule
+\begin{minipage}[b]{0.03\columnwidth}\raggedleft
+\(k\)\strut
+\end{minipage} & \begin{minipage}[b]{0.08\columnwidth}\raggedright
+Porto\strut
+\end{minipage} & \begin{minipage}[b]{0.11\columnwidth}\raggedleft
+Embarcado \(E_k\)\strut
+\end{minipage} & \begin{minipage}[b]{0.13\columnwidth}\raggedleft
+{\small Desembarcado} \(D_k\)\strut
+\end{minipage} & \begin{minipage}[b]{0.19\columnwidth}\raggedleft
+Saldo da escala \(\Delta_k=E_k-D_k\)\strut
+\end{minipage} & \begin{minipage}[b]{0.20\columnwidth}\raggedleft
+Saldo acumulado provisório \(S_k\)\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.03\columnwidth}\raggedleft
+1\strut
+\end{minipage} & \begin{minipage}[t]{0.08\columnwidth}\raggedright
+Santos\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedleft
+9.881,860~t\strut
+\end{minipage} & \begin{minipage}[t]{0.13\columnwidth}\raggedleft
+0,000~t\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedleft
+9.881,860~t\strut
+\end{minipage} & \begin{minipage}[t]{0.20\columnwidth}\raggedleft
+9.881,860~t\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.03\columnwidth}\raggedleft
+2\strut
+\end{minipage} & \begin{minipage}[t]{0.08\columnwidth}\raggedright
+Suape\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedleft
+11.862,199~t\strut
+\end{minipage} & \begin{minipage}[t]{0.13\columnwidth}\raggedleft
+8.002,620~t\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedleft
+3.859,579~t\strut
+\end{minipage} & \begin{minipage}[t]{0.20\columnwidth}\raggedleft
+13.741,439~t\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.03\columnwidth}\raggedleft
+3\strut
+\end{minipage} & \begin{minipage}[t]{0.08\columnwidth}\raggedright
+Pecém\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedleft
+3.231,914~t\strut
+\end{minipage} & \begin{minipage}[t]{0.13\columnwidth}\raggedleft
+7.624,347~t\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedleft
+\(-4.392,433\)~t\strut
+\end{minipage} & \begin{minipage}[t]{0.20\columnwidth}\raggedleft
+9.349,006~t\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.03\columnwidth}\raggedleft
+4\strut
+\end{minipage} & \begin{minipage}[t]{0.08\columnwidth}\raggedright
+Manaus\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedleft
+7.571,660~t\strut
+\end{minipage} & \begin{minipage}[t]{0.13\columnwidth}\raggedleft
+19.897,560~t\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedleft
+\(-12.325,900\)~t\strut
+\end{minipage} & \begin{minipage}[t]{0.20\columnwidth}\raggedleft
+\(-2.976,894\)~t\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+O desenvolvimento completo dos saldos acumulados é:
+
+\[
+\begin{aligned}
+S_1
+&=(9{.}881{,}860-0)
+=9{.}881{,}860\ \mathrm{t},\\
+S_2
+&=(9{.}881{,}860-0)
++(11{.}862{,}199-8{.}002{,}620)
+=13{.}741{,}439\ \mathrm{t},\\
+S_3
+&=(9{.}881{,}860-0)
++(11{.}862{,}199-8{.}002{,}620)
+\\
+&\quad +(3{.}231{,}914-7{.}624{,}347)
+=9{.}349{,}006\ \mathrm{t},\\
+S_4
+&=(9{.}881{,}860-0)
++(11{.}862{,}199-8{.}002{,}620)
+\\
+&\quad +(3{.}231{,}914-7{.}624{,}347)
++(7{.}571{,}660-19{.}897{,}560)
+=-2{.}976{,}894\ \mathrm{t}.
+\end{aligned}
+\]
+
+O menor saldo acumulado provisório é \(-2{.}976{,}894\)~t. Aplicando a
+fórmula da carga inicial mínima:
+
+\[
+\begin{aligned}
+B_0
+&=\max\left(0,-\min[S_1,S_2,S_3,S_4]\right)\\
+&=\max\left(0,-(-2{.}976{,}894)\right)\\
+&=2{.}976{,}894\ \mathrm{t}.
+\end{aligned}
+\]
+
+O saldo provisório não representa a carga efetiva a bordo, pois foi
+calculado supondo artificialmente que o navio chegou à primeira escala
+sem carga. Sua função é identificar a carga inicial mínima necessária
+para impedir valores negativos. Somando \(B_0\) aos saldos acumulados,
+obtém-se a carga a bordo após cada escala:
+
+\[
+\begin{aligned}
+B_{\mathrm{Santos}}
+&=2{.}976{,}894+9{.}881{,}860-0
+=12{.}858{,}754\ \mathrm{t},\\
+B_{\mathrm{Suape}}
+&=12{.}858{,}754+11{.}862{,}199-8{.}002{,}620
+=16{.}718{,}333\ \mathrm{t},\\
+B_{\mathrm{Pecem}}
+&=16{.}718{,}333+3{.}231{,}914-7{.}624{,}347
+=12{.}325{,}900\ \mathrm{t},\\
+B_{\mathrm{Manaus}}
+&=12{.}325{,}900+7{.}571{,}660-19{.}897{,}560
+=0\ \mathrm{t}.
+\end{aligned}
+\]
+
+Desse modo, os subtrechos Santos--Suape, Suape--Pecém e Pecém--Manaus
+são percorridos com 12.858,754~t, 16.718,333~t e 12.325,900~t a bordo,
+respectivamente. A carga inicial calculada não é uma medição direta: ela
+é a estimativa mínima compatível com as movimentações observadas e com a
+condição física de que a carga a bordo não pode ser negativa.
 
 \hypertarget{intensidade-de-combustuxedvel-do-navio}{%
-\paragraph{3.3.4.2 Intensidade de combustível do
+\paragraph{4.3.4.2 Intensidade de combustível do
 navio}\label{intensidade-de-combustuxedvel-do-navio}}
 
 Após reconstruir o percurso e a carga a bordo, é preciso estimar quanto
-combustível foi necessário para realizar esse transporte. Para isso, o
-sistema usa a \textbf{intensidade de combustível}, isto é, a quantidade
-de combustível associada ao transporte de uma tonelada por uma milha
-náutica. A unidade é grama por tonelada-milha náutica, ou
+combustível foi necessário para realizar esse transporte. Conforme
+fundamentado na Seção 3.1, o sistema usa a \textbf{intensidade de
+combustível} para obter uma estimativa média e comparável, ao invés de
+simular as condições particulares de uma única viagem. Essa intensidade
+é a quantidade de combustível associada ao transporte de uma tonelada
+por uma milha náutica. A unidade é grama por tonelada-milha náutica, ou
 \(\mathrm{g/(t\cdot nm)}\).
 
-Esse indicador é uma razão, e não o consumo total de uma viagem. Uma
-intensidade de \(7{,}43\ \mathrm{g/(t\cdot nm)}\), por exemplo,
-significa que, em média, são associados 7,43 g de combustível a cada
-tonelada transportada por uma milha náutica. Assim, ele permite comparar
-navios e viagens de tamanhos diferentes. O consumo total de cada viagem
-só é obtido posteriormente, ao multiplicar essa intensidade pelo
-trabalho de transporte reconstruído, conforme a Seção 3.3.4.3.
+Segundo a EU MRV, esse indicador é construído a partir de um processo
+padronizado. Para cada navio, a companhia define um plano de
+monitoramento que descreve os métodos e as fontes de dados utilizados.
+Esse plano é avaliado por um verificador acreditado e, quando aplicável,
+aprovado pela autoridade responsável. Durante o período de reporte, são
+registrados por viagem o combustível consumido, a distância percorrida,
+o tempo no mar e a carga transportada. Ao final do ano, esses registros
+são consolidados em um relatório de emissões do navio, que também passa
+por verificação antes de ser submetido pelo sistema THETIS-MRV
+\parencite[p. 9, 30--32 e 54--55]{ecmrvguide2025}.
+
+O trabalho de transporte de cada viagem é o produto entre a carga
+transportada e a distância percorrida. A intensidade anual não é uma
+média aritmética das intensidades das viagens, mas a razão entre o
+combustível total consumido no ano e o trabalho de transporte total:
+
+\[
+W_v=m_vd_v
+\qquad\text{e}\qquad
+I_{f,\mathrm{anual}}=\frac{F_{\mathrm{anual}}}{\sum_v W_v},
+\]
+
+em que \(m_v\) é a massa de carga da viagem \(v\), \(d_v\) é a distância
+percorrida, \(W_v\) é o respectivo trabalho de transporte e
+\(F_{\mathrm{anual}}\) é o combustível total consumido pelo navio no
+período. Uma intensidade de
+\(7{,}43\ \mathrm{g/(t\cdot nm)}\), por exemplo, significa que, na média
+anual, foram associados 7,43 g de combustível ao transporte de uma
+tonelada por uma milha náutica.
+
+Para navios porta-contêineres, o EU MRV permite determinar a carga pela
+massa real ou pelo número de TEU multiplicado por pesos-padrão. A opção
+adotada deve constar no plano de monitoramento e ser aplicada de forma
+consistente durante todo o período de reporte. Os métodos de medição do
+combustível, suas fontes de dados e as incertezas associadas também devem
+ser documentados; o guia recomenda verificações de plausibilidade e,
+quando possível, o uso de uma segunda fonte para conferir os dados
+principais \parencite[p. 42, 48--49 e 109--110]{ecmrvguide2025}.
+
+Esses procedimentos conferem rastreabilidade, consistência e verificação
+por entidade acreditada ao indicador, tornando-o adequado como
+referência histórica para uma avaliação comparativa. Isso não significa
+que a intensidade reproduza exatamente uma viagem brasileira ou que
+elimine toda incerteza de medição. Ela representa o desempenho anual
+verificado do navio dentro das regras do EU MRV. O consumo atribuído a
+cada viagem reconstruída pelo CabotageLens é calculado posteriormente,
+ao aplicar essa intensidade ao respectivo trabalho de transporte,
+conforme a Seção 4.3.4.3.
 
 \hypertarget{valor-individual-do-navio-no-eu-mrv}{%
-\subparagraph{3.3.4.2.1 Valor individual do navio no EU
+\subparagraph{4.3.4.2.1 Valor individual do navio no EU
 MRV}\label{valor-individual-do-navio-no-eu-mrv}}
 
-A ANTAQ informa por onde o navio passou e qual carga levava, mas não
-informa diretamente o combustível consumido. Esse dado vem da base de
-\textbf{Monitoramento, Reporte e Verificação da União Europeia}
-(\emph{European Union Monitoring, Reporting and Verification}, EU MRV),
-que publica indicadores anuais de consumo, atividade e emissões por
-embarcação. O número IMO registrado na ANTAQ permite procurar o mesmo
-navio nessa base.
+Na aplicação ao corredor brasileiro, a ANTAQ informa por onde o navio
+passou e qual carga levava, enquanto o EU MRV fornece seu indicador anual
+de intensidade. O número IMO é o elo entre as duas bases e permite
+procurar a mesma embarcação.
+
+A Figura 5 mostra parte de uma dessas planilhas anuais. Cada linha
+corresponde a um navio, enquanto as colunas reúnem o número IMO, o nome,
+o tipo, o período de reporte, o consumo, as emissões e os indicadores
+médios de eficiência usados na avaliação.
+
+\begin{center}
+\includegraphics[width=0.98\linewidth]{images/eu_mrv_2025_recorte.png}
+\end{center}
+
+{\raggedright
+\emph{Figura 5 --- Captura de tela de parte do arquivo
+\texttt{2025-v18-23072026-EU MRV}\linebreak
+\texttt{Publication of information.xlsx}.
+Fonte: Agência Europeia de Segurança Marítima (EMSA), 2026.}
+\par}
 
 Na viagem \texttt{voyage\_9612791\_00011}, o IMO 9612791 foi encontrado
 diretamente no EU MRV, com intensidade de
@@ -1156,7 +1657,7 @@ do padrão do seu tipo de navio, o sistema usa uma estimativa documentada
 de um grupo semelhante. As regras para isso são apresentadas a seguir.
 
 \hypertarget{valores-atuxedpicos-p95-e-estatuxedstica-robusta}{%
-\subparagraph{3.3.4.2.2 Valores atípicos, P95 e estatística
+\subparagraph{4.3.4.2.2 Valores atípicos, P95 e estatística
 robusta}\label{valores-atuxedpicos-p95-e-estatuxedstica-robusta}}
 
 Um valor alto publicado no EU MRV não é descartado por ser
@@ -1165,11 +1666,20 @@ navios comparáveis e, se usado sem verificação, pode distorcer a
 intensidade média de uma ligação. Por esse motivo, o sistema compara a
 intensidade individual com as intensidades dos navios do mesmo tipo.
 
-O percentil 95 (P95) é o ponto abaixo do qual estão 95\% dos valores do
-grupo ordenado. Em outras palavras, após ordenar as intensidades de
-todos os navios de um tipo, apenas os 5\% maiores ficam acima do P95. A
-regra só é aplicada quando há pelo menos 20 navios no grupo, para que
-essa comparação tenha uma base mínima.
+``Mesmo tipo'' significa a mesma categoria registrada no campo
+\texttt{Ship type} da publicação do EU MRV. O sistema lê esse campo para
+cada número IMO, desconsidera apenas diferenças entre letras maiúsculas
+e minúsculas e espaços extras e reúne os rótulos iguais. Assim, todos os
+navios identificados como \emph{container ship} formam um grupo. Cada
+IMO participa uma única vez, com seu indicador positivo mais recente.
+Portanto, o tipo não é inferido pelo nome do navio, pela rota, pelo
+armador ou pelas dimensões da embarcação \parencite{emsa2026}.
+
+Depois de formar o grupo, o sistema calcula o percentil 95 (P95), ponto
+abaixo do qual estão 95\% dos valores ordenados. Em outras palavras,
+apenas os 5\% maiores ficam acima do P95. A regra só é aplicada quando há
+pelo menos 20 navios no grupo, para que essa comparação tenha uma base
+mínima.
 
 No grupo de 243 navios classificados como \emph{container ship}, o P95 é
 \(24{,}073\ \mathrm{g/(t\cdot nm)}\). O navio de IMO 9603221
@@ -1196,27 +1706,44 @@ a mesma regra é aplicada a todos os grupos e sua aplicação fica
 registrada na saída do cálculo, com a estatística usada, o tamanho da
 amostra e a quantidade de valores retirados. Esse uso do P95 trata
 apenas a intensidade individual do navio; o uso do P95 para a distância
-marítima representativa é descrito separadamente na Seção~3.3.4.4.
+marítima representativa é descrito separadamente na Seção~4.3.4.4.
 
 \hypertarget{estimativa-quando-nuxe3o-huxe1-valor-individual}{%
-\subparagraph{3.3.4.2.3 Estimativa quando não há valor
+\subparagraph{4.3.4.2.3 Estimativa quando não há valor
 individual}\label{estimativa-quando-nuxe3o-huxe1-valor-individual}}
 
 Nem todos os navios que operam no Brasil aparecem na base europeia.
 Nessa situação, o sistema continua usando a própria base EU MRV, mas
-procura um grupo de embarcações semelhantes. Primeiro, procura a classe
-do navio, que é o grupo mais específico disponível. Se não houver uma
-estatística utilizável para essa classe, procura o tipo do navio,
-categoria mais ampla, como \emph{container ship}. O resultado é
-identificado como estimativa da classe ou do tipo; ele não é apresentado
-como se fosse uma medição individual do navio ausente.
+procura um grupo de embarcações semelhantes.
+
+Neste trabalho, \textbf{classe do navio} é uma faixa de porte definida
+pelo modelo dentro do tipo \emph{container ship}. O porte é aproximado
+em toneladas com campos do EU MRV ligados ao trabalho de transporte: o
+sistema prioriza informações baseadas em \emph{deadweight} (DWT) e,
+quando elas não estão disponíveis, usa informações baseadas na massa
+transportada. Em seguida, aplica três faixas:
+\texttt{container\_small}, abaixo de 20.000 t;
+\texttt{container\_feeder}, de 20.000 t a menos de 40.000 t; e
+\texttt{container\_large}, a partir de 40.000 t. Esses limites são
+regras de modelagem do CabotageLens; não são classes publicadas pelo EU
+MRV nem classificações técnicas atribuídas por uma sociedade
+classificadora.
+
+A classe é mais específica que o tipo porque separa os
+porta-contêineres por faixa de porte. O sistema só usa a referência de
+classe quando essa identificação está disponível nos dados do navio ou
+da viagem. Ele não deduz uma classe ausente pelo nome ou pela rota. Se a
+classe não estiver disponível, procura o tipo, categoria mais ampla,
+como \emph{container ship}. O resultado é identificado como estimativa
+da classe ou do tipo; ele não é apresentado como se fosse uma medição
+individual do navio ausente.
 
 Cada recorte recebe, portanto, uma intensidade e uma descrição clara de
 sua origem: valor individual do IMO, estimativa pela classe ou
 estimativa pelo tipo.
 
 \hypertarget{exemplo-de-estimativa-pelo-tipo-de-navio}{%
-\subparagraph{3.3.4.2.4 Exemplo de estimativa pelo tipo de
+\subparagraph{4.3.4.2.4 Exemplo de estimativa pelo tipo de
 navio}\label{exemplo-de-estimativa-pelo-tipo-de-navio}}
 
 A viagem \texttt{voyage\_9974486\_00001}, realizada pelo navio de IMO
@@ -1249,23 +1776,44 @@ como uma estimativa baseada no tipo \emph{container ship}, e não como
 uma medição do navio de IMO 9974486.
 
 \hypertarget{trabalho-de-transporte-e-intensidade-da-ligauxe7uxe3o}{%
-\paragraph{3.3.4.3 Trabalho de transporte e intensidade da
+\paragraph{4.3.4.3 Trabalho de transporte e intensidade da
 ligação}\label{trabalho-de-transporte-e-intensidade-da-ligauxe7uxe3o}}
 
-Uma ligação entre dois portos não corresponde, necessariamente, a uma
-única viagem nem a uma única sequência de escalas. Para representar
-Santos--Manaus, por exemplo, o sistema aproveita cada recorte histórico
-que começou em Santos e chegou a Manaus na mesma viagem e no mesmo
-sentido, independentemente do número de paradas. Um recorte só entra
-nessa consolidação quando a origem e o destino são portos distintos da
-mesma viagem, aparecem na ordem do cenário e todos os subtrechos entre
-eles têm distância disponível. Se o navio repete a mesma ligação, o
-sistema usa o recorte direto; se não houver um, usa o recorte completo
-mais curto, evitando que a mesma viagem seja contada duas vezes. Antes de
-reunir esses recortes em uma única intensidade, ele calcula quanto
-transporte foi realizado em cada um deles. A ideia é ponderar a média das
-intensidades pela quantidade de carga que de fato foi transportada
-naquele trecho.
+Uma ligação entre dois portos pode aparecer em várias viagens e em
+diferentes sequências de escalas. Por isso, o sistema analisa cada
+viagem separadamente. Neste contexto, \textbf{recorte} é a parte de uma
+viagem que começa em uma escala no porto de origem e termina em uma
+escala posterior no porto de destino, incluindo todas as paradas
+intermediárias. Na sequência Santos \(\rightarrow\) Suape
+\(\rightarrow\) Pecém \(\rightarrow\) Manaus, por exemplo, o recorte
+Santos--Manaus contém os três subtrechos observados.
+
+Um recorte é aceito quando atende, simultaneamente, a quatro condições:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  a origem e o destino pertencem à mesma viagem;
+\item
+  são portos distintos;
+\item
+  a origem aparece antes do destino na sequência de escalas; e
+\item
+  todos os subtrechos entre os dois portos possuem distância válida.
+\end{enumerate}
+
+Uma mesma viagem pode passar mais de uma vez pela origem ou pelo destino
+e, assim, produzir mais de um recorte para a mesma ligação. Para não
+contar essa viagem duas vezes, o sistema mantém apenas um recorte:
+prioriza o \textbf{direto}, no qual origem e destino são escalas
+consecutivas; se não houver recorte direto, mantém o recorte completo de
+menor distância. Essa escolha resolve apenas repetições dentro da mesma
+viagem. Recortes de viagens diferentes continuam no conjunto, mesmo
+quando passam por portos intermediários distintos.
+
+Depois dessa seleção, o sistema calcula quanto transporte foi realizado
+em cada recorte. Esse valor será usado para dar maior peso às observações
+que efetivamente transportaram mais carga por uma distância maior.
 
 Esse cálculo usa o trabalho de transporte. Em cada subtrecho, a carga a
 bordo é multiplicada pela distância percorrida; em seguida, os
@@ -1414,13 +1962,13 @@ subseção anterior:
 \end{itemize}
 
 A soma dos produtos \(I_v\,W_{v,o,d}\) é
-\(28.410.938.295{,}411\ \mathrm{g}\). Logo:
+\(22.092.543.373{,}408\ \mathrm{g}\). Logo:
 
 \[
 I_{\mathrm{Santos,Manaus}}^{\mathrm{rep}}=
-\frac{28.410.938.295{,}411}
+\frac{22.092.543.373{,}408}
 {3.153.328.821{,}755}
-=9{,}009824\ \mathrm{g/(t\cdot nm)}.
+=7{,}006102\ \mathrm{g/(t\cdot nm)}.
 \]
 
 Esse resultado não é a intensidade de um navio escolhido como
@@ -1429,7 +1977,7 @@ para esse trecho, em que cada uma contribui conforme a carga
 efetivamente transportada e a distância percorrida.
 
 \hypertarget{distuxe2ncia-maruxedtima-representativa-entre-os-portos}{%
-\paragraph{3.3.4.4 Distância marítima representativa entre os
+\paragraph{4.3.4.4 Distância marítima representativa entre os
 portos}\label{distuxe2ncia-maruxedtima-representativa-entre-os-portos}}
 
 Para calcular o consumo de uma nova remessa, o sistema usa uma distância
@@ -1469,8 +2017,8 @@ Na fórmula, \(m_{v,s}\) é a carga a bordo no subtrecho \(s\),
 
 Na viagem \texttt{voyage\_9612791\_00011}, por exemplo, o trabalho de
 transporte de \(39.294.668{,}494\ \mathrm{t\cdot nm}\) é dividido pela
-distância total de \(2.952{,}579\ \mathrm{nm}\), resultando
-\(13.308{,}592\ \mathrm{t}\). Esse é o peso da referida viagem na média
+distância total de \(2.952{,}580\ \mathrm{nm}\), resultando
+\(13.308{,}588\ \mathrm{t}\). Esse é o peso da referida viagem na média
 de distância; não é a carga de uma nova remessa simulada.
 
 Em seguida, a distância representativa é a média das distâncias
@@ -1502,16 +2050,300 @@ retirados apenas da média de distância. Os 87 recortes restantes,
 distribuídos em 20 corredores, resultam em
 \(6.094{,}975\ \mathrm{km}\), ou \(3.291{,}023\ \mathrm{nm}\). Os 89
 recortes continuam na média de intensidade apresentada na
-Seção~3.3.4.3.
+Seção~4.3.4.3.
+
+\hypertarget{exemplo-integrado-com-cinco-viagens-observadas}{%
+\paragraph{4.3.4.5 Exemplo integrado com cinco viagens
+observadas}\label{exemplo-integrado-com-cinco-viagens-observadas}}
+
+Esta subseção reúne as etapas anteriores em um exemplo numérico único,
+antes do cálculo das emissões. Foram selecionados cinco recortes
+Santos--Manaus que possuem intensidade individual obtida diretamente
+pelo IMO no EU MRV e cuja distância não ultrapassa o P95 de
+\(6.975{,}000\ \mathrm{km}\). Portanto, nenhum deles exige substituição
+da intensidade por uma estatística de classe ou tipo, nem retirada da
+média de distância.
+
+A base atual contém somente quatro IMOs distintos que atendem
+simultaneamente a esses critérios. Por isso, o exemplo usa cinco
+recortes de quatro navios: o IMO 9612791 aparece em duas viagens, mas
+percorre sequências de escalas diferentes. Essa repetição é mantida
+porque a unidade observada pelo método é o recorte de cada viagem, e não
+apenas o navio.
+
+\begin{center}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,1.50cm)
+    {V1 · voyage\_9612791\_00011 · IMO 9612791 · \(I=7{,}43\ \mathrm{g/(t\cdot nm)}\)};
+  \node[clnode] (v1a) at (0.00cm,0.00cm) {Santos};
+  \node[clnode] (v1b) at (7.50cm,0.00cm) {Suape};
+  \node[clnode] (v1c) at (15.00cm,0.00cm) {Pecém};
+  \node[clnode] (v1d) at (22.50cm,0.00cm) {Manaus};
+  \node[align=center,text width=5.80cm,font=\tiny] at (3.75cm,0.72cm)
+    {\(m=12.858{,}754\ \mathrm{t}\)\\\(d=2.332{,}000\ \mathrm{km}\mid1.259{,}179\ \mathrm{nm}\)};
+  \node[align=center,text width=5.80cm,font=\tiny] at (11.25cm,0.72cm)
+    {\(m=16.718{,}333\ \mathrm{t}\)\\\(d=940{,}458\ \mathrm{km}\mid507{,}806\ \mathrm{nm}\)};
+  \node[align=center,text width=5.80cm,font=\tiny] at (18.75cm,0.72cm)
+    {\(m=12.325{,}900\ \mathrm{t}\)\\\(d=2.195{,}720\ \mathrm{km}\mid1.185{,}594\ \mathrm{nm}\)};
+  \draw[clarrow] (v1a) -- (v1b);
+  \draw[clarrow] (v1b) -- (v1c);
+  \draw[clarrow] (v1c) -- (v1d);
+
+  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,-1.50cm)
+    {V2 · voyage\_9612791\_00003 · IMO 9612791 · \(I=7{,}43\ \mathrm{g/(t\cdot nm)}\)};
+  \node[clnode] (v2a) at (0.00cm,-3.00cm) {Santos};
+  \node[clnode] (v2b) at (4.50cm,-3.00cm) {Itajaí};
+  \node[clnode] (v2c) at (9.00cm,-3.00cm) {Paranaguá};
+  \node[clnode] (v2d) at (13.50cm,-3.00cm) {Suape};
+  \node[clnode] (v2e) at (18.00cm,-3.00cm) {Pecém};
+  \node[clnode] (v2f) at (22.50cm,-3.00cm) {Manaus};
+  \node[align=center,text width=3.70cm,font=\tiny] at (2.25cm,-2.28cm)
+    {\(m=4.917{,}810\ \mathrm{t}\)\\\(d=419{,}000\ \mathrm{km}\mid226{,}242\ \mathrm{nm}\)};
+  \node[align=center,text width=3.70cm,font=\tiny] at (6.75cm,-2.28cm)
+    {\(m=13.522{,}710\ \mathrm{t}\)\\\(d=193{,}000\ \mathrm{km}\mid104{,}212\ \mathrm{nm}\)};
+  \node[align=center,text width=3.70cm,font=\tiny] at (11.25cm,-2.28cm)
+    {\(m=10.386{,}517\ \mathrm{t}\)\\\(d=2.573{,}000\ \mathrm{km}\mid1.389{,}309\ \mathrm{nm}\)};
+  \node[align=center,text width=3.70cm,font=\tiny] at (15.75cm,-2.28cm)
+    {\(m=24.196{,}861\ \mathrm{t}\)\\\(d=940{,}458\ \mathrm{km}\mid507{,}806\ \mathrm{nm}\)};
+  \node[align=center,text width=3.70cm,font=\tiny] at (20.25cm,-2.28cm)
+    {\(m=22.825{,}450\ \mathrm{t}\)\\\(d=2.195{,}720\ \mathrm{km}\mid1.185{,}594\ \mathrm{nm}\)};
+  \draw[clarrow] (v2a) -- (v2b);
+  \draw[clarrow] (v2b) -- (v2c);
+  \draw[clarrow] (v2c) -- (v2d);
+  \draw[clarrow] (v2d) -- (v2e);
+  \draw[clarrow] (v2e) -- (v2f);
+
+  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,-4.50cm)
+    {V3 · voyage\_9539494\_00001 · IMO 9539494 · \(I=9{,}50\ \mathrm{g/(t\cdot nm)}\)};
+  \node[clnode] (v3a) at (0.00cm,-6.00cm) {Santos};
+  \node[clnode] (v3b) at (4.50cm,-6.00cm) {Itapoá};
+  \node[clnode] (v3c) at (9.00cm,-6.00cm) {Rio de Janeiro};
+  \node[clnode] (v3d) at (13.50cm,-6.00cm) {Suape};
+  \node[clnode] (v3e) at (18.00cm,-6.00cm) {Pecém};
+  \node[clnode] (v3f) at (22.50cm,-6.00cm) {Manaus};
+  \node[align=center,text width=3.70cm,font=\tiny] at (2.25cm,-5.28cm)
+    {\(m=16.056{,}390\ \mathrm{t}\)\\\(d=420{,}711\ \mathrm{km}\mid227{,}166\ \mathrm{nm}\)};
+  \node[align=center,text width=3.70cm,font=\tiny] at (6.75cm,-5.28cm)
+    {\(m=21.950{,}396\ \mathrm{t}\)\\\(d=750{,}344\ \mathrm{km}\mid405{,}153\ \mathrm{nm}\)};
+  \node[align=center,text width=3.70cm,font=\tiny] at (11.25cm,-5.28cm)
+    {\(m=24.195{,}104\ \mathrm{t}\)\\\(d=1.965{,}000\ \mathrm{km}\mid1.061{,}015\ \mathrm{nm}\)};
+  \node[align=center,text width=3.70cm,font=\tiny] at (15.75cm,-5.28cm)
+    {\(m=22.048{,}947\ \mathrm{t}\)\\\(d=940{,}458\ \mathrm{km}\mid507{,}806\ \mathrm{nm}\)};
+  \node[align=center,text width=3.70cm,font=\tiny] at (20.25cm,-5.28cm)
+    {\(m=22.144{,}555\ \mathrm{t}\)\\\(d=2.195{,}720\ \mathrm{km}\mid1.185{,}594\ \mathrm{nm}\)};
+  \draw[clarrow] (v3a) -- (v3b);
+  \draw[clarrow] (v3b) -- (v3c);
+  \draw[clarrow] (v3c) -- (v3d);
+  \draw[clarrow] (v3d) -- (v3e);
+  \draw[clarrow] (v3e) -- (v3f);
+
+  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,-7.50cm)
+    {V4 · voyage\_9649835\_00009 · IMO 9649835 · \(I=5{,}41\ \mathrm{g/(t\cdot nm)}\)};
+  \node[clnode] (v4a) at (0.00cm,-9.00cm) {Santos};
+  \node[clnode] (v4b) at (5.63cm,-9.00cm) {Itapoá};
+  \node[clnode] (v4c) at (11.25cm,-9.00cm) {Suape};
+  \node[clnode] (v4d) at (16.88cm,-9.00cm) {Pecém};
+  \node[clnode] (v4e) at (22.50cm,-9.00cm) {Manaus};
+  \node[align=center,text width=4.70cm,font=\tiny] at (2.81cm,-8.28cm)
+    {\(m=27.128{,}064\ \mathrm{t}\)\\\(d=420{,}711\ \mathrm{km}\mid227{,}166\ \mathrm{nm}\)};
+  \node[align=center,text width=4.70cm,font=\tiny] at (8.44cm,-8.28cm)
+    {\(m=26.218{,}790\ \mathrm{t}\)\\\(d=2.596{,}249\ \mathrm{km}\mid1.401{,}862\ \mathrm{nm}\)};
+  \node[align=center,text width=4.70cm,font=\tiny] at (14.06cm,-8.28cm)
+    {\(m=27.448{,}321\ \mathrm{t}\)\\\(d=940{,}458\ \mathrm{km}\mid507{,}806\ \mathrm{nm}\)};
+  \node[align=center,text width=4.70cm,font=\tiny] at (19.69cm,-8.28cm)
+    {\(m=26.331{,}352\ \mathrm{t}\)\\\(d=2.195{,}720\ \mathrm{km}\mid1.185{,}594\ \mathrm{nm}\)};
+  \draw[clarrow] (v4a) -- (v4b);
+  \draw[clarrow] (v4b) -- (v4c);
+  \draw[clarrow] (v4c) -- (v4d);
+  \draw[clarrow] (v4d) -- (v4e);
+
+  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,-10.50cm)
+    {V5 · voyage\_9343974\_00002 · IMO 9343974 · \(I=6{,}80\ \mathrm{g/(t\cdot nm)}\)};
+  \node[clnode] (v5a) at (0.00cm,-12.00cm) {Santos};
+  \node[clnode] (v5b) at (5.63cm,-12.00cm) {Itapoá};
+  \node[clnode] (v5c) at (11.25cm,-12.00cm) {Paranaguá};
+  \node[clnode] (v5d) at (16.88cm,-12.00cm) {Suape};
+  \node[clnode] (v5e) at (22.50cm,-12.00cm) {Manaus};
+  \node[align=center,text width=4.70cm,font=\tiny] at (2.81cm,-11.28cm)
+    {\(m=13.420{,}582\ \mathrm{t}\)\\\(d=420{,}711\ \mathrm{km}\mid227{,}166\ \mathrm{nm}\)};
+  \node[align=center,text width=4.70cm,font=\tiny] at (8.44cm,-11.28cm)
+    {\(m=186{,}001\ \mathrm{t}\)\\\(d=75{,}884\ \mathrm{km}^{*}\mid40{,}974\ \mathrm{nm}^{*}\)};
+  \node[align=center,text width=4.70cm,font=\tiny] at (14.06cm,-11.28cm)
+    {\(m=184{,}551\ \mathrm{t}\)\\\(d=2.573{,}000\ \mathrm{km}\mid1.389{,}309\ \mathrm{nm}\)};
+  \node[align=center,text width=4.70cm,font=\tiny] at (19.69cm,-11.28cm)
+    {\(m=955{,}858\ \mathrm{t}\)\\\(d=3.790{,}000\ \mathrm{km}\mid2.046{,}436\ \mathrm{nm}\)};
+  \draw[clarrow] (v5a) -- (v5b);
+  \draw[clarrow] (v5b) -- (v5c);
+  \draw[clarrow] (v5c) -- (v5d);
+  \draw[clarrow] (v5d) -- (v5e);
+\end{tikzpicture}%
+}
+\end{center}
+
+\emph{Figura 6 --- Cinco recortes observados entre Santos e Manaus. Cada
+seta informa a carga a bordo (\(m\)) e a distância do subtrecho
+(\(d\)). Fonte: elaboração própria com dados de Carga e Atracação da
+ANTAQ, intensidades do EU MRV e distâncias da matriz marítima do
+sistema. O asterisco identifica o subtrecho Itapoá--Paranaguá, cuja
+distância foi estimada por \texttt{haversine\_fallback}; as demais
+distâncias vieram da matriz marítima.}
+
+Primeiro, calcula-se o trabalho de transporte de cada recorte pela soma
+dos produtos entre carga e distância de seus subtrechos. Aplicando
+\(W_v=\sum_s m_{v,s}d_{v,s}\) aos valores da Figura 6:
+
+\[
+\begin{aligned}
+W_1&=16.191.476{,}419+8.489.677{,}588+14.613.514{,}486
+=39.294.668{,}494,\\
+W_2&=1.112.614{,}681+1.409.224{,}098+14.430.080{,}044
++12.287.322{,}459+27.061.719{,}163
+=56.300.960{,}445,\\
+W_3&=3.647.460{,}006+8.893.274{,}093+25.671.371{,}145
++11.196.597{,}842+26.254.454{,}059
+=75.663.157{,}145,\\
+W_4&=6.162.563{,}845+36.755.135{,}597+13.938.434{,}869
++31.218.295{,}937
+=88.074.430{,}248,\\
+W_5&=3.048.695{,}012+7.621{,}231+256.398{,}339+1.956.102{,}495
+=5.268.817{,}077\ \mathrm{t\cdot nm}.
+\end{aligned}
+\]
+
+Em seguida, a intensidade individual de cada IMO é aplicada ao
+respectivo trabalho de transporte. A carga média a bordo, usada como
+peso no cálculo da distância, é obtida por
+\(\bar m_v=W_v/D_v^{\mathrm{nm}}\).
+
+{\scriptsize
+\begin{longtable}[]{@{}lrrrrrr@{}}
+\toprule
+Recorte & \(D_v\) (km) & \(D_v\) (nm) & \(W_v\) (t·nm) &
+\(I_v\) (g/(t·nm)) & \(M_v\) (kg) & \(\bar m_v\) (t)\tabularnewline
+\midrule
+\endhead
+V1 & 5.468,178 & 2.952,580 & 39.294.668,494 & 7,43 & 291.959,387 & 13.308,588\tabularnewline
+V2 & 6.321,178 & 3.413,163 & 56.300.960,445 & 7,43 & 418.316,136 & 16.495,245\tabularnewline
+V3 & 6.272,232 & 3.386,735 & 75.663.157,145 & 9,50 & 718.799,993 & 22.341,035\tabularnewline
+V4 & 6.153,138 & 3.322,429 & 88.074.430,248 & 5,41 & 476.482,668 & 26.509,051\tabularnewline
+V5 & 6.859,595 & 3.703,885 & 5.268.817,077 & 6,80 & 35.827,956 & 1.422,511\tabularnewline
+\textbf{Total} & --- & --- & \textbf{264.602.033,408} & --- &
+\textbf{1.941.386,140} & \textbf{80.076,431}\tabularnewline
+\bottomrule
+\end{longtable}
+}
+
+\emph{Fonte: elaboração própria. Os valores apresentados foram
+arredondados; as operações foram realizadas com a precisão completa
+mantida pelo sistema.}
+
+Para tornar explícita a conversão de trabalho de transporte em
+combustível, os cinco resultados são:
+
+\[
+\begin{aligned}
+M_1&=\frac{7{,}43\times39.294.668{,}494}{1000}=291.959{,}387\ \mathrm{kg},\\
+M_2&=\frac{7{,}43\times56.300.960{,}445}{1000}=418.316{,}136\ \mathrm{kg},\\
+M_3&=\frac{9{,}50\times75.663.157{,}145}{1000}=718.799{,}993\ \mathrm{kg},\\
+M_4&=\frac{5{,}41\times88.074.430{,}248}{1000}=476.482{,}668\ \mathrm{kg},\\
+M_5&=\frac{6{,}80\times5.268.817{,}077}{1000}=35.827{,}956\ \mathrm{kg}.
+\end{aligned}
+\]
+
+Assim, a intensidade representativa apenas deste conjunto ilustrativo
+é a razão entre o combustível total e o trabalho de transporte total:
+
+\[
+\begin{aligned}
+I_5
+&=\frac{\sum_{v=1}^{5}I_vW_v}{\sum_{v=1}^{5}W_v}\\
+&=\frac{1.941.386{,}140\times1000}{264.602.033{,}408}\\
+&=7{,}337004\ \mathrm{g/(t\cdot nm)}.
+\end{aligned}
+\]
+
+Como os cinco recortes estão abaixo do P95, todos entram no exemplo da
+distância. A média ponderada pelas cargas médias a bordo é:
+
+\[
+\begin{aligned}
+\bar D_5
+&=\frac{\sum_{v=1}^{5}D_v^{\mathrm{km}}\bar m_v}
+{\sum_{v=1}^{5}\bar m_v}\\
+&=\frac{
+\begin{aligned}
+&5.468{,}178(13.308{,}588)+
+6.321{,}178(16.495{,}245)+
+6.272{,}232(22.341{,}035)\\
+&\quad+
+6.153{,}138(26.509{,}051)+
+6.859{,}595(1.422{,}511)
+\end{aligned}}
+{80.076{,}431}\\
+&=6.119{,}690\ \mathrm{km}
+=3.304{,}368\ \mathrm{nm}.
+\end{aligned}
+\]
+
+Esses dois resultados --- \(7{,}337004\ \mathrm{g/(t\cdot nm)}\) e
+\(6.119{,}690\ \mathrm{km}\) --- servem apenas para demonstrar o cálculo
+com cinco observações e não são os parâmetros usados pela aplicação. O
+processo é repetido para os demais recortes elegíveis de
+Santos--Manaus. No conjunto completo, a intensidade utiliza os 89
+recortes e resulta em \(7{,}006102\ \mathrm{g/(t\cdot nm)}\); a distância
+utiliza os 87 recortes mantidos após o P95 e resulta em
+\(6.094{,}975\ \mathrm{km}\).
+
+\hypertarget{consumo-maruxedtimo-da-remessa-simulada}{%
+\paragraph{4.3.4.6 Consumo marítimo da remessa
+simulada}\label{consumo-maruxedtimo-da-remessa-simulada}}
+
+Depois de preparar a intensidade e a distância representativas da
+ligação, o sistema calcula o consumo associado à remessa informada pelo
+usuário. Nesta etapa, a massa da carga aparece diretamente na fórmula:
+
+\[
+M_{\mathrm{VLSFO,remessa}}
+=\frac{
+I_{\mathrm{Santos,Manaus}}^{\mathrm{rep}}\,
+m_{\mathrm{remessa}}\,
+D_{\mathrm{Santos,Manaus}}^{\mathrm{rep,nm}}
+}{1000}.
+\]
+
+Nessa expressão, \(m_{\mathrm{remessa}}\) é a massa transportada, em
+toneladas. O produto
+\(m_{\mathrm{remessa}}D^{\mathrm{rep,nm}}\) é o trabalho de transporte
+da nova remessa, em \(\mathrm{t\cdot nm}\); a multiplicação pela
+intensidade fornece gramas de VLSFO, convertidos em quilogramas pela
+divisão por 1.000. Para a remessa de 14~t:
+
+\[
+\begin{aligned}
+M_{\mathrm{VLSFO,remessa}}
+&=\frac{
+7{,}006102\ \mathrm{g/(t\cdot nm)}
+\times14\ \mathrm{t}
+\times3.291{,}023\ \mathrm{nm}
+}{1000}\\
+&=322{,}801\ \mathrm{kg}.
+\end{aligned}
+\]
+
+Esse é o consumo de VLSFO apresentado na linha ``Navegação'' da Tabela
+9. Ele não corresponde ao combustível total das 89 viagens históricas:
+essas viagens servem apenas para preparar a intensidade e a distância
+representativas aplicadas à remessa simulada.
 
 \hypertarget{emissuxf5es-da-alternativa-multimodal}{%
-\subsubsection{3.3.5 Emissões da alternativa
+\subsubsection{4.3.5 Emissões da alternativa
 multimodal}\label{emissuxf5es-da-alternativa-multimodal}}
 
 Os trechos de \emph{first mile} e \emph{last mile} usam a mesma
-conversão de diesel em emissões descrita na Seção~3.2.3. As operações
+conversão de diesel em emissões descrita na Seção~4.2.3. As operações
 portuárias também aplicam esse fator diretamente aos litros de diesel
-calculados na Seção~3.3.3. Na navegação, o consumo de VLSFO (\emph{very
+calculados na Seção~4.3.3. Na navegação, o consumo de VLSFO (\emph{very
 low sulphur fuel oil}, óleo combustível de baixíssimo teor de enxofre) é
 multiplicado pelo fator operacional correspondente. Em ambos os casos, a
 fronteira continua sendo TTW: considera-se apenas o combustível queimado
@@ -1549,8 +2381,41 @@ MEPC.391(81).\strut
 \bottomrule
 \end{longtable}
 
+Para cada etapa, a emissão é o combustível consumido multiplicado pelo
+fator correspondente. Nos acessos e nas operações portuárias, usa-se o
+volume de Diesel S10; na navegação, usa-se a massa de VLSFO:
+
+\[
+\begin{aligned}
+E_{\mathrm{first}}
+&=37{,}465\ \mathrm{L}\times2{,}68\ \mathrm{kg\ CO_2e/L}
+=100{,}41\ \mathrm{kg\ CO_2e},\\
+E_{\mathrm{navegacao}}
+&=322{,}801\ \mathrm{kg}\times3{,}114\ \mathrm{kg\ CO_2e/kg}
+=1.005{,}20\ \mathrm{kg\ CO_2e},\\
+E_{\mathrm{porto}}
+&=4{,}820\ \mathrm{L}\times2{,}68\ \mathrm{kg\ CO_2e/L}
+=12{,}92\ \mathrm{kg\ CO_2e},\\
+E_{\mathrm{last}}
+&=610{,}300\ \mathrm{L}\times2{,}68\ \mathrm{kg\ CO_2e/L}
+=1.635{,}60\ \mathrm{kg\ CO_2e}.
+\end{aligned}
+\]
+
+Somando as quatro etapas:
+
+\[
+\begin{aligned}
+E_{\mathrm{multimodal}}
+&=E_{\mathrm{first}}+E_{\mathrm{navegacao}}
++E_{\mathrm{porto}}+E_{\mathrm{last}}\\
+&=100{,}41+1.005{,}20+12{,}92+1.635{,}60\\
+&=2.754{,}13\ \mathrm{kg\ CO_2e}.
+\end{aligned}
+\]
+
 \hypertarget{custo-do-combustuxedvel}{%
-\subsubsection{3.3.6 Custo do
+\subsubsection{4.3.6 Custo do
 combustível}\label{custo-do-combustuxedvel}}
 
 O custo modelado do combustível considera apenas o combustível estimado
@@ -1562,7 +2427,7 @@ No exemplo São Paulo--Rio Branco, a atualização retornou os preços da
 semana de 12 a 18 de julho de 2026, com data final de pesquisa em 18 de
 julho. Os acessos rodoviários, \emph{first mile} e \emph{last mile},
 usam a mesma regra de escolha do veículo e de cálculo de consumo da
-Seção 3.2.1. Para precificar o diesel, o \emph{first mile} usa a média
+Seção 4.2.1. Para precificar o diesel, o \emph{first mile} usa a média
 entre a UF de origem e a UF do porto de embarque, e o \emph{last mile},
 a média entre a UF do porto de desembarque e a UF de destino. Nas
 operações portuárias, cada porto usa diretamente o preço do diesel na
@@ -1650,15 +2515,58 @@ R\$~8,260/L\strut
 \bottomrule
 \end{longtable}
 
+O custo de cada etapa é o respectivo consumo multiplicado pelo preço do
+combustível. No \emph{first mile}, São Paulo é tanto a UF de origem
+quanto a UF do porto de Santos, de modo que o preço permanece em
+R\$~6,960/L. No \emph{last mile}, a média entre Amazonas e Acre é
+\((7{,}250+9{,}270)/2=8{,}260\)~R\$/L. Nas operações portuárias, os
+4,820~L correspondem a 2,410~L em cada terminal, e cada parcela recebe o
+preço da sua UF. Na navegação, o cálculo mantém a conversão não
+arredondada de R\$~3,81231/kg:
+
+\[
+\begin{aligned}
+C_{\mathrm{first}}
+&=37{,}465\ \mathrm{L}\times6{,}960\ \mathrm{R\$/L}
+=260{,}76\ \mathrm{R\$},\\
+C_{\mathrm{navegacao}}
+&=322{,}801\ \mathrm{kg}\times3{,}81231\ \mathrm{R\$/kg}
+=1.230{,}62\ \mathrm{R\$},\\
+C_{\mathrm{porto}}
+&=(2{,}410\ \mathrm{L}\times6{,}960\ \mathrm{R\$/L})
++(2{,}410\ \mathrm{L}\times7{,}250\ \mathrm{R\$/L})\\
+&=34{,}25\ \mathrm{R\$},\\
+C_{\mathrm{last}}
+&=610{,}300\ \mathrm{L}\times8{,}260\ \mathrm{R\$/L}
+=5.041{,}08\ \mathrm{R\$}.
+\end{aligned}
+\]
+
+O custo modelado total da alternativa multimodal é:
+
+\[
+\begin{aligned}
+C_{\mathrm{multimodal}}
+&=C_{\mathrm{first}}+C_{\mathrm{navegacao}}
++C_{\mathrm{porto}}+C_{\mathrm{last}}\\
+&=260{,}76+1.230{,}62+34{,}25+5.041{,}08\\
+&=6.566{,}71\ \mathrm{R\$}.
+\end{aligned}
+\]
+
+Os consumos de diesel e VLSFO não são somados diretamente porque usam
+unidades e combustíveis diferentes. A agregação ocorre depois da
+conversão de cada etapa para a unidade comum de custo ou de emissões.
+
 \hypertarget{resultado-consolidado-da-alternativa-multimodal-do-exemplo-suxe3o-paulorio-branco}{%
-\subsubsection{3.3.7 Resultado consolidado da alternativa multimodal do
+\subsubsection{4.3.7 Resultado consolidado da alternativa multimodal do
 exemplo São Paulo--Rio
 Branco}\label{resultado-consolidado-da-alternativa-multimodal-do-exemplo-suxe3o-paulorio-branco}}
 
 Para a remessa de 14~t entre São Paulo (SP) e Rio Branco (AC), a Tabela
 9 reúne os resultados das etapas que compõem a alternativa multimodal.
-Os cálculos e as fontes de cada etapa estão descritos nas Seções 3.3.1 a
-3.3.6.
+Os cálculos e as fontes de cada etapa estão descritos nas Seções 4.3.1 a
+4.3.6.
 
 \textbf{Tabela 9 --- Resultado da alternativa multimodal no exemplo São
 Paulo--Rio Branco, para uma remessa de 14~t.}
@@ -1700,11 +2608,11 @@ Porto de Santos--Porto de Manaus\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 6.094,975~km\newline{}(3.291,023 milhas náuticas)\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-415,122~kg de VLSFO\strut
+322,801~kg de VLSFO\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-R\$~1.582,57\strut
+R\$~1.230,62\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.292,69~kg~CO\textsubscript{2}e\strut
+1.005,20~kg\newline{}CO\textsubscript{2}e\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.14\columnwidth}\raggedright
 Operações portuárias\strut
@@ -1730,7 +2638,7 @@ Porto de Manaus--Rio Branco\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 R\$~5.041,08\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-1.635,60~kg~CO\textsubscript{2}e\strut
+1.635,60~kg\newline{}CO\textsubscript{2}e\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.14\columnwidth}\raggedright
 \textbf{Total}\strut
@@ -1741,21 +2649,21 @@ R\$~5.041,08\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
 ---\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-\textbf{R\$~6.918,66}\strut
+\textbf{R\$~6.566,71}\strut
 \end{minipage} & \begin{minipage}[t]{0.14\columnwidth}\raggedleft
-\textbf{3.041,62~kg~CO\textsubscript{2}e}\strut
+\textbf{2.754,13~kg}\newline{}\textbf{CO\textsubscript{2}e}\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
 
 \hypertarget{resultado-final-do-exemplo-suxe3o-paulorio-branco}{%
-\subsection{3.4 Resultado final do exemplo São Paulo--Rio
+\subsection{4.4 Resultado final do exemplo São Paulo--Rio
 Branco}\label{resultado-final-do-exemplo-suxe3o-paulorio-branco}}
 
 Esta seção compara, para a mesma remessa de 14~t, os resultados totais
 da alternativa A, rodoviária direta, e da alternativa B, multimodal. Os
-valores das alternativas A e B foram consolidados nas Seções 3.2.4 e
-3.3.7, respectivamente.
+valores das alternativas A e B foram consolidados nas Seções 4.2.4 e
+4.3.7, respectivamente.
 
 \textbf{Tabela 10 --- Comparação dos resultados totais no exemplo São
 Paulo--Rio Branco, para uma remessa de 14~t.}
@@ -1787,18 +2695,18 @@ Emissões operacionais TTW\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 4.068,28~kg~CO\textsubscript{2}e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.041,62~kg~CO\textsubscript{2}e\strut
+2.754,13~kg~CO\textsubscript{2}e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-1.026,66~kg~CO\textsubscript{2}e a menos (25,24\%).\strut
+1.314,15~kg~CO\textsubscript{2}e a menos (32,30\%).\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Custo modelado do combustível\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 R\$~12.318,68\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-R\$~6.918,66\strut
+R\$~6.566,71\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-R\$~5.400,02 a menos (43,84\%).\strut
+R\$~5.751,97 a menos (46,69\%).\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
@@ -1808,10 +2716,10 @@ apresenta menor custo modelado do combustível e menores emissões
 operacionais TTW no cenário analisado.
 
 \hypertarget{implementauxe7uxe3o-computacional}{%
-\section{4. Implementação
+\section{5. Implementação
 computacional}\label{implementauxe7uxe3o-computacional}}
 
-A Seção 3 descreve o que é calculado: duas alternativas que prestam o
+A Seção 4 descreve o que é calculado: duas alternativas que prestam o
 mesmo serviço logístico, seus trechos, os dados usados e as regras
 físicas aplicadas. Esta seção mostra como essas regras foram
 transformadas em software: o objetivo não é repetir as fórmulas, mas
@@ -1834,7 +2742,7 @@ Dessa forma, a execução do sistema não depende de infraestrutura ou
 licenças pagas para cumprir seu propósito.
 
 \hypertarget{arquitetura-do-sistema-e-tecnologias-utilizadas}{%
-\subsection{4.1 Arquitetura do sistema e tecnologias
+\subsection{5.1 Arquitetura do sistema e tecnologias
 utilizadas}\label{arquitetura-do-sistema-e-tecnologias-utilizadas}}
 
 O sistema é desenvolvido em Python. A interface, os cálculos, a
@@ -1938,11 +2846,11 @@ fonte de dados nem substitui as regras de cálculo descritas neste
 estudo.
 
 \hypertarget{dados-de-entrada-tratamento-de-endereuxe7os-e-geocodificauxe7uxe3o}{%
-\subsection{4.2 Dados de entrada, tratamento de endereços e
+\subsection{5.2 Dados de entrada, tratamento de endereços e
 geocodificação}\label{dados-de-entrada-tratamento-de-endereuxe7os-e-geocodificauxe7uxe3o}}
 
 \hypertarget{dados-recebidos-pelo-pipeline}{%
-\subsubsection{4.2.1 Dados recebidos pelo
+\subsubsection{5.2.1 Dados recebidos pelo
 pipeline}\label{dados-recebidos-pelo-pipeline}}
 
 Cada execução do pipeline recebe três dados: a origem, o destino e a
@@ -1954,7 +2862,7 @@ Assim, a rota rodoviária e a rota multimodal sempre partem dos mesmos
 pontos e transportam a mesma carga.
 
 \hypertarget{do-texto-uxe0s-coordenadas}{%
-\subsubsection{4.2.2 Do texto às
+\subsubsection{5.2.2 Do texto às
 coordenadas}\label{do-texto-uxe0s-coordenadas}}
 
 Origem e destino precisam ser convertidos em latitude e longitude antes
@@ -1970,7 +2878,7 @@ interpretado corretamente como ``Avenida Professor Luciano Gualberto,
 São Paulo, SP''.
 
 \hypertarget{consulta-aos-serviuxe7os-de-localizauxe7uxe3o}{%
-\subsubsection{4.2.3 Consulta aos serviços de
+\subsubsection{5.2.3 Consulta aos serviços de
 localização}\label{consulta-aos-serviuxe7os-de-localizauxe7uxe3o}}
 
 O pipeline envia o texto de origem ou destino primeiro ao
@@ -1981,7 +2889,7 @@ envia a mesma consulta ao LocationIQ. A saída desta etapa é um ponto
 identificado por coordenadas (latitude e longitude).
 
 \hypertarget{fluxograma-explicativo}{%
-\subsubsection{4.2.4 Fluxograma
+\subsubsection{5.2.4 Fluxograma
 explicativo}\label{fluxograma-explicativo}}
 
 O fluxograma mostra o caminho de quatro formas de entrada para o mesmo
@@ -1991,7 +2899,7 @@ local:
 \resizebox{\linewidth}{!}{%
 \begin{tikzpicture}
   \node[clnode] (mA) at (-7.80cm,0.00cm) {Avenida Professor Luciano Gualberto, São Paulo, SP};
-  \node[clnode] (mO) at (0.00cm,-3.00cm) {Consulta ao ORS/LocationIQ};
+  \node[clnode] (mO) at (0.00cm,-3.00cm) {Consulta ao\\ORS/\\LocationIQ};
   \node[clnode] (mB) at (-2.60cm,0.00cm) {av prof Luciano Gualberto, SP};
   \node[clnode] (mC) at (2.60cm,0.00cm) {05508-010};
   \node[clnode] (mD) at (7.80cm,0.00cm) {av prof luciano galberto};
@@ -2011,7 +2919,7 @@ novamente, o sistema reutiliza esse resultado em vez de realizar outra
 geocodificação.
 
 \hypertarget{validauxe7uxe3o-das-coordenadas}{%
-\subsubsection{4.2.5 Validação das
+\subsubsection{5.2.5 Validação das
 coordenadas}\label{validauxe7uxe3o-das-coordenadas}}
 
 Antes de calcular uma rota, é preciso verificar se o endereço foi
@@ -2020,7 +2928,7 @@ referência
 \texttt{Avenida\ Professor\ Luciano\ Gualberto,\ São\ Paulo,\ SP}. A
 consulta independente no Google Maps retornou as coordenadas latitude
 igual a −23,560017° e longitude igual a −46,727769°, apresentadas na
-Figura 3 \parencite{googlemaps2026}. Para o mesmo endereço, o motor de geocodificação retornou as
+Figura 7 \parencite{googlemaps2026}. Para o mesmo endereço, o motor de geocodificação retornou as
 coordenadas (−23,558808°; −46,730357°). A distância em linha reta entre
 os dois pontos é aproximadamente 296~m.
 
@@ -2028,11 +2936,11 @@ os dois pontos é aproximadamente 296~m.
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-18 143636.png}
 \end{center}
 
-\emph{Figura 3 --- Consulta independente do endereço Avenida Professor
+\emph{Figura 7 --- Consulta independente do endereço Avenida Professor
 Luciano Gualberto, São Paulo, SP, no Google Maps. Fonte: captura de tela
 do Google Maps realizada em 18 de julho de 2026.}
 
-A Figura 4 mostra a consulta, no Google Maps, das coordenadas devolvidas
+A Figura 8 mostra a consulta, no Google Maps, das coordenadas devolvidas
 pelo motor; os dois pontos permanecem na Avenida Professor Luciano
 Gualberto, na região da Universidade de São Paulo (USP).
 
@@ -2040,7 +2948,7 @@ Gualberto, na região da Universidade de São Paulo (USP).
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-18 145249.png}
 \end{center}
 
-\emph{Figura 4 --- Consulta no Google Maps das coordenadas retornadas
+\emph{Figura 8 --- Consulta no Google Maps das coordenadas retornadas
 pelo motor de geocodificação para a Avenida Professor Luciano Gualberto.
 Fonte: captura de tela do Google Maps realizada em 18 de julho de 2026.}
 
@@ -2050,11 +2958,11 @@ a posição de um portão ou de um número específico do imóvel, mas é
 suficiente para o propósito deste estudo.
 
 \hypertarget{implementauxe7uxe3o-da-alternativa-rodoviuxe1ria}{%
-\subsection{4.3 Implementação da alternativa
+\subsection{5.3 Implementação da alternativa
 rodoviária}\label{implementauxe7uxe3o-da-alternativa-rodoviuxe1ria}}
 
 \hypertarget{consulta-de-rota-rodoviuxe1ria}{%
-\subsubsection{4.3.1 Consulta de rota
+\subsubsection{5.3.1 Consulta de rota
 rodoviária}\label{consulta-de-rota-rodoviuxe1ria}}
 
 Com as coordenadas da origem e do destino já definidas, o sistema envia
@@ -2064,7 +2972,7 @@ responder devolve a distância rodoviária e sua identificação, que ficam
 associadas ao cenário.
 
 No exemplo São Paulo--Rio Branco, após a geocodificação descrita na
-Seção 4.2, o ORS recebeu as coordenadas de São Paulo (latitude
+Seção 5.2, o ORS recebeu as coordenadas de São Paulo (latitude
 −23,550520°; longitude −46,633308°) e de Rio Branco (latitude
 −9,989637°; longitude −67,822462°). A distância rodoviária devolvida foi
 3.491,431~km.
@@ -2078,7 +2986,7 @@ Seção 4.2, o ORS recebeu as coordenadas de São Paulo (latitude
   \node[clnode] (mB) at (-0.50cm,2.00cm) {Destino: Rio Branco, AC};
   \node[clnode] (mS) at (-0.50cm,0.00cm) {Geocodificação};
   \node[clnode] (mD) at (-0.50cm,-2.30cm) {Latitude: −9,989637°\\Longitude: −67,822462°};
-  \node[clnode] (mT) at (4.20cm,-4.30cm) {Consulta de rota\\ORS/LocationIQ};
+  \node[clnode] (mT) at (4.20cm,-4.30cm) {Consulta de rota\\ORS/\\LocationIQ};
   \node[clnode] (mE) at (8.70cm,-4.30cm) {Distância rodoviária:\\3.491,431 km};
   \draw[clarrow] (mA) -- (mR);
   \draw[clarrow] (mB) -- (mS);
@@ -2092,10 +3000,10 @@ Seção 4.2, o ORS recebeu as coordenadas de São Paulo (latitude
 \end{center}
 
 \hypertarget{validauxe7uxe3o-da-distuxe2ncia-rodoviuxe1ria}{%
-\paragraph{4.3.1.1 Validação da distância
+\paragraph{5.3.1.1 Validação da distância
 rodoviária}\label{validauxe7uxe3o-da-distuxe2ncia-rodoviuxe1ria}}
 
-A Figura 5 apresenta uma consulta independente no Google Maps para a
+A Figura 9 apresenta uma consulta independente no Google Maps para a
 mesma ligação entre São Paulo e Rio Branco. A rota selecionada pelo
 Google Maps tem 3.497~km, enquanto o motor do sistema retornou
 3.491,431~km. A diferença é de 5,569~km, ou 0,16\% da distância exibida
@@ -2105,7 +3013,7 @@ no Google Maps.
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-15 144749.png}
 \end{center}
 
-\emph{Figura 5 --- Consulta no Google Maps para São Paulo--Rio Branco:
+\emph{Figura 9 --- Consulta no Google Maps para São Paulo--Rio Branco:
 rota selecionada de 3.497~km. Fonte: captura de tela do Google Maps
 realizada em 15 de julho de 2026.}
 
@@ -2116,7 +3024,7 @@ artificialmente os quilômetros percorridos e poderia distorcer as
 estimativas de consumo, custo e emissões.
 
 \hypertarget{consulta-do-preuxe7o-do-diesel}{%
-\subsubsection{4.3.2 Consulta do preço do
+\subsubsection{5.3.2 Consulta do preço do
 diesel}\label{consulta-do-preuxe7o-do-diesel}}
 
 Para calcular o custo, a rotina Python busca os preços mais recentes de
@@ -2137,7 +3045,7 @@ indisponível.
 
 {\scriptsize
 \renewcommand{\arraystretch}{0.78}
-\begin{tabular}{@{}p{0.095\linewidth}p{0.095\linewidth}p{0.09\linewidth}p{0.14\linewidth}p{0.15\linewidth}p{0.13\linewidth}p{0.14\linewidth}@{}}
+\begin{tabular}{@{}p{0.095\linewidth}p{0.095\linewidth}p{0.095\linewidth}p{0.135\linewidth}p{0.15\linewidth}p{0.13\linewidth}p{0.14\linewidth}@{}}
 \toprule
 \textbf{DATA\newline INICIAL} & \textbf{DATA\newline FINAL} & \textbf{REGIÃO} & \textbf{ESTADO} & \textbf{PRODUTO} & \textbf{UNIDADE\newline DE MEDIDA} & \raggedleft\textbf{PREÇO MÉDIO\newline REVENDA}\tabularnewline
 \midrule
@@ -2156,11 +3064,11 @@ reproduzidos do arquivo \texttt{SEMANAL\_ESTADOS-DESDE\_2013.xlsx} usado
 para conferir a rotina de leitura.}
 
 \hypertarget{consumo-custo-e-emissuxf5es-rodoviuxe1rias}{%
-\subsubsection{4.3.3 Consumo, custo e emissões
+\subsubsection{5.3.3 Consumo, custo e emissões
 rodoviárias}\label{consumo-custo-e-emissuxf5es-rodoviuxe1rias}}
 
 Com a distância disponível, o avaliador aplica as regras das Seções
-3.2.1 a 3.2.3. Ele seleciona a configuração rodoviária representativa a
+4.2.1 a 4.2.3. Ele seleciona a configuração rodoviária representativa a
 partir da massa da remessa, calcula os litros de diesel de cada perna e
 converte esse consumo em custo e emissões.
 
@@ -2170,7 +3078,7 @@ insumos. Dessa forma, o total rodoviário pode ser auditado sem
 misturá-lo com as parcelas portuárias ou marítimas.
 
 \hypertarget{resumo-do-pipeline-da-alternativa-direta}{%
-\subsubsection{4.3.4 Resumo do pipeline da alternativa
+\subsubsection{5.3.4 Resumo do pipeline da alternativa
 direta}\label{resumo-do-pipeline-da-alternativa-direta}}
 
 A alternativa direta é calculada de forma independente da alternativa
@@ -2184,7 +3092,7 @@ incluir portos ou navegação.
 No exemplo São Paulo--Rio Branco, uma remessa de 14~t percorre
 3.491,431~km. O sistema seleciona uma carreta de cinco eixos, com
 eficiência de 2,3~km/L, e estima 1.518,014~L de Diesel S10. Com o preço
-e o fator de emissão definidos nas Seções~3.2.2 e 3.2.3, o resultado é
+e o fator de emissão definidos nas Seções~4.2.2 e 4.2.3, o resultado é
 R\$~12.318,68 de custo modelado do combustível e 4.068,28~kg~CO\textsubscript{2}e de
 emissões operacionais TTW.
 
@@ -2214,7 +3122,7 @@ emissões operacionais TTW.
 \end{center}
 
 \hypertarget{montagem-da-alternativa-multimodal}{%
-\subsection{4.4 Montagem da alternativa
+\subsection{5.4 Montagem da alternativa
 multimodal}\label{montagem-da-alternativa-multimodal}}
 
 Após calcular a rota rodoviária direta, o sistema monta a alternativa
@@ -2223,7 +3131,7 @@ transporte rodoviário, os endereços já geocodificados, os preços de
 diesel por unidade federativa e a cotação do VLSFO.
 
 \hypertarget{consulta-e-conversuxe3o-do-preuxe7o-do-vlsfo}{%
-\subsubsection{4.4.1 Consulta e conversão do preço do
+\subsubsection{5.4.1 Consulta e conversão do preço do
 VLSFO}\label{consulta-e-conversuxe3o-do-preuxe7o-do-vlsfo}}
 
 Antes de avaliar a alternativa multimodal, o pipeline busca a cotação
@@ -2256,11 +3164,11 @@ P_{\mathrm{VLSFO}}^{\mathrm{R\$/kg}}
 Nas duas linhas, \(P_{\mathrm{VLSFO}}\) representa o preço do VLSFO e o
 sobrescrito informa a unidade em que ele está expresso. Esse é o valor
 entregue ao avaliador para calcular o custo do combustível marítimo. A
-fonte, os valores e a regra de custo estão detalhados na Seção 3.3.6 e
+fonte, os valores e a regra de custo estão detalhados na Seção 4.3.6 e
 na Tabela 8.
 
 \hypertarget{matriz-maruxedtima}{%
-\subsubsection{4.4.2 Matriz marítima}\label{matriz-maruxedtima}}
+\subsubsection{5.4.2 Matriz marítima}\label{matriz-maruxedtima}}
 
 Antes de definir os portos de um novo cenário, o sistema prepara a
 referência marítima com base em viagens de cabotagem que realmente
@@ -2273,7 +3181,7 @@ pelo \href{https://www.geografos.com.br/}{Geógrafos}
 \parencite{geografos2026}.
 
 \hypertarget{dados-da-antaq}{%
-\paragraph{4.4.2.1 Dados da ANTAQ}\label{dados-da-antaq}}
+\paragraph{5.4.2.1 Dados da ANTAQ}\label{dados-da-antaq}}
 
 A rotina de atualização acessa o
 \href{https://estatistica.antaq.gov.br/ea/sense/download.html}{Painel
@@ -2283,7 +3191,7 @@ baixa os arquivos em formato TXT. A biblioteca Python Beautiful Soup lê
 a página e seus arquivos de apoio para localizar os endereços de
 download disponibilizados pela ANTAQ. São obtidas as tabelas de Carga,
 Atracação e Tempos de Atracação. Os campos de Carga e Atracação usados
-na reconstrução estão detalhados na Seção 3.3.4.1, nas Tabelas 4 e 5.
+na reconstrução estão detalhados na Seção 4.3.4.1, nas Tabelas 4 e 5.
 
 A atualização também sincroniza os dados necessários e os artefatos
 gerados para o Supabase Storage, o local de armazenamento de arquivos do
@@ -2292,10 +3200,10 @@ marítima permanecem disponíveis para reutilização e rastreabilidade, sem
 depender do acesso imediato ao portal da ANTAQ.
 
 \hypertarget{reconstruuxe7uxe3o-das-viagens-1}{%
-\paragraph{4.4.2.2 Reconstrução das
+\paragraph{5.4.2.2 Reconstrução das
 viagens}\label{reconstruuxe7uxe3o-das-viagens-1}}
 
-Para implementar a lógica apresentada na Seção 3.3.4.1.3, a função de
+Para implementar a lógica apresentada na Seção 4.3.4.1.3, a função de
 reconstrução reúne os registros de cabotagem conteinerizada e relaciona
 cada movimentação de carga à escala correspondente. A tabela de
 Atracação fornece o porto, a data e o número da Organização Marítima
@@ -2332,20 +3240,20 @@ brutos:
 \end{itemize}
 
 \hypertarget{dados-da-eu-mrv}{%
-\paragraph{4.4.2.3 Dados da EU MRV}\label{dados-da-eu-mrv}}
+\paragraph{5.4.2.3 Dados da EU MRV}\label{dados-da-eu-mrv}}
 
 Os arquivos anuais da base europeia de Monitoramento, Reporte e
 Verificação da União Europeia (EU MRV) são obtidos no
 \href{https://mrv.emsa.europa.eu/}{THETIS-MRV, da Agência Europeia de
 Segurança Marítima} e armazenados no Supabase Storage. Os campos e o
-exemplo de correspondência por IMO estão apresentados na Seção 3.3.4.2 e
+exemplo de correspondência por IMO estão apresentados na Seção 4.3.4.2 e
 na Tabela 6.
 
 \hypertarget{cuxe1lculo-do-trabalho-de-transporte}{%
-\paragraph{4.4.2.4 Cálculo do trabalho de
+\paragraph{5.4.2.4 Cálculo do trabalho de
 transporte}\label{cuxe1lculo-do-trabalho-de-transporte}}
 
-Como explicado na Seção 3.3.4.2, o sistema procura primeiro o IMO do
+Como explicado na Seção 4.3.4.2, o sistema procura primeiro o IMO do
 navio observado na ANTAQ. Se não houver indicador individual utilizável,
 ou se ele for classificado como atípico, é aplicada uma referência
 robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A
@@ -2353,7 +3261,7 @@ carga a bordo, a distância e a intensidade permitem calcular o trabalho
 de transporte e o consumo estimado de cada viagem.
 
 \hypertarget{compilauxe7uxe3o-na-estrutura-matricial}{%
-\paragraph{4.4.2.5 Compilação na estrutura
+\paragraph{5.4.2.5 Compilação na estrutura
 matricial}\label{compilauxe7uxe3o-na-estrutura-matricial}}
 
 Os resultados são reunidos na estrutura \texttt{SeaMatrix}. Para cada
@@ -2394,7 +3302,7 @@ destino.
 A Tabela 13 apresenta a distância representativa de cada sentido. Quando
 há 20 ou mais recortes, as distâncias acima do P95 são retiradas antes da
 média ponderada pela carga média a bordo, conforme explicado na
-Seção~3.3.4.4. Nota-se que a distância de ida pode ser diferente da
+Seção~4.3.4.4. Nota-se que a distância de ida pode ser diferente da
 distância de volta, uma vez que cada sentido reúne seu próprio conjunto
 de viagens, cargas e distâncias observadas. As duas tabelas incluem
 recortes diretos e recortes com escalas intermediárias. O travessão
@@ -2425,7 +3333,7 @@ Manaus & 5.867,445 & 6.585,233 & 5.560,801 & 5.768,673 &
 
 \emph{Fonte: elaboração própria a partir da matriz marítima direcional
 preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em
-19 de julho de 2026.}
+23 de julho de 2026.}
 
 \Needspace{14\baselineskip}
 A Tabela 14 apresenta a intensidade média, ponderada pelo trabalho de
@@ -2440,18 +3348,18 @@ Origem / destino & Santos & Salvador & Suape & Pecém &
 Manaus\tabularnewline
 \midrule
 \endhead
-Santos & --- & 9,605744 & 8,729368 & 9,745651 & 9,009824\tabularnewline
-Salvador & 9,338150 & --- & 8,558943 & 10,183560 &
-9,322050\tabularnewline
-Suape & 9,292748 & 9,984933 & --- & 9,551157 & 9,034616\tabularnewline
-Pecém & 9,643543 & 9,716983 & 8,681143 & --- & 9,092814\tabularnewline
-Manaus & 9,098669 & 9,322050 & 9,178646 & 9,055626 & ---\tabularnewline
+Santos & --- & 6,152554 & 6,680958 & 7,280740 & 7,006102\tabularnewline
+Salvador & 6,593389 & --- & 6,927173 & 8,379871 &
+6,624583\tabularnewline
+Suape & 6,421161 & 6,294919 & --- & 6,546223 & 6,984032\tabularnewline
+Pecém & 6,852916 & 6,663381 & 7,003180 & --- & 6,967572\tabularnewline
+Manaus & 6,865533 & 6,624583 & 6,955700 & 7,197945 & ---\tabularnewline
 \bottomrule
 \end{longtable}
 
 \emph{Fonte: elaboração própria a partir de viagens de cabotagem
 observadas pela ANTAQ e das intensidades do EU MRV, consolidadas na
-matriz marítima direcional atualizada em 19 de julho de 2026.}
+matriz marítima direcional atualizada em 23 de julho de 2026.}
 
 O trecho abaixo representa, de forma simplificada, como a matriz pode
 ser consultada. O porto de origem contém os portos de destino e, para
@@ -2469,17 +3377,17 @@ e os indicadores de cobertura apresentados nas seções anteriores.
     \DataTypeTok{"Porto de Santos"}\FunctionTok{:} \FunctionTok{\{}
         \DataTypeTok{"Porto de Salvador"}\FunctionTok{:} \FunctionTok{\{}
             \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{2516.136}\FunctionTok{,}
-            \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{9.605744}\FunctionTok{,}
+            \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{6.152554}\FunctionTok{,}
             \ErrorTok{...}
         \FunctionTok{\},}
     \DataTypeTok{"Porto de Suape"}\FunctionTok{:} \FunctionTok{\{}
         \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{2912.073}\FunctionTok{,}
-        \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{8.729368}\FunctionTok{,}
+        \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{6.680958}\FunctionTok{,}
         \ErrorTok{...}
     \FunctionTok{\},}
     \DataTypeTok{"Porto de Manaus"}\FunctionTok{:} \FunctionTok{\{}
       \DataTypeTok{"distancia_km"}\FunctionTok{:} \FloatTok{6094.975}\FunctionTok{,}
-      \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{9.009824}\FunctionTok{,}
+      \DataTypeTok{"intensidade_g_por_t_nm"}\FunctionTok{:} \FloatTok{7.006102}\FunctionTok{,}
       \ErrorTok{...}
     \FunctionTok{\},}
     \ErrorTok{...}
@@ -2490,11 +3398,11 @@ e os indicadores de cobertura apresentados nas seções anteriores.
 \end{Shaded}
 
 \hypertarget{escolha-dos-portos-e-acessos-rodoviuxe1rios}{%
-\subsubsection{4.4.3 Escolha dos portos e acessos
+\subsubsection{5.4.3 Escolha dos portos e acessos
 rodoviários}\label{escolha-dos-portos-e-acessos-rodoviuxe1rios}}
 
 \hypertarget{escolha-dos-portos-1}{%
-\paragraph{4.4.3.1 Escolha dos portos}\label{escolha-dos-portos-1}}
+\paragraph{5.4.3.1 Escolha dos portos}\label{escolha-dos-portos-1}}
 
 A definição dos portos de embarque e desembarque começa pela função
 \texttt{find\_nearest\_port}. Ela usa a distância de Haversine, um
@@ -2511,14 +3419,14 @@ A distância de Haversine, porém, é usada apenas nessa escolha inicial.
 Ela não entra nos cálculos de consumo, custo ou emissões.
 
 \hypertarget{acessos-rodoviuxe1rios-first-mile-e-last-mile-1}{%
-\paragraph{\texorpdfstring{4.4.3.2 Acessos rodoviários: \emph{first
+\paragraph{\texorpdfstring{5.4.3.2 Acessos rodoviários: \emph{first
 mile} e \emph{last
-mile}}{4.4.3.2 Acessos rodoviários: first mile e last mile}}\label{acessos-rodoviuxe1rios-first-mile-e-last-mile-1}}
+mile}}{5.4.3.2 Acessos rodoviários: first mile e last mile}}\label{acessos-rodoviuxe1rios-first-mile-e-last-mile-1}}
 
 Após escolher os dois portos e suas respectivas coordenadas, o sistema
 calcula a distância real dos dois acessos rodoviários --- origem → porto
 de embarque e porto de desembarque → destino --- pelo mesmo procedimento
-exposto na Seção 4.3.1.
+exposto na Seção 5.3.1.
 
 Essa sequência reduz consultas desnecessárias aos provedores de rota. Em
 vez de solicitar uma rota rodoviária para cada porto candidato de uma
@@ -2528,7 +3436,7 @@ rodoviária, enquanto a distância de Haversine é usada apenas como um
 filtro rápido para definir qual porto consultar.
 
 \hypertarget{resultado-consolidado-do-exemplo-suxe3o-paulorio-branco}{%
-\paragraph{4.4.3.3 Resultado consolidado do exemplo São Paulo--Rio
+\paragraph{5.4.3.3 Resultado consolidado do exemplo São Paulo--Rio
 Branco}\label{resultado-consolidado-do-exemplo-suxe3o-paulorio-branco}}
 
 No exemplo São Paulo--Rio Branco, a seleção geográfica indicou o Porto
@@ -2590,26 +3498,26 @@ caminho percorrido pela malha viária. Apenas a última é usada nos
 cálculos da alternativa multimodal.
 
 \hypertarget{operauxe7uxf5es-portuuxe1rias-1}{%
-\subsubsection{4.4.4 Operações
+\subsubsection{5.4.4 Operações
 portuárias}\label{operauxe7uxf5es-portuuxe1rias-1}}
 
 A rotina de operações portuárias recebe a carga, os dois portos e o
-número de escalas para realizar o procedimento descrito na Seção 3.3.3.
+número de escalas para realizar o procedimento descrito na Seção 4.3.3.
 O resultado da execução foi 4,820~L de diesel para as operações
 quantificadas, equivalentes a R\$~34,25 e 12,92~kg~CO\textsubscript{2}e.
 
 \hypertarget{consulta-da-ligauxe7uxe3o-maruxedtima}{%
-\subsection{4.5 Consulta da ligação
+\subsection{5.5 Consulta da ligação
 marítima}\label{consulta-da-ligauxe7uxe3o-maruxedtima}}
 
 Com os portos de embarque e desembarque já definidos, o avaliador
-consulta a matriz preparada na Seção 4.4.2. Nessa etapa, ele não escolhe
+consulta a matriz preparada na Seção 5.4.2. Nessa etapa, ele não escolhe
 um novo corredor nem reconstrói as viagens históricas: apenas recupera
 os valores representativos do par de portos selecionado e os aplica à
 carga do cenário.
 
 \hypertarget{consulta-da-ligauxe7uxe3o-maruxedtima-no-cenuxe1rio}{%
-\subsubsection{4.5.1 Consulta da ligação marítima no
+\subsubsection{5.5.1 Consulta da ligação marítima no
 cenário}\label{consulta-da-ligauxe7uxe3o-maruxedtima-no-cenuxe1rio}}
 
 No exemplo São Paulo--Rio Branco, a escolha dos portos leva à consulta
@@ -2666,7 +3574,7 @@ recortes até o P95\strut
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Intensidade marítima\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-9,009824~g/(t·nm)\strut
+7,006102~g/(t·nm)\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Média ponderada pelo trabalho de transporte dos 89 recortes\strut
 \end{minipage}\tabularnewline
@@ -2690,7 +3598,7 @@ cenário\strut
 \end{longtable}
 
 \hypertarget{resultado-final-do-cenuxe1rio}{%
-\subsection{4.6 Resultado final do
+\subsection{5.6 Resultado final do
 cenário}\label{resultado-final-do-cenuxe1rio}}
 
 Após executar as etapas descritas nas seções anteriores, o pipeline
@@ -2727,24 +3635,24 @@ Custo modelado do combustível\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 R\$~12.318,68\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-R\$~6.918,66\strut
+R\$~6.566,71\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-R\$~5.400,02 a menos (43,84\%)\strut
+R\$~5.751,97 a menos (46,69\%)\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Emissões operacionais TTW\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
 4.068,28~kg~CO\textsubscript{2}e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedleft
-3.041,62~kg~CO\textsubscript{2}e\strut
+2.754,13~kg~CO\textsubscript{2}e\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-1.026,66~kg~CO\textsubscript{2}e a menos (25,24\%)\strut
+1.314,15~kg~CO\textsubscript{2}e a menos (32,30\%)\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
 
 \hypertarget{rastreabilidade-auditoria-e-versionamento}{%
-\subsection{4.7 Rastreabilidade, auditoria e
+\subsection{5.7 Rastreabilidade, auditoria e
 versionamento}\label{rastreabilidade-auditoria-e-versionamento}}
 
 O resultado não guarda apenas os totais de custo e emissão. A cada
@@ -2792,7 +3700,7 @@ Identifica a base da intensidade e da distância marítimas\strut
 \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Intensidade marítima\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
-9,009824~g/(t·nm); fontes por IMO e por tipo identificadas\strut
+7,006102~g/(t·nm); fontes por IMO e por tipo identificadas\strut
 \end{minipage} & \begin{minipage}[t]{0.30\columnwidth}\raggedright
 Diferencia medição individual de estimativa de grupo\strut
 \end{minipage}\tabularnewline
@@ -2825,7 +3733,7 @@ Sinaliza a aproximação sem ocultá-la no total\strut
 3.3.7}
 
 \hypertarget{versionamento-e-reproduuxe7uxe3o-do-cuxe1lculo}{%
-\subsubsection{4.7.1 Versionamento e reprodução do
+\subsubsection{5.7.1 Versionamento e reprodução do
 cálculo}\label{versionamento-e-reproduuxe7uxe3o-do-cuxe1lculo}}
 
 O versionamento é etapa fundamental do desenvolvimento de sistemas. Git
@@ -2839,7 +3747,7 @@ arquivos foram usados em cada versão do estudo, comparar alterações e
 apoiar a rastreabilidade e a auditoria dos resultados.
 
 \hypertarget{aplicauxe7uxe3o-web}{%
-\subsection{4.8 Aplicação web}\label{aplicauxe7uxe3o-web}}
+\subsection{5.8 Aplicação web}\label{aplicauxe7uxe3o-web}}
 
 Para disponibilizar o cálculo sem exigir instalação local, o
 CabotageLens é hospedado gratuitamente no Streamlit Community Cloud. A
@@ -2850,10 +3758,10 @@ resultados para vários destinos. As subseções seguintes apresentam essas
 duas interfaces.
 
 \hypertarget{puxe1gina-router}{%
-\subsubsection{4.8.1 Página Router}\label{puxe1gina-router}}
+\subsubsection{5.8.1 Página Router}\label{puxe1gina-router}}
 
 A página Router executa a comparação para a origem, o destino e a carga
-informados no cenário. A Figura 6 mostra os campos da barra lateral
+informados no cenário. A Figura 10 mostra os campos da barra lateral
 usados nessa definição. No exemplo, a análise parte da Avenida Professor
 Luciano Gualberto, em São Paulo, segue para Manaus e considera uma carga
 de 14 t.
@@ -2862,11 +3770,11 @@ de 14 t.
 \includegraphics[width=0.94\linewidth]{images/router-scenario.png}
 \end{center}
 
-\emph{Figura 6 --- Campos de definição do cenário na página Router.
+\emph{Figura 10 --- Campos de definição do cenário na página Router.
 Fonte: elaboração própria.}
 
 Após a execução, a página apresenta as alternativas calculadas em um
-mapa, como ilustra a Figura 7. As linhas traçadas servem apenas para
+mapa, como ilustra a Figura 11. As linhas traçadas servem apenas para
 representar visualmente as distâncias e a ligação entre os pontos; elas
 não correspondem às rotas rodoviárias ou marítimas efetivamente
 utilizadas nos cálculos.
@@ -2875,7 +3783,7 @@ utilizadas nos cálculos.
 \includegraphics[width=0.94\linewidth]{images/router-map.png}
 \end{center}
 
-\emph{Figura 7 --- Representação visual das alternativas calculadas na
+\emph{Figura 11 --- Representação visual das alternativas calculadas na
 página Router. Fonte: elaboração própria.}
 
 Os resultados detalhados, os avisos, os logs e os demais registros
@@ -2885,7 +3793,7 @@ conferência do cálculo é feita pelos dados e registros apresentados pelo
 sistema.
 
 \hypertarget{puxe1gina-mapa-de-calor}{%
-\subsubsection{4.8.2 Página Mapa de
+\subsubsection{5.8.2 Página Mapa de
 calor}\label{puxe1gina-mapa-de-calor}}
 
 O Mapa de calor amplia a comparação realizada na página Router. Em vez
@@ -2893,8 +3801,8 @@ de avaliar apenas uma ligação entre origem e destino, o usuário informa
 uma origem e a massa da carga, e o sistema compara esse cenário com 608
 municípios brasileiros de população superior a 50 mil habitantes. Para
 cada município, são calculadas as mesmas duas alternativas descritas na
-Seção 3: a rodovia direta e a cadeia rodoviária--cabotagem--rodoviária.
-A Figura 8 mostra os campos usados para definir o cenário. No exemplo, a
+Seção 4: a rodovia direta e a cadeia rodoviária--cabotagem--rodoviária.
+A Figura 12 mostra os campos usados para definir o cenário. No exemplo, a
 análise parte da Avenida Professor Luciano Gualberto, em São Paulo, e
 considera uma carga de 14 t.
 
@@ -2902,7 +3810,7 @@ considera uma carga de 14 t.
 \includegraphics[width=0.94\linewidth]{images/heatmap-scenario.png}
 \end{center}
 
-\emph{Figura 8 --- Campos de definição do cenário na página Mapa de
+\emph{Figura 12 --- Campos de definição do cenário na página Mapa de
 calor. Fonte: elaboração própria.}
 
 O resultado permite visualizar, em diferentes partes do país, onde a
@@ -2918,18 +3826,18 @@ diferenças. Os resultados são calculados para os municípios do conjunto
 de destinos; as áreas entre eles são uma interpolação visual para tornar
 o padrão mais legível no mapa. Portanto, cada área colorida não
 representa uma nova rota calculada, mas a visualização dos resultados
-obtidos para os destinos próximos. A Figura 9 ilustra essa representação
+obtidos para os destinos próximos. A Figura 13 ilustra essa representação
 para o cenário informado.
 
 \begin{center}
 \includegraphics[width=0.94\linewidth]{images/heatmap-map.png}
 \end{center}
 
-\emph{Figura 9 --- Representação espacial dos resultados calculados na
+\emph{Figura 13 --- Representação espacial dos resultados calculados na
 página Mapa de calor. Fonte: elaboração própria.}
 
 \hypertarget{comparauxe7uxf5es-com-ferramentas-externas}{%
-\section{5. Comparações com ferramentas
+\section{6. Comparações com ferramentas
 externas}\label{comparauxe7uxf5es-com-ferramentas-externas}}
 
 As ferramentas externas permitem confrontar o resultado do CabotageLens
@@ -2939,10 +3847,10 @@ difere, a diferença permanece explícita; os resultados não são ajustados
 para produzir uma equivalência artificial.
 
 \hypertarget{calculadora-de-emissuxf5es-da-alianuxe7a}{%
-\subsection{\texorpdfstring{5.1
+\subsection{\texorpdfstring{6.1
 \href{https://www.alianca.com.br/calculadora-de-co2}{Calculadora de
 emissões da
-Aliança}}{5.1 Calculadora de emissões da Aliança}}\label{calculadora-de-emissuxf5es-da-alianuxe7a}}
+Aliança}}{6.1 Calculadora de emissões da Aliança}}\label{calculadora-de-emissuxf5es-da-alianuxe7a}}
 
 Na calculadora da Aliança \parencite{alianca2026}, o cenário informado foi São
 Paulo--Abaetetuba, com um contêiner seco de 40 pés e 20 t de carga. O
@@ -2960,7 +3868,7 @@ totais.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/calculo-co2_86072221.png}
 \end{center}
 
-\emph{Figura 10 --- Resultado da calculadora da Aliança para São
+\emph{Figura 14 --- Resultado da calculadora da Aliança para São
 Paulo--Abaetetuba. Fonte: resultado exportado pela ferramenta, fornecido
 pelo autor.}
 
@@ -3086,10 +3994,10 @@ dos totais de cada alternativa. O CabotageLens apresenta a redução com
 sinal coerente com as emissões totais mostradas.
 
 \hypertarget{calculadora-de-emissuxf5es-da-log-in}{%
-\subsection{\texorpdfstring{5.2
+\subsection{\texorpdfstring{6.2
 \href{https://www.loginlogistica.com.br/calculadora-co2/}{Calculadora de
 emissões da
-Log-In}}{5.2 Calculadora de emissões da Log-In}}\label{calculadora-de-emissuxf5es-da-log-in}}
+Log-In}}{6.2 Calculadora de emissões da Log-In}}\label{calculadora-de-emissuxf5es-da-log-in}}
 
 A captura da calculadora da Log-In \parencite{login2026} refere-se ao cenário São Paulo--Rio
 Branco e mostra uma alternativa rodoviária de 3.032 km. A alternativa
@@ -3101,7 +4009,7 @@ mesmo cenário foi executado no CabotageLens com 14 t e 1 TEU.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/loginlogistica.png}
 \end{center}
 
-\emph{Figura 11 --- Resultado da calculadora de emissões da Log-In.
+\emph{Figura 15 --- Resultado da calculadora de emissões da Log-In.
 Fonte: captura de tela fornecida pelo autor.}
 
 \textbf{Tabela 20 --- Emissões no cenário de referência São Paulo--Rio
@@ -3142,7 +4050,7 @@ Multimodal\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 7.584,836 km\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-3,042 t\strut
+2,754 t\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.17\columnwidth}\raggedright
 Redução em relação à rodovia\strut
@@ -3153,14 +4061,14 @@ Redução em relação à rodovia\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
 ---\strut
 \end{minipage} & \begin{minipage}[t]{0.17\columnwidth}\raggedleft
-1,027 t\strut
+1,314 t\strut
 \end{minipage}\tabularnewline
 \bottomrule
 \end{longtable}
 
 No resultado multimodal, as duas ferramentas estão próximas. A distância
 da Log-In é 11,064 km maior, uma diferença de 0,15\%, e a emissão de GEE
-informada é 0,142 t menor, ou 4,7\% em relação ao CabotageLens. Essa
+informada é 0,146 t maior, ou 5,3\% em relação ao CabotageLens. Essa
 proximidade é positiva porque os valores divulgados pelas duas
 ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
 
@@ -3168,16 +4076,16 @@ Na alternativa rodoviária, porém, a distância da Log-In não corresponde
 à rota porta a porta São Paulo--Rio Branco previamente calculada. A
 ferramenta informa 3.032 km, enquanto o CabotageLens obteve 3.491,431 km
 e a conferência independente no Google Maps indicou 3.497 km, como
-apresentado na Seção 4.3.1.1. Essa diferença de 459,431 km, ou 13,2\%,
+apresentado na Seção 5.3.1.1. Essa diferença de 459,431 km, ou 13,2\%,
 contribui para que a emissão rodoviária informada pela Log-In seja
 menor. Por isso, a comparação rodoviária não deve ser interpretada como
 uma equivalência direta entre os dois sistemas.
 
 \hypertarget{calculadora-de-piso-muxednimo-de-frete-da-antt}{%
-\subsection{\texorpdfstring{5.3
+\subsection{\texorpdfstring{6.3
 \href{https://calculadorafrete.antt.gov.br/}{Calculadora de piso mínimo
 de frete da
-ANTT}}{5.3 Calculadora de piso mínimo de frete da ANTT}}\label{calculadora-de-piso-muxednimo-de-frete-da-antt}}
+ANTT}}{6.3 Calculadora de piso mínimo de frete da ANTT}}\label{calculadora-de-piso-muxednimo-de-frete-da-antt}}
 
 Na calculadora da Agência Nacional de Transportes Terrestres (ANTT)
 \parencite{anttfrete2026}, o
@@ -3191,7 +4099,7 @@ combustível.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/calculadorafreteantt.png}
 \end{center}
 
-\emph{Figura 12 --- Resultado da calculadora de piso mínimo de frete da
+\emph{Figura 16 --- Resultado da calculadora de piso mínimo de frete da
 ANTT para a distância de 3.491 km. Fonte: captura de tela fornecida pelo
 autor.}
 
@@ -3243,10 +4151,10 @@ contextualização, e não como cotações equivalentes.
 
 \clearpage
 \hypertarget{conclusuxf5es}{%
-\section{6. Conclusões}\label{conclusuxf5es}}
+\section{7. Conclusões}\label{conclusuxf5es}}
 
 \hypertarget{resultados-da-comparauxe7uxe3o}{%
-\subsection{6.1 Resultados da
+\subsection{7.1 Resultados da
 comparação}\label{resultados-da-comparauxe7uxe3o}}
 
 Este trabalho apresentou o CabotageLens, uma ferramenta para comparar
@@ -3258,14 +4166,14 @@ comparar apenas o trecho marítimo com uma viagem rodoviária completa.
 
 No exemplo de uma remessa de 14~t entre São Paulo e Rio Branco, a
 alternativa multimodal percorre 117,24\% mais quilômetros do que a
-rodoviária direta. Mesmo assim, emite 25,24\% menos CO\textsubscript{2}e operacional e
-apresenta custo modelado do combustível 43,84\% menor. O resultado
+rodoviária direta. Mesmo assim, emite 32,30\% menos CO\textsubscript{2}e operacional e
+apresenta custo modelado do combustível 46,69\% menor. O resultado
 mostra que a distância total, isoladamente, não é suficiente para
 comparar os modais: os acessos rodoviários, as operações portuárias e a
 navegação precisam ser avaliados na mesma cadeia logística.
 
 \hypertarget{contribuiuxe7uxe3o-metodoluxf3gica}{%
-\subsection{6.2 Contribuição
+\subsection{7.2 Contribuição
 metodológica}\label{contribuiuxe7uxe3o-metodoluxf3gica}}
 
 A principal contribuição do CabotageLens está na construção da perna
@@ -3283,7 +4191,7 @@ A ligação Santos--Manaus demonstra o efeito dessa escolha: os 89
 recortes completos formam 22 sequências de portos, com viagens diretas e
 viagens com escalas intermediárias. Para a distância, os 2 recortes acima
 do P95 de 6.975,000~km são retirados da média, resultando em
-6.094,975~km com 87 recortes; a intensidade de 9,009824~g/(t·nm)
+6.094,975~km com 87 recortes; a intensidade de 7,006102~g/(t·nm)
 continua usando os 89 recortes. Portanto, esses indicadores não
 descrevem uma rota única nem o desempenho de um único navio; sua
 procedência permanece registrada para conferência.
