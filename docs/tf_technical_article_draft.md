@@ -54,7 +54,7 @@ Além do papel predominante na matriz, o transporte rodoviário de cargas depend
 
 Para saber se a cabotagem faz sentido em uma ligação específica, a comparação precisa ser porta a porta. Uma comparação porta a porta começa no local onde a carga está e termina no local em que ela será entregue. As duas alternativas precisam prestar exatamente o mesmo serviço: transportar a mesma massa entre esses dois pontos. No caminho rodoviário, o caminhão percorre todo o trajeto por estrada. Na alternativa com cabotagem, a carga segue de caminhão até o porto de embarque, é transportada pelo navio entre os portos e, em seguida, segue de caminhão do porto de desembarque até o destino final. Por isso, a análise soma distância, consumo, emissões e custo de todas essas etapas, em vez de comparar apenas o trecho marítimo com a viagem rodoviária completa.
 
-Os consumos associados às operações de movimentação de carga nos portos também podem ser deixados de lado quando a avaliação se concentra apenas nos deslocamentos rodoviário e marítimo. Este estudo busca incorporar também esse componente à comparação porta a porta, com base em referências sobre carga e descarga em terminais e sobre o consumo de energia nas operações portuárias (Nguyen, Woo e Kim, 2022; Papaioannou et al., 2017; Dados Relatório 2, 2024).
+Os consumos associados às operações de movimentação de carga nos portos também podem ser deixados de lado quando a avaliação se concentra apenas nos deslocamentos rodoviário e marítimo. Este estudo busca incorporar também esse componente à comparação porta a porta, com base em referências sobre carga e descarga em terminais e sobre o consumo de energia nas operações portuárias (Nguyen, Woo e Kim, 2022; Papaioannou et al., 2017; Costa, 2023).
 
 É para tornar essa comparação possível que foi desenvolvido o CabotageLens. O usuário informa a origem, o destino e a massa da carga, e o sistema constrói as duas alternativas de transporte. Para cada uma, apresenta a distância total, o consumo de combustível, as emissões operacionais e o custo modelado do combustível. Ao reunir essas informações em uma mesma base de comparação, a ferramenta permite avaliar, para cada ligação, como a alternativa com cabotagem se diferencia da rota feita inteiramente por estrada. Com isso, a comparação deixa de ser uma escolha abstrata entre caminhão e navio e passa a considerar a operação logística completa.
 
@@ -64,7 +64,7 @@ A literatura mostra que a cabotagem pode ser relevante em viagens longas, mas o 
 
 Estudos de *short sea shipping* (navegação marítima de curta distância) também mostram que a substituição do transporte rodoviário pelo transporte marítimo não significa uma vantagem ambiental automática. O resultado depende do tipo de navio, de sua utilização, das distâncias e da carga à qual o consumo é atribuído (Svindland e Hjelle, 2019). Por isso, a unidade analisada deve ser a remessa completa, e não um navio e um caminhão considerados isoladamente (Raza, Svanberg e Wiegmans, 2020).
 
-Um princípio metodológico do estudo é dar preferência a dados públicos, oficiais, observados e auditáveis. A [Agência Nacional de Transportes Aquaviários (ANTAQ)](https://estatistica.antaq.gov.br/ea/sense/download.html), órgão federal que regula e acompanha o transporte aquaviário brasileiro, fornece os registros de escalas e de movimentação de carga. A base europeia de [Monitoramento, Reporte e Verificação da União Europeia (EU MRV)](https://mrv.emsa.europa.eu/) publica indicadores anuais de consumo e atividade dos navios. Essas fontes permitem relacionar uma operação registrada no Brasil ao desempenho do navio identificado pelo número da Organização Marítima Internacional (IMO), uma identificação permanente da embarcação. Os campos utilizados, os arquivos de origem e a forma de reconstruir as viagens são apresentados na Seção 4.3 (ANTAQ, 2025; EMSA, 2026).
+Para transformar essas exigências em uma avaliação reproduzível, o estudo combina duas fontes complementares. A [Agência Nacional de Transportes Aquaviários (ANTAQ)](https://estatistica.antaq.gov.br/ea/sense/download.html) fornece registros observados de escalas e movimentações de carga no Brasil. O [Monitoramento, Reporte e Verificação da União Europeia (EU MRV)](https://mrv.emsa.europa.eu/) fornece indicadores anuais de consumo e atividade por navio. O número IMO permite relacionar os registros das duas bases. Os arquivos, os campos utilizados e o procedimento de reconstrução são apresentados na Seção 4.3 (ANTAQ, 2025; EMSA, 2026).
 
 O cálculo de emissões adota a fronteira operacional *tank-to-wheel* (TTW, do tanque à roda), pois o objetivo é comparar as emissões diretamente associadas ao transporte da mesma remessa. Em um caminhão a diesel, por exemplo, isso corresponde às emissões liberadas pelo escapamento durante a viagem. As fronteiras *well-to-wheel* (WTW, do poço à roda) e de avaliação de ciclo de vida (*life-cycle assessment*, LCA) ampliariam a análise para etapas que ocorrem antes ou além do deslocamento (Costa, Mendes e Silva, 2024; Roux et al., 2024), mas não foram adotadas no presente estudo.
 
@@ -88,9 +88,19 @@ Além das emissões, o estudo delimita o custo e o serviço que serão comparado
 | Custo | Estimativa do custo modelado do combustível | Frete comercial, negociação, seguro, estoque, multas por permanência e reserva de espaço no navio |
 | Serviço | Sequências de portos realmente registradas no período analisado | Garantia de frequência, espaço no navio ou disponibilidade comercial futura |
 
-## 3. Metodologia
+### 3.1 Finalidade comparativa e uso de parâmetros históricos
 
-Esta seção descreve como o CabotageLens constrói e compara as alternativas de transporte. A Seção 3.1 define o serviço que as duas alternativas precisam atender. Em seguida, a Seção 3.2 calcula a alternativa rodoviária e a Seção 3.3 monta a alternativa com cabotagem, incluindo os acessos terrestres, as operações portuárias e a navegação. A Seção 3.4 reúne os resultados do exemplo. A Seção 4 apresenta a implementação dessas regras no sistema.
+Definidas a unidade de comparação e as fronteiras do estudo, é necessário estabelecer um nível de detalhamento compatível com sua finalidade. O CabotageLens busca comparar diferentes cenários em uma base comum, e não reproduzir as condições instantâneas de uma viagem específica. Por isso, combina os dados próprios de cada cenário — origem, destino, carga e percurso — com parâmetros históricos ou representativos de desempenho.
+
+O mesmo princípio é aplicado às duas alternativas. Na perna rodoviária, a distância calculada é combinada a uma eficiência definida por número de eixos a partir da referência da [Agência Nacional de Transportes Terrestres (ANTT)](http://www.antt.gov.br/). Na perna marítima, o percurso e a carga reconstruídos são combinados ao indicador anual correspondente ao navio. Assim, nenhuma das alternativas recebe um nível de precisão incompatível com os dados disponíveis (ANTT, 2025; ANTAQ, 2025; EMSA, 2026).
+
+Para a navegação, adoção de indicadores médios evita que a comparação fique condicionada às circunstâncias de uma única viagem e oferece uma referência rastreável para diferentes cenários. Incorporar diretamente calado ou deslocamento, velocidade, trim, vento, ondas, correntes, condição do casco e do propulsor e regimes das máquinas produziria uma estimativa localizada, válida para uma combinação específica de navio, rota e momento operacional. Porém, como o estudo busca comparar os modais a partir de desempenhos médios, e não reproduzir as condições particulares de uma viagem, o modelo utiliza um indicador anual que reúne o desempenho do navio ao longo do período monitorado.
+
+Os resultados devem, portanto, ser interpretados como estimativas médias de consumo e emissões operacionais TTW. Eles não representam o consumo exato de uma viagem específica nem demonstram que a cabotagem é sempre ambientalmente superior. A conclusão permanece condicionada à rota, aos acessos terrestres, à carga, ao navio representado e às demais premissas do modelo (Svindland e Hjelle, 2019). A Seção 4 apresenta como os parâmetros rodoviários e marítimos são obtidos, aplicados e identificados quando exigem estimativas por grupo.
+
+## 4. Metodologia
+
+Esta seção descreve como o CabotageLens constrói e compara as alternativas de transporte. A Seção 4.1 define o serviço que as duas alternativas precisam atender. Em seguida, a Seção 4.2 calcula a alternativa rodoviária e a Seção 4.3 monta a alternativa com cabotagem, incluindo os acessos terrestres, as operações portuárias e a navegação. A Seção 4.4 reúne os resultados do exemplo. A Seção 5 apresenta a implementação dessas regras no sistema.
 
 ### 4.1 Serviço comparado e alternativas logísticas
 
@@ -133,7 +143,7 @@ O cálculo rodoviário começa pela distância terrestre total entre a origem e 
 
 #### 4.2.1 Escolha do veículo e consumo de diesel
 
-A massa transportada define o veículo representativo. O modelo utiliza os rendimentos médios por número de eixos publicados pela **Agência Nacional de Transportes Terrestres (ANTT)**. Esses dados oficiais foram obtidos na tabela da Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas, disponibilizada no [portal de legislação da ANTT (ANTTlegis)](https://anttlegis.antt.gov.br/action/UrlPublicasAction.php?acao=abrirAtoPublico&cod_menu=9230&cod_modulo=623&num_ato=00000001&seq_ato=ATT&sgl_orgao=SUROC%2FANTT%2FMT&sgl_tipo=POR&vlr_ano=2025). A tabela de referência adotada no modelo associa a faixa de carga ao número de eixos e relaciona cada configuração à eficiência básica em quilômetros por litro (km/L). A seleção automática é uma regra de modelagem para estimar consumo; não é uma verificação de limite legal de peso nem substitui o planejamento operacional de uma transportadora.
+A massa transportada define o veículo representativo. O modelo utiliza os rendimentos médios por número de eixos publicados pela **Agência Nacional de Transportes Terrestres (ANTT)**. Esses dados oficiais foram obtidos na tabela da Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas, disponibilizada no [portal de legislação da Agência Nacional de Transportes Terrestres (ANTTlegis)](https://anttlegis.antt.gov.br/action/UrlPublicasAction.php?acao=abrirAtoPublico&cod_menu=9230&cod_modulo=623&num_ato=00000001&seq_ato=ATT&sgl_orgao=SUROC%2FANTT%2FMT&sgl_tipo=POR&vlr_ano=2025). A tabela de referência adotada no modelo associa a faixa de carga ao número de eixos e relaciona cada configuração à eficiência básica em quilômetros por litro (km/L). A seleção automática é uma regra de modelagem para estimar consumo; não é uma verificação de limite legal de peso nem substitui o planejamento operacional de uma transportadora.
 
 **Tabela 2 — Regra automática para o veículo rodoviário representativo e eficiência básica adotada.**
 
@@ -253,7 +263,50 @@ O sistema associa a origem ao porto mais próximo disponível na base portuária
 
 #### 4.3.2 Acessos rodoviários: *first mile* e *last mile*
 
-O primeiro acesso, chamado de *first mile*, leva a carga da origem até o porto de embarque. O segundo, chamado de *last mile*, leva a carga do porto de desembarque até o destino final. Para cada um deles, o sistema obtém uma distância rodoviária, aplica a regra de veículo, eficiência e consumo de diesel da Seção 3.2.1 e converte o consumo em emissões conforme a Seção 3.2.3.
+O primeiro acesso, chamado de *first mile*, é o deslocamento da carga entre a origem até o porto de embarque. Já o segundo, chamado de *last mile*, se refere à ida da carga do porto de desembarque até o destino final. Para cada um deles, o sistema obtém uma distância rodoviária, aplica a regra de veículo, eficiência e consumo de diesel da Seção 4.2.1 e converte o consumo em emissões conforme a Seção 4.2.3.
+
+O consumo dos dois acessos é calculado pela mesma expressão. O índice $i$ identifica o acesso e assume $\mathrm{first}$ ou $\mathrm{last}$:
+
+$$
+V_{\mathrm{diesel},i}
+=N_{\mathrm{viagens},i}
+\frac{D_i}{\eta_i},
+\qquad
+i\in\{\mathrm{first},\mathrm{last}\}.
+$$
+
+No exemplo São Paulo–Rio Branco, os valores das variáveis são:
+
+| Variável | Grandeza | *First mile* | *Last mile* |
+| :-- | :-- | :-- | :-- |
+| $V_{\mathrm{diesel},i}$ | Volume de diesel do acesso, em litros; é o resultado procurado. | $V_{\mathrm{diesel,first}}$ | $V_{\mathrm{diesel,last}}$ |
+| $D_i$ | Distância rodoviária do acesso. | 86,170 km, entre São Paulo e o Porto de Santos. | 1.403,691 km, entre o Porto de Manaus e Rio Branco. |
+| $\eta_i$ | Eficiência do veículo selecionado para a remessa de 14 t. | 2,3 km/L; carreta de cinco eixos. | 2,3 km/L; carreta de cinco eixos. |
+| $N_{\mathrm{viagens},i}$ | Número de viagens carregadas necessárias; a remessa cabe em um único veículo. | 1 viagem. | 1 viagem. |
+
+Substituindo:
+
+- para *first mile*:
+
+$$
+\begin{aligned}
+V_{\mathrm{diesel,first}}
+&=1\times\frac{86{,}170\ \mathrm{km}}{2{,}3\ \mathrm{km/L}}
+=37{,}465\ \mathrm{L}\\
+\end{aligned}
+$$
+
+- para *last mile*:
+
+$$
+\begin{aligned}
+V_{\mathrm{diesel,last}}
+&=1\times\frac{1.403{,}691\ \mathrm{km}}{2{,}3\ \mathrm{km/L}}
+=610{,}300\ \mathrm{L}
+\end{aligned}
+$$
+
+Portanto, o *first mile* consome 37,465 L de diesel e o *last mile*, 610,300 L. A carga entra nesse cálculo ao definir o veículo e o número de viagens necessárias. Se a massa exigisse mais de uma viagem, cada consumo seria multiplicado pelo respectivo número de viagens carregadas. Esses volumes permanecem separados do consumo das operações portuárias e da navegação e são posteriormente convertidos em custo e emissões.
 
 #### 4.3.3 Operações portuárias
 
@@ -261,9 +314,35 @@ As operações portuárias são as movimentações realizadas dentro do terminal
 
 O modelo representa esse consumo pelos equipamentos para os quais há fatores de atividade no cenário adotado: o guindaste sobre pneus do pátio (*rubber-tyred gantry*, RTG) e o caminhão que circula internamente no terminal. Estudos sobre carga e descarga em portos e sobre o uso energético de RTGs fundamentam a representação da operação por equipamento a seguir (Nguyen, Woo e Kim, 2022; Papaioannou et al., 2017).
 
-O cálculo segue uma sequência simples: a carga informada é convertida em contêineres equivalentes a 20 pés (TEU); cada TEU gera uma quantidade definida de movimentos por equipamento; e cada movimento é convertido em litros de diesel. Os movimentos por contêiner e os consumos por movimento vêm do cenário de referência parametrizado com dados de Santos (Dados Relatório 2, 2024).
+##### 4.3.3.1 Origem e tratamento dos parâmetros operacionais
 
-O cenário sempre considera duas operações portuárias: uma no porto de embarque e outra no porto de desembarque. Como a mesma remessa passa pelos dois terminais, a fórmula já usa a multiplicação por 2:
+Os estudos citados acima fundamentam a separação do consumo por equipamento, mas não fornecem os valores numéricos empregados no exemplo. Esses valores foram extraídos da planilha técnica elaborada pelo Professor Doutor Gustavo Adolfo Alves da Costa em 2023 como material de apoio à sua pesquisa de doutorado sobre competitividade e sustentabilidade da cabotagem (Costa, 2023). A planilha reúne os componentes da comparação multimodal posteriormente apresentada por Costa, Mendes e Gomes da Cruz (2025).
+
+No material fornecido, o consumo é informado em litros por contêiner e acompanhado do respectivo número de movimentos:
+
+- RTG: 1,4 e 1,441185 L por contêiner, com 4 movimentos;
+- Caminhão interno: 0,975000 e 1,003682 L por contêiner, com 2 movimentos.
+
+O consumo por movimento de cada equipamento é obtido pela divisão do consumo por contêiner pelo respectivo número de movimentos. Como há dois cenários para cada equipamento, o modelo adota a média dos dois resultados:
+
+$$
+\begin{aligned}
+c_{\mathrm{RTG}}
+&=\frac{1}{2}\left(\frac{1{,}400000}{4}+\frac{1{,}441185}{4}\right)
+=0{,}355148\ \mathrm{L/movimento},\\
+c_{\mathrm{caminhao}}
+&=\frac{1}{2}\left(\frac{0{,}975000}{2}+\frac{1{,}003682}{2}\right)
+=0{,}494671\ \mathrm{L/movimento}.
+\end{aligned}
+$$
+
+Para aplicar esses fatores à carga analisada, o modelo utiliza o TEU como unidade operacional. A massa da remessa é convertida em TEU e cada unidade recebe o número de movimentos definido para cada equipamento.
+
+##### 4.3.3.2 Cálculo do consumo modelado das operações portuárias
+
+O cálculo combina a quantidade de TEUs, o número de movimentos por equipamento e o respectivo consumo de diesel por movimento.
+
+Na comparação porta a porta deste estudo, são consideradas duas operações portuárias: uma no terminal de embarque e outra no terminal de desembarque. Como a mesma remessa passa pelos dois terminais, a fórmula inclui a multiplicação por 2:
 
 $$
 V_{\mathrm{diesel,porto}}
@@ -274,37 +353,42 @@ $$
 
 Nessa expressão, $V_{\mathrm{diesel,porto}}$ é o volume total de diesel das duas operações portuárias, em litros; $N_{\mathrm{TEU}}$ é a quantidade de TEUs da remessa; $a$ é o número de movimentos por TEU; e $c$ é o consumo de diesel, em litros por movimento. O primeiro termo ($a_{\mathrm{RTG}}\times\,c_{\mathrm{RTG}}$) calcula o diesel do RTG e o segundo ($a_{\mathrm{caminhao}}\times\,c_{\mathrm{caminhao}}$) calcula o diesel do caminhão interno. A multiplicação por 2 leva esse consumo para os dois terminais. O resultado é usado posteriormente no cálculo das emissões operacionais e do custo modelado do combustível.
 
-No exemplo, a remessa de 14 t equivale a 1 TEU. O RTG realiza quatro movimentos por contêiner, com consumo de 0,355148 L por movimento, e o caminhão interno realiza dois movimentos, com consumo de 0,494671 L por movimento. Aplicando diretamente a fórmula:
+No exemplo, a remessa de 14 t equivale a 1 TEU. Substituindo os fatores obtidos anteriormente na fórmula:
 
 $$
 \begin{aligned}
 V_{\mathrm{diesel,porto}}
 &=2\times1\times
 \left[(4\times0{,}355148)+(2\times0{,}494671)\right]\\
-&=2\times(1{,}421+0{,}989)\\
-&=4{,}820\ \mathrm{L}.
+&=2\times2{,}409934\\
+&=4{,}819868\ \mathrm{L}\approx4{,}820\ \mathrm{L}.
 \end{aligned}
 $$
 
-Assim, no exemplo São Paulo–Rio Branco, as operações portuárias em Santos e Manaus totalizam 4,820 L de diesel.
+Assim, no exemplo São Paulo–Rio Branco, o consumo modelado é de 2,410 L de diesel por TEU em cada terminal e totaliza 4,820 L nas duas operações portuárias.
 
-#### 3.3.4 Consumo de combustível na perna marítima
+#### 4.3.4 Consumo de combustível na perna marítima
 
 A perna marítima corresponde ao deslocamento da remessa por cabotagem entre o porto de embarque e o porto de desembarque. Nesta etapa, o modelo estima o consumo de VLSFO (*very low sulphur fuel oil*, óleo combustível de baixíssimo teor de enxofre) associado a esse deslocamento.
 
-A estimativa não parte de um corredor previamente definido. Ela é construída com registros observados de escalas e movimentações de carga da Agência Nacional de Transportes Aquaviários (ANTAQ) e com indicadores de intensidade de combustível do Monitoramento, Reporte e Verificação da União Europeia (EU MRV).
+A estimativa não parte de um corredor previamente definido. Ela é construída com registros observados de escalas e movimentações de carga da [Agência Nacional de Transportes Aquaviários (ANTAQ)](https://estatistica.antaq.gov.br/ea/sense/download.html) e com indicadores de intensidade de combustível do [Monitoramento, Reporte e Verificação da União Europeia (EU MRV)](https://mrv.emsa.europa.eu/).
 
-A seção está organizada em quatro etapas. Primeiro, apresenta como os registros da ANTAQ são reunidos para reconstruir cada viagem e seus subtrechos. Em seguida, explica como é definida a intensidade de combustível de cada navio. Depois, mostra como as viagens válidas são consolidadas para obter a intensidade representativa da ligação. Por fim, descreve o cálculo da distância marítima representativa, considerando os corredores observados e tratando percursos excepcionalmente longos de forma consistente.
+A seção apresenta quatro etapas metodológicas, seguidas por dois exemplos numéricos. Primeiro, mostra como os registros da ANTAQ são reunidos para reconstruir cada viagem e seus subtrechos. Em seguida, explica como é definida a intensidade de combustível de cada navio, como as viagens válidas formam a intensidade representativa da ligação e como se calcula a distância marítima representativa. Ao final, cinco viagens ilustram a formação dessas médias e o resultado completo é aplicado à remessa simulada.
 
 ##### 4.3.4.1 Atividade observada na ANTAQ e reconstrução das viagens
 
-Para executar essa reconstrução, o sistema parte dos arquivos brutos da ANTAQ, que não trazem uma viagem pronta, como “Santos–Manaus”. Cada linha registra apenas um evento: uma escala em um porto e uma movimentação de carga. Antes de combinar esses registros, o sistema mantém apenas as movimentações de cabotagem e carga conteinerizada vinculadas a uma atracação e a um navio identificado pelo número IMO. Ao reunir os registros do mesmo navio, ordenar as escalas e calcular a carga a bordo, transforma esses eventos isolados em uma viagem observada.
+Para calcular a perna marítima, o sistema combina duas tabelas disponibilizadas pela ANTAQ: Atracação e Carga. Nenhuma delas apresenta isoladamente uma viagem completa, como “Santos–Manaus”. As informações necessárias para a análise de uma viagem completa foi dividida entre essas tabelas e estão distribuídas da seguinte forma:
 
-Para reconstruir uma viagem, o sistema combina duas tabelas que cumprem papéis diferentes. A tabela de Carga mostra o que entrou e o que saiu do navio em cada escala. A tabela de Atracação mostra onde e quando essa escala ocorreu e qual navio a realizou. O campo `IDAtracacao` (código único de identificação da atracação) aparece nos dois arquivos e faz a ligação entre eles.
+- Na tabela de Atracação, cada linha registra uma **escala** de determinado navio em um porto ou terminal, com suas datas e seu número IMO (ver Seção 4.3.4.1.2).
+- Na tabela de Carga, cada linha registra uma parcela de **carga movimentada** durante uma atracação, com informações como massa, quantidade em TEU e sentido da movimentação (ver Seção 4.3.4.1.1).
+
+Como a viagem não está registrada como uma unidade pronta, ela precisa ser reconstruída a partir dessas duas tabelas.
+
+A reconstrução é apresentada nas subseções seguintes na ordem em que os dados são tratados. Primeiro, o sistema mantém somente as movimentações de carga conteinerizada em cabotagem e as atracações de navios identificados pelo número IMO. Depois, agrupa os registros da tabela de Carga pelo campo `IDAtracacao` e os associa à escala correspondente na tabela de Atracação. Com as escalas de cada navio ordenadas cronologicamente, o sistema pode formar os subtrechos da viagem e calcular a carga a bordo entre portos consecutivos.
 
 ###### 4.3.4.1.1 Tabela de Carga da ANTAQ
 
-A tabela de Carga é um registro de movimentações, não um itinerário pronto. Cada linha representa uma parcela de carga movimentada em determinada escala: informa a massa, a quantidade de contêineres e se ela foi embarcada ou desembarcada. Uma mesma escala pode ter várias linhas, pois o navio pode descarregar e carregar mercadorias associadas a diferentes pares de origem e destino.
+Na primeira etapa, a tabela de Carga detalha as movimentações ocorridas em cada escala. Cada linha informa a massa, a quantidade de contêineres e se determinada parcela foi embarcada ou desembarcada. Uma mesma escala pode ter várias linhas, pois o navio pode descarregar e carregar mercadorias associadas a diferentes pares de origem e destino.
 
 Para saber quanto foi movimentado no porto, o sistema reúne as linhas com o mesmo `IDAtracacao` e soma separadamente os desembarques e os embarques. A carga embarcada entra no navio naquele porto e segue para o trecho seguinte; a carga desembarcada deixa o navio naquele porto. Por isso, os valores da Tabela 4 são apresentados na ordem **desembarcados / embarcados**. Eles mostram o movimento ocorrido na escala, e não a carga total que o navio levava ao partir.
 
@@ -328,9 +412,7 @@ A Figura 2 apresenta parte do arquivo bruto de Carga. A repetição do mesmo `ID
 
 *Arquivo: `2025Carga.txt`. Fonte: [Agência Nacional de Transportes Aquaviários (ANTAQ), Painel Estatístico Aquaviário](https://estatistica.antaq.gov.br/ea/sense/download.html).*
 
-Para reconstruir a carga a bordo, o sistema lê os desembarques e embarques na ordem das escalas. A primeira escala disponível pode ocorrer com o navio já carregado. Se o saldo acumulado de embarques menos desembarques ficar negativo em algum ponto, isso indica que havia carga a bordo antes do primeiro registro observado. Nesses casos, o sistema inclui apenas a carga inicial mínima necessária para manter o saldo não negativo e continua a reconstrução dos subtrechos. Se isso não ocorrer, a carga inicial é considerada zero.
-
-###### 3.3.4.1.2 Tabela de Atracação da ANTAQ
+###### 4.3.4.1.2 Tabela de Atracação da ANTAQ
 
 A tabela de Atracação é o registro cronológico das escalas. Cada linha informa que determinado navio esteve em um porto ou terminal, em quais datas chegou e saiu e qual é o seu número IMO, identificador único do navio usado internacionalmente. Ela não informa a massa movimentada. Ao ligar seu `IDAtracacao` aos movimentos da tabela de Carga e ordenar as datas de atracação, o sistema transforma os registros isolados na sequência Santos → Suape → Pecém → Manaus.
 
@@ -354,22 +436,70 @@ A Figura 3 apresenta parte do arquivo bruto de Atracação. Cada linha identific
 
 *Arquivo: `2025Atracacao.txt`. Fonte: [Agência Nacional de Transportes Aquaviários (ANTAQ), Painel Estatístico Aquaviário](https://estatistica.antaq.gov.br/ea/sense/download.html).*
 
-##### 3.3.4.1.3 Reconstrução das viagens
+##### 4.3.4.1.3 Reconstrução das viagens
 
-A integração das duas tabelas mostra, portanto, a ordem das escalas e a mudança de carga em cada uma delas. Ela não descreve apenas uma ligação abstrata Santos–Manaus: registra o que entrou e saiu do navio em Santos, Suape, Pecém e Manaus. A Figura 2 mostra o resultado da reconstrução para a parte de ida da viagem `voyage_9612791_00011`; em cada seta, a carga é aquela que estava a bordo enquanto o navio navegava para o porto seguinte e a distância está em milhas náuticas (nm):
+A integração das tabelas de Atracação e Carga permite identificar as escalas pertencentes ao mesmo navio e ordená-las cronologicamente. O sistema forma um subtrecho entre cada par de escalas consecutivas e consulta sua distância na matriz marítima. Assim, a viagem deixa de ser uma ligação abstrata Santos–Manaus e passa a ser representada pela sequência observada Santos → Suape → Pecém → Manaus. A Figura 4 mostra essa parte da viagem `voyage_9612791_00011`; cada seta apresenta somente a distância do subtrecho, em milhas náuticas (nm):
 
 ```mermaid
 flowchart LR
-    S[Santos] -->|1.259,179 nm<br/>Carga a bordo: 12.858,754 t| U[Suape]
-    U -->|507,806 nm<br/>Carga a bordo: 16.718,333 t| P[Pecém]
-    P -->|1.185,594 nm<br/>Carga a bordo: 12.325,900 t| M[Manaus]
+    S[Santos] -->|1.259,179 nm| U[Suape]
+    U -->|507,806 nm| P[Pecém]
+    P -->|1.185,594 nm| M[Manaus]
 ```
 
-*Figura 2 — Parte de ida reconstruída da viagem `voyage_9612791_00011`. Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ e distâncias da matriz marítima do sistema.*
+*Figura 4 — Sequência de escalas e distâncias da parte de ida da viagem `voyage_9612791_00011`. Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ e distâncias da matriz marítima do sistema.*
 
-##### 3.3.4.2 Intensidade de combustível do navio
+##### 4.3.4.1.4 Carga a bordo
 
-Após reconstruir o percurso e a carga a bordo, é preciso estimar quanto combustível foi necessário para realizar esse transporte. Para isso, o sistema usa a **intensidade de combustível**, isto é, a quantidade de combustível associada ao transporte de uma tonelada por uma milha náutica. A unidade é grama por tonelada-milha náutica, ou $\mathrm{g/(t\cdot nm)}$.
+A carga a bordo de cada subtrecho é a massa transportada pelo navio. Para a escala $k$, o sistema calcula:
+
+$$
+B_k=B_{k-1}+E_k-D_k,
+$$
+
+em que $B_k$ é a carga total a bordo após a escala $k$; $B_{k-1}$ é a carga existente antes dessa escala; $E_k$ é a massa embarcada; e $D_k$ é a massa desembarcada. O mesmo procedimento é realizado separadamente para a massa, em toneladas, e para a quantidade de carga, em TEU.
+
+Em algumas viagens, o saldo acumulado de embarques menos desembarques, quando calculado a partir de zero, fica negativo em uma ou mais escalas. Como a carga a bordo não pode ser negativa, o sistema usa o menor valor desse saldo para determinar a carga inicial mínima compatível com os registros:
+
+$$
+B_0=
+\max\left(
+0,\,
+-\min_{1\leq k\leq n}
+\left[
+\sum_{i=1}^{k}(E_i-D_i)
+\right]
+\right).
+$$
+
+Assim, $B_0$ é a menor carga inicial capaz de manter todos os saldos da viagem iguais ou superiores a zero. Se o saldo acumulado nunca ficar negativo, $B_0$ é igual a zero.
+
+###### 4.3.4.1.4.1 Carga a bordo para a viagem `voyage_9612791_00011`
+
+A viagem `voyage_9612791_00011` é exemplo desse comportamento: o balanço iniciado artificialmente em zero atingiria $-2{.}976{,}894$ t após a escala de Manaus. Portanto, o sistema calcula uma carga inicial mínima de 2.976,894 t antes da escala de Santos. Aplicando os embarques e desembarques apresentados na Tabela 4:
+
+$$
+\begin{aligned}
+B_{\mathrm{Santos}}
+&=2{.}976{,}894+9{.}881{,}860-0
+=12{.}858{,}754\ \mathrm{t},\\
+B_{\mathrm{Suape}}
+&=12{.}858{,}754+11{.}862{,}199-8{.}002{,}620
+=16{.}718{,}333\ \mathrm{t},\\
+B_{\mathrm{Pecem}}
+&=16{.}718{,}333+3{.}231{,}914-7{.}624{,}347
+=12{.}325{,}900\ \mathrm{t},\\
+B_{\mathrm{Manaus}}
+&=12{.}325{,}900+7{.}571{,}660-19{.}897{,}560
+=0\ \mathrm{t}.
+\end{aligned}
+$$
+
+Desse modo, os subtrechos Santos–Suape, Suape–Pecém e Pecém–Manaus são percorridos com 12.858,754 t, 16.718,333 t e 12.325,900 t a bordo, respectivamente. A carga inicial calculada não é uma medição direta: ela é a estimativa mínima compatível com as movimentações observadas e com a condição física de que a carga a bordo não pode ser negativa.
+
+##### 4.3.4.2 Intensidade de combustível do navio
+
+Após reconstruir o percurso e a carga a bordo, é preciso estimar quanto combustível foi necessário para realizar esse transporte. Conforme fundamentado na Seção 3.1, o sistema usa a **intensidade de combustível** para obter uma estimativa média e comparável, em vez de simular as condições particulares de uma única viagem. Essa intensidade é a quantidade de combustível associada ao transporte de uma tonelada por uma milha náutica. A unidade é grama por tonelada-milha náutica, ou $\mathrm{g/(t\cdot nm)}$.
 
 Esse indicador é uma razão, e não o consumo total de uma viagem. Uma intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$, por exemplo, significa que, em média, são associados 7,43 g de combustível a cada tonelada transportada por uma milha náutica. Assim, ele permite comparar navios e viagens de tamanhos diferentes. O consumo total de cada viagem só é obtido posteriormente, ao multiplicar essa intensidade pelo trabalho de transporte reconstruído, conforme a Seção 3.3.4.3.
 
