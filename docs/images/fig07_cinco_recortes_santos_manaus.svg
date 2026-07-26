@@ -44,19 +44,19 @@
         text-anchor: middle;
       }
       .header-title {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
       }
       .header-detail {
-        font-size: 14px;
+        font-size: 17px;
       }
       .port-label {
-        font-size: 17px;
+        font-size: 19px;
         font-weight: 700;
         dominant-baseline: middle;
       }
       .leg-label {
-        font-size: 15px;
+        font-size: 19px;
         font-weight: 600;
       }
     </style>
@@ -74,39 +74,34 @@
 
   <!-- Cabeçalhos -->
   <g aria-label="Viagem V1">
-    <rect class="header" x="10" y="18" width="240" height="100" rx="5"/>
+    <rect class="header" x="10" y="18" width="240" height="88" rx="5"/>
     <text class="header-title" x="130" y="43">V1</text>
-    <text class="header-detail" x="130" y="64">voyage_9612791_00011</text>
-    <text class="header-detail" x="130" y="84">IMO 9612791</text>
-    <text class="header-detail" x="130" y="104">I = 7,43 g/(t·nm)</text>
+    <text class="header-detail" x="130" y="69">IMO 9612791</text>
+    <text class="header-detail" x="130" y="93">I = 7,43 g/(t·nm)</text>
   </g>
   <g aria-label="Viagem V2">
-    <rect class="header" x="270" y="18" width="240" height="100" rx="5"/>
+    <rect class="header" x="270" y="18" width="240" height="88" rx="5"/>
     <text class="header-title" x="390" y="43">V2</text>
-    <text class="header-detail" x="390" y="64">voyage_9612791_00003</text>
-    <text class="header-detail" x="390" y="84">IMO 9612791</text>
-    <text class="header-detail" x="390" y="104">I = 7,43 g/(t·nm)</text>
+    <text class="header-detail" x="390" y="69">IMO 9612791</text>
+    <text class="header-detail" x="390" y="93">I = 7,43 g/(t·nm)</text>
   </g>
   <g aria-label="Viagem V3">
-    <rect class="header" x="530" y="18" width="240" height="100" rx="5"/>
+    <rect class="header" x="530" y="18" width="240" height="88" rx="5"/>
     <text class="header-title" x="650" y="43">V3</text>
-    <text class="header-detail" x="650" y="64">voyage_9539494_00001</text>
-    <text class="header-detail" x="650" y="84">IMO 9539494</text>
-    <text class="header-detail" x="650" y="104">I = 9,50 g/(t·nm)</text>
+    <text class="header-detail" x="650" y="69">IMO 9539494</text>
+    <text class="header-detail" x="650" y="93">I = 9,50 g/(t·nm)</text>
   </g>
   <g aria-label="Viagem V4">
-    <rect class="header" x="790" y="18" width="240" height="100" rx="5"/>
+    <rect class="header" x="790" y="18" width="240" height="88" rx="5"/>
     <text class="header-title" x="910" y="43">V4</text>
-    <text class="header-detail" x="910" y="64">voyage_9649835_00009</text>
-    <text class="header-detail" x="910" y="84">IMO 9649835</text>
-    <text class="header-detail" x="910" y="104">I = 5,41 g/(t·nm)</text>
+    <text class="header-detail" x="910" y="69">IMO 9649835</text>
+    <text class="header-detail" x="910" y="93">I = 5,41 g/(t·nm)</text>
   </g>
   <g aria-label="Viagem V5">
-    <rect class="header" x="1050" y="18" width="240" height="100" rx="5"/>
+    <rect class="header" x="1050" y="18" width="240" height="88" rx="5"/>
     <text class="header-title" x="1170" y="43">V5</text>
-    <text class="header-detail" x="1170" y="64">voyage_9343974_00002</text>
-    <text class="header-detail" x="1170" y="84">IMO 9343974</text>
-    <text class="header-detail" x="1170" y="104">I = 6,80 g/(t·nm)</text>
+    <text class="header-detail" x="1170" y="69">IMO 9343974</text>
+    <text class="header-detail" x="1170" y="93">I = 6,80 g/(t·nm)</text>
   </g>
 
   <!-- Setas das rotas -->
@@ -210,141 +205,141 @@
   <g aria-label="Dados dos subtrechos da viagem V1">
     <rect class="leg-background" x="31" y="350" width="198" height="70"/>
     <text class="leg-label" x="130" y="371">
-      <tspan x="130">m = 12.858,754 t</tspan>
-      <tspan x="130" dy="20">d = 2.332,000 km</tspan>
-      <tspan x="130" dy="20">1.259,179 nm</tspan>
+      <tspan x="130">m = 12.859 t</tspan>
+      <tspan x="130" dy="20">d = 2.332 km</tspan>
+      <tspan x="130" dy="20">1.259 nm</tspan>
     </text>
     <rect class="leg-background" x="31" y="650" width="198" height="70"/>
     <text class="leg-label" x="130" y="671">
-      <tspan x="130">m = 16.718,333 t</tspan>
-      <tspan x="130" dy="20">d = 940,458 km</tspan>
-      <tspan x="130" dy="20">507,806 nm</tspan>
+      <tspan x="130">m = 16.718 t</tspan>
+      <tspan x="130" dy="20">d = 940 km</tspan>
+      <tspan x="130" dy="20">508 nm</tspan>
     </text>
     <rect class="leg-background" x="31" y="800" width="198" height="70"/>
     <text class="leg-label" x="130" y="821">
-      <tspan x="130">m = 12.325,900 t</tspan>
-      <tspan x="130" dy="20">d = 2.195,720 km</tspan>
-      <tspan x="130" dy="20">1.185,594 nm</tspan>
+      <tspan x="130">m = 12.326 t</tspan>
+      <tspan x="130" dy="20">d = 2.196 km</tspan>
+      <tspan x="130" dy="20">1.186 nm</tspan>
     </text>
   </g>
 
   <g aria-label="Dados dos subtrechos da viagem V2">
     <rect class="leg-background" x="291" y="200" width="198" height="70"/>
     <text class="leg-label" x="390" y="221">
-      <tspan x="390">m = 4.917,810 t</tspan>
-      <tspan x="390" dy="20">d = 419,000 km</tspan>
-      <tspan x="390" dy="20">226,242 nm</tspan>
+      <tspan x="390">m = 4.918 t</tspan>
+      <tspan x="390" dy="20">d = 419 km</tspan>
+      <tspan x="390" dy="20">226 nm</tspan>
     </text>
     <rect class="leg-background" x="291" y="350" width="198" height="70"/>
     <text class="leg-label" x="390" y="371">
-      <tspan x="390">m = 13.522,710 t</tspan>
-      <tspan x="390" dy="20">d = 193,000 km</tspan>
-      <tspan x="390" dy="20">104,212 nm</tspan>
+      <tspan x="390">m = 13.523 t</tspan>
+      <tspan x="390" dy="20">d = 193 km</tspan>
+      <tspan x="390" dy="20">104 nm</tspan>
     </text>
     <rect class="leg-background" x="291" y="500" width="198" height="70"/>
     <text class="leg-label" x="390" y="521">
-      <tspan x="390">m = 10.386,517 t</tspan>
-      <tspan x="390" dy="20">d = 2.573,000 km</tspan>
-      <tspan x="390" dy="20">1.389,309 nm</tspan>
+      <tspan x="390">m = 10.387 t</tspan>
+      <tspan x="390" dy="20">d = 2.573 km</tspan>
+      <tspan x="390" dy="20">1.389 nm</tspan>
     </text>
     <rect class="leg-background" x="291" y="650" width="198" height="70"/>
     <text class="leg-label" x="390" y="671">
-      <tspan x="390">m = 24.196,861 t</tspan>
-      <tspan x="390" dy="20">d = 940,458 km</tspan>
-      <tspan x="390" dy="20">507,806 nm</tspan>
+      <tspan x="390">m = 24.197 t</tspan>
+      <tspan x="390" dy="20">d = 940 km</tspan>
+      <tspan x="390" dy="20">508 nm</tspan>
     </text>
     <rect class="leg-background" x="291" y="800" width="198" height="70"/>
     <text class="leg-label" x="390" y="821">
-      <tspan x="390">m = 22.825,450 t</tspan>
-      <tspan x="390" dy="20">d = 2.195,720 km</tspan>
-      <tspan x="390" dy="20">1.185,594 nm</tspan>
+      <tspan x="390">m = 22.825 t</tspan>
+      <tspan x="390" dy="20">d = 2.196 km</tspan>
+      <tspan x="390" dy="20">1.186 nm</tspan>
     </text>
   </g>
 
   <g aria-label="Dados dos subtrechos da viagem V3">
     <rect class="leg-background" x="551" y="200" width="198" height="70"/>
     <text class="leg-label" x="650" y="221">
-      <tspan x="650">m = 16.056,390 t</tspan>
-      <tspan x="650" dy="20">d = 420,711 km</tspan>
-      <tspan x="650" dy="20">227,166 nm</tspan>
+      <tspan x="650">m = 16.056 t</tspan>
+      <tspan x="650" dy="20">d = 421 km</tspan>
+      <tspan x="650" dy="20">227 nm</tspan>
     </text>
     <rect class="leg-background" x="551" y="350" width="198" height="70"/>
     <text class="leg-label" x="650" y="371">
-      <tspan x="650">m = 21.950,396 t</tspan>
-      <tspan x="650" dy="20">d = 750,344 km</tspan>
-      <tspan x="650" dy="20">405,153 nm</tspan>
+      <tspan x="650">m = 21.950 t</tspan>
+      <tspan x="650" dy="20">d = 750 km</tspan>
+      <tspan x="650" dy="20">405 nm</tspan>
     </text>
     <rect class="leg-background" x="551" y="500" width="198" height="70"/>
     <text class="leg-label" x="650" y="521">
-      <tspan x="650">m = 24.195,104 t</tspan>
-      <tspan x="650" dy="20">d = 1.965,000 km</tspan>
-      <tspan x="650" dy="20">1.061,015 nm</tspan>
+      <tspan x="650">m = 24.195 t</tspan>
+      <tspan x="650" dy="20">d = 1.965 km</tspan>
+      <tspan x="650" dy="20">1.061 nm</tspan>
     </text>
     <rect class="leg-background" x="551" y="650" width="198" height="70"/>
     <text class="leg-label" x="650" y="671">
-      <tspan x="650">m = 22.048,947 t</tspan>
-      <tspan x="650" dy="20">d = 940,458 km</tspan>
-      <tspan x="650" dy="20">507,806 nm</tspan>
+      <tspan x="650">m = 22.049 t</tspan>
+      <tspan x="650" dy="20">d = 940 km</tspan>
+      <tspan x="650" dy="20">508 nm</tspan>
     </text>
     <rect class="leg-background" x="551" y="800" width="198" height="70"/>
     <text class="leg-label" x="650" y="821">
-      <tspan x="650">m = 22.144,555 t</tspan>
-      <tspan x="650" dy="20">d = 2.195,720 km</tspan>
-      <tspan x="650" dy="20">1.185,594 nm</tspan>
+      <tspan x="650">m = 22.145 t</tspan>
+      <tspan x="650" dy="20">d = 2.196 km</tspan>
+      <tspan x="650" dy="20">1.186 nm</tspan>
     </text>
   </g>
 
   <g aria-label="Dados dos subtrechos da viagem V4">
     <rect class="leg-background" x="811" y="200" width="198" height="70"/>
     <text class="leg-label" x="910" y="221">
-      <tspan x="910">m = 27.128,064 t</tspan>
-      <tspan x="910" dy="20">d = 420,711 km</tspan>
-      <tspan x="910" dy="20">227,166 nm</tspan>
+      <tspan x="910">m = 27.128 t</tspan>
+      <tspan x="910" dy="20">d = 421 km</tspan>
+      <tspan x="910" dy="20">227 nm</tspan>
     </text>
     <rect class="leg-background" x="811" y="425" width="198" height="70"/>
     <text class="leg-label" x="910" y="446">
-      <tspan x="910">m = 26.218,790 t</tspan>
-      <tspan x="910" dy="20">d = 2.596,249 km</tspan>
-      <tspan x="910" dy="20">1.401,862 nm</tspan>
+      <tspan x="910">m = 26.219 t</tspan>
+      <tspan x="910" dy="20">d = 2.596 km</tspan>
+      <tspan x="910" dy="20">1.402 nm</tspan>
     </text>
     <rect class="leg-background" x="811" y="650" width="198" height="70"/>
     <text class="leg-label" x="910" y="671">
-      <tspan x="910">m = 27.448,321 t</tspan>
-      <tspan x="910" dy="20">d = 940,458 km</tspan>
-      <tspan x="910" dy="20">507,806 nm</tspan>
+      <tspan x="910">m = 27.448 t</tspan>
+      <tspan x="910" dy="20">d = 940 km</tspan>
+      <tspan x="910" dy="20">508 nm</tspan>
     </text>
     <rect class="leg-background" x="811" y="800" width="198" height="70"/>
     <text class="leg-label" x="910" y="821">
-      <tspan x="910">m = 26.331,352 t</tspan>
-      <tspan x="910" dy="20">d = 2.195,720 km</tspan>
-      <tspan x="910" dy="20">1.185,594 nm</tspan>
+      <tspan x="910">m = 26.331 t</tspan>
+      <tspan x="910" dy="20">d = 2.196 km</tspan>
+      <tspan x="910" dy="20">1.186 nm</tspan>
     </text>
   </g>
 
   <g aria-label="Dados dos subtrechos da viagem V5">
     <rect class="leg-background" x="1071" y="200" width="198" height="70"/>
     <text class="leg-label" x="1170" y="221">
-      <tspan x="1170">m = 13.420,582 t</tspan>
-      <tspan x="1170" dy="20">d = 420,711 km</tspan>
-      <tspan x="1170" dy="20">227,166 nm</tspan>
+      <tspan x="1170">m = 13.421 t</tspan>
+      <tspan x="1170" dy="20">d = 421 km</tspan>
+      <tspan x="1170" dy="20">227 nm</tspan>
     </text>
     <rect class="leg-background" x="1071" y="350" width="198" height="70"/>
     <text class="leg-label" x="1170" y="371">
-      <tspan x="1170">m = 186,001 t</tspan>
-      <tspan x="1170" dy="20">d = 75,884 km</tspan>
-      <tspan x="1170" dy="20">40,974 nm</tspan>
+      <tspan x="1170">m = 186 t</tspan>
+      <tspan x="1170" dy="20">d = 76 km</tspan>
+      <tspan x="1170" dy="20">41 nm</tspan>
     </text>
     <rect class="leg-background" x="1071" y="500" width="198" height="70"/>
     <text class="leg-label" x="1170" y="521">
-      <tspan x="1170">m = 184,551 t</tspan>
-      <tspan x="1170" dy="20">d = 2.573,000 km</tspan>
-      <tspan x="1170" dy="20">1.389,309 nm</tspan>
+      <tspan x="1170">m = 185 t</tspan>
+      <tspan x="1170" dy="20">d = 2.573 km</tspan>
+      <tspan x="1170" dy="20">1.389 nm</tspan>
     </text>
     <rect class="leg-background" x="1071" y="725" width="198" height="70"/>
     <text class="leg-label" x="1170" y="746">
-      <tspan x="1170">m = 955,858 t</tspan>
-      <tspan x="1170" dy="20">d = 3.790,000 km</tspan>
-      <tspan x="1170" dy="20">2.046,436 nm</tspan>
+      <tspan x="1170">m = 956 t</tspan>
+      <tspan x="1170" dy="20">d = 3.790 km</tspan>
+      <tspan x="1170" dy="20">2.046 nm</tspan>
     </text>
   </g>
 </svg>

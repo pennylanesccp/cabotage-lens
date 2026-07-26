@@ -488,9 +488,13 @@ A integração das tabelas de Atracação e Carga permite identificar as escalas
 
 ```mermaid
 flowchart LR
-    S[Santos] -->|1.259,179 nm| U[Suape]
-    U -->|507,806 nm| P[Pecém]
-    P -->|1.185,594 nm| M[Manaus]
+    S["Santos"] -->|"1.259,179 nm"| U["Suape"]
+    U -->|"507,806 nm"| P["Pecém"]
+    P -->|"1.185,594 nm"| M["Manaus"]
+
+    classDef porto fill:#f5f7fa,stroke:#204470,color:#111827,stroke-width:1.5px;
+    class S,U,P,M porto;
+    linkStyle default stroke:#204470,stroke-width:1.6px;
 ```
 
 *Figura 4 — Sequência de escalas e distâncias da parte de ida da viagem `voyage_9612791_00011`. Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ e distâncias da matriz marítima do sistema.*
@@ -799,7 +803,7 @@ Os cinco recortes correspondem a quatro navios. O IMO 9612791 aparece em duas vi
 
 ![Cinco recortes observados entre Santos e Manaus, com as viagens dispostas em colunas e os portos repetidos alinhados horizontalmente.](images/fig07_cinco_recortes_santos_manaus.svg)
 
-*Figura 7 — Cinco recortes observados entre Santos e Manaus. Cada seta informa a carga a bordo ($m$) e a distância do subtrecho ($d$). Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ, intensidades do EU MRV e distâncias da matriz marítima do sistema.*
+*Figura 7 — Cinco recortes observados entre Santos e Manaus. Cada seta informa a carga a bordo ($m$) e a distância do subtrecho ($d$), com valores arredondados ao inteiro mais próximo apenas para facilitar a leitura da figura. Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ, intensidades do EU MRV e distâncias da matriz marítima do sistema.*
 
 Primeiro, calcula-se o trabalho de transporte de cada recorte pela soma dos produtos entre carga e distância de seus subtrechos. Aplicando $W_v=\sum_s m_{v,s}\times d_{v,s}$ aos valores da Figura 7:
 
