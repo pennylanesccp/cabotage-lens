@@ -222,20 +222,26 @@ operacionais; custo de combustível; rastreabilidade.
 ANP & Agência Nacional do Petróleo, Gás Natural e Biocombustíveis; publica os preços de Diesel S10 usados no cálculo de custo. \\
 ANTAQ & Agência Nacional de Transportes Aquaviários; fornece os registros observados de atracação e movimentação de carga. \\
 ANTT & Agência Nacional de Transportes Terrestres; publica os rendimentos rodoviários por número de eixos usados na estimativa de consumo. \\
+BCE & Banco Central Europeu; fornece a série cambial usada na conversão do preço do VLSFO de dólar para real. \\
 Cabotagem & Transporte aquaviário de cargas entre portos do mesmo país. \\
 CO\textsubscript{2}e & Dióxido de carbono equivalente; unidade que expressa emissões de gases de efeito estufa em uma mesma base. \\
 EU MRV & Sistema europeu de Monitoramento, Reporte e Verificação; fornece indicadores anuais de atividade e consumo dos navios. \\
+\textit{Fallback} & Procedimento alternativo acionado quando a fonte ou o método principal não fornece um resultado utilizável; sua aplicação permanece identificada na saída. \\
 \textit{First mile} e \textit{last mile} & Acessos rodoviários entre a origem e o porto de embarque, e entre o porto de desembarque e o destino, respectivamente. \\
 Geocodificação & Conversão de um endereço ou local informado em coordenadas geográficas. \\
 Distância de Haversine & Distância geométrica entre dois pontos calculada a partir de latitude e longitude; usada somente para selecionar os portos mais próximos. \\
 IMO & Número de identificação permanente atribuído pela Organização Marítima Internacional a cada navio. \\
 Intensidade marítima & Combustível associado ao transporte de uma tonelada por uma milha náutica, expresso em g/(t·nm). \\
 LCA & \textit{Life-cycle assessment}, ou avaliação de ciclo de vida; fronteira mais ampla que pode incluir veículos, infraestrutura e cadeia do combustível. \\
+ORS & OpenRouteService; serviço consultado prioritariamente para geocodificação e cálculo das rotas rodoviárias. \\
 P95 & Percentil 95; limite usado para identificar valores excepcionalmente altos em conjuntos de dados. \\
 Perna marítima & Trecho de cabotagem entre o porto de embarque e o porto de desembarque. \\
+\textit{Pipeline} & Sequência organizada de etapas que recebe os dados do cenário, consulta as fontes necessárias, executa os cálculos e reúne os resultados. \\
+RTG & \textit{Rubber-tyred gantry crane}, ou guindaste de pórtico sobre pneus; equipamento usado na movimentação de contêineres no terminal. \\
 TEU e TKU & Unidade equivalente a um contêiner de 20 pés e tonelada-quilômetro útil, respectivamente. \\
 Trabalho de transporte & Produto da carga a bordo pela distância em cada subtrecho, expresso em t·nm. \\
 TTW e WTW & \textit{Tank-to-wheel}, que considera a queima do combustível durante o transporte, e \textit{well-to-wheel}, que também inclui suas etapas anteriores. \\
+UF & Unidade da Federação; identifica o estado usado na seleção do preço do Diesel S10. \\
 VLSFO & \textit{Very low sulphur fuel oil}, óleo combustível naval de baixíssimo teor de enxofre. \\
 \bottomrule
 \end{longtable}
@@ -572,6 +578,9 @@ Volume de diesel & \(V\) & L\tabularnewline
 Massa de VLSFO (óleo combustível naval de baixo teor de enxofre) & \(M\)
 & kg\tabularnewline
 Massa da carga & \(m\) & t\tabularnewline
+Massa embarcada na escala \(k\) & \(M_k^{\mathrm{emb}}\) & t\tabularnewline
+Massa desembarcada na escala \(k\) & \(M_k^{\mathrm{des}}\) &
+t\tabularnewline
 Preço do combustível & \(P\) & R\(/L ou R\)/kg\tabularnewline
 Custo modelado do combustível & \(C\) & R\$\tabularnewline
 Emissão operacional & \(E\) & kg CO\textsubscript{2}e\tabularnewline
@@ -1370,11 +1379,12 @@ cada escala \(k\), calcula-se primeiro o saldo líquido da movimentação de
 carga:
 
 \[
-\Delta_k=E_k-D_k,
+\Delta_k=M_k^{\mathrm{emb}}-M_k^{\mathrm{des}},
 \]
 
-em que \(\Delta_k\) é o saldo da escala; \(E_k\) é a massa embarcada; e
-\(D_k\) é a massa desembarcada. A carga a bordo após a escala é:
+em que \(\Delta_k\) é o saldo da escala, \(M_k^{\mathrm{emb}}\) é a massa
+embarcada e \(M_k^{\mathrm{des}}\) é a massa desembarcada. A carga a
+bordo após a escala é:
 
 \[
 B_k=B_{k-1}+\Delta_k,
@@ -1441,9 +1451,9 @@ provisório \(S_k\).
 \end{minipage} & \begin{minipage}[b]{0.08\columnwidth}\raggedright
 Porto\strut
 \end{minipage} & \begin{minipage}[b]{0.11\columnwidth}\raggedleft
-Embarcado \(E_k\)\strut
+Embarcado \(M_k^{\mathrm{emb}}\)\strut
 \end{minipage} & \begin{minipage}[b]{0.13\columnwidth}\raggedleft
-{\small Desembarcado} \(D_k\)\strut
+{\small Desembarcado} \(M_k^{\mathrm{des}}\)\strut
 \end{minipage} & \begin{minipage}[b]{0.19\columnwidth}\raggedleft
 Saldo da escala \(\Delta_k\)\strut
 \end{minipage} & \begin{minipage}[b]{0.20\columnwidth}\raggedleft
@@ -4121,11 +4131,11 @@ Redução em relação à rodovia\strut
 \bottomrule
 \end{longtable}
 
-No resultado multimodal, as duas ferramentas estão próximas. A distância
-da Log-In é 11,064 km maior, uma diferença de 0,15\%, e a emissão de GEE
-informada é 0,146 t maior, ou 5,3\% em relação ao CabotageLens. Essa
-proximidade é positiva porque os valores divulgados pelas duas
-ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
+No resultado multimodal, a distância da Log-In é 11,064 km maior, uma
+diferença de 0,15\%, e a emissão de GEE informada é 0,146 t maior, ou
+5,3\% em relação ao CabotageLens. Essa proximidade numérica se limita ao
+cenário apresentado e não constitui uma validação independente, pois as
+ferramentas utilizam fontes, parâmetros e procedimentos próprios.
 
 Na alternativa rodoviária, porém, a distância da Log-In não corresponde
 à rota porta a porta São Paulo--Rio Branco previamente calculada. A
@@ -4197,12 +4207,12 @@ R\$ 12.318,68 --- custo modelado do combustível\strut
 
 Os dois valores têm finalidades diferentes: o resultado da ANTT é o piso
 mínimo de frete, enquanto o CabotageLens isola o custo operacional de
-combustível. Por isso, não se espera que sejam iguais. Ainda assim, o
-combustível calculado pelo sistema, R\$~12.318,68, representa 57,8\% do
-piso de R\$~21.308,12. Essa proporção é um sinal de coerência de ordem
-de grandeza, pois o piso mínimo também reúne outras parcelas do frete
-além do combustível. Assim, os valores são apresentados lado a lado para
-contextualização, e não como cotações equivalentes.
+combustível. Por isso, não se espera que sejam iguais. O custo de
+combustível calculado pelo sistema, R\$~12.318,68, representa 57,8\% do piso de
+R\$~21.308,12. Essa proporção é apresentada apenas para contextualizar a
+magnitude dos valores e não constitui uma referência de validação, pois
+o piso mínimo também reúne outras parcelas do frete. Portanto, os
+resultados não devem ser interpretados como cotações equivalentes.
 
 \clearpage
 \hypertarget{conclusuxf5es}{%

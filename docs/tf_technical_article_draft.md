@@ -50,20 +50,26 @@ Este trabalho apresenta o CabotageLens, um sistema computacional auditável para
 | ANP | Agência Nacional do Petróleo, Gás Natural e Biocombustíveis; publica os preços de Diesel S10 usados no cálculo de custo. |
 | ANTAQ | Agência Nacional de Transportes Aquaviários; fornece os registros observados de atracação e movimentação de carga. |
 | ANTT | Agência Nacional de Transportes Terrestres; publica os rendimentos rodoviários por número de eixos usados na estimativa de consumo. |
+| BCE | Banco Central Europeu; fornece a série cambial usada na conversão do preço do VLSFO de dólar para real. |
 | Cabotagem | Transporte aquaviário de cargas entre portos do mesmo país. |
 | CO₂e | Dióxido de carbono equivalente; unidade que expressa emissões de gases de efeito estufa em uma mesma base. |
 | EU MRV | Sistema europeu de Monitoramento, Reporte e Verificação; fornece indicadores anuais de atividade e consumo dos navios. |
+| *Fallback* | Procedimento alternativo acionado quando a fonte ou o método principal não fornece um resultado utilizável; sua aplicação permanece identificada na saída. |
 | *First mile* e *last mile* | Acessos rodoviários entre a origem e o porto de embarque, e entre o porto de desembarque e o destino, respectivamente. |
 | Geocodificação | Conversão de um endereço ou local informado em coordenadas geográficas. |
 | Distância de Haversine | Distância geométrica entre dois pontos calculada a partir de latitude e longitude; usada somente para selecionar os portos mais próximos. |
 | IMO | Número de identificação permanente atribuído pela Organização Marítima Internacional a cada navio. |
 | Intensidade marítima | Combustível associado ao transporte de uma tonelada por uma milha náutica, expresso em g/(t·nm). |
 | LCA | *Life-cycle assessment*, ou avaliação de ciclo de vida; fronteira mais ampla que pode incluir veículos, infraestrutura e cadeia do combustível. |
+| ORS | OpenRouteService; serviço consultado prioritariamente para geocodificação e cálculo das rotas rodoviárias. |
 | P95 | Percentil 95; limite usado para identificar valores excepcionalmente altos em conjuntos de dados. |
 | Perna marítima | Trecho de cabotagem entre o porto de embarque e o porto de desembarque. |
+| *Pipeline* | Sequência organizada de etapas que recebe os dados do cenário, consulta as fontes necessárias, executa os cálculos e reúne os resultados. |
+| RTG | *Rubber-tyred gantry crane*, ou guindaste de pórtico sobre pneus; equipamento usado na movimentação de contêineres no terminal. |
 | TEU e TKU | Unidade equivalente a um contêiner de 20 pés e tonelada-quilômetro útil, respectivamente. |
 | Trabalho de transporte | Produto da carga a bordo pela distância em cada subtrecho, expresso em t·nm. |
 | TTW e WTW | *Tank-to-wheel*, que considera a queima do combustível durante o transporte, e *well-to-wheel*, que também inclui suas etapas anteriores. |
+| UF | Unidade da Federação; identifica o estado usado na seleção do preço do Diesel S10. |
 | VLSFO | *Very low sulphur fuel oil*, óleo combustível naval de baixíssimo teor de enxofre. |
 
 ## 1. Objetivo
@@ -162,6 +168,8 @@ Para estimar as operações portuárias, o sistema representa a remessa de 14 t
 | Volume de diesel | $V$ | L |
 | Massa de VLSFO (óleo combustível naval de baixo teor de enxofre) | $M$ | kg |
 | Massa da carga | $m$ | t |
+| Massa embarcada na escala $k$ | $M_k^{\mathrm{emb}}$ | t |
+| Massa desembarcada na escala $k$ | $M_k^{\mathrm{des}}$ | t |
 | Preço do combustível | $P$ | R$/L ou R$/kg |
 | Custo modelado do combustível | $C$ | R$ |
 | Emissão operacional | $E$ | kg CO₂e |
@@ -492,10 +500,10 @@ flowchart LR
 A carga a bordo de cada subtrecho é a massa transportada pelo navio. Para cada escala $k$, calcula-se primeiro o saldo líquido da movimentação de carga:
 
 $$
-\Delta_k=E_k-D_k,
+\Delta_k=M_k^{\mathrm{emb}}-M_k^{\mathrm{des}},
 $$
 
-em que $\Delta_k$ é o saldo da escala; $E_k$ é a massa embarcada; e $D_k$ é a massa desembarcada. A carga a bordo após a escala é:
+em que $\Delta_k$ é o saldo da escala, $M_k^{\mathrm{emb}}$ é a massa embarcada e $M_k^{\mathrm{des}}$ é a massa desembarcada. A carga a bordo após a escala é:
 
 $$
 B_k=B_{k-1}+\Delta_k,
@@ -535,7 +543,7 @@ A viagem `voyage_9612791_00011` permite aplicar esse procedimento passo a passo.
 
 **Tabela 6 — Detalhamento do saldo de carga por escala na viagem `voyage_9612791_00011`.**
 
-| $k$ | Porto | Embarcado $E_k$ | Desembarcado $D_k$ | Saldo da escala $\Delta_k$ | Saldo acumulado provisório $S_k$ |
+| $k$ | Porto | Embarcado $M_k^{\mathrm{emb}}$ | Desembarcado $M_k^{\mathrm{des}}$ | Saldo da escala $\Delta_k$ | Saldo acumulado provisório $S_k$ |
 | --: | :-- | --: | --: | --: | --: |
 | 1 | Santos | 9.881,860 t | 0,000 t | 9.881,860 t | 9.881,860 t |
 | 2 | Suape | 11.862,199 t | 8.002,620 t | 3.859,579 t | 13.741,439 t |
@@ -1537,7 +1545,7 @@ A captura da calculadora da Log-In refere-se ao cenário São Paulo–Rio Branco
 | Multimodal | 7.595,9 km | 2,9 t | 7.584,836 km | 2,754 t |
 | Redução em relação à rodovia | — | 0,2 t | — | 1,314 t |
 
-No resultado multimodal, as duas ferramentas estão próximas. A distância da Log-In é 11,064 km maior, uma diferença de 0,15%, e a emissão de GEE informada é 0,146 t maior, ou 5,3% em relação ao CabotageLens. Essa proximidade é positiva porque os valores divulgados pelas duas ferramentas são semelhantes, mesmo usando fontes e parâmetros próprios.
+No resultado multimodal, a distância da Log-In é 11,064 km maior, uma diferença de 0,15%, e a emissão de GEE informada é 0,146 t maior, ou 5,3% em relação ao CabotageLens. Essa proximidade numérica se limita ao cenário apresentado e não constitui uma validação independente, pois as ferramentas utilizam fontes, parâmetros e procedimentos próprios.
 
 Na alternativa rodoviária, porém, a distância da Log-In não corresponde à rota porta a porta São Paulo–Rio Branco previamente calculada. A ferramenta informa 3.032 km, enquanto o CabotageLens obteve 3.491,431 km e a conferência independente no Google Maps indicou 3.497 km, como apresentado na Seção 5.3.1.1. Essa diferença de 459,431 km, ou 13,2%, contribui para que a emissão rodoviária informada pela Log-In seja menor. Por isso, a comparação rodoviária não deve ser interpretada como uma equivalência direta entre os dois sistemas.
 
@@ -1557,7 +1565,7 @@ Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário
 | Configuração do veículo | 5 eixos | 5 eixos |
 | Valor calculado | R$ 21.308,12 — piso mínimo de frete | R$ 12.318,68 — custo modelado do combustível |
 
-Os dois valores têm finalidades diferentes: o resultado da ANTT é o piso mínimo de frete, enquanto o CabotageLens isola o custo operacional de combustível. Por isso, não se espera que sejam iguais. Ainda assim, o combustível calculado pelo sistema, R$ 12.318,68, representa 57,8% do piso de R$ 21.308,12. Essa proporção é um sinal de coerência de ordem de grandeza, pois o piso mínimo também reúne outras parcelas do frete além do combustível. Assim, os valores são apresentados lado a lado para contextualização, e não como cotações equivalentes.
+Os dois valores têm finalidades diferentes: o resultado da ANTT é o piso mínimo de frete, enquanto o CabotageLens isola o custo operacional de combustível. Por isso, não se espera que sejam iguais. O custo de combustível calculado pelo sistema, R$ 12.318,68, representa 57,8% do piso de R$ 21.308,12. Essa proporção é apresentada apenas para contextualizar a magnitude dos valores e não constitui uma referência de validação, pois o piso mínimo também reúne outras parcelas do frete. Portanto, os resultados não devem ser interpretados como cotações equivalentes.
 
 ## 7. Conclusões
 

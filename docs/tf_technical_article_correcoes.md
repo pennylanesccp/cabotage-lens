@@ -88,6 +88,8 @@ Além disso, a viagem `voyage_9974486_00001` não serve mais como exemplo de aus
 
 ## COR10 — Ampliar o dicionário de termos técnicos
 
+**Status:** implementada.
+
 **Local:** Dicionário de termos.
 
 **Problema:** siglas e termos recorrentes na implementação não estão definidos no dicionário, como ORS, RTG, UF, BCE, *pipeline* e *fallback*.
@@ -95,6 +97,8 @@ Além disso, a viagem `voyage_9974486_00001` não serve mais como exemplo de aus
 **Proposta:** incluir apenas os termos indispensáveis à leitura do artigo ou substituir os estrangeirismos por equivalentes em português no primeiro uso.
 
 ## COR11 — Tornar mais neutra a interpretação das comparações externas
+
+**Status:** implementada.
 
 **Local:** Seções 6.2 e 6.3.
 
@@ -111,6 +115,8 @@ Além disso, a viagem `voyage_9974486_00001` não serve mais como exemplo de aus
 **Proposta:** associar essas informações à versão ou à data da execução apresentada no artigo, evitando que sejam interpretadas como garantias permanentes.
 
 ## COR13 — Evitar a sobreposição do símbolo de distância com o desembarque
+
+**Status:** implementada.
 
 **Local:** Quadro 2 e Seção 4.3.4.1.3.1.
 
