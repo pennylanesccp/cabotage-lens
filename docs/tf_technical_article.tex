@@ -40,6 +40,7 @@
             breaklinks=true}
 \urlstyle{same}  % don't use monospace font for urls
 \usepackage[margin=2.5cm]{geometry}
+\usepackage{pdflscape}
 \usepackage{color}
 \usepackage{fancyvrb}
 \newcommand{\VerbBar}{|}
@@ -1274,8 +1275,8 @@ Nacional de Transportes Aquaviários (ANTAQ), Painel Estatístico
 Aquaviário}.}
 
 \hypertarget{reconstruuxe7uxe3o-das-viagens}{%
-\paragraph{4.3.4.1.3 Reconstrução das
-viagens}\label{reconstruuxe7uxe3o-das-viagens}}
+\paragraph{4.3.4.1.3 Reconstrução das viagens e carga a
+bordo}\label{reconstruuxe7uxe3o-das-viagens}}
 
 A integração das tabelas de Atracação e Carga permite identificar as
 escalas pertencentes ao mesmo navio e ordená-las cronologicamente. O
@@ -1309,52 +1310,73 @@ dados de Carga e Atracação da ANTAQ e distâncias da matriz marítima do
 sistema.}
 
 \hypertarget{carga-a-bordo}{%
-\paragraph{4.3.4.1.4 Carga a bordo}\label{carga-a-bordo}}
+\subparagraph{4.3.4.1.3.1 Carga a bordo}\label{carga-a-bordo}}
 
 A carga a bordo de cada subtrecho é a massa transportada pelo navio. Para
-a escala \(k\), o sistema calcula:
+cada escala \(k\), calcula-se primeiro o saldo líquido da movimentação de
+carga:
 
 \[
-B_k=B_{k-1}+E_k-D_k,
+\Delta_k=E_k-D_k,
 \]
 
-em que \(B_k\) é a carga total a bordo após a escala \(k\);
-\(B_{k-1}\) é a carga existente antes dessa escala; \(E_k\) é a massa
-embarcada; e \(D_k\) é a massa desembarcada. O mesmo procedimento é
-realizado separadamente para a massa, em toneladas, e para a quantidade
-de carga, em TEU.
+em que \(\Delta_k\) é o saldo da escala; \(E_k\) é a massa embarcada; e
+\(D_k\) é a massa desembarcada. A carga a bordo após a escala é:
 
-Em algumas viagens, o saldo acumulado de embarques menos desembarques,
-quando calculado a partir de zero, fica negativo em uma ou mais escalas.
-Como a carga a bordo não pode ser negativa, o sistema usa o menor valor
-desse saldo para determinar a carga inicial mínima compatível com os
+\[
+B_k=B_{k-1}+\Delta_k,
+\]
+
+em que \(B_k\) é a carga total a bordo após a escala \(k\) e
+\(B_{k-1}\) é a carga existente antes dessa escala.
+
+Para determinar a carga existente antes da primeira escala observada, o
+sistema calcula o saldo acumulado provisório:
+
+\[
+S_0=0,
+\qquad
+S_k=\sum_{i=1}^{k}\Delta_i,
+\]
+
+em que \(S_0\) representa o início do balanço provisório sem carga
+inicial e \(S_k\) é a soma dos saldos da primeira escala até a escala
+\(k\). Em algumas viagens, o saldo acumulado \(S_k\), calculado a partir
+de \(S_0=0\), fica negativo em uma ou mais escalas, como mostra a Seção
+4.3.4.1.3.2. Como a carga a bordo não pode ser negativa, o menor valor
+dessa sequência determina a carga inicial mínima compatível com os
 registros:
 
 \[
 B_0=
 \max\left(
 0,\,
--\min_{1\leq k\leq n}
-\left[
-\sum_{i=1}^{k}(E_i-D_i)
-\right]
+-\min_{1\leq k\leq n}S_k
 \right).
 \]
 
-Assim, \(B_0\) é a menor carga inicial capaz de manter todos os saldos da
-viagem iguais ou superiores a zero. Se o saldo acumulado nunca ficar
-negativo, \(B_0\) é igual a zero.
+Nessa expressão, \(n\) é o número total de escalas da viagem. Assim,
+\(B_0\) é a menor carga inicial capaz de manter a carga a bordo igual ou
+superior a zero em todas as escalas. Depois de determinar \(B_0\), a
+carga após qualquer escala também pode ser escrita como:
+
+\[
+B_k=B_0+S_k.
+\]
+
+Essa expressão é equivalente ao cálculo sucessivo de
+\(B_k=B_{k-1}+\Delta_k\). Se todos os valores de \(S_k\) forem iguais ou
+superiores a zero, \(B_0\) é igual a zero.
 
 \hypertarget{carga-a-bordo-para-a-viagem-voyage-9612791-00011}{%
-\subparagraph{\texorpdfstring{4.3.4.1.4.1 Carga a bordo para a viagem
-\texttt{voyage\_9612791\_00011}}{4.3.4.1.4.1 Carga a bordo para a viagem voyage\_9612791\_00011}}\label{carga-a-bordo-para-a-viagem-voyage-9612791-00011}}
+\subparagraph{\texorpdfstring{4.3.4.1.3.2 Carga a bordo para a viagem
+\texttt{voyage\_9612791\_00011}}{4.3.4.1.3.2 Carga a bordo para a viagem voyage\_9612791\_00011}}\label{carga-a-bordo-para-a-viagem-voyage-9612791-00011}}
 
-A viagem \texttt{voyage\_9612791\_00011} permite mostrar esse
-procedimento passo a passo. Para cada escala \(k\), calcula-se primeiro o
-saldo da escala, \(\Delta_k=E_k-D_k\), e depois o saldo acumulado
-provisório, \(S_k=\sum_{i=1}^{k}(E_i-D_i)\), considerando inicialmente
-\(B_0=0\). Os valores de embarque e desembarque vêm da Tabela 4; os dois
-saldos são calculados a partir deles.
+A viagem \texttt{voyage\_9612791\_00011} permite aplicar esse
+procedimento passo a passo. A tabela a seguir parte de \(S_0=0\) e
+apresenta, em cada escala, os valores de embarque e desembarque
+informados na Tabela 4, o saldo líquido \(\Delta_k\) e o saldo acumulado
+provisório \(S_k\).
 
 \textbf{Detalhamento do saldo de carga por escala na viagem
 \texttt{voyage\_9612791\_00011}.}
@@ -1370,7 +1392,7 @@ Embarcado \(E_k\)\strut
 \end{minipage} & \begin{minipage}[b]{0.13\columnwidth}\raggedleft
 {\small Desembarcado} \(D_k\)\strut
 \end{minipage} & \begin{minipage}[b]{0.19\columnwidth}\raggedleft
-Saldo da escala \(\Delta_k=E_k-D_k\)\strut
+Saldo da escala \(\Delta_k\)\strut
 \end{minipage} & \begin{minipage}[b]{0.20\columnwidth}\raggedleft
 Saldo acumulado provisório \(S_k\)\strut
 \end{minipage}\tabularnewline
@@ -1431,35 +1453,8 @@ Manaus\strut
 \bottomrule
 \end{longtable}
 
-O desenvolvimento completo dos saldos acumulados é:
-
-\[
-\begin{aligned}
-S_1
-&=(9{.}881{,}860-0)
-=9{.}881{,}860\ \mathrm{t},\\
-S_2
-&=(9{.}881{,}860-0)
-+(11{.}862{,}199-8{.}002{,}620)
-=13{.}741{,}439\ \mathrm{t},\\
-S_3
-&=(9{.}881{,}860-0)
-+(11{.}862{,}199-8{.}002{,}620)
-\\
-&\quad +(3{.}231{,}914-7{.}624{,}347)
-=9{.}349{,}006\ \mathrm{t},\\
-S_4
-&=(9{.}881{,}860-0)
-+(11{.}862{,}199-8{.}002{,}620)
-\\
-&\quad +(3{.}231{,}914-7{.}624{,}347)
-+(7{.}571{,}660-19{.}897{,}560)
-=-2{.}976{,}894\ \mathrm{t}.
-\end{aligned}
-\]
-
-O menor saldo acumulado provisório é \(-2{.}976{,}894\)~t. Aplicando a
-fórmula da carga inicial mínima:
+O menor saldo acumulado provisório, portanto, é
+\(-2{.}976{,}894\)~t. Aplicando a fórmula da carga inicial mínima:
 
 \[
 \begin{aligned}
@@ -1470,25 +1465,28 @@ B_0
 \end{aligned}
 \]
 
-O saldo provisório não representa a carga efetiva a bordo, pois foi
-calculado supondo artificialmente que o navio chegou à primeira escala
-sem carga. Sua função é identificar a carga inicial mínima necessária
-para impedir valores negativos. Somando \(B_0\) aos saldos acumulados,
-obtém-se a carga a bordo após cada escala:
+Os valores de \(S_k\) não representam a carga efetiva a bordo, pois
+resultam do balanço iniciado em zero. Eles servem para determinar
+\(B_0\). A carga após cada escala é então calculada sucessivamente com os
+valores de \(\Delta_k\) apresentados na tabela:
 
 \[
 \begin{aligned}
-B_{\mathrm{Santos}}
-&=2{.}976{,}894+9{.}881{,}860-0
+B_{\mathrm{Santos}}=B_1
+&=B_0+\Delta_1
+=2{.}976{,}894+9{.}881{,}860
 =12{.}858{,}754\ \mathrm{t},\\
-B_{\mathrm{Suape}}
-&=12{.}858{,}754+11{.}862{,}199-8{.}002{,}620
+B_{\mathrm{Suape}}=B_2
+&=B_1+\Delta_2
+=12{.}858{,}754+3{.}859{,}579
 =16{.}718{,}333\ \mathrm{t},\\
-B_{\mathrm{Pecem}}
-&=16{.}718{,}333+3{.}231{,}914-7{.}624{,}347
+B_{\mathrm{Pecem}}=B_3
+&=B_2+\Delta_3
+=16{.}718{,}333-4{.}392{,}433
 =12{.}325{,}900\ \mathrm{t},\\
-B_{\mathrm{Manaus}}
-&=12{.}325{,}900+7{.}571{,}660-19{.}897{,}560
+B_{\mathrm{Manaus}}=B_4
+&=B_3+\Delta_4
+=12{.}325{,}900-12{.}325{,}900
 =0\ \mathrm{t}.
 \end{aligned}
 \]
@@ -1499,28 +1497,53 @@ respectivamente. A carga inicial calculada não é uma medição direta: ela
 é a estimativa mínima compatível com as movimentações observadas e com a
 condição física de que a carga a bordo não pode ser negativa.
 
+A Figura 5 resume o resultado e mostra a carga a bordo em cada subtrecho
+da viagem.
+
+\begin{center}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[clnode] (cS) at (0.00cm,-0.00cm) {Santos};
+  \node[clnode] (cU) at (5.10cm,-0.00cm) {Suape};
+  \node[clnode] (cP) at (10.20cm,-0.00cm) {Pecém};
+  \node[clnode] (cM) at (15.30cm,-0.00cm) {Manaus};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (2.55cm,1.45cm) {12.858,754~t};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (7.65cm,1.45cm) {16.718,333~t};
+  \node[align=center, text width=4.30cm, font=\scriptsize] at (12.75cm,1.45cm) {12.325,900~t};
+  \draw[clarrow] (cS) -- (cU);
+  \draw[clarrow] (cU) -- (cP);
+  \draw[clarrow] (cP) -- (cM);
+\end{tikzpicture}%
+}
+\end{center}
+
+\emph{Figura 5 --- Sequência de escalas e carga a bordo nos subtrechos
+da parte de ida da viagem \texttt{voyage\_9612791\_00011}. Fonte:
+elaboração própria com dados de Carga e Atracação da ANTAQ e resultados
+da reconstrução da viagem.}
+
 \hypertarget{intensidade-de-combustuxedvel-do-navio}{%
 \paragraph{4.3.4.2 Intensidade de combustível do
 navio}\label{intensidade-de-combustuxedvel-do-navio}}
 
-Após reconstruir o percurso e a carga a bordo, é preciso estimar quanto
-combustível foi necessário para realizar esse transporte. Conforme
+Após reconstruir o percurso e a carga a bordo, é preciso estimar o
+consumo de combustível associado a esse transporte. Conforme
 fundamentado na Seção 3.1, o sistema usa a \textbf{intensidade de
-combustível} para obter uma estimativa média e comparável, ao invés de
+combustível} para obter uma estimativa média e comparável, em vez de
 simular as condições particulares de uma única viagem. Essa intensidade
-é a quantidade de combustível associada ao transporte de uma tonelada
-por uma milha náutica. A unidade é grama por tonelada-milha náutica, ou
+expressa a massa de combustível associada ao transporte de uma tonelada
+por uma milha náutica. Sua unidade é grama por tonelada-milha náutica, ou
 \(\mathrm{g/(t\cdot nm)}\).
 
-Segundo a EU MRV, esse indicador é construído a partir de um processo
-padronizado. Para cada navio, a companhia define um plano de
-monitoramento que descreve os métodos e as fontes de dados utilizados.
-Esse plano é avaliado por um verificador acreditado e, quando aplicável,
-aprovado pela autoridade responsável. Durante o período de reporte, são
-registrados por viagem o combustível consumido, a distância percorrida,
-o tempo no mar e a carga transportada. Ao final do ano, esses registros
-são consolidados em um relatório de emissões do navio, que também passa
-por verificação antes de ser submetido pelo sistema THETIS-MRV
+No EU MRV, esse indicador é construído por um processo padronizado. Para
+cada navio, a companhia elabora um plano de monitoramento que descreve os
+métodos e as fontes de dados utilizados. Esse plano é avaliado por um
+verificador acreditado e, quando aplicável, aprovado pela autoridade
+responsável. Durante o período de reporte, são monitorados, em regra por
+viagem, o combustível consumido, a distância percorrida, o tempo no mar e
+a carga transportada. Ao final do ano, esses registros são agregados no
+relatório de emissões do navio, que também passa por verificação antes de
+ser submetido pelo sistema THETIS-MRV
 \parencite[p. 9, 30--32 e 54--55]{ecmrvguide2025}.
 
 O trabalho de transporte de cada viagem é o produto entre a carga
@@ -1534,32 +1557,45 @@ W_v=m_vd_v
 I_{f,\mathrm{anual}}=\frac{F_{\mathrm{anual}}}{\sum_v W_v},
 \]
 
-em que \(m_v\) é a massa de carga da viagem \(v\), \(d_v\) é a distância
-percorrida, \(W_v\) é o respectivo trabalho de transporte e
-\(F_{\mathrm{anual}}\) é o combustível total consumido pelo navio no
-período. Uma intensidade de
+em que \(m_v\) é a massa de carga da viagem \(v\), em toneladas; \(d_v\)
+é a distância percorrida, em milhas náuticas; \(W_v\) é o respectivo
+trabalho de transporte, em \(\mathrm{t\cdot nm}\); e
+\(F_{\mathrm{anual}}\) é a massa total de combustível consumida pelo
+navio no período, expressa em gramas. Uma intensidade de
 \(7{,}43\ \mathrm{g/(t\cdot nm)}\), por exemplo, significa que, na média
-anual, foram associados 7,43 g de combustível ao transporte de uma
+anual, foram associados 7,43~g de combustível ao transporte de uma
 tonelada por uma milha náutica.
 
-Para navios porta-contêineres, o EU MRV permite determinar a carga pela
-massa real ou pelo número de TEU multiplicado por pesos-padrão. A opção
-adotada deve constar no plano de monitoramento e ser aplicada de forma
-consistente durante todo o período de reporte. Os métodos de medição do
-combustível, suas fontes de dados e as incertezas associadas também devem
-ser documentados; o guia recomenda verificações de plausibilidade e,
-quando possível, o uso de uma segunda fonte para conferir os dados
-principais \parencite[p. 42, 48--49 e 109--110]{ecmrvguide2025}.
+Os dados que formam o indicador seguem procedimentos documentados. O
+método de medição do combustível, sua fonte de dados e a incerteza
+associada devem constar do plano de monitoramento, e o guia recomenda
+verificações de plausibilidade com uma segunda fonte de dados sempre que
+possível. Para navios porta-contêineres, a carga pode ser determinada
+pela massa real ou pelo número de TEU multiplicado por pesos-padrão; a
+opção escolhida também deve ser registrada e aplicada de forma
+consistente durante o período de reporte
+\parencite[p. 42, 48--49 e 109--110]{ecmrvguide2025}. Esses requisitos
+não eliminam a incerteza, mas conferem rastreabilidade ao indicador e
+sustentam sua verificação.
 
-Esses procedimentos conferem rastreabilidade, consistência e verificação
-por entidade acreditada ao indicador, tornando-o adequado como
-referência histórica para uma avaliação comparativa. Isso não significa
-que a intensidade reproduza exatamente uma viagem brasileira ou que
-elimine toda incerteza de medição. Ela representa o desempenho anual
-verificado do navio dentro das regras do EU MRV. O consumo atribuído a
-cada viagem reconstruída pelo CabotageLens é calculado posteriormente,
-ao aplicar essa intensidade ao respectivo trabalho de transporte,
-conforme a Seção 4.3.4.3.
+Por isso, o indicador oferece uma referência histórica adequada à
+comparação proposta. Ele representa o desempenho anual verificado do
+navio, e não o consumo exato de uma viagem brasileira. Para cada recorte
+reconstruído, o CabotageLens seleciona a intensidade por uma única
+hierarquia: usa o valor individual positivo mais recente do mesmo IMO;
+verifica esse valor em relação aos navios do mesmo tipo, quando há
+amostra suficiente; e, se a correspondência individual não existir ou
+for considerada atípica, recorre a uma estimativa robusta da classe ou,
+na falta dela, do tipo do navio. A origem do valor selecionado permanece
+registrada.
+
+Em seguida, essa intensidade é aplicada ao trabalho de transporte do
+recorte, conforme a Seção 4.3.4.3. Como o campo adotado informa apenas a
+massa total de combustível por trabalho de transporte, sem identificar
+um combustível específico, o modelo trata a massa calculada como VLSFO
+nas etapas posteriores de emissões e custo, apresentadas nas Seções
+4.3.5 e 4.3.6. Essa é uma premissa do CabotageLens, não uma
+característica informada pelo EU MRV.
 
 \hypertarget{valor-individual-do-navio-no-eu-mrv}{%
 \subparagraph{4.3.4.2.1 Valor individual do navio no EU
@@ -1570,7 +1606,7 @@ passou e qual carga levava, enquanto o EU MRV fornece seu indicador anual
 de intensidade. O número IMO é o elo entre as duas bases e permite
 procurar a mesma embarcação.
 
-A Figura 5 mostra parte de uma dessas planilhas anuais. Cada linha
+A Figura 6 mostra parte de uma dessas planilhas anuais. Cada linha
 corresponde a um navio, enquanto as colunas reúnem o número IMO, o nome,
 o tipo, o período de reporte, o consumo, as emissões e os indicadores
 médios de eficiência usados na avaliação.
@@ -1580,7 +1616,7 @@ médios de eficiência usados na avaliação.
 \end{center}
 
 {\raggedright
-\emph{Figura 5 --- Captura de tela de parte do arquivo
+\emph{Figura 6 --- Captura de tela de parte do arquivo
 \texttt{2025-v18-23072026-EU MRV}\linebreak
 \texttt{Publication of information.xlsx}.
 Fonte: Agência Europeia de Segurança Marítima (EMSA), 2026.}
@@ -1649,106 +1685,152 @@ Europeia de Segurança Marítima (EMSA)}, publicação anual de informações
 do EU MRV.}
 
 O sistema procura primeiro o mesmo IMO no EU MRV. Quando encontra o
-mesmo navio em mais de um ano, usa o indicador positivo mais recente.
-Esse é o caso preferencial, pois a intensidade pertence ao navio que
-aparece nos registros da ANTAQ. Quando não há correspondência
-individual, ou quando o valor individual é estatisticamente muito fora
-do padrão do seu tipo de navio, o sistema usa uma estimativa documentada
-de um grupo semelhante. As regras para isso são apresentadas a seguir.
+navio em mais de um ano, usa o indicador positivo mais recente. Esse é
+o caso preferencial, pois a intensidade pertence à embarcação observada
+nos registros da ANTAQ. Antes de aplicá-la, porém, o sistema verifica se
+ela é excepcionalmente alta em relação aos navios do mesmo tipo. Se não
+houver correspondência individual utilizável, a mesma hierarquia de
+estimativas coletivas é acionada. As duas etapas são apresentadas a
+seguir.
 
-\hypertarget{valores-atuxedpicos-p95-e-estatuxedstica-robusta}{%
-\subparagraph{4.3.4.2.2 Valores atípicos, P95 e estatística
-robusta}\label{valores-atuxedpicos-p95-e-estatuxedstica-robusta}}
+\hypertarget{verificauxe7uxe3o-do-valor-individual-p95-e-valores-atuxedpicos}{%
+\subparagraph{4.3.4.2.2 Verificação do valor individual: P95 e valores
+atípicos}\label{verificauxe7uxe3o-do-valor-individual-p95-e-valores-atuxedpicos}}
 
-Um valor alto publicado no EU MRV não é descartado por ser
-necessariamente incorreto. Ainda assim, ele pode ser muito diferente dos
-navios comparáveis e, se usado sem verificação, pode distorcer a
-intensidade média de uma ligação. Por esse motivo, o sistema compara a
-intensidade individual com as intensidades dos navios do mesmo tipo.
+Um valor alto publicado no EU MRV não é considerado incorreto apenas
+por sua magnitude. Ainda assim, ele pode ser excepcional em relação a
+navios comparáveis e, se aplicado diretamente, exercer influência
+desproporcional sobre a intensidade média da ligação. Por isso, depois
+de localizar o valor individual, o sistema o compara com as intensidades
+dos navios do mesmo tipo.
 
 ``Mesmo tipo'' significa a mesma categoria registrada no campo
-\texttt{Ship type} da publicação do EU MRV. O sistema lê esse campo para
-cada número IMO, desconsidera apenas diferenças entre letras maiúsculas
-e minúsculas e espaços extras e reúne os rótulos iguais. Assim, todos os
-navios identificados como \emph{container ship} formam um grupo. Cada
-IMO participa uma única vez, com seu indicador positivo mais recente.
-Portanto, o tipo não é inferido pelo nome do navio, pela rota, pelo
-armador ou pelas dimensões da embarcação \parencite{emsa2026}.
+\texttt{Ship type} da publicação do EU MRV. Para formar o grupo de
+comparação, o sistema reúne os rótulos iguais e mantém, para cada IMO,
+somente o indicador positivo mais recente. Assim, todos os navios
+identificados como \emph{container ship} pertencem ao mesmo grupo. O
+tipo não é inferido pelo nome do navio, pela rota, pelo armador ou pelas
+dimensões da embarcação \parencite{emsa2026}.
 
-Depois de formar o grupo, o sistema calcula o percentil 95 (P95), ponto
+Com o grupo formado, o sistema calcula o percentil 95 (P95), ponto
 abaixo do qual estão 95\% dos valores ordenados. Em outras palavras,
-apenas os 5\% maiores ficam acima do P95. A regra só é aplicada quando há
-pelo menos 20 navios no grupo, para que essa comparação tenha uma base
-mínima.
+apenas os 5\% maiores ficam acima desse limite. A verificação só é
+aplicada quando o grupo contém pelo menos 20 navios. Se a amostra for
+menor, não há triagem pelo P95 e o valor individual é mantido.
 
-No grupo de 243 navios classificados como \emph{container ship}, o P95 é
-\(24{,}073\ \mathrm{g/(t\cdot nm)}\). O navio de IMO 9603221
+No grupo de 243 navios classificados como \emph{container ship}, o P95
+é \(24{,}073\ \mathrm{g/(t\cdot nm)}\). O navio de IMO 9603221
 (\emph{Fernão de Magalhães}), por exemplo, possui valor individual de
 \(228{,}83\ \mathrm{g/(t\cdot nm)}\), acima desse limite. A viagem
 observada não é retirada: suas escalas, distâncias e carga a bordo
-continuam no cálculo. O que muda é somente a intensidade aplicada a ela.
-Quando há uma estimativa de classe disponível, ela é usada; caso
-contrário, aplica-se a estimativa robusta do tipo \emph{container ship},
-de \(9{,}322050\ \mathrm{g/(t\cdot nm)}\).
+continuam no cálculo. O sistema deixa apenas de usar o valor individual
+e passa à hierarquia de estimativas coletivas descrita na subseção
+seguinte.
 
-O P95 e a estatística robusta têm funções diferentes. Enquanto P95
-identifica quando o valor individual é excepcionalmente alto para seu
-grupo, a estatística robusta produz o valor de grupo que será usado
-quando o IMO estiver ausente ou quando o valor individual precisar ser
-substituído. Tanto para a \textbf{classe} como para o \textbf{tipo} do
-navio, o sistema usa a \textbf{média aparada disponível}, que exclui
-valores abaixo do percentil 1 e acima do percentil 99 e calcula a média
-dos valores restantes como intensidade desse grupo.
+O P95 tem, portanto, uma função de decisão: verificar se o valor
+individual pode ser aplicado diretamente. Ele não calcula a intensidade
+substituta nem elimina a viagem observada. A estimativa usada quando
+esse valor não é utilizável é definida a seguir.
 
-Essas regras evitam que poucos valores extremos definam a estimativa
-coletiva. Elas não foram criadas para escolher um resultado mais baixo:
-a mesma regra é aplicada a todos os grupos e sua aplicação fica
-registrada na saída do cálculo, com a estatística usada, o tamanho da
-amostra e a quantidade de valores retirados. Esse uso do P95 trata
-apenas a intensidade individual do navio; o uso do P95 para a distância
-marítima representativa é descrito separadamente na Seção~4.3.4.4.
+Esse uso do P95 trata apenas a intensidade individual do navio. O P95
+empregado para selecionar as distâncias marítimas que entram na média
+representativa tem outra finalidade e é descrito separadamente na
+Seção~4.3.4.4.
 
-\hypertarget{estimativa-quando-nuxe3o-huxe1-valor-individual}{%
-\subparagraph{4.3.4.2.3 Estimativa quando não há valor
-individual}\label{estimativa-quando-nuxe3o-huxe1-valor-individual}}
+\hypertarget{estimativa-robusta-quando-nuxe3o-huxe1-valor-individual-utilizuxe1vel}{%
+\subparagraph{4.3.4.2.3 Estimativa robusta quando não há valor individual
+utilizável}\label{estimativa-robusta-quando-nuxe3o-huxe1-valor-individual-utilizuxe1vel}}
 
-Nem todos os navios que operam no Brasil aparecem na base europeia.
-Nessa situação, o sistema continua usando a própria base EU MRV, mas
-procura um grupo de embarcações semelhantes.
+A mesma regra de substituição atende a duas situações: o IMO observado
+na ANTAQ não possui um indicador individual positivo no EU MRV, ou o
+valor encontrado ultrapassa o P95 do seu tipo. Em ambos os casos, o
+sistema continua usando a base EU MRV, mas substitui a referência
+individual por uma estimativa de um grupo de embarcações semelhantes.
 
-Neste trabalho, \textbf{classe do navio} é uma faixa de porte definida
-pelo modelo dentro do tipo \emph{container ship}. O porte é aproximado
-em toneladas com campos do EU MRV ligados ao trabalho de transporte: o
-sistema prioriza informações baseadas em \emph{deadweight} (DWT) e,
-quando elas não estão disponíveis, usa informações baseadas na massa
-transportada. Em seguida, aplica três faixas:
-\texttt{container\_small}, abaixo de 20.000 t;
+O primeiro nível é a \textbf{classe do navio}, uma faixa de porte
+definida pelo CabotageLens dentro do tipo \emph{container ship}. O porte
+é aproximado em toneladas com campos do EU MRV ligados ao trabalho de
+transporte: o sistema prioriza informações baseadas em
+\emph{deadweight} (DWT) e, quando elas não estão disponíveis, usa
+informações baseadas na massa transportada. Em seguida, aplica três
+faixas: \texttt{container\_small}, abaixo de 20.000 t;
 \texttt{container\_feeder}, de 20.000 t a menos de 40.000 t; e
-\texttt{container\_large}, a partir de 40.000 t. Esses limites são
-regras de modelagem do CabotageLens; não são classes publicadas pelo EU
-MRV nem classificações técnicas atribuídas por uma sociedade
-classificadora.
+\texttt{container\_large}, a partir de 40.000 t. Essas faixas são regras
+do modelo, não classes publicadas pelo EU MRV nem classificações
+atribuídas por uma sociedade classificadora.
 
 A classe é mais específica que o tipo porque separa os
-porta-contêineres por faixa de porte. O sistema só usa a referência de
-classe quando essa identificação está disponível nos dados do navio ou
-da viagem. Ele não deduz uma classe ausente pelo nome ou pela rota. Se a
-classe não estiver disponível, procura o tipo, categoria mais ampla,
-como \emph{container ship}. O resultado é identificado como estimativa
-da classe ou do tipo; ele não é apresentado como se fosse uma medição
-individual do navio ausente.
+porta-contêineres por faixa de porte. Por isso, quando a classe está
+identificada e possui uma estatística disponível, o sistema usa sua
+intensidade. Caso contrário, recorre ao tipo, categoria mais ampla
+registrada no campo \texttt{Ship type}, como \emph{container ship}. A
+classe não é deduzida pelo nome do navio ou pela rota.
 
-Cada recorte recebe, portanto, uma intensidade e uma descrição clara de
-sua origem: valor individual do IMO, estimativa pela classe ou
-estimativa pelo tipo.
+As intensidades de classe e de tipo seguem a mesma regra de síntese
+robusta sobre os valores disponíveis em cada grupo. O sistema ordena
+esses valores, exclui os resultados abaixo do percentil 1 e acima do
+percentil 99 e calcula a média dos valores restantes. Quando a amostra é
+pequena demais para retirar ao menos um valor de cada extremidade, usa a
+mediana do grupo. Essa estatística reduz a influência de poucos valores
+extremos sem escolher deliberadamente uma intensidade menor.
+
+Assim, a sequência permanece a mesma tanto para um IMO ausente quanto
+para um valor individual acima do P95: primeiro, procura-se a estimativa
+da classe; se ela não estiver disponível, usa-se a estimativa do tipo. A
+saída registra a origem da intensidade, a estatística adotada, o tamanho
+da amostra e a quantidade de valores retirados. O resultado é
+apresentado como estimativa coletiva, e não como medição individual do
+navio.
+
+\hypertarget{exemplo-de-estimativa-pela-classe-de-navio}{%
+\subparagraph{4.3.4.2.4 Exemplo de estimativa pela classe de
+navio}\label{exemplo-de-estimativa-pela-classe-de-navio}}
+
+O exemplo a seguir aplica o primeiro nível das estimativas coletivas a
+uma viagem observada. A viagem \texttt{voyage\_9603221\_00008},
+realizada pelo navio de IMO 9603221, percorreu Santos, Suape, Pecém e
+Manaus. O número IMO foi obtido nos registros da ANTAQ e permitiu
+localizar o mesmo navio no EU MRV. Seu valor individual é
+\(228{,}83\ \mathrm{g/(t\cdot nm)}\), acima do P95 do tipo
+\emph{container ship}; por isso, esse valor não é usado diretamente.
+
+Para esse registro, o campo baseado em DWT não está disponível. Por
+isso, aplica-se a alternativa baseada na massa transportada, já descrita
+na Seção~4.3.4.2.3. O porte aproximado resultante é
+\(603{,}243\ \mathrm{t}\); como esse valor é inferior a 20.000~t, o
+navio é enquadrado na classe \texttt{container\_small}.
+
+O artefato dessa classe reúne 6.315 registros anuais válidos. Após
+ordenar as intensidades, o sistema exclui os 64 valores abaixo do
+percentil 1 e os 64 valores acima do percentil 99. Restam 6.187 valores
+para o cálculo:
+
+\[
+I_{\mathrm{container\_small}}
+=\frac{\sum_{j=1}^{6187} I_j}{6187}
+=14{,}028610\ \mathrm{g/(t\cdot nm)}.
+\]
+
+Nessa fórmula, \(I_{\mathrm{container\_small}}\) é a intensidade média
+aparada da classe \texttt{container\_small}; \(I_j\) é a intensidade do
+\(j\)-ésimo registro mantido após a retirada dos valores extremos; e
+\(j\) percorre os 6.187 valores restantes.
+
+Portanto, nesse exemplo de aplicação da regra de classe, os subtrechos
+da viagem recebem a intensidade de
+\(14{,}028610\ \mathrm{g/(t\cdot nm)}\) em substituição ao valor
+individual atípico. O resultado representa a classe
+\texttt{container\_small}, e não uma medição individual do navio de IMO
+9603221.
 
 \hypertarget{exemplo-de-estimativa-pelo-tipo-de-navio}{%
-\subparagraph{4.3.4.2.4 Exemplo de estimativa pelo tipo de
+\subparagraph{4.3.4.2.5 Exemplo de estimativa pelo tipo de
 navio}\label{exemplo-de-estimativa-pelo-tipo-de-navio}}
 
-A viagem \texttt{voyage\_9974486\_00001}, realizada pelo navio de IMO
-9974486, passou por Paranaguá, Rio de Janeiro e Salvador. Esse IMO
-aparece nos registros da ANTAQ, mas não possui correspondência
+O exemplo a seguir mostra o último nível dessa hierarquia, a estimativa
+pelo tipo. A viagem \texttt{voyage\_9974486\_00001}, realizada pelo
+navio de IMO 9974486, passou por Paranaguá, Rio de Janeiro e Salvador.
+Esse IMO aparece nos registros da ANTAQ, mas não possui correspondência
 individual no EU MRV. Como o registro também não traz uma classe mais
 específica, o sistema usa os dados do tipo documentado \emph{container
 ship} na própria base do EU MRV.
@@ -2057,141 +2139,203 @@ Seção~4.3.4.3.
 observadas}\label{exemplo-integrado-com-cinco-viagens-observadas}}
 
 Esta subseção reúne as etapas anteriores em um exemplo numérico único,
-antes do cálculo das emissões. Foram selecionados cinco recortes
-Santos--Manaus que possuem intensidade individual obtida diretamente
-pelo IMO no EU MRV e cuja distância não ultrapassa o P95 de
-\(6.975{,}000\ \mathrm{km}\). Portanto, nenhum deles exige substituição
-da intensidade por uma estatística de classe ou tipo, nem retirada da
-média de distância.
+formado por cinco recortes Santos--Manaus. O exemplo é apenas
+ilustrativo; o conjunto completo contém 89 recortes.
 
-A base atual contém somente quatro IMOs distintos que atendem
-simultaneamente a esses critérios. Por isso, o exemplo usa cinco
-recortes de quatro navios: o IMO 9612791 aparece em duas viagens, mas
-percorre sequências de escalas diferentes. Essa repetição é mantida
-porque a unidade observada pelo método é o recorte de cada viagem, e não
-apenas o navio.
+Os cinco recortes correspondem a quatro navios. O IMO 9612791 aparece
+em duas viagens, mas percorre sequências de escalas diferentes. Essa
+repetição é mantida porque a unidade observada pelo método é o recorte
+de cada viagem, e não apenas o navio.
 
+\clearpage
+\begin{landscape}
 \begin{center}
-\resizebox{\linewidth}{!}{%
-\begin{tikzpicture}
-  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,1.50cm)
-    {V1 · voyage\_9612791\_00011 · IMO 9612791 · \(I=7{,}43\ \mathrm{g/(t\cdot nm)}\)};
-  \node[clnode] (v1a) at (0.00cm,0.00cm) {Santos};
-  \node[clnode] (v1b) at (7.50cm,0.00cm) {Suape};
-  \node[clnode] (v1c) at (15.00cm,0.00cm) {Pecém};
-  \node[clnode] (v1d) at (22.50cm,0.00cm) {Manaus};
-  \node[align=center,text width=5.80cm,font=\tiny] at (3.75cm,0.72cm)
-    {\(m=12.858{,}754\ \mathrm{t}\)\\\(d=2.332{,}000\ \mathrm{km}\mid1.259{,}179\ \mathrm{nm}\)};
-  \node[align=center,text width=5.80cm,font=\tiny] at (11.25cm,0.72cm)
-    {\(m=16.718{,}333\ \mathrm{t}\)\\\(d=940{,}458\ \mathrm{km}\mid507{,}806\ \mathrm{nm}\)};
-  \node[align=center,text width=5.80cm,font=\tiny] at (18.75cm,0.72cm)
-    {\(m=12.325{,}900\ \mathrm{t}\)\\\(d=2.195{,}720\ \mathrm{km}\mid1.185{,}594\ \mathrm{nm}\)};
+\begin{tikzpicture}[
+  routehead/.style={anchor=north west, align=left, text width=4.30cm,
+    font=\scriptsize\bfseries},
+  routeport/.style={clnode, text width=1.75cm, minimum height=0.58cm,
+    font=\scriptsize},
+  routedata/.style={anchor=west, align=left, text width=3.00cm,
+    font=\scriptsize}
+]
+  % V1
+  \node[routehead] at (0.10cm,1.85cm)
+    {V1\\
+     voyage\_9612791\_00011\\
+     IMO 9612791\\
+     \(I=7{,}43\ \mathrm{g/(t\cdot nm)}\)};
+  \node[routeport] (v1a) at (1.00cm,0.00cm) {Santos};
+  \node[routeport] (v1b) at (1.00cm,-6.75cm) {Suape};
+  \node[routeport] (v1c) at (1.00cm,-9.00cm) {Pecém};
+  \node[routeport] (v1d) at (1.00cm,-11.25cm) {Manaus};
+  \node[routedata] at (2.05cm,-3.375cm)
+    {\(m=12.858{,}754\ \mathrm{t}\)\\
+     \(d=2.332{,}000\ \mathrm{km}\)\\
+     \(1.259{,}179\ \mathrm{nm}\)};
+  \node[routedata] at (2.05cm,-7.875cm)
+    {\(m=16.718{,}333\ \mathrm{t}\)\\
+     \(d=940{,}458\ \mathrm{km}\)\\
+     \(507{,}806\ \mathrm{nm}\)};
+  \node[routedata] at (2.05cm,-10.125cm)
+    {\(m=12.325{,}900\ \mathrm{t}\)\\
+     \(d=2.195{,}720\ \mathrm{km}\)\\
+     \(1.185{,}594\ \mathrm{nm}\)};
   \draw[clarrow] (v1a) -- (v1b);
   \draw[clarrow] (v1b) -- (v1c);
   \draw[clarrow] (v1c) -- (v1d);
 
-  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,-1.50cm)
-    {V2 · voyage\_9612791\_00003 · IMO 9612791 · \(I=7{,}43\ \mathrm{g/(t\cdot nm)}\)};
-  \node[clnode] (v2a) at (0.00cm,-3.00cm) {Santos};
-  \node[clnode] (v2b) at (4.50cm,-3.00cm) {Itajaí};
-  \node[clnode] (v2c) at (9.00cm,-3.00cm) {Paranaguá};
-  \node[clnode] (v2d) at (13.50cm,-3.00cm) {Suape};
-  \node[clnode] (v2e) at (18.00cm,-3.00cm) {Pecém};
-  \node[clnode] (v2f) at (22.50cm,-3.00cm) {Manaus};
-  \node[align=center,text width=3.70cm,font=\tiny] at (2.25cm,-2.28cm)
-    {\(m=4.917{,}810\ \mathrm{t}\)\\\(d=419{,}000\ \mathrm{km}\mid226{,}242\ \mathrm{nm}\)};
-  \node[align=center,text width=3.70cm,font=\tiny] at (6.75cm,-2.28cm)
-    {\(m=13.522{,}710\ \mathrm{t}\)\\\(d=193{,}000\ \mathrm{km}\mid104{,}212\ \mathrm{nm}\)};
-  \node[align=center,text width=3.70cm,font=\tiny] at (11.25cm,-2.28cm)
-    {\(m=10.386{,}517\ \mathrm{t}\)\\\(d=2.573{,}000\ \mathrm{km}\mid1.389{,}309\ \mathrm{nm}\)};
-  \node[align=center,text width=3.70cm,font=\tiny] at (15.75cm,-2.28cm)
-    {\(m=24.196{,}861\ \mathrm{t}\)\\\(d=940{,}458\ \mathrm{km}\mid507{,}806\ \mathrm{nm}\)};
-  \node[align=center,text width=3.70cm,font=\tiny] at (20.25cm,-2.28cm)
-    {\(m=22.825{,}450\ \mathrm{t}\)\\\(d=2.195{,}720\ \mathrm{km}\mid1.185{,}594\ \mathrm{nm}\)};
+  % V2
+  \node[routehead] at (5.00cm,1.85cm)
+    {V2\\
+     voyage\_9612791\_00003\\
+     IMO 9612791\\
+     \(I=7{,}43\ \mathrm{g/(t\cdot nm)}\)};
+  \node[routeport] (v2a) at (5.90cm,0.00cm) {Santos};
+  \node[routeport] (v2b) at (5.90cm,-2.25cm) {Itajaí};
+  \node[routeport] (v2c) at (5.90cm,-4.50cm) {Paranaguá};
+  \node[routeport] (v2d) at (5.90cm,-6.75cm) {Suape};
+  \node[routeport] (v2e) at (5.90cm,-9.00cm) {Pecém};
+  \node[routeport] (v2f) at (5.90cm,-11.25cm) {Manaus};
+  \node[routedata] at (6.95cm,-1.125cm)
+    {\(m=4.917{,}810\ \mathrm{t}\)\\
+     \(d=419{,}000\ \mathrm{km}\)\\
+     \(226{,}242\ \mathrm{nm}\)};
+  \node[routedata] at (6.95cm,-3.375cm)
+    {\(m=13.522{,}710\ \mathrm{t}\)\\
+     \(d=193{,}000\ \mathrm{km}\)\\
+     \(104{,}212\ \mathrm{nm}\)};
+  \node[routedata] at (6.95cm,-5.625cm)
+    {\(m=10.386{,}517\ \mathrm{t}\)\\
+     \(d=2.573{,}000\ \mathrm{km}\)\\
+     \(1.389{,}309\ \mathrm{nm}\)};
+  \node[routedata] at (6.95cm,-7.875cm)
+    {\(m=24.196{,}861\ \mathrm{t}\)\\
+     \(d=940{,}458\ \mathrm{km}\)\\
+     \(507{,}806\ \mathrm{nm}\)};
+  \node[routedata] at (6.95cm,-10.125cm)
+    {\(m=22.825{,}450\ \mathrm{t}\)\\
+     \(d=2.195{,}720\ \mathrm{km}\)\\
+     \(1.185{,}594\ \mathrm{nm}\)};
   \draw[clarrow] (v2a) -- (v2b);
   \draw[clarrow] (v2b) -- (v2c);
   \draw[clarrow] (v2c) -- (v2d);
   \draw[clarrow] (v2d) -- (v2e);
   \draw[clarrow] (v2e) -- (v2f);
 
-  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,-4.50cm)
-    {V3 · voyage\_9539494\_00001 · IMO 9539494 · \(I=9{,}50\ \mathrm{g/(t\cdot nm)}\)};
-  \node[clnode] (v3a) at (0.00cm,-6.00cm) {Santos};
-  \node[clnode] (v3b) at (4.50cm,-6.00cm) {Itapoá};
-  \node[clnode] (v3c) at (9.00cm,-6.00cm) {Rio de Janeiro};
-  \node[clnode] (v3d) at (13.50cm,-6.00cm) {Suape};
-  \node[clnode] (v3e) at (18.00cm,-6.00cm) {Pecém};
-  \node[clnode] (v3f) at (22.50cm,-6.00cm) {Manaus};
-  \node[align=center,text width=3.70cm,font=\tiny] at (2.25cm,-5.28cm)
-    {\(m=16.056{,}390\ \mathrm{t}\)\\\(d=420{,}711\ \mathrm{km}\mid227{,}166\ \mathrm{nm}\)};
-  \node[align=center,text width=3.70cm,font=\tiny] at (6.75cm,-5.28cm)
-    {\(m=21.950{,}396\ \mathrm{t}\)\\\(d=750{,}344\ \mathrm{km}\mid405{,}153\ \mathrm{nm}\)};
-  \node[align=center,text width=3.70cm,font=\tiny] at (11.25cm,-5.28cm)
-    {\(m=24.195{,}104\ \mathrm{t}\)\\\(d=1.965{,}000\ \mathrm{km}\mid1.061{,}015\ \mathrm{nm}\)};
-  \node[align=center,text width=3.70cm,font=\tiny] at (15.75cm,-5.28cm)
-    {\(m=22.048{,}947\ \mathrm{t}\)\\\(d=940{,}458\ \mathrm{km}\mid507{,}806\ \mathrm{nm}\)};
-  \node[align=center,text width=3.70cm,font=\tiny] at (20.25cm,-5.28cm)
-    {\(m=22.144{,}555\ \mathrm{t}\)\\\(d=2.195{,}720\ \mathrm{km}\mid1.185{,}594\ \mathrm{nm}\)};
+  % V3
+  \node[routehead] at (9.90cm,1.85cm)
+    {V3\\
+     voyage\_9539494\_00001\\
+     IMO 9539494\\
+     \(I=9{,}50\ \mathrm{g/(t\cdot nm)}\)};
+  \node[routeport] (v3a) at (10.80cm,0.00cm) {Santos};
+  \node[routeport] (v3b) at (10.80cm,-2.25cm) {Itapoá};
+  \node[routeport] (v3c) at (10.80cm,-4.50cm) {Rio de Janeiro};
+  \node[routeport] (v3d) at (10.80cm,-6.75cm) {Suape};
+  \node[routeport] (v3e) at (10.80cm,-9.00cm) {Pecém};
+  \node[routeport] (v3f) at (10.80cm,-11.25cm) {Manaus};
+  \node[routedata] at (11.85cm,-1.125cm)
+    {\(m=16.056{,}390\ \mathrm{t}\)\\
+     \(d=420{,}711\ \mathrm{km}\)\\
+     \(227{,}166\ \mathrm{nm}\)};
+  \node[routedata] at (11.85cm,-3.375cm)
+    {\(m=21.950{,}396\ \mathrm{t}\)\\
+     \(d=750{,}344\ \mathrm{km}\)\\
+     \(405{,}153\ \mathrm{nm}\)};
+  \node[routedata] at (11.85cm,-5.625cm)
+    {\(m=24.195{,}104\ \mathrm{t}\)\\
+     \(d=1.965{,}000\ \mathrm{km}\)\\
+     \(1.061{,}015\ \mathrm{nm}\)};
+  \node[routedata] at (11.85cm,-7.875cm)
+    {\(m=22.048{,}947\ \mathrm{t}\)\\
+     \(d=940{,}458\ \mathrm{km}\)\\
+     \(507{,}806\ \mathrm{nm}\)};
+  \node[routedata] at (11.85cm,-10.125cm)
+    {\(m=22.144{,}555\ \mathrm{t}\)\\
+     \(d=2.195{,}720\ \mathrm{km}\)\\
+     \(1.185{,}594\ \mathrm{nm}\)};
   \draw[clarrow] (v3a) -- (v3b);
   \draw[clarrow] (v3b) -- (v3c);
   \draw[clarrow] (v3c) -- (v3d);
   \draw[clarrow] (v3d) -- (v3e);
   \draw[clarrow] (v3e) -- (v3f);
 
-  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,-7.50cm)
-    {V4 · voyage\_9649835\_00009 · IMO 9649835 · \(I=5{,}41\ \mathrm{g/(t\cdot nm)}\)};
-  \node[clnode] (v4a) at (0.00cm,-9.00cm) {Santos};
-  \node[clnode] (v4b) at (5.63cm,-9.00cm) {Itapoá};
-  \node[clnode] (v4c) at (11.25cm,-9.00cm) {Suape};
-  \node[clnode] (v4d) at (16.88cm,-9.00cm) {Pecém};
-  \node[clnode] (v4e) at (22.50cm,-9.00cm) {Manaus};
-  \node[align=center,text width=4.70cm,font=\tiny] at (2.81cm,-8.28cm)
-    {\(m=27.128{,}064\ \mathrm{t}\)\\\(d=420{,}711\ \mathrm{km}\mid227{,}166\ \mathrm{nm}\)};
-  \node[align=center,text width=4.70cm,font=\tiny] at (8.44cm,-8.28cm)
-    {\(m=26.218{,}790\ \mathrm{t}\)\\\(d=2.596{,}249\ \mathrm{km}\mid1.401{,}862\ \mathrm{nm}\)};
-  \node[align=center,text width=4.70cm,font=\tiny] at (14.06cm,-8.28cm)
-    {\(m=27.448{,}321\ \mathrm{t}\)\\\(d=940{,}458\ \mathrm{km}\mid507{,}806\ \mathrm{nm}\)};
-  \node[align=center,text width=4.70cm,font=\tiny] at (19.69cm,-8.28cm)
-    {\(m=26.331{,}352\ \mathrm{t}\)\\\(d=2.195{,}720\ \mathrm{km}\mid1.185{,}594\ \mathrm{nm}\)};
+  % V4
+  \node[routehead] at (14.80cm,1.85cm)
+    {V4\\
+     voyage\_9649835\_00009\\
+     IMO 9649835\\
+     \(I=5{,}41\ \mathrm{g/(t\cdot nm)}\)};
+  \node[routeport] (v4a) at (15.70cm,0.00cm) {Santos};
+  \node[routeport] (v4b) at (15.70cm,-2.25cm) {Itapoá};
+  \node[routeport] (v4c) at (15.70cm,-6.75cm) {Suape};
+  \node[routeport] (v4d) at (15.70cm,-9.00cm) {Pecém};
+  \node[routeport] (v4e) at (15.70cm,-11.25cm) {Manaus};
+  \node[routedata] at (16.75cm,-1.125cm)
+    {\(m=27.128{,}064\ \mathrm{t}\)\\
+     \(d=420{,}711\ \mathrm{km}\)\\
+     \(227{,}166\ \mathrm{nm}\)};
+  \node[routedata] at (16.75cm,-4.50cm)
+    {\(m=26.218{,}790\ \mathrm{t}\)\\
+     \(d=2.596{,}249\ \mathrm{km}\)\\
+     \(1.401{,}862\ \mathrm{nm}\)};
+  \node[routedata] at (16.75cm,-7.875cm)
+    {\(m=27.448{,}321\ \mathrm{t}\)\\
+     \(d=940{,}458\ \mathrm{km}\)\\
+     \(507{,}806\ \mathrm{nm}\)};
+  \node[routedata] at (16.75cm,-10.125cm)
+    {\(m=26.331{,}352\ \mathrm{t}\)\\
+     \(d=2.195{,}720\ \mathrm{km}\)\\
+     \(1.185{,}594\ \mathrm{nm}\)};
   \draw[clarrow] (v4a) -- (v4b);
   \draw[clarrow] (v4b) -- (v4c);
   \draw[clarrow] (v4c) -- (v4d);
   \draw[clarrow] (v4d) -- (v4e);
 
-  \node[anchor=west,font=\scriptsize\bfseries] at (-1.15cm,-10.50cm)
-    {V5 · voyage\_9343974\_00002 · IMO 9343974 · \(I=6{,}80\ \mathrm{g/(t\cdot nm)}\)};
-  \node[clnode] (v5a) at (0.00cm,-12.00cm) {Santos};
-  \node[clnode] (v5b) at (5.63cm,-12.00cm) {Itapoá};
-  \node[clnode] (v5c) at (11.25cm,-12.00cm) {Paranaguá};
-  \node[clnode] (v5d) at (16.88cm,-12.00cm) {Suape};
-  \node[clnode] (v5e) at (22.50cm,-12.00cm) {Manaus};
-  \node[align=center,text width=4.70cm,font=\tiny] at (2.81cm,-11.28cm)
-    {\(m=13.420{,}582\ \mathrm{t}\)\\\(d=420{,}711\ \mathrm{km}\mid227{,}166\ \mathrm{nm}\)};
-  \node[align=center,text width=4.70cm,font=\tiny] at (8.44cm,-11.28cm)
-    {\(m=186{,}001\ \mathrm{t}\)\\\(d=75{,}884\ \mathrm{km}^{*}\mid40{,}974\ \mathrm{nm}^{*}\)};
-  \node[align=center,text width=4.70cm,font=\tiny] at (14.06cm,-11.28cm)
-    {\(m=184{,}551\ \mathrm{t}\)\\\(d=2.573{,}000\ \mathrm{km}\mid1.389{,}309\ \mathrm{nm}\)};
-  \node[align=center,text width=4.70cm,font=\tiny] at (19.69cm,-11.28cm)
-    {\(m=955{,}858\ \mathrm{t}\)\\\(d=3.790{,}000\ \mathrm{km}\mid2.046{,}436\ \mathrm{nm}\)};
+  % V5
+  \node[routehead] at (19.70cm,1.85cm)
+    {V5\\
+     voyage\_9343974\_00002\\
+     IMO 9343974\\
+     \(I=6{,}80\ \mathrm{g/(t\cdot nm)}\)};
+  \node[routeport] (v5a) at (20.60cm,0.00cm) {Santos};
+  \node[routeport] (v5b) at (20.60cm,-2.25cm) {Itapoá};
+  \node[routeport] (v5c) at (20.60cm,-4.50cm) {Paranaguá};
+  \node[routeport] (v5d) at (20.60cm,-6.75cm) {Suape};
+  \node[routeport] (v5e) at (20.60cm,-11.25cm) {Manaus};
+  \node[routedata] at (21.65cm,-1.125cm)
+    {\(m=13.420{,}582\ \mathrm{t}\)\\
+     \(d=420{,}711\ \mathrm{km}\)\\
+     \(227{,}166\ \mathrm{nm}\)};
+  \node[routedata] at (21.65cm,-3.375cm)
+    {\(m=186{,}001\ \mathrm{t}\)\\
+     \(d=75{,}884\ \mathrm{km}\)\\
+     \(40{,}974\ \mathrm{nm}\)};
+  \node[routedata] at (21.65cm,-5.625cm)
+    {\(m=184{,}551\ \mathrm{t}\)\\
+     \(d=2.573{,}000\ \mathrm{km}\)\\
+     \(1.389{,}309\ \mathrm{nm}\)};
+  \node[routedata] at (21.65cm,-9.00cm)
+    {\(m=955{,}858\ \mathrm{t}\)\\
+     \(d=3.790{,}000\ \mathrm{km}\)\\
+     \(2.046{,}436\ \mathrm{nm}\)};
   \draw[clarrow] (v5a) -- (v5b);
   \draw[clarrow] (v5b) -- (v5c);
   \draw[clarrow] (v5c) -- (v5d);
   \draw[clarrow] (v5d) -- (v5e);
-\end{tikzpicture}%
-}
+\end{tikzpicture}
 \end{center}
 
-\emph{Figura 6 --- Cinco recortes observados entre Santos e Manaus. Cada
+\emph{Figura 7 --- Cinco recortes observados entre Santos e Manaus. Cada
 seta informa a carga a bordo (\(m\)) e a distância do subtrecho
 (\(d\)). Fonte: elaboração própria com dados de Carga e Atracação da
 ANTAQ, intensidades do EU MRV e distâncias da matriz marítima do
-sistema. O asterisco identifica o subtrecho Itapoá--Paranaguá, cuja
-distância foi estimada por \texttt{haversine\_fallback}; as demais
-distâncias vieram da matriz marítima.}
+sistema.}
+\end{landscape}
 
 Primeiro, calcula-se o trabalho de transporte de cada recorte pela soma
 dos produtos entre carga e distância de seus subtrechos. Aplicando
-\(W_v=\sum_s m_{v,s}d_{v,s}\) aos valores da Figura 6:
+\(W_v=\sum_s m_{v,s}\times d_{v,s}\) aos valores da Figura 7:
 
 \[
 \begin{aligned}
@@ -2257,8 +2401,8 @@ Assim, a intensidade representativa apenas deste conjunto ilustrativo
 \[
 \begin{aligned}
 I_5
-&=\frac{\sum_{v=1}^{5}I_vW_v}{\sum_{v=1}^{5}W_v}\\
-&=\frac{1.941.386{,}140\times1000}{264.602.033{,}408}\\
+&=\frac{\sum_{v=1}^{5}I_v\times W_v}{\sum_{v=1}^{5}W_v}\\[4pt]
+&=\frac{1.941.386{,}140\times1000}{264.602.033{,}408}\\[4pt]
 &=7{,}337004\ \mathrm{g/(t\cdot nm)}.
 \end{aligned}
 \]
@@ -2269,19 +2413,22 @@ distância. A média ponderada pelas cargas médias a bordo é:
 \[
 \begin{aligned}
 \bar D_5
-&=\frac{\sum_{v=1}^{5}D_v^{\mathrm{km}}\bar m_v}
-{\sum_{v=1}^{5}\bar m_v}\\
+&=\frac{\sum_{v=1}^{5}D_v^{\mathrm{km}}\times\bar m_v}
+{\sum_{v=1}^{5}\bar m_v}\\[4pt]
 &=\frac{
 \begin{aligned}
-&5.468{,}178(13.308{,}588)+
-6.321{,}178(16.495{,}245)+
-6.272{,}232(22.341{,}035)\\
+&\quad5.468{,}178\times13.308{,}588\\
 &\quad+
-6.153{,}138(26.509{,}051)+
-6.859{,}595(1.422{,}511)
+6.321{,}178\times16.495{,}245\\
+&\quad+
+6.272{,}232\times22.341{,}035\\
+&\quad+
+6.153{,}138\times26.509{,}051\\
+&\quad+
+6.859{,}595\times1.422{,}511
 \end{aligned}}
-{80.076{,}431}\\
-&=6.119{,}690\ \mathrm{km}
+{80.076{,}431}
+=6.119{,}690\ \mathrm{km}
 =3.304{,}368\ \mathrm{nm}.
 \end{aligned}
 \]
@@ -2381,9 +2528,31 @@ MEPC.391(81).\strut
 \bottomrule
 \end{longtable}
 
-Para cada etapa, a emissão é o combustível consumido multiplicado pelo
-fator correspondente. Nos acessos e nas operações portuárias, usa-se o
-volume de Diesel S10; na navegação, usa-se a massa de VLSFO:
+Para as etapas que usam Diesel S10 --- \emph{first mile}, operações
+portuárias e \emph{last mile} ---, a emissão é calculada a partir do
+volume consumido:
+
+\[
+E_{i,\mathrm{diesel}}
+=V_{\mathrm{diesel},i}\,FE_{\mathrm{diesel}},
+\qquad
+i\in\{\mathrm{first},\mathrm{porto},\mathrm{last}\}.
+\]
+
+Na navegação, o consumo é expresso em massa de VLSFO:
+
+\[
+E_{\mathrm{navegacao}}
+=M_{\mathrm{VLSFO}}\,FE_{\mathrm{VLSFO}}.
+\]
+
+Nessas expressões, \(E\) é a emissão operacional, em
+\(\mathrm{kg\ CO_2e}\); \(V_{\mathrm{diesel},i}\) é o volume de Diesel
+S10 da etapa \(i\), em litros; \(M_{\mathrm{VLSFO}}\) é a massa de
+VLSFO, em quilogramas; \(FE_{\mathrm{diesel}}\) é o fator do diesel, em
+\(\mathrm{kg\ CO_2e/L}\); e \(FE_{\mathrm{VLSFO}}\) é o fator do VLSFO,
+em \(\mathrm{kg\ CO_2e/kg}\). Aplicando essas relações aos consumos já
+calculados:
 
 \[
 \begin{aligned}
@@ -2483,14 +2652,22 @@ Santos (SP), R\$~6,960/L.\strut
 R\$~6,960/L\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
-Operações portuárias\strut
+Operação no porto de embarque\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
 \href{https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas}{ANP}\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-Diesel S10: \newline{} Porto de Santos (SP), R\$~6,960/L; \newline{}
-Porto de Manaus (AM), R\$~7,250/L.\strut
+Diesel S10: \newline{} Porto de Santos (SP), R\$~6,960/L.\strut
 \end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
-R\$~6,960/L em Santos e \newline{} R\$~7,250/L em Manaus.\strut
+R\$~6,960/L\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.22\columnwidth}\raggedright
+Operação no porto de desembarque\strut
+\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
+\href{https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas}{ANP}\strut
+\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
+Diesel S10: \newline{} Porto de Manaus (AM), R\$~7,250/L.\strut
+\end{minipage} & \begin{minipage}[t]{0.22\columnwidth}\raggedright
+R\$~7,250/L\strut
 \end{minipage}\tabularnewline
 \begin{minipage}[t]{0.22\columnwidth}\raggedright
 Navegação\strut
@@ -2515,27 +2692,66 @@ R\$~8,260/L\strut
 \bottomrule
 \end{longtable}
 
-O custo de cada etapa é o respectivo consumo multiplicado pelo preço do
-combustível. No \emph{first mile}, São Paulo é tanto a UF de origem
-quanto a UF do porto de Santos, de modo que o preço permanece em
-R\$~6,960/L. No \emph{last mile}, a média entre Amazonas e Acre é
+Para as etapas que usam Diesel S10 --- \emph{first mile}, operação no
+porto de embarque, operação no porto de desembarque e \emph{last mile}
+---, o custo é calculado pelo produto entre o volume consumido e o preço
+do diesel aplicado à etapa:
+
+\[
+C_i
+=V_{\mathrm{diesel},i}\,P_{\mathrm{diesel},i}.
+\]
+
+Na navegação, o consumo e o preço do VLSFO são expressos em massa:
+
+\[
+C_{\mathrm{navegacao}}
+=M_{\mathrm{VLSFO}}\,P_{\mathrm{VLSFO}}.
+\]
+
+O custo portuário reúne as duas operações, calculadas separadamente:
+
+\[
+C_{\mathrm{porto}}
+=C_{\mathrm{porto,embarque}}
++C_{\mathrm{porto,desembarque}}.
+\]
+
+Nessas expressões, \(C_i\) é o custo modelado do combustível da etapa
+\(i\), em reais; \(V_{\mathrm{diesel},i}\) é o volume de Diesel S10, em
+litros; \(P_{\mathrm{diesel},i}\) é o preço do diesel, em reais por
+litro; \(M_{\mathrm{VLSFO}}\) é a massa de VLSFO, em quilogramas; e
+\(P_{\mathrm{VLSFO}}\) é o preço desse combustível, em reais por
+quilograma.
+
+Aplicando essas relações ao exemplo, São Paulo é tanto a UF de origem
+quanto a UF do porto de Santos, de modo que o preço do
+\emph{first mile} permanece em R\$~6,960/L. No \emph{last mile}, a
+média entre Amazonas e Acre é
 \((7{,}250+9{,}270)/2=8{,}260\)~R\$/L. Nas operações portuárias, os
-4,820~L correspondem a 2,410~L em cada terminal, e cada parcela recebe o
-preço da sua UF. Na navegação, o cálculo mantém a conversão não
-arredondada de R\$~3,81231/kg:
+4,820~L correspondem a 2,410~L no embarque e 2,410~L no desembarque;
+cada parcela recebe o preço do diesel na UF do respectivo porto. Na
+navegação, o cálculo mantém a conversão não arredondada de
+R\$~3,81231/kg:
 
 \[
 \begin{aligned}
 C_{\mathrm{first}}
 &=37{,}465\ \mathrm{L}\times6{,}960\ \mathrm{R\$/L}
 =260{,}76\ \mathrm{R\$},\\
+C_{\mathrm{porto,embarque}}
+&=2{,}410\ \mathrm{L}\times6{,}960\ \mathrm{R\$/L}
+=16{,}7736\ \mathrm{R\$},\\
+C_{\mathrm{porto,desembarque}}
+&=2{,}410\ \mathrm{L}\times7{,}250\ \mathrm{R\$/L}
+=17{,}4725\ \mathrm{R\$},\\
+C_{\mathrm{porto}}
+&=16{,}7736+17{,}4725
+=34{,}2461\ \mathrm{R\$}
+\approx34{,}25\ \mathrm{R\$},\\
 C_{\mathrm{navegacao}}
 &=322{,}801\ \mathrm{kg}\times3{,}81231\ \mathrm{R\$/kg}
 =1.230{,}62\ \mathrm{R\$},\\
-C_{\mathrm{porto}}
-&=(2{,}410\ \mathrm{L}\times6{,}960\ \mathrm{R\$/L})
-+(2{,}410\ \mathrm{L}\times7{,}250\ \mathrm{R\$/L})\\
-&=34{,}25\ \mathrm{R\$},\\
 C_{\mathrm{last}}
 &=610{,}300\ \mathrm{L}\times8{,}260\ \mathrm{R\$/L}
 =5.041{,}08\ \mathrm{R\$}.
@@ -2928,7 +3144,7 @@ referência
 \texttt{Avenida\ Professor\ Luciano\ Gualberto,\ São\ Paulo,\ SP}. A
 consulta independente no Google Maps retornou as coordenadas latitude
 igual a −23,560017° e longitude igual a −46,727769°, apresentadas na
-Figura 7 \parencite{googlemaps2026}. Para o mesmo endereço, o motor de geocodificação retornou as
+Figura 8 \parencite{googlemaps2026}. Para o mesmo endereço, o motor de geocodificação retornou as
 coordenadas (−23,558808°; −46,730357°). A distância em linha reta entre
 os dois pontos é aproximadamente 296~m.
 
@@ -2936,11 +3152,11 @@ os dois pontos é aproximadamente 296~m.
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-18 143636.png}
 \end{center}
 
-\emph{Figura 7 --- Consulta independente do endereço Avenida Professor
+\emph{Figura 8 --- Consulta independente do endereço Avenida Professor
 Luciano Gualberto, São Paulo, SP, no Google Maps. Fonte: captura de tela
 do Google Maps realizada em 18 de julho de 2026.}
 
-A Figura 8 mostra a consulta, no Google Maps, das coordenadas devolvidas
+A Figura 9 mostra a consulta, no Google Maps, das coordenadas devolvidas
 pelo motor; os dois pontos permanecem na Avenida Professor Luciano
 Gualberto, na região da Universidade de São Paulo (USP).
 
@@ -2948,7 +3164,7 @@ Gualberto, na região da Universidade de São Paulo (USP).
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-18 145249.png}
 \end{center}
 
-\emph{Figura 8 --- Consulta no Google Maps das coordenadas retornadas
+\emph{Figura 9 --- Consulta no Google Maps das coordenadas retornadas
 pelo motor de geocodificação para a Avenida Professor Luciano Gualberto.
 Fonte: captura de tela do Google Maps realizada em 18 de julho de 2026.}
 
@@ -3003,7 +3219,7 @@ Seção 5.2, o ORS recebeu as coordenadas de São Paulo (latitude
 \paragraph{5.3.1.1 Validação da distância
 rodoviária}\label{validauxe7uxe3o-da-distuxe2ncia-rodoviuxe1ria}}
 
-A Figura 9 apresenta uma consulta independente no Google Maps para a
+A Figura 10 apresenta uma consulta independente no Google Maps para a
 mesma ligação entre São Paulo e Rio Branco. A rota selecionada pelo
 Google Maps tem 3.497~km, enquanto o motor do sistema retornou
 3.491,431~km. A diferença é de 5,569~km, ou 0,16\% da distância exibida
@@ -3013,7 +3229,7 @@ no Google Maps.
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-15 144749.png}
 \end{center}
 
-\emph{Figura 9 --- Consulta no Google Maps para São Paulo--Rio Branco:
+\emph{Figura 10 --- Consulta no Google Maps para São Paulo--Rio Branco:
 rota selecionada de 3.497~km. Fonte: captura de tela do Google Maps
 realizada em 15 de julho de 2026.}
 
@@ -3761,7 +3977,7 @@ duas interfaces.
 \subsubsection{5.8.1 Página Router}\label{puxe1gina-router}}
 
 A página Router executa a comparação para a origem, o destino e a carga
-informados no cenário. A Figura 10 mostra os campos da barra lateral
+informados no cenário. A Figura 11 mostra os campos da barra lateral
 usados nessa definição. No exemplo, a análise parte da Avenida Professor
 Luciano Gualberto, em São Paulo, segue para Manaus e considera uma carga
 de 14 t.
@@ -3770,11 +3986,11 @@ de 14 t.
 \includegraphics[width=0.94\linewidth]{images/router-scenario.png}
 \end{center}
 
-\emph{Figura 10 --- Campos de definição do cenário na página Router.
+\emph{Figura 11 --- Campos de definição do cenário na página Router.
 Fonte: elaboração própria.}
 
 Após a execução, a página apresenta as alternativas calculadas em um
-mapa, como ilustra a Figura 11. As linhas traçadas servem apenas para
+mapa, como ilustra a Figura 12. As linhas traçadas servem apenas para
 representar visualmente as distâncias e a ligação entre os pontos; elas
 não correspondem às rotas rodoviárias ou marítimas efetivamente
 utilizadas nos cálculos.
@@ -3783,7 +3999,7 @@ utilizadas nos cálculos.
 \includegraphics[width=0.94\linewidth]{images/router-map.png}
 \end{center}
 
-\emph{Figura 11 --- Representação visual das alternativas calculadas na
+\emph{Figura 12 --- Representação visual das alternativas calculadas na
 página Router. Fonte: elaboração própria.}
 
 Os resultados detalhados, os avisos, os logs e os demais registros
@@ -3802,7 +4018,7 @@ uma origem e a massa da carga, e o sistema compara esse cenário com 608
 municípios brasileiros de população superior a 50 mil habitantes. Para
 cada município, são calculadas as mesmas duas alternativas descritas na
 Seção 4: a rodovia direta e a cadeia rodoviária--cabotagem--rodoviária.
-A Figura 12 mostra os campos usados para definir o cenário. No exemplo, a
+A Figura 13 mostra os campos usados para definir o cenário. No exemplo, a
 análise parte da Avenida Professor Luciano Gualberto, em São Paulo, e
 considera uma carga de 14 t.
 
@@ -3810,7 +4026,7 @@ considera uma carga de 14 t.
 \includegraphics[width=0.94\linewidth]{images/heatmap-scenario.png}
 \end{center}
 
-\emph{Figura 12 --- Campos de definição do cenário na página Mapa de
+\emph{Figura 13 --- Campos de definição do cenário na página Mapa de
 calor. Fonte: elaboração própria.}
 
 O resultado permite visualizar, em diferentes partes do país, onde a
@@ -3826,14 +4042,14 @@ diferenças. Os resultados são calculados para os municípios do conjunto
 de destinos; as áreas entre eles são uma interpolação visual para tornar
 o padrão mais legível no mapa. Portanto, cada área colorida não
 representa uma nova rota calculada, mas a visualização dos resultados
-obtidos para os destinos próximos. A Figura 13 ilustra essa representação
+obtidos para os destinos próximos. A Figura 14 ilustra essa representação
 para o cenário informado.
 
 \begin{center}
 \includegraphics[width=0.94\linewidth]{images/heatmap-map.png}
 \end{center}
 
-\emph{Figura 13 --- Representação espacial dos resultados calculados na
+\emph{Figura 14 --- Representação espacial dos resultados calculados na
 página Mapa de calor. Fonte: elaboração própria.}
 
 \hypertarget{comparauxe7uxf5es-com-ferramentas-externas}{%
@@ -3868,7 +4084,7 @@ totais.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/calculo-co2_86072221.png}
 \end{center}
 
-\emph{Figura 14 --- Resultado da calculadora da Aliança para São
+\emph{Figura 15 --- Resultado da calculadora da Aliança para São
 Paulo--Abaetetuba. Fonte: resultado exportado pela ferramenta, fornecido
 pelo autor.}
 
@@ -4009,7 +4225,7 @@ mesmo cenário foi executado no CabotageLens com 14 t e 1 TEU.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/loginlogistica.png}
 \end{center}
 
-\emph{Figura 15 --- Resultado da calculadora de emissões da Log-In.
+\emph{Figura 16 --- Resultado da calculadora de emissões da Log-In.
 Fonte: captura de tela fornecida pelo autor.}
 
 \textbf{Tabela 20 --- Emissões no cenário de referência São Paulo--Rio
@@ -4099,7 +4315,7 @@ combustível.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/calculadorafreteantt.png}
 \end{center}
 
-\emph{Figura 16 --- Resultado da calculadora de piso mínimo de frete da
+\emph{Figura 17 --- Resultado da calculadora de piso mínimo de frete da
 ANTT para a distância de 3.491 km. Fonte: captura de tela fornecida pelo
 autor.}
 
