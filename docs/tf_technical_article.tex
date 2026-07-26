@@ -119,10 +119,13 @@
 \usepackage[backend=biber,style=abnt,sorting=nyt]{biblatex}
 \addbibresource{references.bib}
 
-\title{CabotageLens: sistema computacional auditável para comparação porta a
-porta entre rodovia e cabotagem no Brasil}
-\author{Felipe de Sá Proença}
-\date{}
+\newcommand{\reporttitle}{CabotageLens: sistema computacional auditável para comparação porta a porta entre rodovia e cabotagem no Brasil}
+\newcommand{\reportauthor}{Felipe de Sá Proença}
+\newcommand{\reportadvisor}{Prof. Dr. Marcos Mendes de Oliveira Pinto}
+\newcommand{\reportinstitution}{Escola Politécnica da Universidade de São Paulo}
+\newcommand{\reportcourse}{Engenharia Naval}
+\newcommand{\reportlocation}{São Paulo}
+\newcommand{\reportyear}{2026}
 
 
 % -----------------------------------------------------------------------------
@@ -151,8 +154,58 @@ porta entre rodovia e cabotagem no Brasil}
 \renewcommand{\refname}{Referências}
 
 \begin{document}
-\maketitle
+\begin{titlepage}
 \thispagestyle{empty}
+\centering
+
+{\large\reportinstitution\par}
+\vspace{0.4cm}
+{\large\reportcourse\par}
+
+\vfill
+
+{\Large\reportauthor\par}
+
+\vfill
+
+{\LARGE\bfseries\color{clblue}\reporttitle\par}
+
+\vfill
+
+{\large Trabalho de Formatura\par}
+\vspace{0.5cm}
+{\large\textbf{Orientador:} \reportadvisor\par}
+
+\vfill
+
+{\large\reportlocation\par}
+{\large\reportyear\par}
+\end{titlepage}
+
+\section*{Resumo}
+
+Este trabalho apresenta o CabotageLens, um sistema computacional auditável
+para comparar, porta a porta, o transporte rodoviário direto e a alternativa
+multimodal formada por acessos rodoviários, operações portuárias e cabotagem
+no Brasil. Para a mesma carga, origem e destino, o sistema estima as
+distâncias, o consumo de Diesel S10 e VLSFO, as emissões operacionais
+\emph{tank-to-wheel} (TTW) e o custo modelado do combustível. A perna
+marítima é construída com viagens observadas pela Agência Nacional de
+Transportes Aquaviários (ANTAQ): as escalas são ordenadas, a carga a bordo é
+calculada em cada subtrecho e a intensidade de combustível é obtida no
+sistema europeu de Monitoramento, Reporte e Verificação (EU MRV),
+preferencialmente pelo mesmo número IMO ou, quando necessário, por uma
+estimativa robusta do tipo do navio. No exemplo de uma remessa de 14~t entre
+São Paulo e Rio Branco, a alternativa multimodal percorreu 117,24\% mais
+quilômetros, mas apresentou 32,30\% menos emissões operacionais de
+CO\textsubscript{2}e e custo modelado do combustível 46,69\% menor que a
+alternativa rodoviária direta. Esses resultados se restringem ao cenário e
+às premissas declaradas: não representam frete comercial, disponibilidade
+do serviço, emissões \emph{well-to-wheel} ou avaliação de ciclo de vida.
+
+\noindent\textbf{Palavras-chave:} cabotagem; transporte multimodal; emissões
+operacionais; custo de combustível; rastreabilidade.
+
 \clearpage
 
 \tableofcontents
@@ -1373,12 +1426,12 @@ superiores a zero, \(B_0\) é igual a zero.
 \texttt{voyage\_9612791\_00011}}{4.3.4.1.3.2 Carga a bordo para a viagem voyage\_9612791\_00011}}\label{carga-a-bordo-para-a-viagem-voyage-9612791-00011}}
 
 A viagem \texttt{voyage\_9612791\_00011} permite aplicar esse
-procedimento passo a passo. A tabela a seguir parte de \(S_0=0\) e
+procedimento passo a passo. A Tabela 6 parte de \(S_0=0\) e
 apresenta, em cada escala, os valores de embarque e desembarque
 informados na Tabela 4, o saldo líquido \(\Delta_k\) e o saldo acumulado
 provisório \(S_k\).
 
-\textbf{Detalhamento do saldo de carga por escala na viagem
+\textbf{Tabela 6 --- Detalhamento do saldo de carga por escala na viagem
 \texttt{voyage\_9612791\_00011}.}
 
 \begin{longtable}[]{@{}llllll@{}}
@@ -1468,7 +1521,7 @@ B_0
 Os valores de \(S_k\) não representam a carga efetiva a bordo, pois
 resultam do balanço iniciado em zero. Eles servem para determinar
 \(B_0\). A carga após cada escala é então calculada sucessivamente com os
-valores de \(\Delta_k\) apresentados na tabela:
+valores de \(\Delta_k\) apresentados na Tabela 6:
 
 \[
 \begin{aligned}
@@ -1585,9 +1638,8 @@ reconstruído, o CabotageLens seleciona a intensidade por uma única
 hierarquia: usa o valor individual positivo mais recente do mesmo IMO;
 verifica esse valor em relação aos navios do mesmo tipo, quando há
 amostra suficiente; e, se a correspondência individual não existir ou
-for considerada atípica, recorre a uma estimativa robusta da classe ou,
-na falta dela, do tipo do navio. A origem do valor selecionado permanece
-registrada.
+for considerada atípica, recorre a uma estimativa robusta do tipo do
+navio. A origem do valor selecionado permanece registrada.
 
 Em seguida, essa intensidade é aplicada ao trabalho de transporte do
 recorte, conforme a Seção 4.3.4.3. Como o campo adotado informa apenas a
@@ -1624,10 +1676,10 @@ Fonte: Agência Europeia de Segurança Marítima (EMSA), 2026.}
 
 Na viagem \texttt{voyage\_9612791\_00011}, o IMO 9612791 foi encontrado
 diretamente no EU MRV, com intensidade de
-\(7{,}43\ \mathrm{g/(t\cdot nm)}\) \parencite{emsa2026}. A Tabela 6 mostra os
+\(7{,}43\ \mathrm{g/(t\cdot nm)}\) \parencite{emsa2026}. A Tabela 7 mostra os
 campos usados nessa correspondência.
 
-\textbf{Tabela 6 --- Dados do EU MRV usados para a viagem
+\textbf{Tabela 7 --- Dados do EU MRV usados para a viagem
 \texttt{voyage\_9612791\_00011}.}
 
 \begin{longtable}[]{@{}lll@{}}
@@ -1689,9 +1741,8 @@ navio em mais de um ano, usa o indicador positivo mais recente. Esse é
 o caso preferencial, pois a intensidade pertence à embarcação observada
 nos registros da ANTAQ. Antes de aplicá-la, porém, o sistema verifica se
 ela é excepcionalmente alta em relação aos navios do mesmo tipo. Se não
-houver correspondência individual utilizável, a mesma hierarquia de
-estimativas coletivas é acionada. As duas etapas são apresentadas a
-seguir.
+houver correspondência individual utilizável, o sistema recorre à
+estimativa coletiva pelo tipo. As duas etapas são apresentadas a seguir.
 
 \hypertarget{verificauxe7uxe3o-do-valor-individual-p95-e-valores-atuxedpicos}{%
 \subparagraph{4.3.4.2.2 Verificação do valor individual: P95 e valores
@@ -1708,9 +1759,10 @@ dos navios do mesmo tipo.
 \texttt{Ship type} da publicação do EU MRV. Para formar o grupo de
 comparação, o sistema reúne os rótulos iguais e mantém, para cada IMO,
 somente o indicador positivo mais recente. Assim, todos os navios
-identificados como \emph{container ship} pertencem ao mesmo grupo. O
-tipo não é inferido pelo nome do navio, pela rota, pelo armador ou pelas
-dimensões da embarcação \parencite{emsa2026}.
+identificados como \emph{container ship} pertencem ao mesmo grupo. Quando
+há correspondência individual, o tipo vem desse campo e não é inferido
+pelo nome do navio, pela rota, pelo armador ou pelas dimensões da
+embarcação \parencite{emsa2026}.
 
 Com o grupo formado, o sistema calcula o percentil 95 (P95), ponto
 abaixo do qual estão 95\% dos valores ordenados. Em outras palavras,
@@ -1718,14 +1770,13 @@ apenas os 5\% maiores ficam acima desse limite. A verificação só é
 aplicada quando o grupo contém pelo menos 20 navios. Se a amostra for
 menor, não há triagem pelo P95 e o valor individual é mantido.
 
-No grupo de 243 navios classificados como \emph{container ship}, o P95
-é \(24{,}073\ \mathrm{g/(t\cdot nm)}\). O navio de IMO 9603221
+No grupo de 268 navios classificados como \emph{container ship}, o P95
+é \(13{,}409\ \mathrm{g/(t\cdot nm)}\). O navio de IMO 9603221
 (\emph{Fernão de Magalhães}), por exemplo, possui valor individual de
 \(228{,}83\ \mathrm{g/(t\cdot nm)}\), acima desse limite. A viagem
 observada não é retirada: suas escalas, distâncias e carga a bordo
 continuam no cálculo. O sistema deixa apenas de usar o valor individual
-e passa à hierarquia de estimativas coletivas descrita na subseção
-seguinte.
+e passa à estimativa coletiva pelo tipo, descrita na subseção seguinte.
 
 O P95 tem, portanto, uma função de decisão: verificar se o valor
 individual pode ser aplicado diretamente. Ele não calcula a intensidade
@@ -1737,125 +1788,70 @@ empregado para selecionar as distâncias marítimas que entram na média
 representativa tem outra finalidade e é descrito separadamente na
 Seção~4.3.4.4.
 
-\hypertarget{estimativa-robusta-quando-nuxe3o-huxe1-valor-individual-utilizuxe1vel}{%
-\subparagraph{4.3.4.2.3 Estimativa robusta quando não há valor individual
-utilizável}\label{estimativa-robusta-quando-nuxe3o-huxe1-valor-individual-utilizuxe1vel}}
+\hypertarget{estimativa-robusta-pelo-tipo-quando-nuxe3o-huxe1-valor-individual-utilizuxe1vel}{%
+\subparagraph{4.3.4.2.3 Estimativa robusta pelo tipo quando não há valor
+individual utilizável}\label{estimativa-robusta-pelo-tipo-quando-nuxe3o-huxe1-valor-individual-utilizuxe1vel}}
 
 A mesma regra de substituição atende a duas situações: o IMO observado
 na ANTAQ não possui um indicador individual positivo no EU MRV, ou o
 valor encontrado ultrapassa o P95 do seu tipo. Em ambos os casos, o
-sistema continua usando a base EU MRV, mas substitui a referência
-individual por uma estimativa de um grupo de embarcações semelhantes.
+sistema continua usando a base do EU MRV, mas substitui a referência
+individual por uma estimativa coletiva do tipo do navio.
 
-O primeiro nível é a \textbf{classe do navio}, uma faixa de porte
-definida pelo CabotageLens dentro do tipo \emph{container ship}. O porte
-é aproximado em toneladas com campos do EU MRV ligados ao trabalho de
-transporte: o sistema prioriza informações baseadas em
-\emph{deadweight} (DWT) e, quando elas não estão disponíveis, usa
-informações baseadas na massa transportada. Em seguida, aplica três
-faixas: \texttt{container\_small}, abaixo de 20.000 t;
-\texttt{container\_feeder}, de 20.000 t a menos de 40.000 t; e
-\texttt{container\_large}, a partir de 40.000 t. Essas faixas são regras
-do modelo, não classes publicadas pelo EU MRV nem classificações
-atribuídas por uma sociedade classificadora.
+O tipo corresponde à categoria registrada no campo \texttt{Ship type},
+como \emph{container ship}. Quando o IMO possui correspondência
+individual, o sistema usa o tipo informado no EU MRV. Quando não há
+correspondência e, portanto, o tipo não pode ser obtido dessa forma, a
+matriz adota \emph{container ship} como categoria padrão, de acordo com
+o escopo de cabotagem conteinerizada deste estudo.
 
-A classe é mais específica que o tipo porque separa os
-porta-contêineres por faixa de porte. Por isso, quando a classe está
-identificada e possui uma estatística disponível, o sistema usa sua
-intensidade. Caso contrário, recorre ao tipo, categoria mais ampla
-registrada no campo \texttt{Ship type}, como \emph{container ship}. A
-classe não é deduzida pelo nome do navio ou pela rota.
+Para formar a estimativa, o sistema ordena os indicadores positivos mais
+recentes dos navios do mesmo tipo. Quando a amostra permite, retira 1\%
+das observações em cada extremidade e calcula a média dos valores
+restantes. Se a amostra for pequena demais para retirar ao menos um valor
+de cada extremidade, usa a mediana do grupo. Essa estatística reduz a
+influência de poucos valores extremos sem escolher deliberadamente uma
+intensidade menor.
 
-As intensidades de classe e de tipo seguem a mesma regra de síntese
-robusta sobre os valores disponíveis em cada grupo. O sistema ordena
-esses valores, exclui os resultados abaixo do percentil 1 e acima do
-percentil 99 e calcula a média dos valores restantes. Quando a amostra é
-pequena demais para retirar ao menos um valor de cada extremidade, usa a
-mediana do grupo. Essa estatística reduz a influência de poucos valores
-extremos sem escolher deliberadamente uma intensidade menor.
-
-Assim, a sequência permanece a mesma tanto para um IMO ausente quanto
-para um valor individual acima do P95: primeiro, procura-se a estimativa
-da classe; se ela não estiver disponível, usa-se a estimativa do tipo. A
-saída registra a origem da intensidade, a estatística adotada, o tamanho
-da amostra e a quantidade de valores retirados. O resultado é
-apresentado como estimativa coletiva, e não como medição individual do
+Assim, tanto para um IMO ausente quanto para um valor individual acima
+do P95, a saída registra o tipo adotado, a estatística, o tamanho da
+amostra e a quantidade de valores retirados. O resultado é apresentado
+como estimativa coletiva do tipo, e não como medição individual do
 navio.
 
-\hypertarget{exemplo-de-estimativa-pela-classe-de-navio}{%
-\subparagraph{4.3.4.2.4 Exemplo de estimativa pela classe de
-navio}\label{exemplo-de-estimativa-pela-classe-de-navio}}
-
-O exemplo a seguir aplica o primeiro nível das estimativas coletivas a
-uma viagem observada. A viagem \texttt{voyage\_9603221\_00008},
-realizada pelo navio de IMO 9603221, percorreu Santos, Suape, Pecém e
-Manaus. O número IMO foi obtido nos registros da ANTAQ e permitiu
-localizar o mesmo navio no EU MRV. Seu valor individual é
-\(228{,}83\ \mathrm{g/(t\cdot nm)}\), acima do P95 do tipo
-\emph{container ship}; por isso, esse valor não é usado diretamente.
-
-Para esse registro, o campo baseado em DWT não está disponível. Por
-isso, aplica-se a alternativa baseada na massa transportada, já descrita
-na Seção~4.3.4.2.3. O porte aproximado resultante é
-\(603{,}243\ \mathrm{t}\); como esse valor é inferior a 20.000~t, o
-navio é enquadrado na classe \texttt{container\_small}.
-
-O artefato dessa classe reúne 6.315 registros anuais válidos. Após
-ordenar as intensidades, o sistema exclui os 64 valores abaixo do
-percentil 1 e os 64 valores acima do percentil 99. Restam 6.187 valores
-para o cálculo:
-
-\[
-I_{\mathrm{container\_small}}
-=\frac{\sum_{j=1}^{6187} I_j}{6187}
-=14{,}028610\ \mathrm{g/(t\cdot nm)}.
-\]
-
-Nessa fórmula, \(I_{\mathrm{container\_small}}\) é a intensidade média
-aparada da classe \texttt{container\_small}; \(I_j\) é a intensidade do
-\(j\)-ésimo registro mantido após a retirada dos valores extremos; e
-\(j\) percorre os 6.187 valores restantes.
-
-Portanto, nesse exemplo de aplicação da regra de classe, os subtrechos
-da viagem recebem a intensidade de
-\(14{,}028610\ \mathrm{g/(t\cdot nm)}\) em substituição ao valor
-individual atípico. O resultado representa a classe
-\texttt{container\_small}, e não uma medição individual do navio de IMO
-9603221.
-
 \hypertarget{exemplo-de-estimativa-pelo-tipo-de-navio}{%
-\subparagraph{4.3.4.2.5 Exemplo de estimativa pelo tipo de
+\subparagraph{4.3.4.2.4 Exemplo de estimativa pelo tipo de
 navio}\label{exemplo-de-estimativa-pelo-tipo-de-navio}}
 
-O exemplo a seguir mostra o último nível dessa hierarquia, a estimativa
-pelo tipo. A viagem \texttt{voyage\_9974486\_00001}, realizada pelo
-navio de IMO 9974486, passou por Paranaguá, Rio de Janeiro e Salvador.
+O exemplo a seguir mostra a aplicação da estimativa pelo tipo. A viagem
+\texttt{voyage\_9612777\_00005}, realizada pelo navio de IMO 9612777,
+contém um recorte entre Santos e Manaus com escalas em Suape e Pecém.
 Esse IMO aparece nos registros da ANTAQ, mas não possui correspondência
-individual no EU MRV. Como o registro também não traz uma classe mais
-específica, o sistema usa os dados do tipo documentado \emph{container
-ship} na própria base do EU MRV.
+individual no EU MRV. Por isso, a matriz adota \emph{container ship}
+como categoria padrão e usa o grupo formado pelos indicadores desse tipo
+publicados no EU MRV.
 
 Para formar esse valor, o sistema reuniu um indicador positivo e mais
-recente de cada um dos 243 navios classificados como \emph{container
+recente de cada um dos 268 navios classificados como \emph{container
 ship} no EU MRV. Após ordenar os valores, retirou os dois menores e os
-dois maiores, que são os valores removidos pela regra de 1\% em cada
-extremidade. Restaram 239 valores para o cálculo:
+dois maiores, conforme a regra de 1\% em cada extremidade. Restaram 264
+valores para o cálculo:
 
 \[
 I_{\mathrm{container\ ship}}
-=\frac{\sum_{j=1}^{239} I_j}{239}
-=9{,}322050\ \mathrm{g/(t\cdot nm)}.
+=\frac{\sum_{j=1}^{264} I_j}{264}
+=6{,}624583\ \mathrm{g/(t\cdot nm)}.
 \]
 
 Nessa fórmula, \(I_{\mathrm{container\ ship}}\) é a intensidade média
 aparada do tipo \emph{container ship}; \(I_j\) é a intensidade do
 \(j\)-ésimo navio mantido após a retirada dos valores extremos; e \(j\)
-percorre os 239 valores restantes.
+percorre os 264 valores restantes.
 
-Portanto, todos os subtrechos dessa viagem recebem a intensidade de
-\(9{,}322050\ \mathrm{g/(t\cdot nm)}\). A saída identifica esse número
+Portanto, todos os subtrechos desse recorte recebem a intensidade de
+\(6{,}624583\ \mathrm{g/(t\cdot nm)}\). A saída identifica esse número
 como uma estimativa baseada no tipo \emph{container ship}, e não como
-uma medição do navio de IMO 9974486.
+uma medição do navio de IMO 9612777.
 
 \hypertarget{trabalho-de-transporte-e-intensidade-da-ligauxe7uxe3o}{%
 \paragraph{4.3.4.3 Trabalho de transporte e intensidade da
@@ -2310,8 +2306,8 @@ M_{\mathrm{VLSFO,remessa}}
 \]
 
 Esse é o consumo de VLSFO apresentado na linha ``Navegação'' da Tabela
-9. Ele não corresponde ao combustível total das 89 viagens históricas:
-essas viagens servem apenas para preparar a intensidade e a distância
+10. Ele não corresponde ao combustível total dos 89 recortes históricos:
+esses recortes servem apenas para preparar a intensidade e a distância
 representativas aplicadas à remessa simulada.
 
 \hypertarget{emissuxf5es-da-alternativa-multimodal}{%
@@ -2327,7 +2323,7 @@ multiplicado pelo fator operacional correspondente. Em ambos os casos, a
 fronteira continua sendo TTW: considera-se apenas o combustível queimado
 durante a operação.
 
-\textbf{Tabela 7 --- Fatores de emissão específicos da alternativa
+\textbf{Tabela 8 --- Fatores de emissão específicos da alternativa
 multimodal.}
 
 \begin{longtable}[]{@{}lll@{}}
@@ -2442,11 +2438,11 @@ equivalente a 1.000~kg. A taxa de conversão USD/BRL também é sempre a
 mais recente: de R\$~5,141345 por US\$, obtida pela ferramenta
 \href{https://pypi.org/project/CurrencyConverter/}{CurrencyConverter} a
 partir de dados do Banco Central Europeu (BCE) \parencite{ecb2026}, o preço convertido foi
-R\$~3.812,31/mt, ou R\$~3,812/kg. A Tabela 8 resume as fontes, os
+R\$~3.812,31/mt, ou R\$~3,812/kg. A Tabela 9 resume as fontes, os
 valores de origem e os preços usados no exemplo.
 
 \Needspace{10\baselineskip}
-\textbf{Tabela 8 --- Preços de combustível usados no exemplo São
+\textbf{Tabela 9 --- Preços de combustível usados no exemplo São
 Paulo--Rio Branco.}
 
 \begin{longtable}[]{@{}llll@{}}
@@ -2611,11 +2607,11 @@ exemplo São Paulo--Rio
 Branco}\label{resultado-consolidado-da-alternativa-multimodal-do-exemplo-suxe3o-paulorio-branco}}
 
 Para a remessa de 14~t entre São Paulo (SP) e Rio Branco (AC), a Tabela
-9 reúne os resultados das etapas que compõem a alternativa multimodal.
+10 reúne os resultados das etapas que compõem a alternativa multimodal.
 Os cálculos e as fontes de cada etapa estão descritos nas Seções 4.3.1 a
 4.3.6.
 
-\textbf{Tabela 9 --- Resultado da alternativa multimodal no exemplo São
+\textbf{Tabela 10 --- Resultado da alternativa multimodal no exemplo São
 Paulo--Rio Branco, para uma remessa de 14~t.}
 
 \begin{longtable}[]{@{}llrrrr@{}}
@@ -2712,7 +2708,7 @@ da alternativa A, rodoviária direta, e da alternativa B, multimodal. Os
 valores das alternativas A e B foram consolidados nas Seções 4.2.4 e
 4.3.7, respectivamente.
 
-\textbf{Tabela 10 --- Comparação dos resultados totais no exemplo São
+\textbf{Tabela 11 --- Comparação dos resultados totais no exemplo São
 Paulo--Rio Branco, para uma remessa de 14~t.}
 
 \begin{longtable}[]{@{}lrrl@{}}
@@ -2796,7 +2792,7 @@ O sistema é desenvolvido em Python. A interface, os cálculos, a
 organização dos dados e as integrações externas ficam em componentes
 separados.
 
-A Tabela 11 apresenta as tecnologias e os serviços essenciais para
+A Tabela 12 apresenta as tecnologias e os serviços essenciais para
 entender a execução do sistema. Ela não lista todas as bibliotecas
 Python utilizadas internamente no código. Essas ferramentas também não
 devem ser confundidas com as fontes metodológicas e de insumos: ANTAQ,
@@ -2805,7 +2801,7 @@ EU MRV, Agência Nacional do Petróleo, Gás Natural e Biocombustíveis
 da tabela permitem obter, tratar, calcular, armazenar ou apresentar
 essas informações.
 
-\textbf{Tabela 11 --- Tecnologias e serviços utilizados na implementação
+\textbf{Tabela 12 --- Tecnologias e serviços utilizados na implementação
 do CabotageLens.}
 
 \begin{longtable}[]{@{}lll@{}}
@@ -2939,8 +2935,8 @@ identificado por coordenadas (latitude e longitude).
 \subsubsection{5.2.4 Fluxograma
 explicativo}\label{fluxograma-explicativo}}
 
-O fluxograma mostra o caminho de quatro formas de entrada para o mesmo
-local:
+A Figura 8 mostra como quatro formas de entrada são processadas para
+identificar o mesmo local:
 
 \begin{center}
 \resizebox{\linewidth}{!}{%
@@ -2960,6 +2956,9 @@ local:
 }
 \end{center}
 
+\emph{Figura 8 --- Fluxo de geocodificação de diferentes formas de
+entrada para um mesmo local. Fonte: elaboração própria.}
+
 Após a geocodificação de um local, suas coordenadas são armazenadas no
 banco de dados Supabase/PostgreSQL. Se o mesmo ponto for usado
 novamente, o sistema reutiliza esse resultado em vez de realizar outra
@@ -2975,7 +2974,7 @@ referência
 \texttt{Avenida\ Professor\ Luciano\ Gualberto,\ São\ Paulo,\ SP}. A
 consulta independente no Google Maps retornou as coordenadas latitude
 igual a −23,560017° e longitude igual a −46,727769°, apresentadas na
-Figura 8 \parencite{googlemaps2026}. Para o mesmo endereço, o motor de geocodificação retornou as
+Figura 9 \parencite{googlemaps2026}. Para o mesmo endereço, o motor de geocodificação retornou as
 coordenadas (−23,558808°; −46,730357°). A distância em linha reta entre
 os dois pontos é aproximadamente 296~m.
 
@@ -2983,11 +2982,11 @@ os dois pontos é aproximadamente 296~m.
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-18 143636.png}
 \end{center}
 
-\emph{Figura 8 --- Consulta independente do endereço Avenida Professor
+\emph{Figura 9 --- Consulta independente do endereço Avenida Professor
 Luciano Gualberto, São Paulo, SP, no Google Maps. Fonte: captura de tela
 do Google Maps realizada em 18 de julho de 2026.}
 
-A Figura 9 mostra a consulta, no Google Maps, das coordenadas devolvidas
+A Figura 10 mostra a consulta, no Google Maps, das coordenadas devolvidas
 pelo motor; os dois pontos permanecem na Avenida Professor Luciano
 Gualberto, na região da Universidade de São Paulo (USP).
 
@@ -2995,7 +2994,7 @@ Gualberto, na região da Universidade de São Paulo (USP).
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-18 145249.png}
 \end{center}
 
-\emph{Figura 9 --- Consulta no Google Maps das coordenadas retornadas
+\emph{Figura 10 --- Consulta no Google Maps das coordenadas retornadas
 pelo motor de geocodificação para a Avenida Professor Luciano Gualberto.
 Fonte: captura de tela do Google Maps realizada em 18 de julho de 2026.}
 
@@ -3022,7 +3021,7 @@ No exemplo São Paulo--Rio Branco, após a geocodificação descrita na
 Seção 5.2, o ORS recebeu as coordenadas de São Paulo (latitude
 −23,550520°; longitude −46,633308°) e de Rio Branco (latitude
 −9,989637°; longitude −67,822462°). A distância rodoviária devolvida foi
-3.491,431~km.
+3.491,431~km. A Figura 11 resume esse processo.
 
 \begin{center}
 \resizebox{\linewidth}{!}{%
@@ -3046,11 +3045,14 @@ Seção 5.2, o ORS recebeu as coordenadas de São Paulo (latitude
 }
 \end{center}
 
+\emph{Figura 11 --- Fluxo de geocodificação e consulta da distância
+rodoviária no exemplo São Paulo--Rio Branco. Fonte: elaboração própria.}
+
 \hypertarget{validauxe7uxe3o-da-distuxe2ncia-rodoviuxe1ria}{%
 \paragraph{5.3.1.1 Validação da distância
 rodoviária}\label{validauxe7uxe3o-da-distuxe2ncia-rodoviuxe1ria}}
 
-A Figura 10 apresenta uma consulta independente no Google Maps para a
+A Figura 12 apresenta uma consulta independente no Google Maps para a
 mesma ligação entre São Paulo e Rio Branco. A rota selecionada pelo
 Google Maps tem 3.497~km, enquanto o motor do sistema retornou
 3.491,431~km. A diferença é de 5,569~km, ou 0,16\% da distância exibida
@@ -3060,7 +3062,7 @@ no Google Maps.
 \includegraphics[width=0.94\linewidth]{images/Screenshot 2026-07-15 144749.png}
 \end{center}
 
-\emph{Figura 10 --- Consulta no Google Maps para São Paulo--Rio Branco:
+\emph{Figura 12 --- Consulta no Google Maps para São Paulo--Rio Branco:
 rota selecionada de 3.497~km. Fonte: captura de tela do Google Maps
 realizada em 15 de julho de 2026.}
 
@@ -3087,7 +3089,7 @@ Supabase Storage, o espaço de armazenamento de arquivos do projeto, para
 garantir rastreabilidade e uma alternativa caso o site da ANP esteja
 indisponível.
 
-\textbf{Tabela 12 --- Recorte bruto da planilha semanal da ANP para
+\textbf{Tabela 13 --- Recorte bruto da planilha semanal da ANP para
 \texttt{OLEO\ DIESEL\ S10}.}
 
 {\scriptsize
@@ -3141,7 +3143,7 @@ No exemplo São Paulo--Rio Branco, uma remessa de 14~t percorre
 eficiência de 2,3~km/L, e estima 1.518,014~L de Diesel S10. Com o preço
 e o fator de emissão definidos nas Seções~4.2.2 e 4.2.3, o resultado é
 R\$~12.318,68 de custo modelado do combustível e 4.068,28~kg~CO\textsubscript{2}e de
-emissões operacionais TTW.
+emissões operacionais TTW. A Figura 13 reúne essas etapas.
 
 \begin{center}
 \resizebox{\linewidth}{!}{%
@@ -3167,6 +3169,9 @@ emissões operacionais TTW.
 \end{tikzpicture}%
 }
 \end{center}
+
+\emph{Figura 13 --- Fluxo de cálculo da alternativa rodoviária direta no
+exemplo São Paulo--Rio Branco. Fonte: elaboração própria.}
 
 \hypertarget{montagem-da-alternativa-multimodal}{%
 \subsection{5.4 Montagem da alternativa
@@ -3212,7 +3217,7 @@ Nas duas linhas, \(P_{\mathrm{VLSFO}}\) representa o preço do VLSFO e o
 sobrescrito informa a unidade em que ele está expresso. Esse é o valor
 entregue ao avaliador para calcular o custo do combustível marítimo. A
 fonte, os valores e a regra de custo estão detalhados na Seção 4.3.6 e
-na Tabela 8.
+na Tabela 9.
 
 \hypertarget{matriz-maruxedtima}{%
 \subsubsection{5.4.2 Matriz marítima}\label{matriz-maruxedtima}}
@@ -3294,7 +3299,7 @@ Verificação da União Europeia (EU MRV) são obtidos no
 \href{https://mrv.emsa.europa.eu/}{THETIS-MRV, da Agência Europeia de
 Segurança Marítima} e armazenados no Supabase Storage. Os campos e o
 exemplo de correspondência por IMO estão apresentados na Seção 4.3.4.2 e
-na Tabela 6.
+na Tabela 7.
 
 \hypertarget{cuxe1lculo-do-trabalho-de-transporte}{%
 \paragraph{5.4.2.4 Cálculo do trabalho de
@@ -3303,9 +3308,9 @@ transporte}\label{cuxe1lculo-do-trabalho-de-transporte}}
 Como explicado na Seção 4.3.4.2, o sistema procura primeiro o IMO do
 navio observado na ANTAQ. Se não houver indicador individual utilizável,
 ou se ele for classificado como atípico, é aplicada uma referência
-robusta de navios da mesma classe ou, se necessário, do mesmo tipo. A
-carga a bordo, a distância e a intensidade permitem calcular o trabalho
-de transporte e o consumo estimado de cada viagem.
+robusta de navios do mesmo tipo. A carga a bordo, a distância e a
+intensidade permitem calcular o trabalho de transporte e o consumo
+estimado de cada viagem.
 
 \hypertarget{compilauxe7uxe3o-na-estrutura-matricial}{%
 \paragraph{5.4.2.5 Compilação na estrutura
@@ -3320,7 +3325,7 @@ P95 quando aplicável e a procedência dos dados. A matriz é direcional:
 Santos → Manaus e Manaus → Santos são consultas diferentes, pois reúnem
 viagens, cargas e distâncias observadas diferentes. A \texttt{SeaMatrix}
 também é salva no Supabase Storage como o arquivo JSON
-\texttt{data/sea\_matrix.json}.
+\texttt{data/sea\_matrix.json}. A Figura 14 resume sua preparação.
 
 \begin{center}
 \resizebox{\linewidth}{!}{%
@@ -3342,11 +3347,14 @@ também é salva no Supabase Storage como o arquivo JSON
 }
 \end{center}
 
-As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados
+\emph{Figura 14 --- Fluxo de preparação dos dados observados e compilação
+da matriz marítima. Fonte: elaboração própria.}
+
+As Tabelas 14 e 15 mostram parte da matriz marítima preparada com dados
 reais. As linhas indicam o porto de origem e, as colunas, o porto de
 destino.
 
-A Tabela 13 apresenta a distância representativa de cada sentido. Quando
+A Tabela 14 apresenta a distância representativa de cada sentido. Quando
 há 20 ou mais recortes, as distâncias acima do P95 são retiradas antes da
 média ponderada pela carga média a bordo, conforme explicado na
 Seção~4.3.4.4. Nota-se que a distância de ida pode ser diferente da
@@ -3356,7 +3364,7 @@ recortes diretos e recortes com escalas intermediárias. O travessão
 indica que origem e destino são o mesmo porto, situação que não forma
 uma perna marítima.
 
-\textbf{Tabela 13 --- Distância marítima representativa após a triagem
+\textbf{Tabela 14 --- Distância marítima representativa após a triagem
 P95, ponderada pela carga média a bordo, na matriz marítima (km).}
 
 \begin{longtable}[]{@{}lrrrrr@{}}
@@ -3383,10 +3391,10 @@ preparada com viagens de cabotagem observadas pela ANTAQ, atualizada em
 23 de julho de 2026.}
 
 \Needspace{14\baselineskip}
-A Tabela 14 apresenta a intensidade média, ponderada pelo trabalho de
+A Tabela 15 apresenta a intensidade média, ponderada pelo trabalho de
 transporte.
 
-\textbf{Tabela 14 --- Intensidade média da ligação marítima, ponderada
+\textbf{Tabela 15 --- Intensidade média da ligação marítima, ponderada
 pelo trabalho de transporte {[}g/(t·nm){]}.}
 
 \begin{longtable}[]{@{}lrrrrr@{}}
@@ -3488,10 +3496,10 @@ Branco}\label{resultado-consolidado-do-exemplo-suxe3o-paulorio-branco}}
 
 No exemplo São Paulo--Rio Branco, a seleção geográfica indicou o Porto
 de Santos para o embarque e o Porto de Manaus para o desembarque. A
-Tabela 15 compara a distância de Haversine usada na seleção com a
+Tabela 16 compara a distância de Haversine usada na seleção com a
 distância rodoviária calculada após a escolha de cada porto.
 
-\textbf{Tabela 15 --- Distâncias de seleção e de acesso rodoviário no
+\textbf{Tabela 16 --- Distâncias de seleção e de acesso rodoviário no
 exemplo São Paulo--Rio Branco.}
 
 \begin{longtable}[]{@{}lllrr@{}}
@@ -3568,12 +3576,12 @@ carga do cenário.
 cenário}\label{consulta-da-ligauxe7uxe3o-maruxedtima-no-cenuxe1rio}}
 
 No exemplo São Paulo--Rio Branco, a escolha dos portos leva à consulta
-Santos--Manaus na \texttt{SeaMatrix}. A Tabela~16 mostra o que a matriz
+Santos--Manaus na \texttt{SeaMatrix}. A Tabela~17 mostra o que a matriz
 devolve para esse par. Um recorte é a parte de uma viagem observada
 compreendida entre os dois portos da ligação; ele pode ser direto ou
 conter escalas intermediárias.
 
-\textbf{Tabela 16 --- Informações devolvidas pela matriz marítima para a
+\textbf{Tabela 17 --- Informações devolvidas pela matriz marítima para a
 ligação Santos--Manaus.}
 
 \begin{longtable}[]{@{}lll@{}}
@@ -3649,11 +3657,11 @@ cenário\strut
 cenário}\label{resultado-final-do-cenuxe1rio}}
 
 Após executar as etapas descritas nas seções anteriores, o pipeline
-reúne os totais das duas alternativas para a mesma remessa. A Tabela 17
+reúne os totais das duas alternativas para a mesma remessa. A Tabela 18
 apresenta o resultado final do exemplo São Paulo--Rio Branco, com 14~t
 de carga.
 
-\textbf{Tabela 17 --- Resultado final do cenário São Paulo--Rio Branco.}
+\textbf{Tabela 18 --- Resultado final do cenário São Paulo--Rio Branco.}
 
 \begin{longtable}[]{@{}lrrl@{}}
 \toprule
@@ -3704,10 +3712,10 @@ versionamento}\label{rastreabilidade-auditoria-e-versionamento}}
 
 O resultado não guarda apenas os totais de custo e emissão. A cada
 execução, o pipeline registra os dados que formaram a rota, as fontes
-utilizadas e os avisos que afetam a leitura do resultado. A Tabela~18
+utilizadas e os avisos que afetam a leitura do resultado. A Tabela~19
 exemplifica esse registro no cenário São Paulo--Rio Branco.
 
-\textbf{Tabela 18 --- Informações de rastreabilidade registradas no
+\textbf{Tabela 19 --- Informações de rastreabilidade registradas no
 exemplo São Paulo--Rio Branco.}
 
 \begin{longtable}[]{@{}lll@{}}
@@ -3776,8 +3784,8 @@ Sinaliza a aproximação sem ocultá-la no total\strut
 \bottomrule
 \end{longtable}
 
-\emph{Esses são os mesmos dados consolidados na Tabela 9 da Sessão
-3.3.7}
+\emph{Esses são os mesmos dados consolidados na Tabela 10, na Seção
+4.3.7.}
 
 \hypertarget{versionamento-e-reproduuxe7uxe3o-do-cuxe1lculo}{%
 \subsubsection{5.7.1 Versionamento e reprodução do
@@ -3808,7 +3816,7 @@ duas interfaces.
 \subsubsection{5.8.1 Página Router}\label{puxe1gina-router}}
 
 A página Router executa a comparação para a origem, o destino e a carga
-informados no cenário. A Figura 11 mostra os campos da barra lateral
+informados no cenário. A Figura 15 mostra os campos da barra lateral
 usados nessa definição. No exemplo, a análise parte da Avenida Professor
 Luciano Gualberto, em São Paulo, segue para Manaus e considera uma carga
 de 14 t.
@@ -3817,11 +3825,11 @@ de 14 t.
 \includegraphics[width=0.94\linewidth]{images/router-scenario.png}
 \end{center}
 
-\emph{Figura 11 --- Campos de definição do cenário na página Router.
+\emph{Figura 15 --- Campos de definição do cenário na página Router.
 Fonte: elaboração própria.}
 
 Após a execução, a página apresenta as alternativas calculadas em um
-mapa, como ilustra a Figura 12. As linhas traçadas servem apenas para
+mapa, como ilustra a Figura 16. As linhas traçadas servem apenas para
 representar visualmente as distâncias e a ligação entre os pontos; elas
 não correspondem às rotas rodoviárias ou marítimas efetivamente
 utilizadas nos cálculos.
@@ -3830,7 +3838,7 @@ utilizadas nos cálculos.
 \includegraphics[width=0.94\linewidth]{images/router-map.png}
 \end{center}
 
-\emph{Figura 12 --- Representação visual das alternativas calculadas na
+\emph{Figura 16 --- Representação visual das alternativas calculadas na
 página Router. Fonte: elaboração própria.}
 
 Os resultados detalhados, os avisos, os logs e os demais registros
@@ -3849,7 +3857,7 @@ uma origem e a massa da carga, e o sistema compara esse cenário com 608
 municípios brasileiros de população superior a 50 mil habitantes. Para
 cada município, são calculadas as mesmas duas alternativas descritas na
 Seção 4: a rodovia direta e a cadeia rodoviária--cabotagem--rodoviária.
-A Figura 13 mostra os campos usados para definir o cenário. No exemplo, a
+A Figura 17 mostra os campos usados para definir o cenário. No exemplo, a
 análise parte da Avenida Professor Luciano Gualberto, em São Paulo, e
 considera uma carga de 14 t.
 
@@ -3857,7 +3865,7 @@ considera uma carga de 14 t.
 \includegraphics[width=0.94\linewidth]{images/heatmap-scenario.png}
 \end{center}
 
-\emph{Figura 13 --- Campos de definição do cenário na página Mapa de
+\emph{Figura 17 --- Campos de definição do cenário na página Mapa de
 calor. Fonte: elaboração própria.}
 
 O resultado permite visualizar, em diferentes partes do país, onde a
@@ -3873,14 +3881,14 @@ diferenças. Os resultados são calculados para os municípios do conjunto
 de destinos; as áreas entre eles são uma interpolação visual para tornar
 o padrão mais legível no mapa. Portanto, cada área colorida não
 representa uma nova rota calculada, mas a visualização dos resultados
-obtidos para os destinos próximos. A Figura 14 ilustra essa representação
+obtidos para os destinos próximos. A Figura 18 ilustra essa representação
 para o cenário informado.
 
 \begin{center}
 \includegraphics[width=0.94\linewidth]{images/heatmap-map.png}
 \end{center}
 
-\emph{Figura 14 --- Representação espacial dos resultados calculados na
+\emph{Figura 18 --- Representação espacial dos resultados calculados na
 página Mapa de calor. Fonte: elaboração própria.}
 
 \hypertarget{comparauxe7uxf5es-com-ferramentas-externas}{%
@@ -3915,11 +3923,11 @@ totais.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/calculo-co2_86072221.png}
 \end{center}
 
-\emph{Figura 15 --- Resultado da calculadora da Aliança para São
+\emph{Figura 19 --- Resultado da calculadora da Aliança para São
 Paulo--Abaetetuba. Fonte: resultado exportado pela ferramenta, fornecido
 pelo autor.}
 
-\textbf{Tabela 19 --- Emissões TTW por etapa no cenário São
+\textbf{Tabela 20 --- Emissões TTW por etapa no cenário São
 Paulo--Abaetetuba, com 20 t de carga.}
 
 \begin{longtable}[]{@{}lrrrr@{}}
@@ -4056,10 +4064,10 @@ mesmo cenário foi executado no CabotageLens com 14 t e 1 TEU.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/loginlogistica.png}
 \end{center}
 
-\emph{Figura 16 --- Resultado da calculadora de emissões da Log-In.
+\emph{Figura 20 --- Resultado da calculadora de emissões da Log-In.
 Fonte: captura de tela fornecida pelo autor.}
 
-\textbf{Tabela 20 --- Emissões no cenário de referência São Paulo--Rio
+\textbf{Tabela 21 --- Emissões no cenário de referência São Paulo--Rio
 Branco.}
 
 \begin{longtable}[]{@{}lrrrr@{}}
@@ -4146,11 +4154,11 @@ combustível.
 \includegraphics[width=0.94\linewidth]{comparacao_externa/calculadorafreteantt.png}
 \end{center}
 
-\emph{Figura 17 --- Resultado da calculadora de piso mínimo de frete da
+\emph{Figura 21 --- Resultado da calculadora de piso mínimo de frete da
 ANTT para a distância de 3.491 km. Fonte: captura de tela fornecida pelo
 autor.}
 
-\textbf{Tabela 21 --- Valores para a ligação São Paulo--Rio Branco.}
+\textbf{Tabela 22 --- Valores para a ligação São Paulo--Rio Branco.}
 
 \begin{longtable}[]{@{}lrr@{}}
 \toprule

@@ -4,6 +4,8 @@ Este arquivo reúne alterações identificadas durante a revisão completa de `t
 
 ## COR01 — Atualizar os números e o exemplo do EU MRV
 
+**Status:** implementada.
+
 **Local:** Seções 4.3.4.2.2 a 4.3.4.2.4.
 
 **Problema:** o texto ainda usa uma versão anterior da base MRV. O artefato atual registra 268 navios do tipo *container ship*, P95 de 13,409 g/(t·nm), retirada de dois valores em cada extremidade, 264 valores mantidos e média aparada de 6,624583 g/(t·nm). O texto apresenta 243 navios, P95 de 24,073 g/(t·nm), 239 valores mantidos e média de 9,322050 g/(t·nm).
@@ -14,16 +16,17 @@ Além disso, a viagem `voyage_9974486_00001` não serve mais como exemplo de aus
 
 ## COR02 — Definir como apresentar a estimativa pela classe do navio
 
+**Status:** implementada.
+
 **Local:** Seções 4.3.4.2.3 e 4.3.4.2.4.
 
 **Problema:** a hierarquia menciona estimativa pela classe antes da estimativa pelo tipo, mas a matriz Santos–Manaus atual não contém recortes resolvidos pela classe. Os 70 *fallbacks* desse par foram resolvidos pelo tipo, e os 268 registros da referência coletiva usam o campo baseado em massa, não DWT.
 
-**Proposta:** escolher entre:
-
-1. manter a classe apenas como regra metodológica, sem exemplo numérico; ou
-2. acrescentar um exemplo externo ao conjunto Santos–Manaus, identificado explicitamente como demonstração da regra e não como caso usado no cenário.
+**Decisão adotada:** retirar a estimativa pela classe de porte e manter somente a estimativa coletiva pelo tipo do navio. A descrição metodológica, o exemplo e as referências posteriores foram ajustados para refletir essa escolha.
 
 ## COR03 — Incluir resumo e palavras-chave
+
+**Status:** implementada.
 
 **Local:** início do artigo, antes do Sumário.
 
@@ -41,6 +44,8 @@ Além disso, a viagem `voyage_9974486_00001` não serve mais como exemplo de aus
 
 ## COR05 — Numerar a tabela do exemplo de carga a bordo
 
+**Status:** implementada.
+
 **Local:** Seção 4.3.4.1.3.2.
 
 **Problema:** a tabela “Detalhamento do saldo de carga por escala” não possui número, enquanto as demais tabelas do artigo são numeradas.
@@ -48,6 +53,8 @@ Além disso, a viagem `voyage_9974486_00001` não serve mais como exemplo de aus
 **Proposta:** incorporá-la à sequência de tabelas e atualizar todas as numerações e referências posteriores. A alteração deve ser feita em conjunto no Markdown e no LaTeX.
 
 ## COR06 — Padronizar a numeração dos fluxogramas da implementação
+
+**Status:** implementada.
 
 **Local:** Seções 5.2.4, 5.3.1, 5.3.4 e 5.4.2.5.
 
