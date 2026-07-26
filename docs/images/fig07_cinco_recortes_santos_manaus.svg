@@ -1,0 +1,350 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 960" role="img"
+  aria-labelledby="title desc">
+  <title id="title">Cinco recortes observados entre Santos e Manaus</title>
+  <desc id="desc">
+    Cinco viagens são apresentadas em colunas verticais. Portos iguais ocupam
+    a mesma linha horizontal. Cada trecho informa carga a bordo e distância.
+  </desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#17627f"/>
+    </marker>
+    <style>
+      .background { fill: #ffffff; }
+      .guide {
+        stroke: #dfe8ed;
+        stroke-width: 1;
+        stroke-dasharray: 4 8;
+      }
+      .header {
+        fill: #eef5f8;
+        stroke: #17627f;
+        stroke-width: 1.7;
+      }
+      .port {
+        fill: #ffffff;
+        stroke: #17627f;
+        stroke-width: 1.8;
+      }
+      .route {
+        fill: none;
+        stroke: #17627f;
+        stroke-width: 1.8;
+        marker-end: url(#arrow);
+      }
+      .leg-background {
+        fill: #ffffff;
+        rx: 4;
+      }
+      text {
+        fill: #17252f;
+        font-family: Arial, Helvetica, sans-serif;
+        text-anchor: middle;
+      }
+      .header-title {
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .header-detail {
+        font-size: 14px;
+      }
+      .port-label {
+        font-size: 17px;
+        font-weight: 700;
+        dominant-baseline: middle;
+      }
+      .leg-label {
+        font-size: 15px;
+        font-weight: 600;
+      }
+    </style>
+  </defs>
+
+  <rect class="background" width="1300" height="960"/>
+
+  <!-- Linhas de referência: todos os portos repetidos compartilham estas alturas. -->
+  <line class="guide" x1="20" y1="160" x2="1280" y2="160"/>
+  <line class="guide" x1="20" y1="310" x2="1280" y2="310"/>
+  <line class="guide" x1="20" y1="460" x2="1280" y2="460"/>
+  <line class="guide" x1="20" y1="610" x2="1280" y2="610"/>
+  <line class="guide" x1="20" y1="760" x2="1280" y2="760"/>
+  <line class="guide" x1="20" y1="910" x2="1280" y2="910"/>
+
+  <!-- Cabeçalhos -->
+  <g aria-label="Viagem V1">
+    <rect class="header" x="10" y="18" width="240" height="100" rx="5"/>
+    <text class="header-title" x="130" y="43">V1</text>
+    <text class="header-detail" x="130" y="64">voyage_9612791_00011</text>
+    <text class="header-detail" x="130" y="84">IMO 9612791</text>
+    <text class="header-detail" x="130" y="104">I = 7,43 g/(t·nm)</text>
+  </g>
+  <g aria-label="Viagem V2">
+    <rect class="header" x="270" y="18" width="240" height="100" rx="5"/>
+    <text class="header-title" x="390" y="43">V2</text>
+    <text class="header-detail" x="390" y="64">voyage_9612791_00003</text>
+    <text class="header-detail" x="390" y="84">IMO 9612791</text>
+    <text class="header-detail" x="390" y="104">I = 7,43 g/(t·nm)</text>
+  </g>
+  <g aria-label="Viagem V3">
+    <rect class="header" x="530" y="18" width="240" height="100" rx="5"/>
+    <text class="header-title" x="650" y="43">V3</text>
+    <text class="header-detail" x="650" y="64">voyage_9539494_00001</text>
+    <text class="header-detail" x="650" y="84">IMO 9539494</text>
+    <text class="header-detail" x="650" y="104">I = 9,50 g/(t·nm)</text>
+  </g>
+  <g aria-label="Viagem V4">
+    <rect class="header" x="790" y="18" width="240" height="100" rx="5"/>
+    <text class="header-title" x="910" y="43">V4</text>
+    <text class="header-detail" x="910" y="64">voyage_9649835_00009</text>
+    <text class="header-detail" x="910" y="84">IMO 9649835</text>
+    <text class="header-detail" x="910" y="104">I = 5,41 g/(t·nm)</text>
+  </g>
+  <g aria-label="Viagem V5">
+    <rect class="header" x="1050" y="18" width="240" height="100" rx="5"/>
+    <text class="header-title" x="1170" y="43">V5</text>
+    <text class="header-detail" x="1170" y="64">voyage_9343974_00002</text>
+    <text class="header-detail" x="1170" y="84">IMO 9343974</text>
+    <text class="header-detail" x="1170" y="104">I = 6,80 g/(t·nm)</text>
+  </g>
+
+  <!-- Setas das rotas -->
+  <g aria-hidden="true">
+    <path class="route" d="M130 183 L130 587"/>
+    <path class="route" d="M130 633 L130 737"/>
+    <path class="route" d="M130 783 L130 887"/>
+
+    <path class="route" d="M390 183 L390 287"/>
+    <path class="route" d="M390 333 L390 437"/>
+    <path class="route" d="M390 483 L390 587"/>
+    <path class="route" d="M390 633 L390 737"/>
+    <path class="route" d="M390 783 L390 887"/>
+
+    <path class="route" d="M650 183 L650 287"/>
+    <path class="route" d="M650 333 L650 437"/>
+    <path class="route" d="M650 483 L650 587"/>
+    <path class="route" d="M650 633 L650 737"/>
+    <path class="route" d="M650 783 L650 887"/>
+
+    <path class="route" d="M910 183 L910 287"/>
+    <path class="route" d="M910 333 L910 587"/>
+    <path class="route" d="M910 633 L910 737"/>
+    <path class="route" d="M910 783 L910 887"/>
+
+    <path class="route" d="M1170 183 L1170 287"/>
+    <path class="route" d="M1170 333 L1170 437"/>
+    <path class="route" d="M1170 483 L1170 587"/>
+    <path class="route" d="M1170 633 L1170 887"/>
+  </g>
+
+  <!-- Portos -->
+  <g aria-label="Portos da viagem V1">
+    <rect class="port" x="50" y="137" width="160" height="46" rx="4"/>
+    <text class="port-label" x="130" y="160">Santos</text>
+    <rect class="port" x="50" y="587" width="160" height="46" rx="4"/>
+    <text class="port-label" x="130" y="610">Suape</text>
+    <rect class="port" x="50" y="737" width="160" height="46" rx="4"/>
+    <text class="port-label" x="130" y="760">Pecém</text>
+    <rect class="port" x="50" y="887" width="160" height="46" rx="4"/>
+    <text class="port-label" x="130" y="910">Manaus</text>
+  </g>
+
+  <g aria-label="Portos da viagem V2">
+    <rect class="port" x="310" y="137" width="160" height="46" rx="4"/>
+    <text class="port-label" x="390" y="160">Santos</text>
+    <rect class="port" x="310" y="287" width="160" height="46" rx="4"/>
+    <text class="port-label" x="390" y="310">Itajaí</text>
+    <rect class="port" x="310" y="437" width="160" height="46" rx="4"/>
+    <text class="port-label" x="390" y="460">Paranaguá</text>
+    <rect class="port" x="310" y="587" width="160" height="46" rx="4"/>
+    <text class="port-label" x="390" y="610">Suape</text>
+    <rect class="port" x="310" y="737" width="160" height="46" rx="4"/>
+    <text class="port-label" x="390" y="760">Pecém</text>
+    <rect class="port" x="310" y="887" width="160" height="46" rx="4"/>
+    <text class="port-label" x="390" y="910">Manaus</text>
+  </g>
+
+  <g aria-label="Portos da viagem V3">
+    <rect class="port" x="570" y="137" width="160" height="46" rx="4"/>
+    <text class="port-label" x="650" y="160">Santos</text>
+    <rect class="port" x="570" y="287" width="160" height="46" rx="4"/>
+    <text class="port-label" x="650" y="310">Itapoá</text>
+    <rect class="port" x="570" y="437" width="160" height="46" rx="4"/>
+    <text class="port-label" x="650" y="460">Rio de Janeiro</text>
+    <rect class="port" x="570" y="587" width="160" height="46" rx="4"/>
+    <text class="port-label" x="650" y="610">Suape</text>
+    <rect class="port" x="570" y="737" width="160" height="46" rx="4"/>
+    <text class="port-label" x="650" y="760">Pecém</text>
+    <rect class="port" x="570" y="887" width="160" height="46" rx="4"/>
+    <text class="port-label" x="650" y="910">Manaus</text>
+  </g>
+
+  <g aria-label="Portos da viagem V4">
+    <rect class="port" x="830" y="137" width="160" height="46" rx="4"/>
+    <text class="port-label" x="910" y="160">Santos</text>
+    <rect class="port" x="830" y="287" width="160" height="46" rx="4"/>
+    <text class="port-label" x="910" y="310">Itapoá</text>
+    <rect class="port" x="830" y="587" width="160" height="46" rx="4"/>
+    <text class="port-label" x="910" y="610">Suape</text>
+    <rect class="port" x="830" y="737" width="160" height="46" rx="4"/>
+    <text class="port-label" x="910" y="760">Pecém</text>
+    <rect class="port" x="830" y="887" width="160" height="46" rx="4"/>
+    <text class="port-label" x="910" y="910">Manaus</text>
+  </g>
+
+  <g aria-label="Portos da viagem V5">
+    <rect class="port" x="1090" y="137" width="160" height="46" rx="4"/>
+    <text class="port-label" x="1170" y="160">Santos</text>
+    <rect class="port" x="1090" y="287" width="160" height="46" rx="4"/>
+    <text class="port-label" x="1170" y="310">Itapoá</text>
+    <rect class="port" x="1090" y="437" width="160" height="46" rx="4"/>
+    <text class="port-label" x="1170" y="460">Paranaguá</text>
+    <rect class="port" x="1090" y="587" width="160" height="46" rx="4"/>
+    <text class="port-label" x="1170" y="610">Suape</text>
+    <rect class="port" x="1090" y="887" width="160" height="46" rx="4"/>
+    <text class="port-label" x="1170" y="910">Manaus</text>
+  </g>
+
+  <!-- Dados de cada subtrecho: os fundos brancos interrompem a linha sem curvá-la. -->
+  <g aria-label="Dados dos subtrechos da viagem V1">
+    <rect class="leg-background" x="31" y="350" width="198" height="70"/>
+    <text class="leg-label" x="130" y="371">
+      <tspan x="130">m = 12.858,754 t</tspan>
+      <tspan x="130" dy="20">d = 2.332,000 km</tspan>
+      <tspan x="130" dy="20">1.259,179 nm</tspan>
+    </text>
+    <rect class="leg-background" x="31" y="650" width="198" height="70"/>
+    <text class="leg-label" x="130" y="671">
+      <tspan x="130">m = 16.718,333 t</tspan>
+      <tspan x="130" dy="20">d = 940,458 km</tspan>
+      <tspan x="130" dy="20">507,806 nm</tspan>
+    </text>
+    <rect class="leg-background" x="31" y="800" width="198" height="70"/>
+    <text class="leg-label" x="130" y="821">
+      <tspan x="130">m = 12.325,900 t</tspan>
+      <tspan x="130" dy="20">d = 2.195,720 km</tspan>
+      <tspan x="130" dy="20">1.185,594 nm</tspan>
+    </text>
+  </g>
+
+  <g aria-label="Dados dos subtrechos da viagem V2">
+    <rect class="leg-background" x="291" y="200" width="198" height="70"/>
+    <text class="leg-label" x="390" y="221">
+      <tspan x="390">m = 4.917,810 t</tspan>
+      <tspan x="390" dy="20">d = 419,000 km</tspan>
+      <tspan x="390" dy="20">226,242 nm</tspan>
+    </text>
+    <rect class="leg-background" x="291" y="350" width="198" height="70"/>
+    <text class="leg-label" x="390" y="371">
+      <tspan x="390">m = 13.522,710 t</tspan>
+      <tspan x="390" dy="20">d = 193,000 km</tspan>
+      <tspan x="390" dy="20">104,212 nm</tspan>
+    </text>
+    <rect class="leg-background" x="291" y="500" width="198" height="70"/>
+    <text class="leg-label" x="390" y="521">
+      <tspan x="390">m = 10.386,517 t</tspan>
+      <tspan x="390" dy="20">d = 2.573,000 km</tspan>
+      <tspan x="390" dy="20">1.389,309 nm</tspan>
+    </text>
+    <rect class="leg-background" x="291" y="650" width="198" height="70"/>
+    <text class="leg-label" x="390" y="671">
+      <tspan x="390">m = 24.196,861 t</tspan>
+      <tspan x="390" dy="20">d = 940,458 km</tspan>
+      <tspan x="390" dy="20">507,806 nm</tspan>
+    </text>
+    <rect class="leg-background" x="291" y="800" width="198" height="70"/>
+    <text class="leg-label" x="390" y="821">
+      <tspan x="390">m = 22.825,450 t</tspan>
+      <tspan x="390" dy="20">d = 2.195,720 km</tspan>
+      <tspan x="390" dy="20">1.185,594 nm</tspan>
+    </text>
+  </g>
+
+  <g aria-label="Dados dos subtrechos da viagem V3">
+    <rect class="leg-background" x="551" y="200" width="198" height="70"/>
+    <text class="leg-label" x="650" y="221">
+      <tspan x="650">m = 16.056,390 t</tspan>
+      <tspan x="650" dy="20">d = 420,711 km</tspan>
+      <tspan x="650" dy="20">227,166 nm</tspan>
+    </text>
+    <rect class="leg-background" x="551" y="350" width="198" height="70"/>
+    <text class="leg-label" x="650" y="371">
+      <tspan x="650">m = 21.950,396 t</tspan>
+      <tspan x="650" dy="20">d = 750,344 km</tspan>
+      <tspan x="650" dy="20">405,153 nm</tspan>
+    </text>
+    <rect class="leg-background" x="551" y="500" width="198" height="70"/>
+    <text class="leg-label" x="650" y="521">
+      <tspan x="650">m = 24.195,104 t</tspan>
+      <tspan x="650" dy="20">d = 1.965,000 km</tspan>
+      <tspan x="650" dy="20">1.061,015 nm</tspan>
+    </text>
+    <rect class="leg-background" x="551" y="650" width="198" height="70"/>
+    <text class="leg-label" x="650" y="671">
+      <tspan x="650">m = 22.048,947 t</tspan>
+      <tspan x="650" dy="20">d = 940,458 km</tspan>
+      <tspan x="650" dy="20">507,806 nm</tspan>
+    </text>
+    <rect class="leg-background" x="551" y="800" width="198" height="70"/>
+    <text class="leg-label" x="650" y="821">
+      <tspan x="650">m = 22.144,555 t</tspan>
+      <tspan x="650" dy="20">d = 2.195,720 km</tspan>
+      <tspan x="650" dy="20">1.185,594 nm</tspan>
+    </text>
+  </g>
+
+  <g aria-label="Dados dos subtrechos da viagem V4">
+    <rect class="leg-background" x="811" y="200" width="198" height="70"/>
+    <text class="leg-label" x="910" y="221">
+      <tspan x="910">m = 27.128,064 t</tspan>
+      <tspan x="910" dy="20">d = 420,711 km</tspan>
+      <tspan x="910" dy="20">227,166 nm</tspan>
+    </text>
+    <rect class="leg-background" x="811" y="425" width="198" height="70"/>
+    <text class="leg-label" x="910" y="446">
+      <tspan x="910">m = 26.218,790 t</tspan>
+      <tspan x="910" dy="20">d = 2.596,249 km</tspan>
+      <tspan x="910" dy="20">1.401,862 nm</tspan>
+    </text>
+    <rect class="leg-background" x="811" y="650" width="198" height="70"/>
+    <text class="leg-label" x="910" y="671">
+      <tspan x="910">m = 27.448,321 t</tspan>
+      <tspan x="910" dy="20">d = 940,458 km</tspan>
+      <tspan x="910" dy="20">507,806 nm</tspan>
+    </text>
+    <rect class="leg-background" x="811" y="800" width="198" height="70"/>
+    <text class="leg-label" x="910" y="821">
+      <tspan x="910">m = 26.331,352 t</tspan>
+      <tspan x="910" dy="20">d = 2.195,720 km</tspan>
+      <tspan x="910" dy="20">1.185,594 nm</tspan>
+    </text>
+  </g>
+
+  <g aria-label="Dados dos subtrechos da viagem V5">
+    <rect class="leg-background" x="1071" y="200" width="198" height="70"/>
+    <text class="leg-label" x="1170" y="221">
+      <tspan x="1170">m = 13.420,582 t</tspan>
+      <tspan x="1170" dy="20">d = 420,711 km</tspan>
+      <tspan x="1170" dy="20">227,166 nm</tspan>
+    </text>
+    <rect class="leg-background" x="1071" y="350" width="198" height="70"/>
+    <text class="leg-label" x="1170" y="371">
+      <tspan x="1170">m = 186,001 t</tspan>
+      <tspan x="1170" dy="20">d = 75,884 km</tspan>
+      <tspan x="1170" dy="20">40,974 nm</tspan>
+    </text>
+    <rect class="leg-background" x="1071" y="500" width="198" height="70"/>
+    <text class="leg-label" x="1170" y="521">
+      <tspan x="1170">m = 184,551 t</tspan>
+      <tspan x="1170" dy="20">d = 2.573,000 km</tspan>
+      <tspan x="1170" dy="20">1.389,309 nm</tspan>
+    </text>
+    <rect class="leg-background" x="1071" y="725" width="198" height="70"/>
+    <text class="leg-label" x="1170" y="746">
+      <tspan x="1170">m = 955,858 t</tspan>
+      <tspan x="1170" dy="20">d = 3.790,000 km</tspan>
+      <tspan x="1170" dy="20">2.046,436 nm</tspan>
+    </text>
+  </g>
+</svg>

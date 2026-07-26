@@ -40,7 +40,15 @@
 
 O objetivo geral deste trabalho é desenvolver e apresentar o CabotageLens como um sistema computacional auditável para comparar, porta a porta, duas alternativas de transporte de uma mesma remessa no Brasil: a rodoviária direta e a multimodal composta por acessos rodoviários, operações portuárias e cabotagem. Para uma origem, um destino e uma massa de carga definidos, o sistema estima as distâncias percorridas, o consumo de Diesel S10 e VLSFO, as emissões operacionais TTW e o custo modelado do combustível, mantendo identificáveis os dados, parâmetros, aproximações e critérios empregados.
 
-Para alcançar esse objetivo geral, o trabalho tem como objetivos específicos: estabelecer uma base funcional comum para as duas alternativas; estruturar os cálculos de distância, combustível, emissões operacionais e custo modelado do combustível; estimar rota e consumo de combustível a partir de dados reais de navegação; implementar essas regras em uma aplicação web; e demonstrar sua aplicação para uma remessa de 14 toneladas de São Paulo, SP até Rio Branco, AC. A avaliação permanece restrita ao escopo operacional e metodológico declarado, sem representar fretes comerciais, disponibilidade futura do serviço ou uma avaliação WTW ou de ciclo de vida.
+Para alcançar esse objetivo geral, o trabalho tem como objetivos específicos:
+
+1) estabelecer uma base funcional comum para as duas alternativas;
+2) estruturar os cálculos de distância, combustível, emissões operacionais e custo modelado do combustível;
+3) estimar os percursos marítimos e o consumo de combustível associado a partir de dados reais de navegação;
+4) implementar essas regras em uma aplicação web; e
+5) demonstrar sua aplicação a uma remessa de 14 toneladas entre São Paulo (SP) e Rio Branco (AC).
+
+A avaliação permanece restrita ao escopo operacional e metodológico declarado, sem representar fretes comerciais, disponibilidade futura do serviço ou uma avaliação WTW ou de ciclo de vida.
 
 ## 2. Introdução
 
@@ -50,7 +58,7 @@ O transporte de cargas no Brasil é fortemente concentrado nas rodovias. Em 2015
 
 *Figura 1 — Distribuição da atividade de transporte de cargas no Brasil em 2015, medida em TKU. Fonte: [Sindicato dos Bancários de São Paulo, Osasco e Região (2018)](https://spbancarios.com.br/05/2018/brasil-e-dependente-do-transporte-rodoviario-de-cargas), com dados de 2015 do Plano Nacional de Logística, conforme informado pela publicação.*
 
-Além do papel predominante na matriz, o transporte rodoviário de cargas depende, principalmente, do diesel e contribui para as emissões de gases de efeito estufa do setor. Por isso, políticas de transporte buscam transferir parte das viagens longas para modais mais eficientes. Tomemos de exemplo a [Comissão Europeia (2011)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52011DC0144), que no Livro Branco dos Transportes definiu a meta de transferir, até 2030, 30% das cargas rodoviárias transportadas por mais de 300 km para ferrovias ou vias aquaviárias e, até 2050, mais de 50%. Nesse contexto, a cabotagem — o transporte marítimo entre portos do mesmo país utilizando a navegação pela costa nacional ou por vias interiores — é uma alternativa possível para parte das cargas de longa distância no Brasil (Carvalho, 2022).
+Além do papel predominante na matriz, o transporte rodoviário de cargas depende, principalmente, do diesel e contribui para as emissões de gases de efeito estufa do setor. Por isso, políticas de transporte buscam transferir parte das viagens longas para modais mais eficientes. A [Comissão Europeia (2011)](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52011DC0144), por exemplo, definiu no Livro Branco dos Transportes a meta de transferir, até 2030, 30% das cargas rodoviárias transportadas por mais de 300 km para ferrovias ou vias aquaviárias e, até 2050, mais de 50%. Nesse contexto, a cabotagem — o transporte marítimo entre portos do mesmo país utilizando a navegação pela costa nacional ou por vias interiores — é uma alternativa possível para parte das cargas de longa distância no Brasil (Carvalho, 2022).
 
 Para saber se a cabotagem faz sentido em uma ligação específica, a comparação precisa ser porta a porta. Uma comparação porta a porta começa no local onde a carga está e termina no local em que ela será entregue. As duas alternativas precisam prestar exatamente o mesmo serviço: transportar a mesma massa entre esses dois pontos. No caminho rodoviário, o caminhão percorre todo o trajeto por estrada. Na alternativa com cabotagem, a carga segue de caminhão até o porto de embarque, é transportada pelo navio entre os portos e, em seguida, segue de caminhão do porto de desembarque até o destino final. Por isso, a análise soma distância, consumo, emissões e custo de todas essas etapas, em vez de comparar apenas o trecho marítimo com a viagem rodoviária completa.
 
@@ -94,7 +102,7 @@ Definidas a unidade de comparação e as fronteiras do estudo, é necessário es
 
 O mesmo princípio é aplicado às duas alternativas. Na perna rodoviária, a distância calculada é combinada a uma eficiência definida por número de eixos a partir da referência da [Agência Nacional de Transportes Terrestres (ANTT)](http://www.antt.gov.br/). Na perna marítima, o percurso e a carga reconstruídos são combinados ao indicador anual correspondente ao navio. Assim, nenhuma das alternativas recebe um nível de precisão incompatível com os dados disponíveis (ANTT, 2025; ANTAQ, 2025; EMSA, 2026).
 
-Para a navegação, adoção de indicadores médios evita que a comparação fique condicionada às circunstâncias de uma única viagem e oferece uma referência rastreável para diferentes cenários. Incorporar diretamente calado ou deslocamento, velocidade, trim, vento, ondas, correntes, condição do casco e do propulsor e regimes das máquinas produziria uma estimativa localizada, válida para uma combinação específica de navio, rota e momento operacional. Porém, como o estudo busca comparar os modais a partir de desempenhos médios, e não reproduzir as condições particulares de uma viagem, o modelo utiliza um indicador anual que reúne o desempenho do navio ao longo do período monitorado.
+Para a navegação, a adoção de indicadores médios evita que a comparação fique condicionada às circunstâncias de uma única viagem e oferece uma referência rastreável para diferentes cenários. Incorporar diretamente calado ou deslocamento, velocidade, trim, vento, ondas, correntes, condição do casco e do propulsor e regimes das máquinas produziria uma estimativa localizada, válida para uma combinação específica de navio, rota e momento operacional. Porém, como o estudo busca comparar os modais a partir de desempenhos médios, e não reproduzir as condições particulares de uma viagem, o modelo utiliza um indicador anual que reúne o desempenho do navio ao longo do período monitorado.
 
 Os resultados devem, portanto, ser interpretados como estimativas médias de consumo e emissões operacionais TTW. Eles não representam o consumo exato de uma viagem específica nem demonstram que a cabotagem é sempre ambientalmente superior. A conclusão permanece condicionada à rota, aos acessos terrestres, à carga, ao navio representado e às demais premissas do modelo (Svindland e Hjelle, 2019). A Seção 4 apresenta como os parâmetros rodoviários e marítimos são obtidos, aplicados e identificados quando exigem estimativas por grupo.
 
@@ -160,7 +168,7 @@ Com a distância rodoviária $D_{\mathrm{rod}}$, em quilômetros, a eficiência 
 
 $$
 V_{\mathrm{diesel,rod}}
-=N_{\mathrm{viagens}}\frac{D_{\mathrm{rod}}}{\eta_{\mathrm{rod}}}.
+=N_{\mathrm{viagens}}\times\frac{D_{\mathrm{rod}}}{\eta_{\mathrm{rod}}}.
 $$
 
 Como exemplo, usemos os 3.491,431 km de distância rodoviária entre São Paulo e Rio Branco. Para transportar uma remessa de 14 t nessa ligação, o modelo seleciona uma carreta de cinco eixos, com eficiência de 2,3 km/L. Como a remessa cabe em uma única viagem, $N_{\mathrm{viagens}}=1$ e o consumo estimado é:
@@ -189,10 +197,10 @@ $$
 O custo estimado é o consumo calculado na Seção 4.2.1 multiplicado pelo preço do litro:
 
 $$
-C_{\mathrm{rod}}=V_{\mathrm{diesel,rod}}\,P_{\mathrm{diesel}}.
+C_{\mathrm{rod}}=V_{\mathrm{diesel,rod}}\times P_{\mathrm{diesel}}.
 $$
 
-Nessas expressões, $C_{\mathrm{rod}}$ é o custo modelado do combustível da rota, em reais; $V_{\mathrm{diesel,rod}}$ é o volume de diesel, em litros; e $P_{\mathrm{diesel}}$ é o preço adotado, em reais por litro. $P_{\mathrm{diesel,origem}}$ e $P_{\mathrm{diesel,destino}}$ são, respectivamente, os preços do Diesel S10 nas Unidades da Federação de origem e destino. Na execução São Paulo–Rio Branco, os valores correspondem aos preços médios de revenda do Diesel S10 divulgados pela ANP para a semana de 12 a 18 de julho de 2026. Nesse levantamento, São Paulo registrou R\$ 6,960/L e o Acre, R\$ 9,270/L. Assim, o preço aplicado à rota foi:
+Nessas expressões, $C_{\mathrm{rod}}$ é o custo modelado do combustível da rota, em reais; $V_{\mathrm{diesel,rod}}$ é o volume de diesel, em litros; e $P_{\mathrm{diesel}}$ é o preço adotado, em reais por litro. $P_{\mathrm{diesel,origem}}$ e $P_{\mathrm{diesel,destino}}$ são, respectivamente, os preços do Diesel S10 nas Unidades da Federação de origem e destino. No cenário São Paulo–Rio Branco, os valores correspondem aos preços médios de revenda do Diesel S10 divulgados pela ANP para a semana de 12 a 18 de julho de 2026. Nesse levantamento, São Paulo registrou R\$ 6,960/L e o Acre, R\$ 9,270/L. Assim, o preço aplicado à rota foi:
 
 $$
 P_{\mathrm{diesel}}
@@ -219,7 +227,7 @@ A emissão rodoviária é o consumo de diesel multiplicado pelo fator de emissã
 
 $$
 E_{\mathrm{rod}}
-=V_{\mathrm{diesel,rod}}\,FE_{\mathrm{diesel}}.
+=V_{\mathrm{diesel,rod}}\times FE_{\mathrm{diesel}}.
 $$
 
 Nessa expressão, $E_{\mathrm{rod}}$ é a emissão operacional da rota, em kg CO₂e; $V_{\mathrm{diesel,rod}}$ é o volume de diesel, em litros; e $FE_{\mathrm{diesel}}$ é o fator de emissão, em kg CO₂e/L. No exemplo São Paulo–Rio Branco, os 1.518,014 L estimados na Seção 4.2.1 resultam em:
@@ -235,7 +243,7 @@ $$
 
 #### 4.2.4 Resultado consolidado da alternativa rodoviária
 
-A Tabela 3 reúne os resultados da alternativa rodoviária para a mesma remessa usada no exemplo São Paulo-Rio Branco.
+A Tabela 3 reúne os resultados da alternativa rodoviária para a mesma remessa usada no exemplo São Paulo–Rio Branco.
 
 **Tabela 3 — Resultados da alternativa rodoviária no exemplo São Paulo–Rio Branco, para uma remessa de 14 t.**
 
@@ -263,13 +271,13 @@ O sistema associa a origem ao porto mais próximo disponível na base portuária
 
 #### 4.3.2 Acessos rodoviários: *first mile* e *last mile*
 
-O primeiro acesso, chamado de *first mile*, é o deslocamento da carga entre a origem até o porto de embarque. Já o segundo, chamado de *last mile*, se refere à ida da carga do porto de desembarque até o destino final. Para cada um deles, o sistema obtém uma distância rodoviária, aplica a regra de veículo, eficiência e consumo de diesel da Seção 4.2.1 e converte o consumo em emissões conforme a Seção 4.2.3.
+O primeiro acesso, chamado de *first mile*, é o deslocamento da carga da origem até o porto de embarque. Já o segundo, chamado de *last mile*, refere-se ao deslocamento da carga do porto de desembarque até o destino final. Para cada um deles, o sistema obtém uma distância rodoviária, aplica a regra de veículo, eficiência e consumo de diesel da Seção 4.2.1 e converte o consumo em emissões conforme a Seção 4.2.3.
 
 O consumo dos dois acessos é calculado pela mesma expressão. O índice $i$ identifica o acesso e assume $\mathrm{first}$ ou $\mathrm{last}$:
 
 $$
 V_{\mathrm{diesel},i}
-=N_{\mathrm{viagens},i}
+=N_{\mathrm{viagens},i}\times
 \frac{D_i}{\eta_i},
 \qquad
 i\in\{\mathrm{first},\mathrm{last}\}.
@@ -328,10 +336,10 @@ O consumo por movimento de cada equipamento é obtido pela divisão do consumo p
 $$
 \begin{aligned}
 c_{\mathrm{RTG}}
-&=\frac{1}{2}\left(\frac{1{,}400000}{4}+\frac{1{,}441185}{4}\right)
+&=\frac{1}{2}\times\left(\frac{1{,}400000}{4}+\frac{1{,}441185}{4}\right)
 =0{,}355148\ \mathrm{L/movimento},\\
 c_{\mathrm{caminhao}}
-&=\frac{1}{2}\left(\frac{0{,}975000}{2}+\frac{1{,}003682}{2}\right)
+&=\frac{1}{2}\times\left(\frac{0{,}975000}{2}+\frac{1{,}003682}{2}\right)
 =0{,}494671\ \mathrm{L/movimento}.
 \end{aligned}
 $$
@@ -347,11 +355,11 @@ Na comparação porta a porta deste estudo, são consideradas duas operações p
 $$
 V_{\mathrm{diesel,porto}}
 =2\times N_{\mathrm{TEU}}\times
-\left(a_{\mathrm{RTG}}\times\,c_{\mathrm{RTG}}
-+a_{\mathrm{caminhao}}\times\,c_{\mathrm{caminhao}}\right).
+\left(a_{\mathrm{RTG}}\times c_{\mathrm{RTG}}
++a_{\mathrm{caminhao}}\times c_{\mathrm{caminhao}}\right).
 $$
 
-Nessa expressão, $V_{\mathrm{diesel,porto}}$ é o volume total de diesel das duas operações portuárias, em litros; $N_{\mathrm{TEU}}$ é a quantidade de TEUs da remessa; $a$ é o número de movimentos por TEU; e $c$ é o consumo de diesel, em litros por movimento. O primeiro termo ($a_{\mathrm{RTG}}\times\,c_{\mathrm{RTG}}$) calcula o diesel do RTG e o segundo ($a_{\mathrm{caminhao}}\times\,c_{\mathrm{caminhao}}$) calcula o diesel do caminhão interno. A multiplicação por 2 leva esse consumo para os dois terminais. O resultado é usado posteriormente no cálculo das emissões operacionais e do custo modelado do combustível.
+Nessa expressão, $V_{\mathrm{diesel,porto}}$ é o volume total de diesel das duas operações portuárias, em litros; $N_{\mathrm{TEU}}$ é a quantidade de TEUs da remessa; $a$ é o número de movimentos por TEU; e $c$ é o consumo de diesel, em litros por movimento. O primeiro termo ($a_{\mathrm{RTG}}\times c_{\mathrm{RTG}}$) calcula o diesel do RTG e o segundo ($a_{\mathrm{caminhao}}\times c_{\mathrm{caminhao}}$) calcula o diesel do caminhão interno. A multiplicação por 2 leva esse consumo para os dois terminais. O resultado é usado posteriormente no cálculo das emissões operacionais e do custo modelado do combustível.
 
 No exemplo, a remessa de 14 t equivale a 1 TEU. Substituindo os fatores obtidos anteriormente na fórmula:
 
@@ -377,7 +385,7 @@ A seção apresenta quatro etapas metodológicas, seguidas por dois exemplos num
 
 ##### 4.3.4.1 Atividade observada na ANTAQ e reconstrução das viagens
 
-Para calcular a perna marítima, o sistema combina duas tabelas disponibilizadas pela ANTAQ: Atracação e Carga. Nenhuma delas apresenta isoladamente uma viagem completa, como “Santos–Manaus”. As informações necessárias para a análise de uma viagem completa foi dividida entre essas tabelas e estão distribuídas da seguinte forma:
+Para calcular a perna marítima, o sistema combina duas tabelas disponibilizadas pela ANTAQ: Atracação e Carga. Nenhuma delas apresenta isoladamente uma viagem completa, como “Santos–Manaus”. As informações necessárias para analisar uma viagem completa foram divididas entre essas tabelas e estão distribuídas da seguinte forma:
 
 - Na tabela de Atracação, cada linha registra uma **escala** de determinado navio em um porto ou terminal, com suas datas e seu número IMO (ver Seção 4.3.4.1.2).
 - Na tabela de Carga, cada linha registra uma parcela de **carga movimentada** durante uma atracação, com informações como massa, quantidade em TEU e sentido da movimentação (ver Seção 4.3.4.1.1).
@@ -414,7 +422,7 @@ A Figura 2 apresenta parte do arquivo bruto de Carga. A repetição do mesmo `ID
 
 ###### 4.3.4.1.2 Tabela de Atracação da ANTAQ
 
-A tabela de Atracação é o registro cronológico das escalas. Cada linha informa que determinado navio esteve em um porto ou terminal, em quais datas chegou e saiu e qual é o seu número IMO, identificador único do navio usado internacionalmente. Ela não informa a massa movimentada. Ao ligar seu `IDAtracacao` aos movimentos da tabela de Carga e ordenar as datas de atracação, o sistema transforma os registros isolados na sequência Santos → Suape → Pecém → Manaus.
+A tabela de Atracação é o registro cronológico das escalas. Cada linha informa que determinado navio esteve em um porto ou terminal, suas datas de chegada e saída e seu número IMO, identificador único do navio usado internacionalmente. Ela não informa a massa movimentada. Ao ligar seu `IDAtracacao` aos movimentos da tabela de Carga e ordenar as datas de atracação, o sistema transforma os registros isolados na sequência Santos → Suape → Pecém → Manaus.
 
 A Figura 3 apresenta parte do arquivo bruto de Atracação. Cada linha identifica uma escala e reúne o porto, as datas e o número IMO necessários para ordenar as escalas do mesmo navio.
 
@@ -527,7 +535,7 @@ B_{\mathrm{Suape}}=B_2
 &=B_1+\Delta_2
 =12{.}858{,}754+3{.}859{,}579
 =16{.}718{,}333\ \mathrm{t},\\
-B_{\mathrm{Pecem}}=B_3
+B_{\mathrm{Pecém}}=B_3
 &=B_2+\Delta_3
 =16{.}718{,}333-4{.}392{,}433
 =12{.}325{,}900\ \mathrm{t},\\
@@ -553,14 +561,14 @@ flowchart LR
 
 ##### 4.3.4.2 Intensidade de combustível do navio
 
-Após reconstruir o percurso e a carga a bordo, é preciso estimar o consumo de combustível associado a esse transporte. Conforme fundamentado na Seção 3.1, o sistema usa a **intensidade de combustível** para obter uma estimativa média e comparável, ao invés de simular as condições particulares de uma única viagem. Essa intensidade expressa a massa de combustível associada ao transporte de uma tonelada por uma milha náutica. Sua unidade é grama por tonelada-milha náutica, ou $\mathrm{g/(t\cdot nm)}$.
+Após reconstruir o percurso e a carga a bordo, é preciso estimar o consumo de combustível associado a esse transporte. Conforme fundamentado na Seção 3.1, o sistema usa a **intensidade de combustível** para obter uma estimativa média e comparável, em vez de simular as condições particulares de uma única viagem. Essa intensidade expressa a massa de combustível associada ao transporte de uma tonelada por uma milha náutica. Sua unidade é grama por tonelada-milha náutica, ou $\mathrm{g/(t\cdot nm)}$.
 
-No EU MRV, esse indicador é construído por um processo padronizado. Para cada navio, a companhia elabora um plano de monitoramento que descreve os métodos e as fontes de dados utilizados. Esse plano é avaliado por um verificador acreditado e, quando aplicável, aprovado pela autoridade responsável. Durante o período de reporte, são monitorados, em regra por viagem, o combustível consumido, a distância percorrida, o tempo no mar e a carga transportada. Ao final do ano, esses registros são agregados no relatório de emissões do navio, que também passa por verificação antes de ser submetido pelo sistema THETIS-MRV (EUROPEAN COMMISSION, 2025, p. 9, 30–32 e 54–55).
+No EU MRV, esse indicador é construído por um processo padronizado. Para cada navio, a companhia elabora um plano de monitoramento que descreve os métodos e as fontes de dados utilizados. Esse plano é avaliado por um verificador acreditado e, quando aplicável, aprovado pela autoridade responsável. Durante o período de reporte, são monitorados, em regra por viagem, o combustível consumido, a distância percorrida, o tempo no mar e a carga transportada. Ao final do ano, esses registros são agregados no relatório de emissões do navio, que também passa por verificação antes de ser submetido por meio do sistema THETIS-MRV (EUROPEAN COMMISSION, 2025, p. 9, 30–32 e 54–55).
 
 O trabalho de transporte de cada viagem é o produto entre a carga transportada e a distância percorrida. A intensidade anual não é uma média aritmética das intensidades das viagens, mas a razão entre o combustível total consumido no ano e o trabalho de transporte total:
 
 $$
-W_v=m_vd_v
+W_v=m_v\times d_v
 \qquad\text{e}\qquad
 I_{f,\mathrm{anual}}=\frac{F_{\mathrm{anual}}}{\sum_v W_v},
 $$
@@ -589,7 +597,7 @@ Na viagem `voyage_9612791_00011`, o IMO 9612791 foi encontrado diretamente no EU
 
 | Fonte ou campo | Valor usado | Papel no cálculo |
 | :-- | :-- | :-- |
-| Arquivo de origem | `2023-v85-08022026-EU MRV Publication of information.xlsx` | Publicação anual consultada para obter o indicador do navio. |
+| Arquivo de origem | `2023-v90-11062026-EU MRV Publication of information.xlsx` | Publicação anual consultada para obter o indicador do navio. |
 | `IMO Number` | `9612791` | Faz a correspondência direta com as escalas observadas na ANTAQ. |
 | `Ship type` | `Container ship` | Classificação do navio informada na base. |
 | `Annual average Fuel consumption per transport work (mass)` | $7{,}43\ \mathrm{g/(t\cdot nm)}$ | Informa a intensidade média de combustível por tonelada-milha náutica do navio. |
@@ -615,7 +623,7 @@ Esse uso do P95 trata apenas a intensidade individual do navio. O P95 empregado 
 
 ###### 4.3.4.2.3 Estimativa robusta quando não há valor individual utilizável
 
-A mesma regra de substituição atende a duas situações: o IMO observado na ANTAQ não possui um indicador individual positivo no EU MRV, ou o valor encontrado ultrapassa o P95 do seu tipo. Em ambos os casos, o sistema continua usando a base EU MRV, mas substitui a referência individual por uma estimativa de um grupo de embarcações semelhantes.
+A mesma regra de substituição atende a duas situações: o IMO observado na ANTAQ não possui um indicador individual positivo no EU MRV, ou o valor encontrado ultrapassa o P95 do seu tipo. Em ambos os casos, o sistema continua usando a base do EU MRV, mas substitui a referência individual por uma estimativa de um grupo de embarcações semelhantes.
 
 O primeiro nível é a **classe do navio**, uma faixa de porte dentro do tipo *container ship*. O porte é aproximado em toneladas com campos do EU MRV ligados ao trabalho de transporte: o sistema prioriza informações baseadas em *deadweight* (DWT) e, quando elas não estão disponíveis, usa informações baseadas na massa transportada. As classes são:
 
@@ -631,9 +639,9 @@ Assim, a sequência permanece a mesma tanto para um IMO ausente quanto para um v
 
 ###### 4.3.4.2.4 Exemplo de estimativa pelo tipo de navio
 
-O exemplo a seguir mostra o último nível dessa hierarquia, a estimativa pelo tipo. A viagem `voyage_9974486_00001`, realizada pelo navio de IMO 9974486, passou por Paranaguá, Rio de Janeiro e Salvador. Esse IMO aparece nos registros da ANTAQ, mas não possui correspondência individual no EU MRV. Como o registro também não traz uma classe mais específica, o sistema usa os dados do tipo documentado *container ship* na própria base do EU MRV.
+O exemplo a seguir mostra o último nível dessa hierarquia, a estimativa pelo tipo. A viagem `voyage_9974486_00001`, realizada pelo navio de IMO 9974486, passou por Paranaguá, Rio de Janeiro e Salvador. Esse IMO aparece nos registros da ANTAQ, mas não possui correspondência individual no EU MRV. Como o registro também não traz uma classe mais específica, o sistema usa os dados do tipo *container ship*, registrado na própria base do EU MRV.
 
-Para formar esse valor, o sistema reuniu um indicador positivo e mais recente de cada um dos 243 navios classificados como *container ship* no EU MRV. Após ordenar os valores, retirou os dois menores e os dois maiores, que são os valores removidos pela regra de 1% em cada extremidade. Restaram 239 valores para o cálculo:
+Para formar esse valor, o sistema reuniu o indicador positivo mais recente de cada um dos 243 navios classificados como *container ship* no EU MRV. Após ordenar os valores, retirou os dois menores e os dois maiores, que são os valores removidos pela regra de 1% em cada extremidade. Restaram 239 valores para o cálculo:
 
 $$
 I_{\mathrm{container\ ship}}
@@ -652,7 +660,7 @@ O sistema calcula quanto transporte foi realizado em cada recorte. Neste context
 Esse cálculo usa o trabalho de transporte. Em cada subtrecho, a carga a bordo é multiplicada pela distância percorrida; em seguida, os resultados dos subtrechos são somados. Para cada recorte válido $v$, extraído de uma viagem reconstruída, o trabalho entre a origem $o$ e o destino $d$ é:
 
 $$
-W_{v,o,d}=\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\,d_{v,s}.
+W_{v,o,d}=\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\times d_{v,s}.
 $$
 
 Nessa fórmula, $\mathcal{S}_{v,o,d}$ é o conjunto de subtrechos entre os dois portos, $m_{v,s}$ é a carga a bordo no subtrecho $s$, em toneladas, e $d_{v,s}$ é a distância correspondente, em milhas náuticas. O resultado $W_{v,o,d}$ é expresso em tonelada-milha náutica ($\mathrm{t\cdot nm}$). Portanto, um recorte recebe mais peso quando transporta mais carga, percorre uma distância maior ou reúne as duas condições.
@@ -683,7 +691,7 @@ O IMO 9612791 possui intensidade individual de $7{,}43\ \mathrm{g/(t\cdot nm)}$ 
 $$
 \begin{aligned}
 M_{\mathrm{VLSFO},v}
-&=\frac{I_v\,W_{v,o,d}}{1000}\\
+&=\frac{I_v\times W_{v,o,d}}{1000}\\
 &=\frac{7{,}43\times39.294.668{,}494}{1000}\\
 &=291.959{,}387\ \mathrm{kg}.
 \end{aligned}
@@ -695,7 +703,7 @@ Após repetir a reconstrução para todas as viagens registradas, o sistema calc
 
 $$
 I_{o,d}^{\mathrm{rep}}=
-\frac{\sum_{v=1}^{N_{\mathrm{recortes}}}I_v\,W_{v,o,d}}
+\frac{\sum_{v=1}^{N_{\mathrm{recortes}}}I_v\times W_{v,o,d}}
 {\sum_{v=1}^{N_{\mathrm{recortes}}}W_{v,o,d}}.
 $$
 
@@ -703,11 +711,11 @@ Aqui, $I_{o,d}^{\mathrm{rep}}$ é a intensidade representativa da ligação; $I_
 
 Em Santos–Manaus, os 89 recortes aceitos somam $3.153.328.821{,}755\ \mathrm{t\cdot nm}$ de trabalho de transporte. Antes da média, são aplicadas as regras de intensidade explicadas na subseção anterior:
 
-- 19 recortes usam a intensidade individual do IMO
+- 19 recortes usam a intensidade individual do IMO;
 - 49 usam a estimativa pelo tipo porque não possuem correspondência individual no EU MRV; e
 - 21 mantêm a viagem observada, mas recebem a estimativa pelo tipo porque o valor individual ultrapassou o limiar de anomalia.
 
-A soma dos produtos $I_v\,W_{v,o,d}$ é $22.092.543.373{,}408\ \mathrm{g}$. Logo:
+A soma dos produtos $I_v\times W_{v,o,d}$ é $22.092.543.373{,}408\ \mathrm{g}$. Logo:
 
 $$
 I_{\mathrm{Santos,Manaus}}^{\mathrm{rep}}=
@@ -716,7 +724,7 @@ I_{\mathrm{Santos,Manaus}}^{\mathrm{rep}}=
 =7{,}006102\ \mathrm{g/(t\cdot nm)}.
 $$
 
-Esse resultado não é a intensidade de um navio escolhido como representante. É a média das 89 viagens registradas nas bases da ANTAQ para esse trecho, em que cada uma contribui conforme a carga efetivamente transportada e a distância percorrida.
+Esse resultado não é a intensidade de um navio escolhido como representante. É a média dos 89 recortes reconstruídos com os registros da ANTAQ para essa ligação, em que cada um contribui conforme a carga efetivamente transportada e a distância percorrida.
 
 ##### 4.3.4.4 Distância marítima representativa entre os portos
 
@@ -728,7 +736,7 @@ Em cada recorte, o sistema primeiro soma as distâncias de seus subtrechos e cal
 
 $$
 \bar m_{v,o,d}=
-\frac{\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\,d_{v,s}}
+\frac{\sum_{s\in\mathcal{S}_{v,o,d}}m_{v,s}\times d_{v,s}}
 {\sum_{s\in\mathcal{S}_{v,o,d}}d_{v,s}}
 =\frac{W_{v,o,d}}{D_{v,o,d}^{\mathrm{nm}}}.
 $$
@@ -737,11 +745,11 @@ Na fórmula, $m_{v,s}$ é a carga a bordo no subtrecho $s$, $d_{v,s}$ é a dist�
 
 Na viagem `voyage_9612791_00011`, por exemplo, o trabalho de transporte de $39.294.668{,}494\ \mathrm{t\cdot nm}$ é dividido pela distância total de $2.952{,}580\ \mathrm{nm}$, resultando $13.308{,}588\ \mathrm{t}$. Esse é o peso da referida viagem na média de distância; não é a carga de uma nova remessa simulada.
 
-Em seguida, a distância representativa é a média das distâncias completas dos recortes que permaneceram até o P95, ponderada por essa carga média:
+Em seguida, a distância representativa é a média das distâncias completas dos recortes mantidos após a triagem pelo P95, ponderada por essa carga média:
 
 $$
 \bar D_{o,d}^{\mathrm{rep}}=
-\frac{\sum_{v\in\mathcal{V}_{o,d}^{\leq P95}}D_{v,o,d}^{\mathrm{km}}\,\bar m_{v,o,d}}
+\frac{\sum_{v\in\mathcal{V}_{o,d}^{\leq P95}}D_{v,o,d}^{\mathrm{km}}\times\bar m_{v,o,d}}
 {\sum_{v\in\mathcal{V}_{o,d}^{\leq P95}}\bar m_{v,o,d}}.
 $$
 
@@ -753,64 +761,11 @@ Em Santos–Manaus, foram reconstruídos 89 recortes completos em 22 corredores.
 
 ##### 4.3.4.5 Exemplo integrado com cinco viagens observadas
 
-Esta subseção reúne as etapas anteriores em um exemplo numérico único, formado por cinco recortes Santos–Manaus. O exemplo é apenas ilustrativo; uma vez que a base de dados fornecida pela ANTAQ fornece um conjunto com 89 recortes.
+Esta subseção reúne as etapas anteriores em um exemplo numérico único, formado por cinco recortes Santos–Manaus. O exemplo é apenas ilustrativo, pois a base de dados fornecida pela ANTAQ contém 89 recortes para essa ligação.
 
 Os cinco recortes correspondem a quatro navios. O IMO 9612791 aparece em duas viagens, mas percorre sequências de escalas diferentes. Essa repetição é mantida porque a unidade observada pelo método é o recorte de cada viagem, e não apenas o navio.
 
-```mermaid
-flowchart LR
-  subgraph V1["V1<br/>voyage_9612791_00011<br/>IMO 9612791<br/>I = 7,43 g/(t·nm)"]
-    direction TB
-    V1A["Santos"] ~~~ V1X1[" "] ~~~ V1X2[" "] ~~~ V1B["Suape"]
-    V1A -->|"m = 12.858,754 t<br/>d = 2.332,000 km<br/>1.259,179 nm"| V1B
-    V1B -->|"m = 16.718,333 t<br/>d = 940,458 km<br/>507,806 nm"| V1C["Pecém"]
-    V1C -->|"m = 12.325,900 t<br/>d = 2.195,720 km<br/>1.185,594 nm"| V1D["Manaus"]
-  end
-
-  subgraph V2["V2<br/>voyage_9612791_00003<br/>IMO 9612791<br/>I = 7,43 g/(t·nm)"]
-    direction TB
-    V2A["Santos"] -->|"m = 4.917,810 t<br/>d = 419,000 km<br/>226,242 nm"| V2B["Itajaí"]
-    V2B -->|"m = 13.522,710 t<br/>d = 193,000 km<br/>104,212 nm"| V2C["Paranaguá"]
-    V2C -->|"m = 10.386,517 t<br/>d = 2.573,000 km<br/>1.389,309 nm"| V2D["Suape"]
-    V2D -->|"m = 24.196,861 t<br/>d = 940,458 km<br/>507,806 nm"| V2E["Pecém"]
-    V2E -->|"m = 22.825,450 t<br/>d = 2.195,720 km<br/>1.185,594 nm"| V2F["Manaus"]
-  end
-
-  subgraph V3["V3<br/>voyage_9539494_00001<br/>IMO 9539494<br/>I = 9,50 g/(t·nm)"]
-    direction TB
-    V3A["Santos"] -->|"m = 16.056,390 t<br/>d = 420,711 km<br/>227,166 nm"| V3B["Itapoá"]
-    V3B -->|"m = 21.950,396 t<br/>d = 750,344 km<br/>405,153 nm"| V3C["Rio de Janeiro"]
-    V3C -->|"m = 24.195,104 t<br/>d = 1.965,000 km<br/>1.061,015 nm"| V3D["Suape"]
-    V3D -->|"m = 22.048,947 t<br/>d = 940,458 km<br/>507,806 nm"| V3E["Pecém"]
-    V3E -->|"m = 22.144,555 t<br/>d = 2.195,720 km<br/>1.185,594 nm"| V3F["Manaus"]
-  end
-
-  subgraph V4["V4<br/>voyage_9649835_00009<br/>IMO 9649835<br/>I = 5,41 g/(t·nm)"]
-    direction TB
-    V4A["Santos"] -->|"m = 27.128,064 t<br/>d = 420,711 km<br/>227,166 nm"| V4B["Itapoá"]
-    V4B ~~~ V4X2[" "] ~~~ V4C["Suape"]
-    V4B -->|"m = 26.218,790 t<br/>d = 2.596,249 km<br/>1.401,862 nm"| V4C
-    V4C -->|"m = 27.448,321 t<br/>d = 940,458 km<br/>507,806 nm"| V4D["Pecém"]
-    V4D -->|"m = 26.331,352 t<br/>d = 2.195,720 km<br/>1.185,594 nm"| V4E["Manaus"]
-  end
-
-  subgraph V5["V5<br/>voyage_9343974_00002<br/>IMO 9343974<br/>I = 6,80 g/(t·nm)"]
-    direction TB
-    V5A["Santos"] -->|"m = 13.420,582 t<br/>d = 420,711 km<br/>227,166 nm"| V5B["Itapoá"]
-    V5B -->|"m = 186,001 t<br/>d = 75,884 km<br/>40,974 nm"| V5C["Paranaguá"]
-    V5C -->|"m = 184,551 t<br/>d = 2.573,000 km<br/>1.389,309 nm"| V5D["Suape"]
-    V5D ~~~ V5X4[" "] ~~~ V5E["Manaus"]
-    V5D -->|"m = 955,858 t<br/>d = 3.790,000 km<br/>2.046,436 nm"| V5E
-  end
-
-  classDef spacer fill:transparent,stroke:transparent,color:transparent,stroke-width:0px
-  class V1X1,V1X2,V4X2,V5X4 spacer
-
-  V1 ~~~ V2
-  V2 ~~~ V3
-  V3 ~~~ V4
-  V4 ~~~ V5
-```
+![Cinco recortes observados entre Santos e Manaus, com as viagens dispostas em colunas e os portos repetidos alinhados horizontalmente.](images/fig07_cinco_recortes_santos_manaus.svg)
 
 *Figura 7 — Cinco recortes observados entre Santos e Manaus. Cada seta informa a carga a bordo ($m$) e a distância do subtrecho ($d$). Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ, intensidades do EU MRV e distâncias da matriz marítima do sistema.*
 
@@ -906,13 +861,13 @@ Depois de preparar a intensidade e a distância representativas da ligação, o 
 $$
 M_{\mathrm{VLSFO,remessa}}
 =\frac{
-I_{\mathrm{Santos,Manaus}}^{\mathrm{rep}}\,
-m_{\mathrm{remessa}}\,
+I_{\mathrm{Santos,Manaus}}^{\mathrm{rep}}\times
+m_{\mathrm{remessa}}\times
 D_{\mathrm{Santos,Manaus}}^{\mathrm{rep,nm}}
 }{1000}.
 $$
 
-Nessa expressão, $m_{\mathrm{remessa}}$ é a massa transportada, em toneladas. O produto $m_{\mathrm{remessa}}D^{\mathrm{rep,nm}}$ é o trabalho de transporte da nova remessa, em $\mathrm{t\cdot nm}$; a multiplicação pela intensidade fornece gramas de VLSFO, convertidos em quilogramas pela divisão por 1.000. Para a remessa de 14 t:
+Nessa expressão, $m_{\mathrm{remessa}}$ é a massa transportada, em toneladas. O produto $m_{\mathrm{remessa}}\times D^{\mathrm{rep,nm}}$ é o trabalho de transporte da nova remessa, em $\mathrm{t\cdot nm}$; a multiplicação pela intensidade fornece gramas de VLSFO, convertidos em quilogramas pela divisão por 1.000. Para a remessa de 14 t:
 
 $$
 \begin{aligned}
@@ -926,7 +881,7 @@ M_{\mathrm{VLSFO,remessa}}
 \end{aligned}
 $$
 
-Esse é o consumo de VLSFO apresentado na linha “Navegação” da Tabela 9. Ele não corresponde ao combustível total das 89 viagens históricas: essas viagens servem apenas para preparar a intensidade e a distância representativas aplicadas à remessa simulada.
+Esse é o consumo de VLSFO apresentado na linha “Navegação” da Tabela 9. Ele não corresponde ao combustível total dos 89 recortes históricos: esses recortes servem apenas para preparar a intensidade e a distância representativas aplicadas à remessa simulada.
 
 #### 4.3.5 Emissões da alternativa multimodal
 
@@ -943,7 +898,7 @@ Para as etapas que usam Diesel S10 — *first mile*, operações portuárias e *
 
 $$
 E_{i,\mathrm{diesel}}
-=V_{\mathrm{diesel},i}\,FE_{\mathrm{diesel}},
+=V_{\mathrm{diesel},i}\times FE_{\mathrm{diesel}},
 \qquad
 i\in\{\mathrm{first},\mathrm{porto},\mathrm{last}\}.
 $$
@@ -952,7 +907,7 @@ Na navegação, o consumo é expresso em massa de VLSFO:
 
 $$
 E_{\mathrm{navegação}}
-=M_{\mathrm{VLSFO}}\,FE_{\mathrm{VLSFO}}.
+=M_{\mathrm{VLSFO}}\times FE_{\mathrm{VLSFO}}.
 $$
 
 Nessas expressões:
@@ -1000,7 +955,7 @@ O custo modelado do combustível considera apenas o combustível estimado em cad
 
 No exemplo São Paulo–Rio Branco, a atualização retornou os preços da semana de 12 a 18 de julho de 2026, com data final de pesquisa em 18 de julho. Os acessos rodoviários, *first mile* e *last mile*, usam a mesma regra de escolha do veículo e de cálculo de consumo da Seção 4.2.1. Para precificar o diesel, o *first mile* usa a média entre a UF de origem e a UF do porto de embarque, e o *last mile*, a média entre a UF do porto de desembarque e a UF de destino. Nas operações portuárias, cada porto usa diretamente o preço do diesel na sua própria UF.
 
-O sistema também busca a cotação mais recente disponível do VLSFO na [Ship & Bunker](https://shipandbunker.com/prices/br-brazil). Nesta execução, a cotação de 18 de julho de 2026 foi US\$ 741,50/mt. A sigla `mt` significa *metric tonne*, ou tonelada métrica, equivalente a 1.000 kg. A taxa de conversão USD/BRL também é sempre a mais recente: de R\$ 5,141345 por US\$, obtida pela ferramenta [CurrencyConverter](https://pypi.org/project/CurrencyConverter/) a partir de dados do Banco Central Europeu (BCE), o preço convertido foi R\$ 3.812,31/mt, ou R\$ 3,812/kg. A Tabela 8 resume as fontes, os valores de origem e os preços usados no exemplo.
+O sistema também busca a cotação mais recente disponível do VLSFO na [Ship & Bunker](https://shipandbunker.com/prices/br-brazil). Nesta execução, a cotação de 18 de julho de 2026 foi US\$ 741,50/mt. A sigla `mt` significa *metric tonne*, ou tonelada métrica, equivalente a 1.000 kg. A taxa USD/BRL usada na conversão foi de R\$ 5,141345 por US\$, obtida pela ferramenta [CurrencyConverter](https://pypi.org/project/CurrencyConverter/) a partir de dados do Banco Central Europeu (BCE). Aplicada à cotação do VLSFO, essa taxa resultou em R\$ 3.812,31/mt, ou R\$ 3,812/kg. A Tabela 8 resume as fontes, os valores de origem e os preços usados no exemplo.
 
 **Tabela 8 — Preços de combustível usados no exemplo São Paulo–Rio Branco.**
 
@@ -1017,14 +972,14 @@ Para as etapas que usam Diesel S10 — *first mile*, operação no porto de emba
 
 $$
 C_i
-=V_{\mathrm{diesel},i}\,P_{\mathrm{diesel},i}.
+=V_{\mathrm{diesel},i}\times P_{\mathrm{diesel},i}.
 $$
 
 Na navegação, o consumo e o preço do VLSFO são expressos em massa:
 
 $$
 C_{\mathrm{navegação}}
-=M_{\mathrm{VLSFO}}\,P_{\mathrm{VLSFO}}.
+=M_{\mathrm{VLSFO}}\times P_{\mathrm{VLSFO}}.
 $$
 
 O custo portuário reúne as duas operações, calculadas separadamente:
@@ -1152,11 +1107,11 @@ Quando o provedor encontra uma correspondência suficiente, o motor de geocodifi
 
 #### 5.2.3 Consulta aos serviços de localização
 
-O pipeline envia o texto de origem ou destino primeiro ao OpenRouteService (ORS). Se o ORS devolver uma localização válida, recebe o rótulo do local, a latitude, a longitude e a identificação do provedor. Quando o ORS não devolve uma resposta utilizável, o pipeline envia a mesma consulta ao LocationIQ. A saída desta etapa é um ponto identificado por coordenadas (latitude e longitude).
+O pipeline envia o texto de origem ou destino primeiro ao OpenRouteService (ORS). Se o ORS devolver uma localização válida, o pipeline recebe o rótulo do local, a latitude, a longitude e a identificação do provedor. Quando o ORS não devolve uma resposta utilizável, o pipeline envia a mesma consulta ao LocationIQ. A saída desta etapa é um ponto identificado por coordenadas (latitude e longitude).
 
 #### 5.2.4 Fluxograma explicativo
 
-O fluxograma mostra o caminho de quatro formas de entrada para o mesmo local:
+O fluxograma mostra como quatro formas de entrada são processadas para identificar o mesmo local:
 
 ```mermaid
 flowchart TB
@@ -1171,7 +1126,7 @@ Após a geocodificação de um local, suas coordenadas são armazenadas no banco
 
 #### 5.2.5 Validação das coordenadas
 
-Antes de calcular uma rota, é preciso verificar se o endereço foi associado à região correta. Para isso, foi usado o endereço de referência `Avenida Professor Luciano Gualberto, São Paulo, SP`. A consulta independente no Google Maps retornou as coordenadas latitude igual a −23,560017° e longitude igual a −46,727769°, apresentadas na Figura 8. Para o mesmo endereço, o motor de geocodificação retornou as coordenadas (−23,558808°; −46,730357°). A distância em linha reta entre os dois pontos é aproximadamente 296 m.
+Antes de calcular uma rota, é preciso verificar se o endereço foi associado à região correta. Para isso, foi usado o endereço de referência `Avenida Professor Luciano Gualberto, São Paulo, SP`. A consulta independente no Google Maps retornou latitude de −23,560017° e longitude de −46,727769°, apresentadas na Figura 8. Para o mesmo endereço, o motor de geocodificação retornou as coordenadas (−23,558808°; −46,730357°). A distância em linha reta entre os dois pontos é de aproximadamente 296 m.
 
 ![Consulta do endereço Avenida Professor Luciano Gualberto no Google Maps.](images/Screenshot%202026-07-18%20143636.png)
 
@@ -1233,7 +1188,7 @@ Após confirmar que o XLSX baixado gerou uma tabela válida de preços por Unida
 
 Com a distância disponível, o avaliador aplica as regras das Seções 4.2.1 a 4.2.3. Ele seleciona a configuração rodoviária representativa a partir da massa da remessa, calcula os litros de diesel de cada perna e converte esse consumo em custo e emissões.
 
-Cada perna guarda, além do valor calculado, a distância, o tipo de veículo, o preço de diesel, o fator de emissão e a origem desses insumos. Dessa forma, o total rodoviário pode ser auditado sem misturá-lo com as parcelas portuárias ou marítimas.
+Cada perna guarda, além do valor calculado, a distância, o tipo de veículo, o preço do diesel, o fator de emissão e a origem desses insumos. Dessa forma, o total rodoviário pode ser auditado sem misturá-lo com as parcelas portuárias ou marítimas.
 
 #### 5.3.4 Resumo do pipeline da alternativa direta
 
@@ -1243,7 +1198,7 @@ No exemplo São Paulo–Rio Branco, uma remessa de 14 t percorre 3.491,431 km.
 
 ```mermaid
 flowchart LR
-    A["Carga, origem e destino<br/>14t de São Paulo até Rio Branco"] --> B["Geocodificação"]
+    A["Carga, origem e destino<br/>14 t entre São Paulo e Rio Branco"] --> B["Geocodificação"]
     A --> D
     B --> C["Distância rodoviária<br/>3.491,431 km"] --> E
     D["Rendimento do veículo<br/>2,3 km/L de Diesel"] --> E["Consumo de Diesel S10<br/>1.518,014 L"] --> F
@@ -1299,7 +1254,7 @@ O resultado da reconstrução também é gravado em tabelas criadas no banco de 
 
 - A tabela `antaq_voyages` registra cada viagem reconstruída;
 - A tabela `antaq_voyage_stops` armazena suas paradas em ordem;
-- A tabela`antaq_voyage_stop_calls` preserva as escalas que formaram cada parada.
+- A tabela `antaq_voyage_stop_calls` preserva as escalas que formaram cada parada.
 
 ##### 5.4.2.3 Dados da EU MRV
 
@@ -1321,7 +1276,7 @@ flowchart LR
     E --> T["Trabalho de transporte<br/>e consumo por recorte"] --> F["SeaMatrix<br/>distância, intensidade e cobertura"]
 ```
 
-As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e, as colunas, o porto de destino.
+As Tabelas 13 e 14 mostram parte da matriz marítima preparada com dados reais. As linhas indicam o porto de origem e as colunas, o porto de destino.
 
 A Tabela 13 apresenta a distância representativa de cada sentido. Quando há 20 ou mais recortes, as distâncias acima do P95 são retiradas antes da média ponderada pela carga média a bordo, conforme explicado na Seção 4.3.4.4. Nota-se que a distância de ida pode ser diferente da distância de volta, uma vez que cada sentido reúne seu próprio conjunto de viagens, cargas e distâncias observadas. As duas tabelas incluem recortes diretos e recortes com escalas intermediárias. O travessão indica que origem e destino são o mesmo porto, situação que não forma uma perna marítima.
 
@@ -1410,7 +1365,7 @@ A diferença entre as duas colunas é esperada: Haversine mede a separação geo
 
 #### 5.4.4 Operações portuárias
 
-A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas para realizar o procedimento descrito na Seção 4.3.3. O resultado da execução foi 4,820 L de diesel para as operações quantificadas, equivalentes a R$ 34,25 e 12,92 kg CO₂e.
+A rotina de operações portuárias recebe a carga, os dois portos e o número de escalas para realizar o procedimento descrito na Seção 4.3.3. O resultado da execução foi 4,820 L de diesel para as operações quantificadas. Esse consumo corresponde a R$ 34,25 e a 12,92 kg CO₂e.
 
 ### 5.5 Consulta da ligação marítima
 
@@ -1430,7 +1385,7 @@ No exemplo São Paulo–Rio Branco, a escolha dos portos leva à consulta Santos
 | Distância marítima | 6.094,975 km, ou 3.291,023 nm | Média da distância total, ponderada pela carga média a bordo dos 87 recortes até o P95 |
 | Intensidade marítima | 7,006102 g/(t·nm) | Média ponderada pelo trabalho de transporte dos 89 recortes |
 | Origem das intensidades | 19 por IMO; 49 por tipo sem IMO utilizável; 21 por tipo após tratamento de valor atípico | A fonte permanece identificada para cada recorte |
-| Aviso de distância | 1 subtrecho aproximado por haversine entre 391 subtrechos | A aproximação permanece identificada na amostra de distância usada no cenário |
+| Aviso de distância | 1 subtrecho aproximado por Haversine entre 391 subtrechos | A aproximação permanece identificada na amostra de distância usada no cenário |
 
 ### 5.6 Resultado final do cenário
 
@@ -1454,13 +1409,13 @@ O resultado não guarda apenas os totais de custo e emissão. A cada execução,
 | :-- | :-- | :-- |
 | Rota rodoviária direta | 3.491,431 km; resultado originalmente obtido do ORS e reutilizado na execução | Permite conferir a distância usada na alternativa direta |
 | Portos selecionados | Santos (SP) e Manaus (AM) | Mostra onde começam e terminam os acessos marítimos e rodoviários |
-| Ligação marítima | 89 viagens completas em 22 corredores; 87 recortes até o P95 para a distância | Identifica a base da intensidade e da distância marítimas |
+| Ligação marítima | 89 recortes completos em 22 corredores; 87 recortes até o P95 para a distância | Identifica a base da intensidade e da distância marítimas |
 | Intensidade marítima | 7,006102 g/(t·nm); fontes por IMO e por tipo identificadas | Diferencia medição individual de estimativa de grupo |
 | Operações portuárias | RTG e caminhão interno do terminal | Identifica os equipamentos considerados no cálculo |
 | Preços de combustível | Diesel S10 da ANP e VLSFO da Ship & Bunker, com data e valor usados | Permite atualizar ou repetir o componente de custo |
-| Avisos de qualidade | Um subtrecho marítimo aproximado por haversine | Sinaliza a aproximação sem ocultá-la no total |
+| Avisos de qualidade | Um subtrecho marítimo aproximado por Haversine | Sinaliza a aproximação sem ocultá-la no total |
 
-*Esses são os mesmos dados consolidados na Tabela 9 da Sessão 3.3.7*
+*Os resultados correspondentes estão consolidados na Tabela 9, na Seção 4.3.7.*
 
 #### 5.7.1 Versionamento e reprodução do cálculo
 
@@ -1472,7 +1427,7 @@ Para disponibilizar o cálculo sem exigir instalação local, o CabotageLens é 
 
 #### 5.8.1 Página Router
 
-A página Router executa a comparação para a origem, o destino e a carga informados no cenário. A Figura 11 mostra os campos da barra lateral usados nessa definição. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, segue para Manaus e considera uma carga de 14 t.
+A página Router executa a comparação para a origem, o destino e a carga informados no cenário. A Figura 11 mostra os campos da barra lateral usados nessa definição. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, segue para Manaus e considera uma carga de 14 t.
 
 ![Campos da barra lateral da página Router usados para definir o cenário.](images/router-scenario.png)
 
@@ -1488,7 +1443,7 @@ Os resultados detalhados, os avisos, os logs e os demais registros gerados duran
 
 #### 5.8.2 Página Mapa de calor
 
-O Mapa de calor amplia a comparação realizada na página Router. Em vez de avaliar apenas uma ligação entre origem e destino, o usuário informa uma origem e a massa da carga, e o sistema compara esse cenário com 608 municípios brasileiros de população superior a 50 mil habitantes. Para cada município, são calculadas as mesmas duas alternativas descritas na Seção 4: a rodovia direta e a cadeia rodoviária–cabotagem–rodoviária. A Figura 13 mostra os campos usados para definir o cenário. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, e considera uma carga de 14 t.
+O Mapa de calor amplia a comparação realizada na página Router. Em vez de avaliar apenas uma ligação entre origem e destino, o usuário informa uma origem e a massa da carga, e o sistema compara esse cenário com 608 municípios brasileiros de população superior a 50 mil habitantes. Para cada município, são calculadas as mesmas duas alternativas descritas na Seção 4: a rodovia direta e a cadeia rodoviária–cabotagem–rodoviária. A Figura 13 mostra os campos usados para definir o cenário. No exemplo, a análise parte da Avenida Professor Luciano Gualberto, em São Paulo, e considera uma carga de 14 t.
 
 ![Campos de origem e carga da página Mapa de calor.](images/heatmap-scenario.png)
 
@@ -1498,7 +1453,7 @@ O resultado permite visualizar, em diferentes partes do país, onde a alternativ
 
 As cores e a altura da superfície facilitam a leitura espacial dessas diferenças. Os resultados são calculados para os municípios do conjunto de destinos; as áreas entre eles são uma interpolação visual para tornar o padrão mais legível no mapa. Portanto, cada área colorida não representa uma nova rota calculada, mas a visualização dos resultados obtidos para os destinos próximos. A Figura 14 ilustra essa representação para o cenário informado.
 
-![Mapa de calor produzido para o cenário de origem em São Paulo e carga de 14 t.](images/heatmap-map.png)
+![Mapa de calor produzido para o cenário de origem em São Paulo e carga de 14 t.](images/heatmap-map.png)
 
 *Figura 14 — Representação espacial dos resultados calculados na página Mapa de calor. Fonte: elaboração própria.*
 
@@ -1508,7 +1463,7 @@ As ferramentas externas permitem confrontar o resultado do CabotageLens com esti
 
 ### 6.1 [Calculadora de emissões da Aliança](https://www.alianca.com.br/calculadora-de-co2)
 
-Na calculadora da Aliança, o cenário informado foi São Paulo–Abaetetuba, com um contêiner seco de 40 pés e 20 t de carga. O mesmo cenário foi executado no CabotageLens com 20 t e 2 TEU, equivalentes a um contêiner de 40 pés. As duas alternativas multimodais utilizam Santos como porto de embarque e Vila do Conde como porto de desembarque.
+Na calculadora da Aliança, o cenário informado foi São Paulo–Abaetetuba, com um contêiner seco de 40 pés e 20 t de carga. O mesmo cenário foi executado no CabotageLens com 20 t e 2 TEU, equivalentes a um contêiner de 40 pés. As duas alternativas multimodais utilizam Santos como porto de embarque e Vila do Conde como porto de desembarque.
 
 A tabela separa as etapas da alternativa multimodal e compara somente as emissões operacionais TTW. Assim, é possível identificar onde os resultados se aproximam ou se afastam, em vez de comparar apenas os totais.
 
@@ -1516,7 +1471,7 @@ A tabela separa as etapas da alternativa multimodal e compara somente as emissõ
 
 *Figura 15 — Resultado da calculadora da Aliança para São Paulo–Abaetetuba. Fonte: resultado exportado pela ferramenta, fornecido pelo autor.*
 
-**Tabela 19 — Emissões TTW por etapa no cenário São Paulo–Abaetetuba, com 20 t de carga.**
+**Tabela 19 — Emissões TTW por etapa no cenário São Paulo–Abaetetuba, com 20 t de carga.**
 
 | Etapa | Aliança: distância | Aliança: CO₂ TTW | CabotageLens: distância | CabotageLens: CO₂e TTW |
 | :-- | --: | --: | --: | --: |
@@ -1530,13 +1485,13 @@ A tabela separa as etapas da alternativa multimodal e compara somente as emissõ
 
 Na rodovia direta, as distâncias são próximas: 2.807 km na Aliança e 2.835,762 km no CabotageLens. Na cadeia multimodal, a Aliança informa 4.869 km para a navegação e 125 km para o acesso final, enquanto o CabotageLens usa 4.495 km e 33,950 km, respectivamente. A diferença restante decorre sobretudo do acesso final e da referência de distância adotada para cada porto.
 
-A distância total multimodal soma apenas os dois acessos rodoviários e a etapa marítima; as operações portuárias não acrescentam distância. A Aliança não as separa: os três trechos exibidos pela ferramenta somam exatamente o total multimodal de 0,975 t. No CabotageLens, essas operações aparecem como uma etapa própria, com 0,026 t de CO₂e TTW, e são incluídas no total. A tabela compara apenas TTW, que é o escopo adotado pelo CabotageLens; a calculadora da Aliança também exibe valores WTW, mas eles não são usados nesta comparação.
+A distância total multimodal soma apenas os dois acessos rodoviários e a etapa marítima; as operações portuárias não acrescentam distância. A Aliança não as separa: os três trechos exibidos pela ferramenta somam exatamente o total multimodal de 0,975 t. No CabotageLens, essas operações aparecem como uma etapa própria, com 0,026 t de CO₂e TTW, e são incluídas no total. A tabela compara apenas TTW, que é o escopo adotado pelo CabotageLens; a calculadora da Aliança também exibe valores WTW, mas eles não são usados nesta comparação.
 
-Há uma inconsistência de sinal no quadro de economia exibido pela Aliança: a diferença entre seus próprios totais TTW é aproximadamente 4,065 − 0,975 = 3,090 t de redução, mas a tela apresenta −3,089 t. Por esse motivo, a última linha da tabela é calculada diretamente a partir dos totais de cada alternativa. O CabotageLens apresenta a redução com sinal coerente com as emissões totais mostradas.
+Há uma inconsistência de sinal no quadro de economia exibido pela Aliança: a diferença entre seus próprios totais TTW é aproximadamente 4,065 − 0,975 = 3,090 t de redução, mas a tela apresenta −3,089 t. Por esse motivo, a última linha da tabela é calculada diretamente a partir dos totais de cada alternativa. O CabotageLens apresenta a redução com sinal coerente com as emissões totais mostradas.
 
 ### 6.2 [Calculadora de emissões da Log-In](https://www.loginlogistica.com.br/calculadora-co2/)
 
-A captura da calculadora da Log-In refere-se ao cenário São Paulo–Rio Branco e mostra uma alternativa rodoviária de 3.032 km. A alternativa por cabotagem é composta por três trechos de 89,9 km, 6.112 km e 1.394 km, compatíveis com a estrutura São Paulo–Santos–Manaus–Rio Branco. O mesmo cenário foi executado no CabotageLens com 14 t e 1 TEU.
+A captura da calculadora da Log-In refere-se ao cenário São Paulo–Rio Branco e mostra uma alternativa rodoviária de 3.032 km. A alternativa por cabotagem é composta por três trechos de 89,9 km, 6.112 km e 1.394 km, compatíveis com a estrutura São Paulo–Santos–Manaus–Rio Branco. O mesmo cenário foi executado no CabotageLens com 14 t e 1 TEU.
 
 ![Resultado da calculadora de emissões da Log-In.](comparacao_externa/loginlogistica.png)
 
@@ -1556,7 +1511,7 @@ Na alternativa rodoviária, porém, a distância da Log-In não corresponde à r
 
 ### 6.3 [Calculadora de piso mínimo de frete da ANTT](https://calculadorafrete.antt.gov.br/)
 
-Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário foi informado como carga conteinerizada, cinco eixos e 3.491 km. O resultado oficial exibido foi R$ 21.308,12. Para a mesma ligação São Paulo–Rio Branco, o CabotageLens calculou 3.491,431 km, selecionou cinco eixos para a carga de 14 t e estimou R$ 12.318,68 de custo de combustível.
+Na calculadora da Agência Nacional de Transportes Terrestres (ANTT), o cenário foi informado como carga conteinerizada, cinco eixos e 3.491 km. O resultado oficial exibido foi R$ 21.308,12. Para a mesma ligação São Paulo–Rio Branco, o CabotageLens calculou 3.491,431 km, selecionou cinco eixos para a carga de 14 t e estimou R$ 12.318,68 de custo de combustível.
 
 ![Resultado da calculadora de piso mínimo de frete da ANTT.](comparacao_externa/calculadorafreteantt.png)
 
@@ -1588,7 +1543,7 @@ A ligação Santos–Manaus demonstra o efeito dessa escolha: os 89 recortes com
 
 Além da contribuição metodológica, o CabotageLens constitui uma contribuição aplicada e acessível: a [aplicação está disponível publicamente](https://cabotagelens.streamlit.app/) e seu [código-fonte, documentação e regras de cálculo podem ser consultados no repositório público do projeto](https://github.com/pennylanesccp/cabotage-lens). Dessa forma, outras pessoas podem executar cenários próprios, conferir as premissas adotadas e reproduzir a lógica de cálculo, dentro dos limites de dados e escopo descritos neste trabalho.
 
-## Referências
+## 8. Referências
 
 AGÊNCIA NACIONAL DO PETRÓLEO, GÁS NATURAL E BIOCOMBUSTÍVEIS (ANP). *Levantamento semanal de preços de combustíveis por estado*. 2026. Disponível em: <https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas>. Acesso em: 19 jul. 2026.
 
