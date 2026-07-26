@@ -436,7 +436,7 @@ A Figura 3 apresenta parte do arquivo bruto de Atracação. Cada linha identific
 
 *Arquivo: `2025Atracacao.txt`. Fonte: [Agência Nacional de Transportes Aquaviários (ANTAQ), Painel Estatístico Aquaviário](https://estatistica.antaq.gov.br/ea/sense/download.html).*
 
-##### 4.3.4.1.3 Reconstrução das viagens
+##### 4.3.4.1.3 Reconstrução das viagens e carga a bordo
 
 A integração das tabelas de Atracação e Carga permite identificar as escalas pertencentes ao mesmo navio e ordená-las cronologicamente. O sistema forma um subtrecho entre cada par de escalas consecutivas e consulta sua distância na matriz marítima. Assim, a viagem deixa de ser uma ligação abstrata Santos–Manaus e passa a ser representada pela sequência observada Santos → Suape → Pecém → Manaus. A Figura 4 mostra essa parte da viagem `voyage_9612791_00011`; cada seta apresenta somente a distância do subtrecho, em milhas náuticas (nm):
 
@@ -449,11 +449,25 @@ flowchart LR
 
 *Figura 4 — Sequência de escalas e distâncias da parte de ida da viagem `voyage_9612791_00011`. Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ e distâncias da matriz marítima do sistema.*
 
-##### 4.3.4.1.4 Carga a bordo
+###### 4.3.4.1.3.1 Carga a bordo
 
-A carga a bordo de cada subtrecho é a massa transportada pelo navio. Para a escala $k$, o sistema calcula:
+A carga a bordo de cada subtrecho é a massa transportada pelo navio. Para cada escala $k$, calcula-se primeiro o saldo líquido da movimentação de carga:
 
 $$
+B_k=B_{k-1}+\Delta_k,
+$$
+
+em que $B_k$ é a carga total a bordo após a escala $k$ e $B_{k-1}$ é a carga existente antes dessa escala.
+
+Para determinar a carga existente antes da primeira escala observada, o sistema calcula o saldo acumulado provisório:
+
+$$
+S_0=0,
+\qquad
+S_k=\sum_{i=1}^{k}\Delta_i,
+$$
+
+em que $S_0$ representa o início do balanço provisório sem carga inicial e $S_k$ é a soma dos saldos da primeira escala até a escala $k$. Em algumas viagens, o saldo acumulado $S_k$, calculado a partir de $S_0=0$, fica negativo em uma ou mais escalas, como mostra a Seção 4.3.4.1.3.2. Como a carga a bordo não pode ser negativa, o menor valor dessa sequência determina a carga inicial mínima compatível com os registros:
 B_k=B_{k-1}+E_k-D_k,
 $$
 
@@ -465,43 +479,84 @@ $$
 B_0=
 \max\left(
 0,\,
--\min_{1\leq k\leq n}
-\left[
-\sum_{i=1}^{k}(E_i-D_i)
-\right]
+-\min_{1\leq k\leq n}S_k
 \right).
 $$
 
-Assim, $B_0$ é a menor carga inicial capaz de manter todos os saldos da viagem iguais ou superiores a zero. Se o saldo acumulado nunca ficar negativo, $B_0$ é igual a zero.
+Nessa expressão, $n$ é o número total de escalas da viagem. Assim, $B_0$ é a menor carga inicial capaz de manter a carga a bordo igual ou superior a zero em todas as escalas. Depois de determinar $B_0$, a carga após qualquer escala também pode ser escrita como:
 
-###### 4.3.4.1.4.1 Carga a bordo para a viagem `voyage_9612791_00011`
+$$
+B_k=B_0+S_k.
+$$
 
-A viagem `voyage_9612791_00011` é exemplo desse comportamento: o balanço iniciado artificialmente em zero atingiria $-2{.}976{,}894$ t após a escala de Manaus. Portanto, o sistema calcula uma carga inicial mínima de 2.976,894 t antes da escala de Santos. Aplicando os embarques e desembarques apresentados na Tabela 4:
+Essa expressão é equivalente ao cálculo sucessivo de $B_k=B_{k-1}+\Delta_k$. Se todos os valores de $S_k$ forem iguais ou superiores a zero, $B_0$ é igual a zero.
+
+###### 4.3.4.1.3.2 Carga a bordo para a viagem `voyage_9612791_00011`
+
+A viagem `voyage_9612791_00011` permite aplicar esse procedimento passo a passo. A tabela a seguir parte de $S_0=0$ e apresenta, em cada escala, os valores de embarque e desembarque informados na Tabela 4, o saldo líquido $\Delta_k$ e o saldo acumulado provisório $S_k$.
+
+**Detalhamento do saldo de carga por escala na viagem `voyage_9612791_00011`.**
+
+| $k$ | Porto | Embarcado $E_k$ | Desembarcado $D_k$ | Saldo da escala $\Delta_k$ | Saldo acumulado provisório $S_k$ |
+| --: | :-- | --: | --: | --: | --: |
+| 1 | Santos | 9.881,860 t | 0,000 t | 9.881,860 t | 9.881,860 t |
+| 2 | Suape | 11.862,199 t | 8.002,620 t | 3.859,579 t | 13.741,439 t |
+| 3 | Pecém | 3.231,914 t | 7.624,347 t | −4.392,433 t | 9.349,006 t |
+| 4 | Manaus | 7.571,660 t | 19.897,560 t | −12.325,900 t | −2.976,894 t |
+
+O menor saldo acumulado provisório, portanto, é $-2{.}976{,}894$ t. Aplicando a fórmula da carga inicial mínima:
 
 $$
 \begin{aligned}
-B_{\mathrm{Santos}}
-&=2{.}976{,}894+9{.}881{,}860-0
-=12{.}858{,}754\ \mathrm{t},\\
-B_{\mathrm{Suape}}
-&=12{.}858{,}754+11{.}862{,}199-8{.}002{,}620
-=16{.}718{,}333\ \mathrm{t},\\
-B_{\mathrm{Pecem}}
-&=16{.}718{,}333+3{.}231{,}914-7{.}624{,}347
-=12{.}325{,}900\ \mathrm{t},\\
-B_{\mathrm{Manaus}}
-&=12{.}325{,}900+7{.}571{,}660-19{.}897{,}560
-=0\ \mathrm{t}.
+B_0
+&=\max\left(0,-\min[S_1,S_2,S_3,S_4]\right)\\
+&=\max\left(0,-(-2{.}976{,}894)\right)\\
+&=2{.}976{,}894\ \mathrm{t}.
 \end{aligned}
 $$
 
+Os valores de $S_k$ não representam a carga efetiva a bordo, pois resultam do balanço iniciado em zero. Eles servem para determinar $B_0$. A carga após cada escala é então calculada sucessivamente com os valores de $\Delta_k$ apresentados na tabela:
+
+$$
+B_{\mathrm{Santos}}=B_1
+&=B_0+\Delta_1
+=2{.}976{,}894+9{.}881{,}860
+=12{.}858{,}754\ \mathrm{t},\\
+B_{\mathrm{Suape}}=B_2
+&=B_1+\Delta_2
+=12{.}858{,}754+3{.}859{,}579
+=16{.}718{,}333\ \mathrm{t},\\
+B_{\mathrm{Pecem}}=B_3
+&=B_2+\Delta_3
+=16{.}718{,}333-4{.}392{,}433
+B_{\mathrm{Manaus}}=B_4
+&=B_3+\Delta_4
+=12{.}325{,}900-12{.}325{,}900
+&=B_3+\Delta_4
+=12{.}325{,}900-12{.}325{,}900
+=0\ \mathrm{t}.
+\end{aligned}
+$$
+Desse modo, os subtrechos Santos–Suape, Suape–Pecém e Pecém–Manaus são percorridos com 12.858,754 t, 16.718,333 t e 12.325,900 t a bordo, respectivamente. A carga inicial calculada não é uma medição direta: ela é a estimativa mínima compatível com as movimentações observadas e com a condição física de que a carga a bordo não pode ser negativa.
+
+
+A Figura 5 resume o resultado e mostra a carga a bordo em cada subtrecho da viagem.
+
+```mermaid
+flowchart LR
+    S[Santos] -->|12.858,754 t| U[Suape]
+    U -->|16.718,333 t| P[Pecém]
+    P -->|12.325,900 t| M[Manaus]
+```
+
+*Figura 5 — Sequência de escalas e carga a bordo nos subtrechos da parte de ida da viagem `voyage_9612791_00011`. Fonte: elaboração própria com dados de Carga e Atracação da ANTAQ e resultados da reconstrução da viagem.*
 Desse modo, os subtrechos Santos–Suape, Suape–Pecém e Pecém–Manaus são percorridos com 12.858,754 t, 16.718,333 t e 12.325,900 t a bordo, respectivamente. A carga inicial calculada não é uma medição direta: ela é a estimativa mínima compatível com as movimentações observadas e com a condição física de que a carga a bordo não pode ser negativa.
 
 ##### 4.3.4.2 Intensidade de combustível do navio
 
-Após reconstruir o percurso e a carga a bordo, é preciso estimar quanto combustível foi necessário para realizar esse transporte. Conforme fundamentado na Seção 3.1, o sistema usa a **intensidade de combustível** para obter uma estimativa média e comparável, ao invés de simular as condições particulares de uma única viagem. Essa intensidade é a quantidade de combustível associada ao transporte de uma tonelada por uma milha náutica. A unidade é grama por tonelada-milha náutica, ou $\mathrm{g/(t\cdot nm)}$.
+Após reconstruir o percurso e a carga a bordo, é preciso estimar o consumo de combustível associado a esse transporte. Conforme fundamentado na Seção 3.1, o sistema usa a **intensidade de combustível** para obter uma estimativa média e comparável, ao invés de simular as condições particulares de uma única viagem. Essa intensidade expressa a massa de combustível associada ao transporte de uma tonelada por uma milha náutica. Sua unidade é grama por tonelada-milha náutica, ou $\mathrm{g/(t\cdot nm)}$.
 
-Segundo a EU MRV, esse indicador é construido a partir de um processo padronizado. Para cada navio, a companhia define um plano de monitoramento que descreve os métodos e as fontes de dados utilizados. Esse plano é avaliado por um verificador acreditado e, quando aplicável, aprovado pela autoridade responsável. Durante o período de reporte, são registrados por viagem o combustível consumido, a distância percorrida, o tempo no mar e a carga transportada. Ao final do ano, esses registros são consolidados em um relatório de emissões do navio, que também passa por verificação antes de ser submetido pelo sistema THETIS-MRV (EUROPEAN COMMISSION, 2025, p. 9, 30–32 e 54–55).
+No EU MRV, esse indicador é construído por um processo padronizado. Para cada navio, a companhia elabora um plano de monitoramento que descreve os métodos e as fontes de dados utilizados. Esse plano é avaliado por um verificador acreditado e, quando aplicável, aprovado pela autoridade responsável. Durante o período de reporte, são monitorados, em regra por viagem, o combustível consumido, a distância percorrida, o tempo no mar e a carga transportada. Ao final do ano, esses registros são agregados no relatório de emissões do navio, que também passa por verificação antes de ser submetido pelo sistema THETIS-MRV (EUROPEAN COMMISSION, 2025, p. 9, 30–32 e 54–55).
 
 O trabalho de transporte de cada viagem é o produto entre a carga transportada e a distância percorrida. A intensidade anual não é uma média aritmética das intensidades das viagens, mas a razão entre o combustível total consumido no ano e o trabalho de transporte total:
 
@@ -511,11 +566,21 @@ W_v=m_vd_v
 I_{f,\mathrm{anual}}=\frac{F_{\mathrm{anual}}}{\sum_v W_v},
 $$
 
-em que $m_v$ é a massa de carga da viagem $v$, $d_v$ é a distância percorrida, $W_v$ é o respectivo trabalho de transporte e $F_{\mathrm{anual}}$ é o combustível total consumido pelo navio no período. Uma intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$, por exemplo, significa que, em média, são associados 7,43 g de combustível a cada tonelada transportada por uma milha náutica. Assim, ele permite comparar navios e viagens de tamanhos diferentes. O consumo total de cada viagem só é obtido posteriormente, ao multiplicar essa intensidade pelo trabalho de transporte reconstruído, conforme a Seção 3.3.4.3.
+em que $m_v$ é a massa de carga da viagem $v$, em toneladas; $d_v$ é a distância percorrida, em milhas náuticas; $W_v$ é o respectivo trabalho de transporte, em $\mathrm{t\cdot nm}$; e $F_{\mathrm{anual}}$ é a massa total de combustível consumida pelo navio no período, expressa em gramas. Uma intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$, por exemplo, significa que, na média anual, foram associados 7,43 g de combustível ao transporte de uma tonelada por uma milha náutica.
+
+Os dados que formam o indicador seguem procedimentos documentados. O método de medição do combustível, sua fonte de dados e a incerteza associada devem constar do plano de monitoramento, e o guia recomenda verificações de plausibilidade com uma segunda fonte de dados sempre que possível (EUROPEAN COMMISSION, 2025, p. 42, 48–49 e 109–110). Esses requisitos não eliminam a incerteza, mas conferem rastreabilidade ao indicador e sustentam sua verificação.
+
+Por isso, o indicador oferece uma referência histórica adequada à comparação proposta. O CabotageLens aplica essa intensidade ao trabalho de transporte de cada recorte reconstruído, conforme a Seção 4.3.4.3.
 
 ###### 4.3.4.2.1 Valor individual do navio no EU MRV
 
-A ANTAQ informa por onde o navio passou e qual carga levava, mas não informa diretamente o combustível consumido. Esse dado vem da base de **Monitoramento, Reporte e Verificação da União Europeia** (*European Union Monitoring, Reporting and Verification*, EU MRV), que publica indicadores anuais de consumo, atividade e emissões por embarcação. O número IMO registrado na ANTAQ permite procurar o mesmo navio nessa base.
+Na aplicação ao corredor brasileiro, a ANTAQ informa por onde o navio passou e qual carga levava, enquanto o EU MRV fornece seu indicador anual de intensidade. O número IMO é o elo entre as duas bases e permite procurar a mesma embarcação.
+
+A Figura 6 mostra parte de uma dessas planilhas anuais. Cada linha corresponde a um navio, enquanto as colunas reúnem o número IMO, o nome, o tipo, o período de reporte, o consumo, as emissões e os indicadores médios de eficiência usados na avaliação.
+
+![Recorte de uma planilha anual do EU MRV.](images/eu_mrv_2025_recorte.png)
+
+*Figura 6 — Captura de tela de parte do arquivo `2025-v18-23072026-EU MRV Publication of information.xlsx`. Fonte: Agência Europeia de Segurança Marítima (EMSA), 2026.*
 
 Na viagem `voyage_9612791_00011`, o IMO 9612791 foi encontrado diretamente no EU MRV, com intensidade de $7{,}43\ \mathrm{g/(t\cdot nm)}$ (EMSA, 2026). A Tabela 6 mostra os campos usados nessa correspondência.
 
